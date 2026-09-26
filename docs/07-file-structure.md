@@ -1,48 +1,57 @@
 # Application file structure plan
 
-Status: proposed target; this revision changes planning documents only.
+Status: proposed production target, with an interactive frontend prototype now implemented.
 
 ## Existing repository
 
-The Vite app lives in the nested `the-crowded-table-app/` directory. Keep it there for now, with root `docs/` shared across frontend/backend plans. Run current app scripts from its directory. Do not reorganize source merely to make a speculative tree exist.
+The accidental duplicate directory has been removed. The Vite app now lives directly at the repository root: `src/`, `public/`, `package.json`, and `vite.config.ts` sit alongside `docs/`. Run `npm run dev`, `npm run build`, `npm run lint`, and `npm run preview` from the repository root. The planned `supabase/` directory will also live at the root. Do not create speculative feature folders before they are needed.
 
 ## Target layout as features are implemented
+
+The current prototype uses `src/App.tsx` for composition, `src/features/*.tsx` for the five sections, `src/components/` for shared UI/activity views, and `src/mock/` for typed fixtures, formatting, and in-memory actions. This is deliberately smaller than the production target below. See [the prototype guide](10-frontend-prototype.md) for coverage and limitations. No `supabase/` backend or PWA service worker has been created.
 
 ```text
 repository/
 ├── docs/
-├── the-crowded-table-app/
-│   ├── public/icons/                  # PWA assets when created
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── router.tsx
-│   │   │   ├── providers.tsx
-│   │   │   └── layouts/               # Five-tab member/guest shell; admin
-│   │   ├── features/
-│   │   │   ├── auth/
-│   │   │   ├── tenancy/               # Current community context
-│   │   │   ├── membership/            # Benefits, paywall, access state
-│   │   │   ├── home/                  # Official feed and seasonal highlight
-│   │   │   ├── official-events/       # List/calendar, admission, My Events
-│   │   │   ├── meet-play/             # Tables, requests, My Tables, matching
-│   │   │   ├── participation/         # Shared seat-state presentation/contracts
-│   │   │   ├── table-chat/
-│   │   │   ├── championship/
-│   │   │   ├── community/
-│   │   │   ├── profile/
-│   │   │   ├── notifications/
-│   │   │   └── admin/                 # Authorized orchestration and audit UI
-│   │   ├── components/ui/
-│   │   ├── lib/
-│   │   │   ├── supabase/client.ts
-│   │   │   └── env.ts
-│   │   ├── types/database.ts          # Generated
-│   │   ├── pwa/
-│   │   ├── styles/                    # Warm club design tokens
-│   │   └── main.tsx
-│   ├── tests/e2e/
-│   ├── .env.example                   # Placeholders only
-│   └── vite.config.ts
+├── public/icons/                      # PWA assets when created
+├── src/
+│   ├── app/
+│   │   ├── router.tsx
+│   │   ├── providers.tsx
+│   │   └── layouts/                   # Five-tab member/guest shell; admin
+│   ├── features/
+│   │   ├── auth/
+│   │   ├── tenancy/                   # Current community context
+│   │   ├── membership/                # Benefits, paywall, access state
+│   │   ├── home/                      # Official feed and seasonal highlight
+│   │   ├── official-events/           # List/calendar, admission, My Events
+│   │   ├── meet-play/                 # Tables, requests, My Tables, matching
+│   │   ├── participation/             # Shared seat-state presentation/contracts
+│   │   ├── table-chat/
+│   │   ├── championship/
+│   │   ├── community/
+│   │   ├── profile/
+│   │   ├── notifications/
+│   │   └── admin/                     # Authorized orchestration and audit UI
+│   ├── components/ui/
+│   ├── lib/
+│   │   ├── supabase/client.ts
+│   │   └── env.ts
+│   ├── types/database.ts              # Generated
+│   ├── pwa/
+│   ├── styles/                        # Warm club design tokens
+│   └── main.tsx
+├── tests/e2e/
+├── .env.example                       # Placeholders only
+├── package.json
+├── package-lock.json
+├── README.md
+├── index.html
+├── eslint.config.js
+├── tsconfig.json
+├── tsconfig.app.json
+├── tsconfig.node.json
+├── vite.config.ts
 └── supabase/
     ├── config.toml
     ├── migrations/
@@ -62,8 +71,8 @@ Use explicit feature APIs for cross-domain coordination. Home may consume the of
 
 Admin screens call the owning domain's authorized commands instead of duplicating entitlement or competition logic. Keep manual payment review with membership/admission orchestration; introduce a separate payment module only when complexity warrants it.
 
-Frontend packages stay in the app package boundary. Supabase migrations/tests stay at repository root; future scripts must identify the correct working directory. Edge Function runtime dependencies should not implicitly depend on frontend packages.
+Frontend dependencies and scripts are defined in the root `package.json`. Planned Supabase configuration, migrations, and tests live under root `supabase/`; frontend end-to-end tests live under root `tests/e2e/`. Edge Function runtime dependencies should not implicitly depend on frontend packages.
 
 ## Future documentation
 
-Once implemented and verified, replace the generic app README with actual setup commands and environment requirements. Add a root entry point for frontend/backend commands and operational links. Keep secrets, production data, and home-address examples out of source control.
+Once implemented and verified, update the existing root `README.md` with project-specific setup commands, environment requirements, frontend/backend commands, and operational links. Keep secrets, production data, and home-address examples out of source control.

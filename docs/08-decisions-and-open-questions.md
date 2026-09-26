@@ -22,8 +22,9 @@ Status: revised using the user's supplied handoff summary.
 | D-014 | MVP includes official events, tables/chat, Championship, minimal Community, Profile, admin | Handoff MVP recommendation adopted as planning baseline |
 | D-015 | Warm club aesthetic and Games • People • Belonging | Handoff |
 | D-016 | No catalog/POS/venue management, followers/person ratings, AI recommendations, native apps in MVP | Handoff exclusions |
+| D-017 | Vite app lives at repository root alongside `docs/`; planned `supabase/` also belongs at root | User removed the accidental duplicate app directory; verified against current layout |
 
-Evidence update: the supplied summary resolves the earlier missing-concept blocker. Original designs were not inspected. Do not retain the old “only page names are known” limitation in active planning.
+Evidence update: the supplied summary resolves the earlier missing-concept blocker. The five generated infographics in `visuals/` have also now been inspected for the frontend prototype. The [prototype guide](10-frontend-prototype.md) records how visual inconsistencies were resolved against the product brief.
 
 ## Proposals and illustrative values
 
@@ -39,7 +40,7 @@ Evidence update: the supplied summary resolves the earlier missing-concept block
 | P-008 | Cached PWA shell, no persisted private API data or offline writes | Technical proposal |
 | P-009 | Supabase Realtime for durable table chat updates | Architecture proposal |
 | P-010 | Minimal user/admin/owner roles; host is a resource relationship | Technical proposal |
-| P-011 | Existing app directory retained, docs at root | Repository proposal |
+| P-011 | Retain the former nested app directory | Superseded by D-017; use the flattened repository-root layout |
 
 Proposals are not approved by silence. The weekly examples, featured games, October dates, prizes, and larger-event guest counts are illustrative rather than a live calendar.
 

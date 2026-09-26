@@ -4,7 +4,7 @@ Status: revised from the user-supplied product handoff. Product direction below 
 
 ## Source and precedence
 
-The user supplied an extensive summary of **Find Boardgame Cafe Ideas** after the chat reader returned only five recent prompts. That summary is now the product source for these plans. The earlier partial retrieval is no longer a blocker. Original graphics were not supplied, so brand direction is grounded in the written brief, not inspected mockups.
+The user supplied an extensive summary of **Find Boardgame Cafe Ideas** after the chat reader returned only five recent prompts. That summary is the product source for these plans. The five reference infographics in `visuals/` have now also been reviewed and used for the interactive frontend prototype. Where generated imagery conflicts with the settled brief, the brief takes precedence.
 
 The user's explicit Vite + TypeScript + React Compiler, Supabase, multi-tenancy/RLS, and mobile PWA requirements take precedence over the handoff's tentative stack suggestions. Prices, example dates, and eventual features retain the tentative status given in the handoff.
 
@@ -21,6 +21,7 @@ The user's explicit Vite + TypeScript + React Compiler, Supabase, multi-tenancy/
 | [Backend patterns](06-backend-patterns.md) | Transactional commands, privacy, waitlists, results, and audit |
 | [File structure](07-file-structure.md) | Proposed repository layout and module responsibilities |
 | [PWA and delivery](09-pwa-and-delivery.md) | Incremental delivery, mobile behavior, and acceptance gates |
+| [Frontend prototype guide](10-frontend-prototype.md) | Interactive pages, walkthroughs, reconciled visuals, and simulation limits |
 
 ## Status language
 

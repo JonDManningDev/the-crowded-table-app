@@ -6,7 +6,7 @@ Status: required stack established; implementation boundaries proposed against t
 
 Use Vite, TypeScript, React Compiler, Supabase with multi-tenancy/RLS, and one mobile-first responsive web/PWA application. These explicit user choices override the handoff's tentative stack suggestions.
 
-The existing app is in `the-crowded-table-app/` and has React Compiler configured. This planning revision does not implement backend, PWA, or features.
+The Vite app lives directly at the repository root, with `src/`, `public/`, `package.json`, and `vite.config.ts` alongside `docs/`. React Compiler is configured. Run app scripts from the repository root. An [interactive frontend prototype](10-frontend-prototype.md) now implements the five main sections with mock data and in-memory actions. Backend persistence, real authentication, and PWA installation/offline behavior remain future implementation work.
 
 ## System responsibilities
 
@@ -77,4 +77,4 @@ Payment automation is deferred; paid admission and membership workflows are MVP 
 
 Use separate local, non-production, and production data/configuration. Version migrations, grants, policies, functions, and generated types. Keep Supabase secret/service credentials in trusted runtimes; only public configuration goes to the browser. [Vite environment guidance](https://vite.dev/guide/env-and-mode) explains client-exposed environment variables.
 
-Router, query library, form validation, styling primitives, PWA tooling, hosting, and delivery channels remain unselected. Keep the existing app folder. Add scheduled work for waitlist expiry and chat archival only with an explicit reliable execution mechanism and retry/monitoring plan.
+Router, query library, form validation, styling primitives, PWA tooling, hosting, and delivery channels remain unselected. Keep the app at the repository root. Add scheduled work for waitlist expiry and chat archival only with an explicit reliable execution mechanism and retry/monitoring plan.

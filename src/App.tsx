@@ -1,122 +1,34 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useEffect, useState } from 'react'
+import type { Page } from './mock/data'
+import { useMockState } from './mock/useMockState'
+import { Avatar, Botanical, Icon, Modal } from './components/ui'
+import { ActivityDialog } from './components/Activity'
+import { Home } from './features/Home'
+import { MeetPlay } from './features/MeetPlay'
+import { Championship } from './features/Championship'
+import { Community } from './features/Community'
+import { ProfilePage } from './features/Profile'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+const navigation: { id: Page; label: string; icon: string }[] = [{ id: 'home', label: 'Home', icon: 'home' }, { id: 'meet-play', label: 'Meet & Play', icon: 'people' }, { id: 'championship', label: 'Championship', icon: 'trophy' }, { id: 'community', label: 'Community', icon: 'chat' }, { id: 'profile', label: 'Profile', icon: 'user' }]
+function currentPage(): Page { const hash = window.location.hash.slice(1); return navigation.find(n => n.id === hash)?.id || 'home' }
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+export default function App() {
+  const model = useMockState()
+  const [page, setPage] = useState<Page>(currentPage)
+  const [activity, setActivity] = useState<string | null>(null)
+  const [membership, setMembership] = useState(false)
+  const [notifications, setNotifications] = useState(false)
+  useEffect(() => { const change = () => { setPage(currentPage()); setActivity(null); window.scrollTo({ top: 0 }) }; window.addEventListener('hashchange', change); return () => window.removeEventListener('hashchange', change) }, [])
+  useEffect(() => { document.title = `${navigation.find(n => n.id === page)?.label} · The Crowded Table` }, [page])
+  const locked = !model.member && (page === 'meet-play' || page === 'community')
+  const activityAllowed = activity && (model.member || model.items.find(i => i.id === activity)?.kind === 'official')
+  function switchMode() { model.setMember(!model.member); setActivity(null); setNotifications(false) }
+  return <div className="app-shell"><a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); document.getElementById('main-content')?.focus() }}>Skip to content</a><aside className="sidebar"><a className="brand" href="#home"><span className="brand-the">The</span><span>Crowded<br/>Table<span className="brand-period">.</span></span><small>GAMES · PEOPLE · BELONGING</small></a><div className="community-location"><Icon name="pin" size={15}/> Tegucigalpa, Honduras</div><nav aria-label="Main navigation">{navigation.map(n => <a key={n.id} href={`#${n.id}`} className={page === n.id ? 'active' : ''} aria-current={page === n.id ? 'page' : undefined}><Icon name={n.icon}/>{n.label}{!model.member && ['meet-play', 'community'].includes(n.id) && <Icon name="lock" size={14}/>}</a>)}</nav><div className="sidebar-bottom"><div className="sidebar-quote"><Botanical/><p>Different games.<br/><em>Same table.</em></p></div><button className="account-button" onClick={() => { window.location.hash = 'profile' }}><Avatar name={model.profile.name}/><span><strong>{model.profile.name}</strong><small>{model.member ? 'Community member' : 'Exploring the table'}</small></span><Icon name="chevron" size={16}/></button></div></aside>
+    <div className="main-wrap"><header className="topbar"><span className="breadcrumb">The Crowded Table <span>/</span> <strong>{navigation.find(n => n.id === page)?.label}</strong></span><div className="topbar-actions"><div className="preview-mode"><span>Preview as</span><button onClick={switchMode} aria-label={`Switch to ${model.member ? 'guest' : 'member'} preview`}><span className={`dot ${!model.member ? 'rust' : ''}`}/>{model.member ? 'Member' : 'Guest'}<Icon name="chevron" size={13}/></button></div><button className="icon-button notification-button" onClick={() => setNotifications(true)} aria-label="Open notifications"><Icon name="bell"/>{model.notices.length > 0 && <span/>}</button><button className="top-avatar" aria-label="Open your profile" onClick={() => { window.location.hash = 'profile' }}><Avatar name={model.profile.name}/></button></div></header>
+    <main id="main-content" tabIndex={-1}><div className="content">{locked ? <section className="paywall"><span className="round-icon"><Icon name="lock" size={27}/></span><span className="eyebrow">A LITTLE MORE BELONGING</span><h1>{page === 'meet-play' ? 'Your people are here.' : 'Come into the conversation.'}</h1><p>{page === 'meet-play' ? 'Find local players. Create your own table. Meet people outside your usual gaming circle.' : 'Share a favorite game, ask a question, and get to know your private community.'}</p><div className="paywall-price">L300<span>/ month</span></div><button className="button" onClick={() => setMembership(true)}>Become a Member <Icon name="arrow" size={18}/></button><small>Meet & Play · Private Community · Game nights · Championship</small><Botanical/></section> : page === 'home' ? <Home model={model} open={setActivity} membership={() => setMembership(true)}/> : page === 'meet-play' ? <MeetPlay model={model} open={setActivity}/> : page === 'championship' ? <Championship model={model}/> : page === 'community' ? <Community model={model}/> : <ProfilePage model={model} open={setActivity} membership={() => setMembership(true)}/>}<footer><span><Icon name="leaf" size={16}/> Good games bring good people together.</span><span>PLAY WELL. BELONG ALWAYS.</span></footer></div></main></div>
+    {activityAllowed && <ActivityDialog key={activity} id={activity} model={model} onClose={() => setActivity(null)}/>}
+    {membership && <Modal title={model.member ? 'A little more belonging, every month' : 'Pull up a chair. Stay a while.'} onClose={() => setMembership(false)}><div className="membership-dialog"><span className="round-icon gold"><Icon name="leaf" size={32}/></span><h2>The Crowded Table Membership</h2><div className="paywall-price">L300<span>/ month</span></div><ul className="benefits">{['Find and create member-hosted tables', 'Meet people in our private community', 'Reserve included official game nights', 'Enter the monthly championship'].map(t => <li key={t}><Icon name="check" size={18}/>{t}</li>)}</ul><p className="meta">Interactive preview only. No account, payment, or subscription is created. Changes last until you refresh.</p><button className="button full" onClick={() => { model.setMember(!model.member); setMembership(false); setActivity(null) }}>{model.member ? 'Preview without membership' : 'Try the member experience'}<Icon name="arrow" size={18}/></button></div></Modal>}
+    {notifications && <Modal title="A little news from your table" onClose={() => setNotifications(false)}>{!model.member ? <p className="muted">Your official-event and championship updates will appear here. Member-table notifications are private.</p> : model.notices.length ? model.notices.map((n, i) => <div className="notification" key={i}><Icon name="leaf"/><p>{n}</p></div>) : <p className="muted">You’re all caught up. A quiet moment before the next game.</p>}{model.member && model.notices.length > 0 && <button className="text-button" onClick={() => model.setNotices([])}>Mark all as read <Icon name="check" size={16}/></button>}</Modal>}
+  </div>
 }
-
-export default App
