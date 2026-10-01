@@ -64,7 +64,7 @@ The first draft's café/venue-centered organization model, staff-only creation, 
 
 ## Initial migration readiness
 
-No unresolved product decision currently blocks authoring the agreed auth/account/tenant migrations. Use the [schema milestone scope](03-database-schema.md#first-migration-milestone) and [initial authorization scope](04-auth-and-multi-tenancy.md#initial-milestone-authorization-scope). Finalize slug syntax/reserved names, field limits, SQL contracts, and tests during implementation. Production email delivery, callback destinations, and recovery flows must be completed before signup is operational, not before migration authoring.
+The agreed auth/account/tenant migrations are now implemented under `supabase/migrations/`, with local configuration, authorization tests, and [implementation documentation](../supabase/README.md). The [schema milestone scope](03-database-schema.md#first-migration-milestone) and [initial authorization scope](04-auth-and-multi-tenancy.md#initial-milestone-authorization-scope) remain authoritative. Slug syntax/reserved names, field limits, and SQL contracts are specified in the implementation. Hosted deployment, production email delivery, frontend callbacks, and recovery flows remain separate work before signup is operational.
 
 Q-001 is resolved by D-031: the tenant boundary and structural multi-community support are established. Initial role/permission scope is settled by D-019/D-020/D-023/D-032/D-033. Future invitations, ownership transfer, profile sharing, discovery, and configurable default grants remain deferred rather than blockers.
 

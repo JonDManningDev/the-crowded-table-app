@@ -37,7 +37,7 @@ There is one global login. Staff assignments and community participation are sep
 
 The initial milestone includes minimal `community_account_profiles` beside `community_accounts`: a community-specific display name and optional bio, plus identity keys and standard audit fields. `user_accounts` initially contains only the Auth identity reference and standard audit fields; speculative preferences and extended profile fields are deferred. Profile setup may follow community-account creation and is not required for staff management access. Users may edit their own profile through permitted writes while the tenant is active; profile reads follow existing directory/privacy rules, and profile writes cannot change standing or grant access.
 
-Tenant slugs are lowercase, unique, exclude reserved application names, and are immutable after creation in the initial version. Validate creation at the backend/database; ownership does not permit slug changes. Finalize the reserved-name list and exact syntax alongside routing before implementing the migrations.
+Tenant slugs are lowercase, unique, exclude reserved application names, and are immutable after creation in the initial version. Validate creation at the backend/database; ownership does not permit slug changes. The migrations enforce 3–63 ASCII letters/digits with single separating hyphens and enumerate reserved route names; keep the reserved list synchronized with routing changes.
 
 ## Public tenant lookup and future discovery
 

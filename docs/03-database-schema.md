@@ -1,6 +1,6 @@
 # Database schema plan
 
-Status: initial auth/account/tenant migration scope agreed; broader MVP relational design remains proposed. Not executable SQL.
+Status: initial auth/account/tenant migrations are implemented in `supabase/migrations/`; broader MVP relational design remains proposed. See [database implementation and validation](../supabase/README.md) for executable contracts and local setup. Deployment to a hosted database remains a separate step.
 
 ## First migration milestone
 
@@ -48,7 +48,7 @@ Normalize blank optional location input to `NULL`. One primary geographic base d
 
 Tenant lifecycle initially supports `active` → `archived` and `archived` → `active`. Archiving prevents ordinary community participation and ordinary tenant-scoped writes while preserving owner access for explicit management/restoration operations. Archive is reversible and does not delete data, revoke the owner assignment, or remove the exactly-one-active-owner requirement. Restoration does not independently approve accounts, reinstate suspended/removed participants, or grant entitlements. Initially only the owner may archive or restore the tenant; platform suspension is deferred. Enforce tenant state in backend authorization, not merely navigation or hidden buttons.
 
-Tenant slugs must be validated at creation for lowercase format, uniqueness, and exclusion from an application-maintained reserved-name list. Enforce these rules in the backend/database, including uniqueness under concurrent creation. Slugs cannot be changed after creation in the initial version, even by the owner. The exact allowed-character/length rules and reserved-name list must be finalized alongside routing before migrations are implemented; they must protect application routes. The slug identifies a community but never grants authority.
+Tenant slugs are 3–63 lowercase ASCII letters/digits with single separating hyphens, unique, and exclude the route names enumerated in the first migration. Enforce these rules in the backend/database, including uniqueness under concurrent creation. Slugs cannot be changed after creation in the initial version, even by the owner. Maintain the reserved-name list alongside routing changes. The slug identifies a community but never grants authority.
 
 ### Public tenant representation
 
