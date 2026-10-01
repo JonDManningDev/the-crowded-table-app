@@ -1,6 +1,16 @@
 # Auth and multi-tenancy plan
 
-Status: product access boundaries and canonical ownership rules established; detailed lifecycle and admin privileges remain proposed.
+Status: initial auth/account/tenant scope and permissions established; broader MVP privileges and lifecycle details remain proposed. The initial milestone boundaries below take precedence over broader future-feature access examples.
+
+## Initial milestone authorization scope
+
+Owners can select admins from existing `community_accounts` in their tenant, linked to verified global users. The established `can_create_admin` flag also permits active same-tenant admins to perform this controlled assignment. Enforce the target's same-tenant community association and verified identity server-side; create an admin assignment with all permissions false without changing community standing or benefits. Repeated creation must not overwrite existing assignments or their permissions. Staff authority still references the global account directly, not a community-account foreign key. Owner participation remains optional.
+
+Support this workflow with a narrow administrative candidate list available only to the owner or staff with `can_create_admin`: same-tenant account user ID, standing, existing staff-assignment status, and optional profile display name. Omit bio, email, audit actors, and unrelated profile data; a missing profile does not prevent selection. Similarly, the approval workflow may expose pending-account IDs and optional display names to the owner or staff with `can_approve_users`. These are explicit administrative projections, not general directory/profile access. Profile reads/edits otherwise remain self-only for this milestone; fellow-member directory access waits for entitlement policies.
+
+Include an owner-only backend command to change `can_approve_users` and `can_create_admin` on admin assignments, retaining audit records and the always-true owner invariant. The full staff configuration UI and configurable default grants come later. Initial tenant-detail/settings and website-copy editing remain owner-only; no admin editing authority is inferred from either initial flag.
+
+Community-account state commands initially cover joining and approval only. Suspension/removal/reinstatement commands are deferred; rejoining cannot reset standing. Admin invitations (including their persistence, delivery, redemption, and UI) are a follow-up feature. References to invitation/transfer tests elsewhere in this document describe future acceptance requirements, not additional first-milestone scope. Use `tenant_admin_actions` as the canonical tenant-scoped administrative audit table.
 
 ## Identity, standing, benefits, and participation
 
@@ -8,12 +18,18 @@ Supabase Auth identifies users. A free signed-in account is not a paid membershi
 
 Proposed tenant: an independently operated community, initially Tegucigalpa. Locations and member tables are not tenants. All business authorization is tenant-specific, even for a user associated with multiple communities. The intended UX includes self-service tenant creation as described below. A tenant switcher is not currently required for the first release.
 
-Sign-in method remains open. The app needs account creation/login and reliable PWA callback behavior. See [Supabase Auth](https://supabase.com/docs/guides/auth).
+The initial sign-in method is email/password through Supabase Auth. OAuth/OIDC sign-in is planned for a later release and is outside this milestone. Supabase Auth remains authoritative for credentials and login identities; do not duplicate passwords or verification tokens in application tables. The email/password implementation must include password recovery and reliable PWA callback behavior. See [Supabase Auth](https://supabase.com/docs/guides/auth).
+
+After a new signup is successfully authenticated, send the user to the application's home page. For this initial flow, do not resume a pre-signup destination, send the user directly to community creation, or automatically create a tenant/join a community/accept a staff invitation. Account creation and community onboarding remain separate explicit actions. Password recovery retains its dedicated recovery flow rather than being treated as a new-signup redirect.
+
+Email verification is required to complete account creation. Explicitly enable email confirmation in every environment, including local development. Signup initially shows a check-your-email screen with a resend option; only after verification and successful authentication does the user proceed to the home page. Auth and a corresponding `user_accounts` record may be provisioned before verification, but these are pending signup records, not authorization to use authenticated application features. Do not add a duplicate application-level verification flag; Supabase Auth is authoritative.
+
+Until verified, users may browse permitted public content and complete verification/recovery flows, but may not create tenants, join communities, accept admin invitations, or perform authenticated management/participation actions. Enforce this boundary through Auth configuration and backend authorization rather than UI controls alone. Verification is a platform-wide requirement and does not replace community approval or grant membership benefits. Callback route names, environment-specific redirect allowlists, production sender/SMTP configuration, and recovery details remain implementation/setup decisions; the post-signup destination is settled as home.
 
 ## Account and community creation
 
 1. A first-time visitor can browse permitted public content without an account.
-2. **Create Account** creates a Supabase Auth identity and its global `user_accounts` record. No community account or tenant association is required.
+2. **Create Account** starts email/password signup, provisioning the Auth identity and its global `user_accounts` record. Require email verification before signup is complete and authenticated app access is available; then send the authenticated user home. No community account or tenant association is required.
 3. **Start New Community** creates the tenant and automatically assigns the signed-in creator as its single active owner through `tenant_staff_assignments`. These writes must succeed or fail together in a trusted transaction.
 4. During creation, ask: **“Would you also like to join this community as a participant?”** Supporting text: “You can manage this community either way. You can join later.” Opting in creates a `community_accounts` record for the same global user and allows community profile setup. Opting out creates neither a community account nor a profile; the owner retains management access.
 
@@ -132,6 +148,8 @@ Also prove: global signup requires no community account; tenant creation assigns
 For customization, prove that only owners or appropriately privileged admins can edit/reset content or approved tenant details; staff need no participation account; private copy is not publicly readable; unsupported content keys are rejected; and clients cannot forge creation/update actors.
 
 For identity/profile and slug rules, prove that signup needs no profile; community profiles cannot reference another tenant's account or duplicate a tenant/user pair; users cannot edit someone else's profile or gain access through profile changes; and private profiles remain protected. Prove uppercase/reserved/duplicate slugs are rejected by persistence rules, concurrent creation cannot duplicate slugs, and post-creation slug changes are denied even for owners.
+
+For signup verification, prove that unverified identities cannot access authenticated app operations, including direct tenant creation/join/admin-invitation commands; verification followed by successful authentication returns new signups home without automatic community actions; and expired/invalid verification links allow a clear retry/resend flow. Verify the confirmation requirement in local, non-production, and production configuration.
 
 For public tenant lookup, prove that only active tenants and the seven approved fields are returned, archived tenants are unavailable publicly while owners retain authorized access, and anonymous direct/alternate reads cannot expose excluded fields or related administrative/profile records. No public directory/search interface is shipped in this milestone.
 

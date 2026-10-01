@@ -1,6 +1,17 @@
 # Database schema plan
 
-Status: proposed relational design for the supplied MVP; not executable SQL.
+Status: initial auth/account/tenant migration scope agreed; broader MVP relational design remains proposed. Not executable SQL.
+
+## First migration milestone
+
+Include `user_accounts`, `tenants`, `tenant_settings`, `tenant_staff_assignments`, `community_accounts`, `community_account_profiles`, `tenant_website_content_overrides`, and `tenant_admin_actions` (canonical name replacing the conceptual `admin_actions`). Include constraints, indexes, audit handling, Auth signup provisioning, grants/RLS, controlled commands, and authorization tests with these tables.
+
+- Implement tenant creation with its owner/settings and optional approved creator participation; public lookup by slug; owner-managed tenant details/settings, archive/restore, and website-copy overrides; community joining/approval; self-profile reads/edits; admin assignment; and an owner-only command to edit the two initial admin permission flags. The permission configuration UI and configurable new-admin defaults remain deferred.
+- Owners select new admins from existing same-tenant `community_accounts` linked to verified global users. The backend enforces this selection boundary; arbitrary global users or other tenants' accounts are not eligible through this initial command. The established `can_create_admin` permission also permits delegated admins to use this controlled assignment operation. New assignments receive all-false permissions and do not change the target's community standing or entitlements. Existing assignments must not be silently overwritten by repeated creation requests.
+- This is an initial onboarding restriction, not a new foreign key from staff assignments to community accounts. Staff authority remains independent of participation, including for owners without a community account. Admin invitations, delivery, redemption, related tables, and UI are follow-up work.
+- Profile access is self-only initially, except for the narrow administrative selection/approval projections defined in the auth plan. No fellow-member directory or public profile access ships before the relevant entitlement/sharing policies. Include website-copy persistence with owner-only editing initially; broader admin editing requires future explicit permission flags.
+- Implement joining and pending-account approval. Retain the defined standing values, but defer suspension/removal/reinstatement commands. Rejoining must never reset an existing account's standing. Finalize slug syntax, reserved names, and text limits during implementation alongside routing.
+- Defer membership/payment/event tables and dependent features. SMTP, production callback destinations, and recovery screens do not block migration authoring, but must be configured/tested before signup is operational.
 
 ## Conventions and tenant boundary
 
@@ -14,7 +25,7 @@ All cross-entity references within a tenant use composite foreign keys to matchi
 - A child table uses a singular prefix based on its parent entity: `tenants` → `tenant_staff_assignments`, `tenant_website_content_overrides`; `activities` → `activity_locations`. Apply this consistently when finalizing the physical schema; older conceptual table labels below and elsewhere in the planning docs must be reconciled before migrations, not treated as naming exceptions.
 - Every table includes `created_at`, `updated_at`, `created_by`, and `updated_by` by default, including join tables. These standard fields are implicit in the table summaries below rather than repeated in every row. Any omission requires a documented table-specific reason; for example, a genuinely immutable, append-only table may omit update fields because updates are prohibited.
 - `created_by` and `updated_by` are nullable UUID foreign keys to global user accounts, not community accounts: staff may act without being participants. SQL `NULL` means the system acted, not unknown attribution; no system account or UUID is needed. Trusted database/backend code sets timestamps and actor attribution; clients cannot choose or rewrite audit actors. Human-initiated actions retain the initiating user's attribution even when performed by backend code or workers. Creation initializes both actor fields to the creator (or both to `NULL` for system creation); updates preserve `created_by` and set `updated_by` to the acting user or explicitly to `NULL` for system updates. Signup provisioning normally attributes creation to the newly registered user, establishing that reference safely.
-- Persist additional audit detail when needed through specific additional audit columns. Standard actor columns record creation and the latest update, not full history; sensitive commands still require `admin_actions` records.
+- Persist additional audit detail when needed through specific additional audit columns. Standard actor columns record creation and the latest update, not full history; sensitive commands still require `tenant_admin_actions` records.
 - Initially prohibit hard deletion of referenced user accounts, including references from staff assignments, community accounts, and audit actor columns. Use restrictive foreign-key deletion behavior; do not cascade-delete dependent business records or use `ON DELETE SET NULL` to erase human attribution, since `NULL` means system. Auth identity deletion must not indirectly bypass this restriction through cascading account deletion. The eventual anonymization/auth-deletion workflow remains deferred and requires an explicit design preserving attribution and tenant ownership before it is enabled.
 
 ## Tenant identity, website copy, and settings
@@ -167,7 +178,7 @@ Member hosts need an explicit participation record for chat/address access; prod
 | `reports` | Reporter, target, reason, status; optional MVP extension, restricted to reporter and authorized moderation |
 | `member_blocks` | Unique tenant/blocker/blocked pair; optional extension pending interaction rules |
 | `community_standards_acceptances` | Tenant/user/version/time; proposed launch safeguard |
-| `admin_actions` | Append-only actor/action/target/reason/time and safe metadata; restricted staff reads |
+| `tenant_admin_actions` | Tenant-scoped append-only actor/action/target/reason/time and safe metadata; owner-only reads initially; no admin audit-read permission yet |
 
 Table chat is MVP. Broad DMs are not. Reports/blocks are proposed additions, not silently mandatory from the handoff. Content removal and suspension are required admin capabilities, subject to the canonical owner protections above; detailed admin privileges remain to be delineated. Keep no-show records internal; avoid public person scores.
 

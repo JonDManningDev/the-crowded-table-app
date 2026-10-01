@@ -1,6 +1,6 @@
 # Decisions and open questions
 
-Status: revised using the user's supplied handoff summary.
+Status: reconciled with accepted auth/account/tenant decisions through 2026-10-01. Initial migration scope is settled; broader MVP questions remain open.
 
 ## Established direction
 
@@ -34,15 +34,18 @@ Status: revised using the user's supplied handoff summary.
 | D-026 | Tenant slugs are lowercase, unique, exclude reserved application names, and are immutable initially | User approval, 2026-10-01; schema and auth plans; exact syntax and reserved list finalized alongside routing |
 | D-027 | Public active-tenant lookup by slug returns only `id`, `slug`, `name`, `country_code`, `state_province`, `city`, `timezone`; archived tenants are publicly unavailable and administrative/profile data stays protected | User approval, 2026-10-01; schema and auth plans |
 | D-028 | Community discovery (“Find Your Next Community”) and opt-in sharing of selected profile data on community pages/searches are later-release features, outside the initial migration milestone; potential member/non-member visibility controls remain to be designed | User direction, 2026-10-01; schema and auth plans; no speculative visibility flags/tables in the initial schema |
-
-Evidence update: the supplied summary resolves the earlier missing-concept blocker. The five generated infographics in `visuals/` have also now been inspected for the frontend prototype. The [prototype guide](10-frontend-prototype.md) records how visual inconsistencies were resolved against the product brief.
+| D-029 | Initial authentication uses email/password through Supabase Auth; OAuth/OIDC is planned for a later release. After a new signup is authenticated, return the user to the application home page | User decision, 2026-10-01; auth plan; post-signup return-to-origin behavior deferred |
+| D-030 | Email verification is mandatory to complete account creation and access authenticated app actions. Pre-verification identity/account provisioning does not grant access; Auth owns verification state | User decision, 2026-10-01; auth plan; verification is independent of community approval and entitlements |
+| D-031 | Tenant means independently operated community. Global users can associate with multiple communities; staff authority and optional community participation are separate. No launch tenant switcher is required | Established user decisions in schema/auth plans; reconciles P-001, P-002, P-010, and Q-001 |
+| D-032 | Initial admin assignment selects existing verified users through same-tenant community accounts, gated by `can_create_admin`; owners can perform it and delegate through that flag. Invitations and their persistence/UI follow later | User direction, 2026-10-01; schema/auth milestone scope; staff-to-global-user relationship remains independent |
+| D-033 | First migrations include the eight tables listed in the schema milestone, self-profile access, narrow administrative candidate/approval lists, joining/approval, owner-only permission editing command and website-copy editing; defer directory access, suspension/removal/reinstatement commands, and broader admin editing flags | User acceptance of milestone recommendations, 2026-10-01; schema/auth plans |
 
 ## Proposals and illustrative values
 
 | ID | Proposal | Status / consequence |
 | --- | --- | --- |
-| P-001 | Tenant = independently operated community, initially Tegucigalpa | Replaces venue-business assumption; future tenant business model still open |
-| P-002 | Accounts may associate with multiple tenants | Structural proposal, not a required launch switcher |
+| P-001 | Tenant = independently operated community, initially Tegucigalpa | Accepted; see D-031. Future commercial model does not reopen the tenant boundary |
+| P-002 | Accounts may associate with multiple tenants | Accepted structurally; see D-031. No launch switcher required |
 | P-003 | L300/month; L125 eligible drop-in; illustrative L200 tournament entry | Proposed prices; do not hard-code as final |
 | P-004 | Tuesday Learn & Play, Thursday special night, 7:30–10:30 PM, approx. 10-person home maximum | Schedule/capacity concept; individual events require explicit setup |
 | P-005 | Manual/admin-assisted Meet Someone New | Strategic feature; confirm exact launch workflow |
@@ -50,7 +53,7 @@ Evidence update: the supplied summary resolves the earlier missing-concept block
 | P-007 | Active holds count against capacity; durable notification outbox | Technical proposal; durations and paid hold rules open |
 | P-008 | Cached PWA shell, no persisted private API data or offline writes | Technical proposal |
 | P-009 | Supabase Realtime for durable table chat updates | Architecture proposal |
-| P-010 | Minimal user/admin/owner roles; host is a resource relationship | Technical proposal |
+| P-010 | Minimal user/admin/owner roles; host is a resource relationship | Superseded by explicit owner/admin staff assignments and separate participation; D-019/D-020/D-023/D-031. Host remains a resource relationship |
 | P-011 | Retain the former nested app directory | Superseded by D-017; use the flattened repository-root layout |
 
 Proposals are not approved by silence. The weekly examples, featured games, October dates, prizes, and larger-event guest counts are illustrative rather than a live calendar.
@@ -59,12 +62,17 @@ Proposals are not approved by silence. The weekly examples, featured games, Octo
 
 The first draft's café/venue-centered organization model, staff-only creation, member-only official discovery, minimal join/cancel-only MVP, and deferral of chat/Championship/Community/waitlists have been replaced. Public locations and private-address separation are now explicit. Hosting venues are optional context, not the domain's foundation.
 
-## Open questions in implementation order
+## Initial migration readiness
+
+No unresolved product decision currently blocks authoring the agreed auth/account/tenant migrations. Use the [schema milestone scope](03-database-schema.md#first-migration-milestone) and [initial authorization scope](04-auth-and-multi-tenancy.md#initial-milestone-authorization-scope). Finalize slug syntax/reserved names, field limits, SQL contracts, and tests during implementation. Production email delivery, callback destinations, and recovery flows must be completed before signup is operational, not before migration authoring.
+
+Q-001 is resolved by D-031: the tenant boundary and structural multi-community support are established. Initial role/permission scope is settled by D-019/D-020/D-023/D-032/D-033. Future invitations, ownership transfer, profile sharing, discovery, and configurable default grants remain deferred rather than blockers.
+
+## Remaining setup and broader MVP questions
 
 | ID | Question | Affects |
 | --- | --- | --- |
-| Q-001 | What future entity is a tenant, and is multi-community membership needed at launch? | Schema and onboarding; recommended community boundary |
-| Q-002 | Which sign-in methods, launch language(s), and age policy? Community approval is settled by D-018/D-019. | Auth, copy, moderation |
+| Q-002 | Configure callbacks, recovery, and production email delivery. Which launch language(s) and age policy? Sign-in method/post-signup destination are settled by D-029, required email verification by D-030, and community approval by D-018/D-019. | Auth, copy, moderation |
 | Q-003 | Which entitlement states grant benefits, for what dates, and what happens to existing seats/chats/hosted tables/competition entries on lapse? | Every private access path |
 | Q-004 | Final prices, collection method, verifier workflow, payment hold duration, cancellation/refund rules? | Membership, drop-ins, special tickets, competition |
 | Q-005 | Does table capacity include host? Does home maximum include founder/helpers? What are cancel/no-show cutoffs? | Capacity and attendance |
@@ -77,7 +85,7 @@ The first draft's café/venue-centered organization model, staff-only creation, 
 | Q-012 | Is manual Meet Someone New part of first public MVP and who operates it? | Matching UI/admin process |
 | Q-013 | Hosting, supported devices, email/push, backup/recovery, retention/deletion? | Deployment and launch readiness |
 
-Start with Q-001, Q-003, Q-004, and Q-005. The concept and five-tab navigation no longer need to be rediscovered.
+Proceed first with the agreed auth/account/tenant migrations. Address Q-002 setup and applicable launch-policy decisions before operating signup publicly; Q-003 through Q-013 belong to dependent feature/launch work and do not expand this migration milestone. The tenant boundary, initial roles, concept, and five-tab navigation do not need to be rediscovered.
 
 ## Decision maintenance
 
