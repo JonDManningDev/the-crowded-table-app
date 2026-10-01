@@ -23,6 +23,17 @@ Status: revised using the user's supplied handoff summary.
 | D-015 | Warm club aesthetic and Games • People • Belonging | Handoff |
 | D-016 | No catalog/POS/venue management, followers/person ratings, AI recommendations, native apps in MVP | Handoff exclusions |
 | D-017 | Vite app lives at repository root alongside `docs/`; planned `supabase/` also belongs at root | User removed the accidental duplicate app directory; verified against current layout |
+| D-018 | `tenant_settings.auto_approve_users` is a non-null boolean, default false; the creator's optional community account is auto-approved during tenant creation | User decision, 2026-09-30; schema and auth plans |
+| D-019 | `tenant_staff_assignments.can_approve_users` is a non-null boolean, default false for admins; all owner administrative permissions initialize to and remain true, including future related permissions | User decision, 2026-09-30; schema and auth plans; revisit only if the owner authority model changes |
+| D-020 | Initially all administrative permissions default to false for non-owner staff. Later, an owner-only community-staff configuration UI will support default grants for new admins and individual permission customization; configurable defaults/persistence are deferred from the first migrations | User decision, 2026-09-30; schema and auth plans; owner permissions remain always true |
+| D-021 | Tenant lifecycle initially uses `active` (default) and `archived`. Archive denies ordinary participation/writes while retaining owner management/restoration access; platform suspension is deferred | User approval, 2026-09-30; schema and auth plans; archive/restore initially owner-only |
+| D-022 | Initially prohibit hard deletion of referenced user accounts. Preserve human audit attribution; `NULL` means system. Defer the eventual anonymization/auth-deletion workflow until explicitly designed | User approval, 2026-09-30; schema and auth plans; revisit when implementing account deletion/anonymization |
+| D-023 | Admin creation/invitation requires `tenant_staff_assignments.can_create_admin`, default false for admins and always true for the owner; creation does not confer permission-granting authority | User decision, 2026-09-30; schema and auth plans |
+| D-024 | Ownership is immutable after tenant creation in the initial version. Owner-controlled transfer will be implemented in a later version with atomic replacement and owner invariants preserved | User decision, 2026-09-30; schema and auth plans; transfer command and UI deferred |
+| D-025 | Initial `user_accounts` fields are identity and standard audit fields only. Minimal `community_account_profiles` (community-specific display name/bio, keys, audit fields) is in scope for the first migration milestone beside `community_accounts` | User approval, 2026-10-01; schema and auth plans; extended preferences/profile fields deferred |
+| D-026 | Tenant slugs are lowercase, unique, exclude reserved application names, and are immutable initially | User approval, 2026-10-01; schema and auth plans; exact syntax and reserved list finalized alongside routing |
+| D-027 | Public active-tenant lookup by slug returns only `id`, `slug`, `name`, `country_code`, `state_province`, `city`, `timezone`; archived tenants are publicly unavailable and administrative/profile data stays protected | User approval, 2026-10-01; schema and auth plans |
+| D-028 | Community discovery (“Find Your Next Community”) and opt-in sharing of selected profile data on community pages/searches are later-release features, outside the initial migration milestone; potential member/non-member visibility controls remain to be designed | User direction, 2026-10-01; schema and auth plans; no speculative visibility flags/tables in the initial schema |
 
 Evidence update: the supplied summary resolves the earlier missing-concept blocker. The five generated infographics in `visuals/` have also now been inspected for the frontend prototype. The [prototype guide](10-frontend-prototype.md) records how visual inconsistencies were resolved against the product brief.
 
@@ -53,7 +64,7 @@ The first draft's café/venue-centered organization model, staff-only creation, 
 | ID | Question | Affects |
 | --- | --- | --- |
 | Q-001 | What future entity is a tenant, and is multi-community membership needed at launch? | Schema and onboarding; recommended community boundary |
-| Q-002 | Which sign-in methods, community approval flow, launch language(s), and age policy? | Auth, copy, moderation |
+| Q-002 | Which sign-in methods, launch language(s), and age policy? Community approval is settled by D-018/D-019. | Auth, copy, moderation |
 | Q-003 | Which entitlement states grant benefits, for what dates, and what happens to existing seats/chats/hosted tables/competition entries on lapse? | Every private access path |
 | Q-004 | Final prices, collection method, verifier workflow, payment hold duration, cancellation/refund rules? | Membership, drop-ins, special tickets, competition |
 | Q-005 | Does table capacity include host? Does home maximum include founder/helpers? What are cancel/no-show cutoffs? | Capacity and attendance |
