@@ -3,8 +3,10 @@ import type { FormEvent, ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { authInitialization, initialAuthRedirect, supabase } from '../lib/supabase'
 import './Auth.css'
+import { CreateCommunity } from './CreateCommunity'
+import { OwnedCommunities } from './OwnedCommunities'
 
-type View = 'signup' | 'signin' | 'forgot' | 'check' | 'reset' | 'callback' | null
+type View = 'signup' | 'signin' | 'forgot' | 'check' | 'reset' | 'callback' | 'create-community' | 'communities' | null
 const redirect = (path: string) => `${window.location.origin}${path}`
 
 export function AuthShell({ children }: { children: ReactNode }) {
@@ -26,7 +28,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
       if (!active) return
       setSession(next)
       if (event === 'PASSWORD_RECOVERY') setView('reset')
-      if (event === 'SIGNED_OUT') setSession(null)
+      if (event === 'SIGNED_OUT') { setSession(null); setView(null) }
     })
     const client = supabase
     void (async () => {
@@ -52,7 +54,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
     return () => { active = false; subscription.unsubscribe() }
   }, [callbackPath, resetPath, callbackError, hasCredentials])
   useEffect(() => {
-    if (view) document.title = `${view === 'reset' ? 'Reset password' : 'Your account'} · The Crowded Table`
+    if (view) document.title = `${view === 'reset' ? 'Reset password' : view === 'create-community' ? 'Start New Community' : view === 'communities' ? 'Your communities' : 'Your account'} · The Crowded Table`
   }, [view])
   useEffect(() => {
     if (!cooldown) return
@@ -104,10 +106,10 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const titles = { signup: 'Pull up a chair.', signin: 'Welcome back.', forgot: 'Find your way back.', check: 'Check your email.', reset: 'Choose a new password.', callback: 'Confirm your account.' }
   return <>
     <section className={`auth-bar ${!view ? 'with-preview' : ''}`} aria-label="Your account">
-      {!ready ? <span role="status">Checking your session…</span> : verified ? <><span>Signed in as <strong>{session?.user.email}</strong></span><button disabled={busy} onClick={() => void run(async () => { const result = await supabase!.auth.signOut({ scope: 'local' }); if (result.error) throw result.error; navigate(null) })}>Sign out</button></> : <><span>Your next game starts with good company.</span><div><button disabled={busy} onClick={() => navigate('signin')}>Sign in</button><button className="button" disabled={busy} onClick={() => navigate('signup')}>Create Account</button></div></>}
+      {!ready ? <span role="status">Checking your session…</span> : verified ? <><span>Signed in as <strong>{session?.user.email}</strong></span><div><button disabled={busy} onClick={() => navigate('communities')}>Your communities</button><button className="button" disabled={busy} onClick={() => navigate('create-community')}>Start New Community</button><button disabled={busy} onClick={() => void run(async () => { const result = await supabase!.auth.signOut({ scope: 'local' }); if (result.error) throw result.error; navigate(null) })}>Sign out</button></div></> : <><span>Your next game starts with good company.</span><div><button disabled={busy} onClick={() => navigate('signin')}>Sign in</button><button className="button" disabled={busy} onClick={() => navigate('signup')}>Create Account</button></div></>}
     </section>
     {!view && (notice || error) && <p className="auth-feedback" role={error ? 'alert' : 'status'}>{error || notice}</p>}
-    {view ? <main className="auth-page"><section className="panel auth-card"><span className="eyebrow">THE CROWDED TABLE</span><h1>{titles[view]}</h1>
+    {view === 'create-community' || view === 'communities' ? verified && session ? (view === 'create-community' ? <CreateCommunity key={session.user.id} onBusyChange={setBusy} onClose={() => { navigate(null); window.location.hash = 'home' }} onList={() => navigate('communities')}/> : <OwnedCommunities key={session.user.id} userId={session.user.id} onCreate={() => navigate('create-community')} onClose={() => { navigate(null); window.location.hash = 'home' }}/>) : <main className="auth-page"><p>Please sign in with a verified account to continue.</p><button onClick={() => navigate('signin')}>Sign in</button></main> : view ? <main className="auth-page"><section className="panel auth-card"><span className="eyebrow">THE CROWDED TABLE</span><h1>{titles[view]}</h1>
       {!supabase && <p role="alert">Account services are not configured yet. Please try again later.</p>}
       {error && <p className="auth-error" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
       {!ready ? <p role="status">Checking your link…</p> : <>

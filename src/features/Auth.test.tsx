@@ -34,6 +34,20 @@ function fill(name: string | RegExp, value: string) { fireEvent.change(screen.ge
 function submit() { fireEvent.submit(document.querySelector('form')!) }
 
 describe('account workflows', () => {
+  it('opens community creation for a verified account', async () => {
+    auth.getSession.mockResolvedValue({ data: { session }, error: null })
+    await start(); click('Start New Community')
+    expect(screen.getByRole('heading', { name: 'Start a new community.' })).toBeTruthy()
+    expect(screen.queryByText('Community preview')).toBeNull()
+    click('Cancel')
+    expect(screen.getByText('Community preview')).toBeTruthy()
+  })
+  it('does not offer community creation to an unverified account', async () => {
+    auth.getSession.mockResolvedValue({ data: { session: { user: { ...session.user, email_confirmed_at: null } } }, error: null })
+    await start()
+    expect(screen.queryByRole('button', { name: 'Start New Community' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Your communities' })).toBeNull()
+  })
   it('signs in and returns home without changing community access', async () => {
     auth.signInWithPassword.mockImplementation(async () => { listener('SIGNED_IN', session); return { error: null } })
     await start(); click('Sign in'); fill('Email address', 'person@example.com'); fill('Password', 'a-long-test-password'); submit()

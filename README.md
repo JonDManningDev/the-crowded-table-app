@@ -33,9 +33,15 @@ node node_modules/vite/bin/vite.js build
 node node_modules/eslint/bin/eslint.js .
 ```
 
+## Create a community
+
+After signing in with a verified account, choose **Start New Community** in the account bar. Enter a name, permanent unique handle, country, optional state/province and city, and community time zone. Participation is optional and unchecked initially. Creation calls `create_tenant` once: the database atomically creates the tenant, default settings, owner assignment, and (if selected) an approved community account. Ownership does not require participation.
+
+**Your communities** reads saved tenants under owner-only database policies and remains available after refreshing and signing in again. It is an ownership list, not a public directory or tenant switcher. Profile setup, joining existing communities, and management screens remain follow-up work. If a request fails without a definite result, check this list before retrying creation.
+
 ## Explore the prototype
 
-The community preview starts as sample member Ana M.; use **Preview as Member / Guest** to compare simulated access. Community activities/profile edits remain in-memory and refreshing restores sample data. Simulated payments never charge anyone. The separate account bar uses real Supabase Auth when configured. Database migrations exist, but community screens are not yet connected to those commands. Client-side preview gating is not production security, and installed/offline PWA support remains unimplemented.
+The community preview starts as sample member Ana M.; use **Preview as Member / Guest** to compare simulated access. Community activities/profile edits remain in-memory and refreshing restores sample data. Simulated payments never charge anyone. The separate account bar uses real Supabase Auth and supports persisted community creation and an owner list when configured. The five preview sections still use sample data. Client-side preview gating is not production security, and installed/offline PWA support remains unimplemented.
 
 See the [prototype guide](docs/10-frontend-prototype.md) for the available flows, design decisions, and limitations. See [planning documents](docs/README.md) for the product and architecture plans, and `docs/visuals/` for the reference infographics.
 

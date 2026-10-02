@@ -34,6 +34,14 @@ Before deployment, select the canonical HTTPS frontend origin. If the app is dep
 
 Revisit this section when deploying, changing domains/ports/routing, introducing preview or separate test environments, or adding OAuth/OIDC. OAuth provider-side callbacks are a separate configuration from these frontend destinations. Test signup-to-home and recovery-to-password-change on each target environment after changes.
 
+## Community creation integration
+
+Implemented 2026-10-02: verified users can select **Start New Community** from the account bar. The form collects name, immutable handle, required country, optional state/province/city, and time zone (initially the device's zone, explicitly editable). The optional participant checkbox starts unchecked and explains that management access is independent of participation.
+
+One `create_tenant` RPC atomically creates the tenant, default settings, owner assignment with all permissions, and optional approved participation. Other users still require approval by default. The client passes no actor, role, or permission fields. Database verification, constraints, and authorization remain authoritative. Duplicate submissions are blocked while pending; uncertain failures are not automatically retried. The owner-only **Your communities** list provides a way to inspect saved results before retrying.
+
+Component tests cover both participation choices, input constraints, duplicate handles, verified-account errors, double submission, uncertain responses, and saved-list errors. No new migration is needed. Hosted creation with a real community remains a manual acceptance step: create a community, inspect the owner/participation result, refresh and reopen **Your communities**, and confirm the persisted details. The existing database tests cover atomic creation and owner/approval invariants; mocked frontend tests do not replace this hosted check. The list does not yet switch the mock community preview to real tenant data.
+
 ## Resend and sender identity
 
 **Selected:** Resend for initial authentication-email delivery. The user purchased `thecrowdedtable.app` through Cloudflare Registrar. Amazon SES is a possible future replacement for learning or growth, not a committed migration.
