@@ -1,0 +1,14 @@
+.creation-card { width:100%; max-width:680px; }
+.creation-card h1 { font-size:46px; margin:12px 0 20px; }
+.creation-fields { display:flex; flex-direction:column; gap:18px; padding:0; border:0; margin:0; min-width:0; }
+.creation-fields .muted { margin-top:-10px; font-size:13px; }
+.participation-choice { padding:18px; background:var(--sage); border-radius:12px; }
+.participation-choice p { margin:8px 0 0; font-size:13px; }
+.community-summary { display:grid; grid-template-columns:auto 1fr; gap:8px 20px; }
+.community-summary dd { margin:0; overflow-wrap:anywhere; }
+.community-summary dt { color:var(--muted); }
+.owned-communities { list-style:none; margin:24px 0; padding:0; }
+.owned-communities li { border-top:1px solid var(--line); padding:20px 0; overflow-wrap:anywhere; }
+.owned-communities h2 { margin-bottom:4px; }
+.owned-communities p { margin-bottom:4px; }
+@media(max-width:600px) { .creation-card h1 { font-size:36px; } .community-summary { grid-template-columns:1fr; gap:4px; } }
