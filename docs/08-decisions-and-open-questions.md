@@ -1,6 +1,6 @@
 # Decisions and open questions
 
-Status: reconciled with accepted auth/account/tenant decisions through 2026-10-01. Initial migration scope is settled; broader MVP questions remain open.
+Status: reconciled with accepted auth/account/tenant decisions and provider selection through 2026-10-02. Initial migration scope is settled; broader MVP questions remain open. Dashboard recommendations and future review triggers are recorded separately from verified applied settings in the [Auth operations record](11-auth-operations.md).
 
 ## Established direction
 
@@ -39,6 +39,13 @@ Status: reconciled with accepted auth/account/tenant decisions through 2026-10-0
 | D-031 | Tenant means independently operated community. Global users can associate with multiple communities; staff authority and optional community participation are separate. No launch tenant switcher is required | Established user decisions in schema/auth plans; reconciles P-001, P-002, P-010, and Q-001 |
 | D-032 | Initial admin assignment selects existing verified users through same-tenant community accounts, gated by `can_create_admin`; owners can perform it and delegate through that flag. Invitations and their persistence/UI follow later | User direction, 2026-10-01; schema/auth milestone scope; staff-to-global-user relationship remains independent |
 | D-033 | First migrations include the eight tables listed in the schema milestone, self-profile access, narrow administrative candidate/approval lists, joining/approval, owner-only permission editing command and website-copy editing; defer directory access, suspension/removal/reinstatement commands, and broader admin editing flags | User acceptance of milestone recommendations, 2026-10-01; schema/auth plans |
+| D-034 | Use Resend for initial authentication email delivery; `thecrowdedtable.app` purchased through Cloudflare Registrar. Amazon SES may be evaluated later for experience or growth | User selection, recorded 2026-10-02; verification/setup and recommended sender subdomain tracked in the Auth operations record |
+
+## Hosted testing and email setup
+
+Use the existing hosted Supabase project `fsnipgsrlclbnfepcbvz` (`https://fsnipgsrlclbnfepcbvz.supabase.co`) for initial hosted validation, with the frontend running at `http://localhost:5173`. A separate hosted test project is not required at this stage. Authentication emails are English initially; localization is a later feature. Resend is selected for initial SMTP delivery, and `thecrowdedtable.app` was purchased through Cloudflare Registrar. Amazon SES is a possible later alternative. The [Auth operations record](11-auth-operations.md) captures recommended settings, unverified setup steps, and review triggers.
+
+CLI access is restored and the repository is linked to the selected project. Both initial migration versions are present in remote history, with no pending migrations in a dry run. Hosted Auth now matches the declared localhost configuration: Site URL and callback allowlist, email confirmation required, 12-character minimum password, and secure password changes. Configuration push changed four Auth properties and preserved undeclared remote settings; verification found no remaining declared-setting differences. SMTP/domain verification, delivery testing, and frontend auth/recovery integration remain outstanding; provider selection is settled.
 
 ## Proposals and illustrative values
 
@@ -72,7 +79,7 @@ Q-001 is resolved by D-031: the tenant boundary and structural multi-community s
 
 | ID | Question | Affects |
 | --- | --- | --- |
-| Q-002 | Configure callbacks, recovery, and production email delivery. Which launch language(s) and age policy? Sign-in method/post-signup destination are settled by D-029, required email verification by D-030, and community approval by D-018/D-019. | Auth, copy, moderation |
+| Q-002 | Implement/test frontend callbacks and recovery; verify Resend sender DNS, SMTP configuration, and email delivery (see the Auth operations record). CLI access and hosted localhost Auth settings are configured. Age policy remains open. Auth emails are English initially, with localization later. Sign-in method/post-signup destination are settled by D-029, required email verification by D-030, and community approval by D-018/D-019. | Auth, copy, moderation |
 | Q-003 | Which entitlement states grant benefits, for what dates, and what happens to existing seats/chats/hosted tables/competition entries on lapse? | Every private access path |
 | Q-004 | Final prices, collection method, verifier workflow, payment hold duration, cancellation/refund rules? | Membership, drop-ins, special tickets, competition |
 | Q-005 | Does table capacity include host? Does home maximum include founder/helpers? What are cancel/no-show cutoffs? | Capacity and attendance |

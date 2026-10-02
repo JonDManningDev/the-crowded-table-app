@@ -22,6 +22,7 @@ The user's explicit Vite + TypeScript + React Compiler, Supabase, multi-tenancy/
 | [File structure](07-file-structure.md) | Proposed repository layout and module responsibilities |
 | [PWA and delivery](09-pwa-and-delivery.md) | Incremental delivery, mobile behavior, and acceptance gates |
 | [Frontend prototype guide](10-frontend-prototype.md) | Interactive pages, walkthroughs, reconciled visuals, and simulation limits |
+| [Auth operations and review checkpoints](11-auth-operations.md) | Supabase dashboard recommendations, Resend setup, verification status, and triggers for revisiting configuration |
 
 ## Status language
 

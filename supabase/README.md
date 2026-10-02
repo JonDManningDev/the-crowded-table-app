@@ -2,7 +2,18 @@
 
 The first two versioned migrations implement the agreed feature slice. They target a Supabase database with its Auth migrations already applied. They do not create or replace Supabase-owned Auth tables.
 
-Validated with Supabase CLI 2.119.0: a clean local rebuild, 85 pgTAP assertions, three two-connection concurrency scenarios, SQL lint, the live email-confirmation setting, and the application TypeScript/production build all passed. Generated public-schema types are checked in at `src/lib/database.types.ts`. Frontend auth integration and hosted deployment have not been performed.
+Validated with Supabase CLI 2.119.0: a clean local rebuild, 85 pgTAP assertions, three two-connection concurrency scenarios, SQL lint, the live email-confirmation setting, and the application TypeScript/production build all passed. Generated public-schema types are checked in at `src/lib/database.types.ts`. The selected hosted project's migration history now reports both migrations applied; frontend auth integration remains outstanding.
+
+## Selected hosted testing environment
+
+- Project reference: `fsnipgsrlclbnfepcbvz`.
+- API URL: `https://fsnipgsrlclbnfepcbvz.supabase.co`.
+- Initial frontend/Site URL: `http://localhost:5173`.
+- Intended exact redirect allowlist: `http://localhost:5173/auth/callback` and `http://localhost:5173/auth/reset-password`.
+- Authentication emails: English initially; localization later.
+- Email confirmation remains mandatory. Resend is selected, and `thecrowdedtable.app` was purchased through Cloudflare Registrar. Recommended sender: `accounts@auth.thecrowdedtable.app`, pending confirmation of the verified subdomain. See the [Auth operations record](../docs/11-auth-operations.md) for settings and review triggers.
+
+CLI access is restored and the repository is linked to this project. Remote migration history lists `20261001000100` and `20261001000200`; `db push --dry-run` reports no pending migrations. No migration was reapplied during this check. The reviewed configuration push applied the localhost Site URL, both callback URLs, minimum password length 12, and secure password changes. Email confirmation was already enabled. A subsequent configuration comparison reports zero declared-setting changes; undeclared remote settings were preserved. SMTP/provider setup and frontend auth/callback handlers remain outstanding before end-to-end testing. Connecting localhost to this URL uses hosted data, not the local Docker database.
 
 ## Local development
 
