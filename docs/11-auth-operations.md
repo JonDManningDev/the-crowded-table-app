@@ -8,9 +8,13 @@ The user selected the existing Supabase project `fsnipgsrlclbnfepcbvz` for initi
 
 The earlier CLI check confirmed the initial migrations and declared hosted Auth settings: localhost Site URL, exact redirects `/auth/callback` and `/auth/reset-password`, 12-character minimum password, required confirmation, and secure password changes. See the [implementation status](../supabase/README.md#selected-hosted-testing-environment).
 
-The recommendations below were discussed against dashboard screenshots. Recording them does **not** confirm that subsequent dashboard changes were saved. Domain verification, SMTP credentials, email delivery, and complete frontend signup/recovery flows still need end-to-end verification. Do not treat this document as a live configuration export.
+The recommendations below were discussed against dashboard screenshots. Recording them does **not** confirm that subsequent dashboard changes were saved. The frontend verification results are recorded below; SMTP credentials were not inspected. Saved dashboard recommendations not covered by those checks still require verification. Do not treat this document as a live configuration export.
 
 ## URL configuration
+
+Frontend update, 2026-10-02: the account shell now implements signup, sign-in/out, resend, both callback routes, and password recovery using the Supabase JavaScript client. The hosted public settings endpoint confirmed email signup enabled, confirmation required, and anonymous sign-ins disabled. The user reports Resend/SMTP configured and confirmed receipt of a signup email, successful email verification, and password sign-in returning home. That test exposed a callback timing defect, now fixed. The user then confirmed recovery email delivery, the password-change form, successful submission, and return home; they reported the recovery test worked as expected. A fresh hosted signup remains the outstanding manual retest for the corrected automatic-confirmation redirect. Current CLI project-key access returned HTTP 403 despite earlier successful project linking; public browser configuration was supplied separately. No SMTP secret was retrieved or stored in the frontend.
+
+Public DNS checks found TXT at `resend._domainkey.auth.thecrowdedtable.app` and both TXT/MX at `send.auth.thecrowdedtable.app`. Record presence alone does not establish Resend's verified status or SMTP delivery success. Eleven mocked-client component tests cover signup/cooldown, delivery errors, successful/failed sign-in, recovery redirect and password matching, unauthenticated recovery, expired/missing callback handling, successful confirmation cleanup, and session restoration/sign-out. Browser inspection confirmed the expired-link screen. Two additional real-SDK tests reproduce callback token consumption before React mounts for both signup and recovery, including Strict Mode. The fix captures non-secret routing metadata before client initialization and checks initialization errors before trusting a session. All 13 tests pass; the user-assisted hosted recovery test also passed.
 
 The 2026-10-02 dashboard screenshot matches the earlier CLI verification and `supabase/config.toml`:
 
@@ -20,7 +24,7 @@ The 2026-10-02 dashboard screenshot matches the earlier CLI verification and `su
 | Redirect allowlist | `http://localhost:5173/auth/callback` | Intended signup confirmation callback; complete authentication, then navigate home |
 | Redirect allowlist | `http://localhost:5173/auth/reset-password` | Intended password-recovery destination; show the password reset flow |
 
-Keep these exact values for current localhost testing. Site URL is the frontend origin, not the Supabase API URL or Resend sending domain. Allowlisting a route does not implement its handler; frontend callback/recovery integration and end-to-end testing remain outstanding.
+Keep these exact values for current localhost testing. Site URL is the frontend origin, not the Supabase API URL or Resend sending domain. Route handlers are now implemented; allowlist configuration alone does not prove successful email delivery or end-to-end authentication.
 
 The signup implementation should explicitly supply the callback URL as `options.emailRedirectTo`; password recovery should explicitly supply the recovery URL as `redirectTo`. Keep verification links functional in the email templates. The callback must handle success and invalid/expired links, and recovery must not immediately redirect home before the password is changed. The current prototype's hash navigation does not replace these Auth route handlers.
 
