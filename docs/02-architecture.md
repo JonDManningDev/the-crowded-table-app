@@ -1,12 +1,20 @@
 # Architecture plan
 
-Status: required stack established; implementation boundaries proposed against the supplied product brief.
+Status: required stack and current canonical client architecture direction established; broader backend implementation designs remain proposals where identified.
 
 ## Baseline
 
 Use Vite, TypeScript, React Compiler, Supabase with multi-tenancy/RLS, and one mobile-first responsive web/PWA application. These explicit user choices override the handoff's tentative stack suggestions.
 
-The Vite app lives directly at the repository root, with `src/`, `public/`, `package.json`, and `vite.config.ts` alongside `docs/`. React Compiler is configured. Run app scripts from the repository root. An [interactive frontend prototype](10-frontend-prototype.md) now implements the five main sections with mock data and in-memory actions. Backend persistence, real authentication, and PWA installation/offline behavior remain future implementation work.
+The Vite app lives directly at the repository root, with `src/`, `public/`, `package.json`, and `vite.config.ts` alongside `docs/`. React Compiler is configured. Run app scripts from the repository root. An [interactive frontend prototype](10-frontend-prototype.md) implements the five main sections with mock data and in-memory actions. Real Supabase Auth, identity/tenant migrations, atomic community creation, and an owner-only saved-community list now coexist with that prototype. Most domain persistence and PWA installation/offline behavior remain future work.
+
+## Client architecture direction
+
+The current canonical direction is pragmatic feature-oriented / vertical-slice organization: `app` composes startup, providers, routing, layout, and cross-feature pages; features own domain behavior and their route pages; generic primitives and proven shared product visuals have distinct homes; `lib` provides technical infrastructure. Feature UI reaches Supabase through feature data access and appropriate hooks/providers.
+
+Plan for TanStack Query as the server-state layer and local React state for ordinary UI state. Use colocated CSS Modules and semantic CSS custom properties for controlled community theme presets. These are accepted directions for the upcoming refactor, not a claim that the prototype already follows them. Grow directories and abstractions only as actual code warrants; revisit choices when requirements change.
+
+The [frontend patterns](05-frontend-patterns.md) own these boundaries and conventions, the [file structure plan](07-file-structure.md) distinguishes illustrative paths from current implementation/refactor candidates, and the [decision register](08-decisions-and-open-questions.md#client-architecture-review-questions) records open review points. This architecture update does not expand product scope or finalize routes.
 
 ## System responsibilities
 
@@ -28,7 +36,7 @@ Supabase Realtime is the proposed transport for table chat updates, with durable
 
 ## Tenant and identity design
 
-Propose **one independently operated community per tenant**, initially The Crowded Table in Tegucigalpa. A home, café, or rented space is a location within a community, not a tenant. Multi-community accounts may be supported structurally without exposing a tenant switcher in the first single-community UI.
+Use **one independently operated community per tenant**, initially The Crowded Table in Tegucigalpa (D-031). A home, café, or rented space is a location within a community, not a tenant. Accounts can associate with multiple communities structurally without requiring a launch tenant switcher.
 
 The precise future tenant business model still needs agreement. Do not create a commercial venue-management system or per-table tenants. Domain examples use `tenant_id`; a selected slug/ID is never authority.
 
@@ -77,4 +85,4 @@ Payment automation is deferred; paid admission and membership workflows are MVP 
 
 Use separate local, non-production, and production data/configuration. Version migrations, grants, policies, functions, and generated types. Keep Supabase secret/service credentials in trusted runtimes; only public configuration goes to the browser. [Vite environment guidance](https://vite.dev/guide/env-and-mode) explains client-exposed environment variables.
 
-Router, query library, form validation, styling primitives, PWA tooling, hosting, and delivery channels remain unselected. Keep the app at the repository root. Add scheduled work for waitlist expiry and chat archival only with an explicit reliable execution mechanism and retry/monitoring plan.
+Router, form/validation libraries, any primitive-component library, PWA tooling, and hosting remain unselected. TanStack Query is the planned server-state choice; CSS Modules and token-based preset theming are the client styling direction. Resend is selected for initial Auth email; broader notification delivery channels remain open. Keep the app at the repository root. Add scheduled work for waitlist expiry and chat archival only with an explicit reliable execution mechanism and retry/monitoring plan.

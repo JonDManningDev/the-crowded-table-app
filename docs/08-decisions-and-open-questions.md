@@ -1,6 +1,6 @@
 # Decisions and open questions
 
-Status: reconciled with accepted auth/account/tenant decisions and provider selection through 2026-10-02. Initial migration scope is settled; broader MVP questions remain open. Dashboard recommendations and future review triggers are recorded separately from verified applied settings in the [Auth operations record](11-auth-operations.md).
+Status: reconciled with accepted auth/account/tenant decisions, provider selection, and the current canonical client architecture direction through 2026-10-02. Initial migration scope is settled; broader MVP and client-refactor questions remain open. Dashboard recommendations and future review triggers are recorded separately from verified applied settings in the [Auth operations record](11-auth-operations.md).
 
 ## Established direction
 
@@ -40,12 +40,22 @@ Status: reconciled with accepted auth/account/tenant decisions and provider sele
 | D-032 | Initial admin assignment selects existing verified users through same-tenant community accounts, gated by `can_create_admin`; owners can perform it and delegate through that flag. Invitations and their persistence/UI follow later | User direction, 2026-10-01; schema/auth milestone scope; staff-to-global-user relationship remains independent |
 | D-033 | First migrations include the eight tables listed in the schema milestone, self-profile access, narrow administrative candidate/approval lists, joining/approval, owner-only permission editing command and website-copy editing; defer directory access, suspension/removal/reinstatement commands, and broader admin editing flags | User acceptance of milestone recommendations, 2026-10-01; schema/auth plans |
 | D-034 | Use Resend for initial authentication email delivery; `thecrowdedtable.app` purchased through Cloudflare Registrar. Amazon SES may be evaluated later for experience or growth | User selection, recorded 2026-10-02; verification/setup and recommended sender subdomain tracked in the Auth operations record |
+| D-035 | Pragmatic feature-oriented / vertical-slice client: `app` owns composition, `features` own business capabilities and their route `pages`; cross-feature Home composition belongs to `app` | User architecture direction, 2026-10-02; locality and clear ownership before the prototype refactor |
+| D-036 | Generic visuals use `components/primitives`; Crowded Table visuals use `components/shared` only with genuine independent cross-feature reuse | User architecture direction, 2026-10-02; avoid speculative reuse and mixed component ownership |
+| D-037 | `lib` is reusable technical infrastructure; feature UI accesses Supabase through feature data functions and appropriate hooks/providers | User architecture direction, 2026-10-02; separate presentation, server-state lifecycle, and backend access without mandatory extra layers |
+| D-038 | Plan for TanStack Query as the server-state layer; ordinary UI state remains local React state; no default Redux/global store | User architecture direction, 2026-10-02; intended adoption, not a claim that the library is installed |
+| D-039 | Prefer feature-local types; generated Supabase types belong in `lib/supabase/database.types.ts`; add row-to-UI mapping only when useful | User architecture direction, 2026-10-02; preserve model flexibility without premature mapping |
+| D-040 | Colocated CSS Modules are the default component styling strategy; semantic CSS custom properties support controlled community theme presets, never arbitrary tenant CSS | User architecture direction, 2026-10-02; scope styles and support future theming without tenant branches in feature components |
+| D-041 | Centralize route configuration in `app`; use `@` for `src` imports, with selective feature public APIs and no circular upward dependencies | User architecture direction, 2026-10-02; router library and exact URLs remain open; alias configuration is refactor work |
+| D-042 | Grow directories and abstractions with actual code; replace mocks behind useful feature interfaces while retaining presentation contracts | User architecture direction, 2026-10-02; no empty scaffolding, compulsory repository/service layers, or immediate whole-client rewrite |
+
+D-035 through D-042 are the **current canonical client direction**, not immutable rules or claims of implementation. The [frontend patterns](05-frontend-patterns.md) contain the normative direction and recommended conventions; the [file structure plan](07-file-structure.md) contains illustrative future paths, current conflicts, and migration steps. Revisit these choices when concrete coupling, reuse, testing needs, or new requirements warrant it, and revise the related documents together.
 
 ## Hosted testing and email setup
 
 Use the existing hosted Supabase project `fsnipgsrlclbnfepcbvz` (`https://fsnipgsrlclbnfepcbvz.supabase.co`) for initial hosted validation, with the frontend running at `http://localhost:5173`. A separate hosted test project is not required at this stage. Authentication emails are English initially; localization is a later feature. Resend is selected for initial SMTP delivery, and `thecrowdedtable.app` was purchased through Cloudflare Registrar. Amazon SES is a possible later alternative. The [Auth operations record](11-auth-operations.md) captures recommended settings, unverified setup steps, and review triggers.
 
-CLI access is restored and the repository is linked to the selected project. Both initial migration versions are present in remote history, with no pending migrations in a dry run. Hosted Auth now matches the declared localhost configuration: Site URL and callback allowlist, email confirmation required, 12-character minimum password, and secure password changes. Configuration push changed four Auth properties and preserved undeclared remote settings; verification found no remaining declared-setting differences. SMTP/domain verification, delivery testing, and frontend auth/recovery integration remain outstanding; provider selection is settled.
+An earlier CLI check linked the repository to the selected project and found both initial migration versions in remote history, with no pending migrations in a dry run. Hosted Auth matched the declared localhost configuration: Site URL and callback allowlist, email confirmation required, 12-character minimum password, and secure password changes. Frontend Auth/callback/recovery flows are now implemented; the user reported signup email receipt, verified password sign-in, and successful recovery through password update/home return. A fresh signup retest after the callback timing fix remains outstanding. Later CLI project-key access returned HTTP 403; consult the [Auth operations record](11-auth-operations.md#url-configuration) for verification limits rather than treating this summary as live setup status.
 
 ## Proposals and illustrative values
 
@@ -69,9 +79,11 @@ Proposals are not approved by silence. The weekly examples, featured games, Octo
 
 The first draft's café/venue-centered organization model, staff-only creation, member-only official discovery, minimal join/cancel-only MVP, and deferral of chat/Championship/Community/waitlists have been replaced. Public locations and private-address separation are now explicit. Hosting venues are optional context, not the domain's foundation.
 
+The earlier frontend proposal's `features/home`, `components/ui`, global generated `types/database.ts`, and entirely undecided query/styling strategy are superseded by D-035 through D-042. The [refactor inventory](07-file-structure.md#current-conflicts-and-refactor-candidates) records both previous path conventions and current code that differs. Home's potential future cross-feature content remains illustrative; it does not silently replace D-007.
+
 ## Initial migration readiness
 
-The agreed auth/account/tenant migrations are now implemented under `supabase/migrations/`, with local configuration, authorization tests, and [implementation documentation](../supabase/README.md). The [schema milestone scope](03-database-schema.md#first-migration-milestone) and [initial authorization scope](04-auth-and-multi-tenancy.md#initial-milestone-authorization-scope) remain authoritative. Slug syntax/reserved names, field limits, and SQL contracts are specified in the implementation. Hosted deployment, production email delivery, frontend callbacks, and recovery flows remain separate work before signup is operational.
+The agreed auth/account/tenant migrations are now implemented under `supabase/migrations/`, with local configuration, authorization tests, and [implementation documentation](../supabase/README.md). The [schema milestone scope](03-database-schema.md#first-migration-milestone) and [initial authorization scope](04-auth-and-multi-tenancy.md#initial-milestone-authorization-scope) remain authoritative. Slug syntax/reserved names, field limits, and SQL contracts are specified in the implementation. Initial hosted migrations and frontend callbacks/recovery are implemented; remaining hosted retests and deployment readiness are tracked separately in the Auth operations record.
 
 Q-001 is resolved by D-031: the tenant boundary and structural multi-community support are established. Initial role/permission scope is settled by D-019/D-020/D-023/D-032/D-033. Future invitations, ownership transfer, profile sharing, discovery, and configurable default grants remain deferred rather than blockers.
 
@@ -79,7 +91,7 @@ Q-001 is resolved by D-031: the tenant boundary and structural multi-community s
 
 | ID | Question | Affects |
 | --- | --- | --- |
-| Q-002 | Implement/test frontend callbacks and recovery; verify Resend sender DNS, SMTP configuration, and email delivery (see the Auth operations record). CLI access and hosted localhost Auth settings are configured. Age policy remains open. Auth emails are English initially, with localization later. Sign-in method/post-signup destination are settled by D-029, required email verification by D-030, and community approval by D-018/D-019. | Auth, copy, moderation |
+| Q-002 | Complete the fresh hosted signup retest after the callback fix and outstanding setup checks in the Auth operations record; retain signup/recovery behavior through the client refactor. Frontend integration and user-reported email/sign-in/recovery tests already exist. Age policy remains open. Auth emails are English initially, with localization later. Sign-in method/post-signup destination are settled by D-029, required email verification by D-030, and community approval by D-018/D-019. | Auth, copy, moderation |
 | Q-003 | Which entitlement states grant benefits, for what dates, and what happens to existing seats/chats/hosted tables/competition entries on lapse? | Every private access path |
 | Q-004 | Final prices, collection method, verifier workflow, payment hold duration, cancellation/refund rules? | Membership, drop-ins, special tickets, competition |
 | Q-005 | Does table capacity include host? Does home maximum include founder/helpers? What are cancel/no-show cutoffs? | Capacity and attendance |
@@ -92,7 +104,22 @@ Q-001 is resolved by D-031: the tenant boundary and structural multi-community s
 | Q-012 | Is manual Meet Someone New part of first public MVP and who operates it? | Matching UI/admin process |
 | Q-013 | Hosting, supported devices, email/push, backup/recovery, retention/deletion? | Deployment and launch readiness |
 
-Proceed first with the agreed auth/account/tenant migrations. Address Q-002 setup and applicable launch-policy decisions before operating signup publicly; Q-003 through Q-013 belong to dependent feature/launch work and do not expand this migration milestone. The tenant boundary, initial roles, concept, and five-tab navigation do not need to be rediscovered.
+Preserve the implemented auth/account/tenant foundation. Address Q-002 setup and applicable launch-policy decisions before operating signup publicly; Q-003 through Q-013 belong to dependent feature/launch work and do not expand this migration milestone. The tenant boundary, initial roles, concept, and five-tab navigation do not need to be rediscovered.
+
+## Client architecture review questions
+
+These refine the accepted direction; they do not block recording it or require speculative implementation. Resolve each before its dependent refactor slice.
+
+| ID | Question / review trigger | Current position |
+| --- | --- | --- |
+| CA-001 | Before expanding Home, which cross-feature sections and audiences are intended? How would that change D-007 and the vision/delivery acceptance rules? | Home is app-owned. Events, Meet & Play, championships, community, and profile are illustrative future inputs; the current feed remains official events only. |
+| CA-002 | Before replacing hash navigation, which router, exact URLs, tenant slug placement, and old-link compatibility are needed? | Central app route map is settled; preserve five destinations and working Auth callback/recovery URLs, redirect allowlists, and startup order. Reconcile reserved slugs with actual routes. |
+| CA-003 | Before moving community creation and mixed activity logic, who owns tenant management versus social Community, membership, participation, chat, admin, and game concepts? | Business capabilities drive ownership; do not create a feature for every screen or event variant. Share visuals/contracts only when useful and preserve distinct admission/privacy rules. |
+| CA-004 | When adopting TanStack Query, what are the query-key conventions, cache lifetimes, mutation invalidations, and cleanup rules on identity/tenant/access changes? Where does the Auth session provider sit? | TanStack Query is intended for resource server state; Auth subscriptions and ordinary UI state have separate lifecycles. Private caches need user/tenant scope and stale-response protection. |
+| CA-005 | When adding theme presets, which semantic tokens, palettes/fonts, density/corner options, defaults, persistence, and application scope are supported? | CSS Modules plus semantic variables and controlled presets are settled; no arbitrary CSS, no new branding/settings schema required by this decision. Check accessibility for supported combinations. |
+| CA-006 | For each real data slice, which mock contracts should survive, where are row-to-UI mappings useful, and is a form/schema library needed? | Keep presentation independent of fixtures and Supabase; choose tools/mappers only for concrete needs. Update aliases, tests, type-generation paths, and docs with the actual moves. |
+
+The overarching review criterion is whether a change clarifies ownership, removes meaningful coupling, or makes change/testing easier. A new folder or layer is not evidence of improvement by itself.
 
 ## Decision maintenance
 

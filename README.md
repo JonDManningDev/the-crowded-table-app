@@ -47,10 +47,14 @@ See the [prototype guide](docs/10-frontend-prototype.md) for the available flows
 
 ## Source layout
 
+These paths describe the current implementation. The [canonical client architecture](docs/05-frontend-patterns.md) and [illustrative layout/refactor inventory](docs/07-file-structure.md) guide upcoming work; they distinguish accepted boundaries from conventions and structures to introduce only when needed.
+
 - `src/App.tsx`: shell, hash navigation, membership preview, shared dialogs.
 - `src/features/`: Home/events, Meet & Play, Championship, Community, Profile.
+- `src/features/Auth.tsx`, `CreateCommunity.tsx`, `OwnedCommunities.tsx`: real account flows, community creation, and the owner list, alongside the preview screens.
+- `src/lib/`: Supabase setup/generated schema types and current tenant-creation helpers (domain helpers are a refactor candidate).
 - `src/mock/`: typed sample data, in-memory state/actions, date formatting.
 - `src/components/`: reusable controls, local vector game art, activity cards/details.
-- `src/index.css`, `src/App.css`: shared visual system and responsive layouts.
+- `src/index.css`, `src/App.css`, and feature `.css` files: current global visual system and layouts; component styles will migrate to CSS Modules.
 
 The illustrations and icons are local SVG components. Google Fonts supplies DM Sans and Libre Caslon Display when available; system sans-serif and Georgia are fallbacks. Real account flows use `@supabase/supabase-js`; component tests use Vitest and Testing Library.

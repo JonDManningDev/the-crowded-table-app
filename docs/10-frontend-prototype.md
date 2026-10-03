@@ -2,6 +2,8 @@
 
 Status: interactive frontend exploration, not a production implementation.
 
+This guide describes the five mock sections. Real Supabase Auth, community creation, and the owner-only community list have since been added alongside them; see the [root README](../README.md). The [canonical client architecture](05-frontend-patterns.md) and [refactor inventory](07-file-structure.md#current-conflicts-and-refactor-candidates) guide the upcoming structural changes without requiring the current prototype to match the illustrative tree immediately.
+
 ## Coverage
 
 | Reference | Implemented counterparts |
@@ -25,7 +27,7 @@ Desktop uses a left navigation rail and wider multi-column layouts. At small wid
 7. **Profile:** edit name/bio/interests and see the shell update. Upcoming activity reflects reservations and hosted tables. Toggle/save preferences and preview the member-facing profile.
 8. **Guest:** use the header switch. Meet & Play and Community become paywalls. Official events and Championship remain accessible with simulated paid entry. Payments do not unlock membership; use the separate membership preview action.
 
-Changes survive page navigation in the current browser session. A full refresh resets everything. No data is written to local storage or sent to a backend.
+Changes within these five mock sections survive page navigation in the current browser session; a full refresh resets that preview state. Those mock interactions do not persist or send data to a backend. The separate account flows persist real Auth sessions, create communities in Supabase, and read the saved owner list.
 
 ## Reconciled design choices
 
@@ -40,13 +42,13 @@ Changes survive page navigation in the current browser session. A full refresh r
 
 ## Deliberate simulation limits
 
-Membership switching is a UI preview, not authentication or secure authorization. All fixtures are shipped to the browser. Real RLS/address security belongs in the later backend implementation.
+Membership switching is a UI preview, not authentication or secure authorization. All fixtures are shipped to the browser. Identity/tenant RLS is already implemented; production event/table address security remains part of the later domain implementation. Preview membership never grants real tenant permissions.
 
 Seats count the host in this prototype. Waitlists support join/cancel but not timed offers or automatic promotion. Host approval uses a seeded incoming request; sending your own request to another host remains pending because there is no second live user.
 
 Payment is a clearly labeled simulation. Championship currently models two-player matches with illustrative 5/3-point scoring; ties go to review. Initial rankings/history/achievements are seeded; confirmed demo matches increment standings, but this is not a full championship engine. Finalists remain provisional.
 
-Chat has in-memory messages and an illustrative 48-hour lifecycle label, with no actual clock-based archival or Realtime. Notifications are a simple in-memory inbox. Settings and support notes are local preview interactions; they trigger no external delivery. Photos, production sign-in, admin dashboards, backend moderation, PWA installation/offline, and payment-provider integration are not implemented by this mockup pass.
+Chat has in-memory messages and an illustrative 48-hour lifecycle label, with no actual clock-based archival or Realtime. Notifications are a simple in-memory inbox. Settings and support notes are local preview interactions; they trigger no external delivery. Photos, admin dashboards, backend moderation, PWA installation/offline, and payment-provider integration remain unimplemented. Real sign-in/callback/recovery flows now exist separately; their verification status is in the [Auth operations record](11-auth-operations.md#url-configuration).
 
 ## Validation
 
