@@ -1,6 +1,6 @@
 # Application file structure and client refactor
 
-Status: **current canonical client architecture direction**, recorded 2026-10-02. Ownership boundaries are accepted; paths and examples below illustrate how to apply them as the client evolves. They are not a scaffold checklist or a claim about what already exists. Create directories and abstractions only when there is actual code to put in them.
+Status: **current canonical client architecture direction**, recorded 2026-10-02. Updated 2026-10-03 for personal versus community navigation. Ownership boundaries are accepted; paths and examples below illustrate how to apply them as the client evolves. They are not a scaffold checklist or a claim about what already exists. Create directories and abstractions only when there is actual code to put in them.
 
 The [frontend patterns](05-frontend-patterns.md) define the decisions and recommended conventions. This document owns the illustrative structure, current implementation inventory, and refactor sequence. Open choices are tracked in the [decision register](08-decisions-and-open-questions.md#client-architecture-review-questions).
 
@@ -25,13 +25,15 @@ src/
 │   │   ├── BottomNav.tsx
 │   │   └── Header.tsx
 │   └── pages/
-│       └── HomePage/                # App-level composition, using feature contracts
+│       ├── MyHomePage/              # Personal feed across related communities
+│       └── CommunityHomePage/       # Composition scoped to the browsed community
 ├── features/
 │   ├── auth/
 │   ├── events/
 │   ├── meet-and-play/
 │   ├── championships/
-│   ├── community/
+│   ├── communities/                # Creation/management, associations, My Communities
+│   ├── discussion/                 # Social content within one community
 │   ├── profile/
 │   └── games/
 ├── components/
@@ -94,16 +96,20 @@ Pages that expose one capability belong to that feature; cross-feature orchestra
 
 | Example route | Illustrative page owner |
 | --- | --- |
-| `/` | `app/pages/HomePage/` |
+| `/` | `app/pages/MyHomePage/` |
+| `/my-communities` | `features/communities/pages/MyCommunitiesPage.tsx` |
+| `/communities/:slug` | `app/pages/CommunityHomePage/` |
 | `/events` | `features/events/pages/EventsPage.tsx` |
 | `/events/:eventId` | `features/events/pages/EventDetailsPage.tsx` |
 | `/meet` | `features/meet-and-play/pages/MeetAndPlayPage.tsx` |
 | `/championships` | `features/championships/pages/ChampionshipsPage.tsx` |
 | `/championships/:id` | `features/championships/pages/ChampionshipDetailsPage.tsx` |
-| `/community` | `features/community/pages/CommunityPage.tsx` |
+| `/communities/:slug/discussion` | `features/discussion/pages/DiscussionPage.tsx` |
 | `/profile/:profileId` | `features/profile/pages/ProfilePage.tsx` |
 
-The existing five navigation destinations remain established product direction. Official-event screens remain reachable within Home's navigation area, with implementation owned by `events`. App-owned Home may compose multiple features in the future, but its current official-event-only feed rule remains in force until the product decision is revisited (CA-001).
+The five community destinations are Community Home, Meet & Play, Championship, Discussion, and Profile. Each must resolve the browsed community; the example URLs above do not finalize how all tenant routes will be scoped. The account area contains My Communities and My Home. My Home is the personal landing/feed across the user's related communities; Community Home retains the official-event feed. Global accounts and community profiles are distinct. CA-001 is resolved by this split.
+
+The current incremental implementation uses hashes: default/`#my-home`, `#my-communities`, `#community-home`, and `#discussion`; legacy `#home` and `#community` remain community aliases. Other community hashes are unchanged. Both personal pages are stubs; only a sample community is browsable. The working owner-only saved-community list remains separate.
 
 `/auth/callback` and `/auth/reset-password` are working paths with configured redirect behavior, unlike the examples above. Preserve confirmation-to-home, recovery-to-password-change, and callback credential cleanup while migrating routing. Router selection, tenant slug routing/reserved names, and compatibility with existing hash links need explicit review (CA-002).
 
@@ -113,33 +119,33 @@ Root `supabase/` remains the backend location; future synthetic seeds or trusted
 
 ## Current conflicts and refactor candidates
 
-This inventory was checked against the repository on 2026-10-02. These are migration candidates, not implementation changes made by this documentation task.
+This inventory was first checked on 2026-10-02 and updated for the 2026-10-03 navigation slice. Unresolved rows are future migration candidates.
 
 | Current code or previous plan | Difference from canonical direction / refactor candidate |
 | --- | --- |
-| `src/App.tsx` owns hash navigation, shell, preview membership, notifications, and shared dialogs; `src/main.tsx` wraps it in `AuthShell` | Move application composition into `app`; extract shell/navigation and feature-owned behavior, keeping `App` small. Coordinate providers and startup without changing working Auth semantics. |
-| Flat `src/features/Home.tsx`, `MeetPlay.tsx`, `Championship.tsx`, `Community.tsx`, `Profile.tsx`, plus account/community screens | Group by capability with route pages under `pages`. Move Home orchestration to `app/pages/HomePage`; put official-event behavior under `events`. Do not mistake every current screen or modal for a separate feature or route. |
+| `src/App.tsx` still composes the main shell, preview membership, notifications, and dialogs; navigation definitions now live in `src/app/navigation.ts`, and the sidebar/personal links in `src/app/layout/Sidebar.tsx`; `src/main.tsx` wraps it in `AuthShell` | Move application composition into `app`; extract shell/navigation and feature-owned behavior, keeping `App` small. Coordinate providers and startup without changing working Auth semantics. |
+| Flat `src/features/Home.tsx`, `MeetPlay.tsx`, `Championship.tsx`, `Community.tsx`, `Profile.tsx`, plus account/community screens | Group by capability with route pages under `pages`. The personal stub now lives in `app/pages/MyHomePage`, and My Communities in `features/communities/pages`. Move the legacy Home's community composition to `app/pages/CommunityHomePage` later; put official-event behavior under `events`. Do not mistake every current screen or modal for a separate feature or route. |
 | `src/components/ui.tsx` mixes controls, decorative/game art, and an import of mock `Art` | Extract generic primitives and remove domain/mock dependencies from them. Keep product visuals feature-local or genuinely shared according to actual consumers. |
 | `src/components/Activity.tsx` combines a presentation card and a dialog using `MockModel`, seat actions, payments, and chat | Separate reusable presentation from domain/state coordination; decide Events/Meet & Play/shared ownership without merging their authorization. |
 | `src/features/Auth.tsx`, `CreateCommunity.tsx`, and `OwnedCommunities.tsx` call Supabase directly | Put Supabase calls behind feature APIs and hooks/providers. Preserve the existing single atomic `create_tenant` RPC, owner-only reads, verification requirements, and callback/subscription cleanup. |
-| `src/lib/tenantCreation.ts` holds tenant draft types, domain validation, and error copy | Move to the feature owning community creation; only genuinely generic validation/utilities belong in `lib`. Community management versus social-community ownership remains CA-003. |
+| `src/lib/tenantCreation.ts` holds tenant draft types, domain validation, and error copy | Move to the feature owning community creation; only genuinely generic validation/utilities belong in `lib`. Community management belongs to `communities`, social content to `discussion` (CA-003); moving existing live code remains a later slice. |
 | `src/lib/supabase.ts` mixes SDK creation with Auth callback routing metadata/initialization; `src/lib/database.types.ts` holds generated types | Target `lib/supabase/client.ts` and `lib/supabase/database.types.ts`; place Auth-specific coordination with its owner while preserving capture before SDK credential consumption. Update imports, tests, and the type-generation command in `supabase/README.md` when files actually move. |
 | `src/mock/data.ts` owns domain types/fixtures and the navigation `Page` type; `src/mock/useMockState.ts` owns behavior across features; UI accepts the whole `MockModel` | Move domain contracts to features and navigation types to the app. Narrow component props/hooks so fixtures no longer define production contracts. Keep a `mocks` area only as useful; moving/renaming it alone does not establish the data boundary. |
 | `src/mock/format.ts` contains reusable date/time formatting | Move generic formatting to technical utilities when its contract is clear; review locale/timezone assumptions as real data arrives. |
 | `OwnedCommunities.tsx` manages request/loading/error state with effects; `package.json` has no TanStack Query | Introduce query infrastructure for real server-state slices, preserving identity/tenant isolation and invalidation. Do not mechanically convert UI state or Auth subscriptions into resource queries. |
 | Global `src/App.css`, `src/index.css`, `src/features/Auth.css`, and `CreateCommunity.css`; existing palette variables in `index.css` | Migrate component rules to CSS Modules and split base styles, semantic tokens, and controlled presets. Current palette variables are a starting point, not a tenant theme system. |
 | `vite.config.ts`, `tsconfig.app.json`, and `vitest.config.ts` have no `@` alias; imports are relative | Configure alias resolution consistently during the refactor; this documentation task does not configure it. |
-| Earlier plan used `features/home`, `official-events`, `meet-play`, singular `championship`, `components/ui`, `app/layouts`, and `types/database.ts` | This document supersedes those illustrative paths with app-owned Home, `events`, `meet-and-play`, `championships`, `components/primitives`, `app/layout`, and colocated Supabase types. Folder spelling is a convention; ownership is the decision. |
+| Earlier plan used `features/home`, `official-events`, `meet-play`, singular `championship`, `components/ui`, `app/layouts`, and `types/database.ts` | This document supersedes those illustrative paths with app-owned My Home and Community Home, `events`, `meet-and-play`, `championships`, `components/primitives`, `app/layout`, and colocated Supabase types. Folder spelling is a convention; ownership is the decision. |
 | Earlier docs said query/styling tools were unselected and no backend or real Auth existed | Reconciled here and in the architecture/prototype guides. CSS Modules and the planned TanStack Query direction are now recorded; router/form/PWA tool selection remains open. |
 
-The Home content tension is a product question, not a reason to postpone ownership changes. Expanded cross-feature Home content remains illustrative, and existing privacy/admission rules continue to apply.
+The 2026-10-03 product decision resolves the Home ambiguity: My Home is personal aggregation; Community Home is tenant-scoped. The sidebar reads a sample community identity object, while its lower account area reads a safe Auth account summary rather than the mock community profile. Full feed wiring, association listing, and real community switching remain future work; existing privacy/admission rules still apply.
 
 ## Recommended refactor progression
 
 The purpose is to establish ownership boundaries before substantial new data and behavior arrive. Matching a theoretical tree is not the goal. Preserve the already-working Auth and community persistence alongside the mock screens.
 
 1. Identify the domain capabilities represented by current screens, mixed activity components, and mock actions. Resolve the ownership questions needed for the first slice.
-2. Move route composition under owning features, with app-owned Home and centralized application routing/layout/providers.
+2. Move route composition under owning features, with separate app-owned My Home/Community Home and centralized application routing/layout/providers.
 3. Extract reusable presentation components and narrow their props. Keep domain-aware components with their feature; promote genuinely generic visuals to primitives and proven cross-feature visuals to shared.
 4. Define feature-local types independent of fixtures. Retain generated schema types as infrastructure; introduce row mapping only when necessary.
 5. Put mock behavior behind useful feature interfaces/hooks, keeping pages focused on composition. An `EventCard` should accept an event whether supplied as `<EventCard event={mockEvent} />` or from `useEvent(eventId)`.

@@ -4,11 +4,19 @@ Status: interactive frontend exploration, not a production implementation.
 
 This guide describes the five mock sections. Real Supabase Auth, community creation, and the owner-only community list have since been added alongside them; see the [root README](../README.md). The [canonical client architecture](05-frontend-patterns.md) and [refactor inventory](07-file-structure.md#current-conflicts-and-refactor-candidates) guide the upcoming structural changes without requiring the current prototype to match the illustrative tree immediately.
 
+## Personal and community navigation — 2026-10-03
+
+The default app destination is now **My Home**, a personal-feed stub with placeholders for community updates, RSVPs, and interest/history-based event suggestions. **My Communities** is a separate stub with a clearly labeled sample-community link; the account bar's working **Your communities** owner list remains separate. These placeholders do not imply that personal data or all community associations have been fetched.
+
+The sidebar identity/subtitle/location, five community links, and motto belong to the sample community. The lower section belongs to the global account and has My Communities/My Home links. It shows the signed-in account summary rather than Ana's mock community profile. Personal navigation remains accessible above the content on mobile; the five community links remain in the bottom bar.
+
+Community hashes are `#community-home`, `#meet-play`, `#championship`, `#discussion`, and `#profile`; `#home` and `#community` remain legacy aliases. Personal hashes are `#my-home` and `#my-communities`. Sign-in, successful confirmation, and completed recovery now return to My Home. No new membership, owner authority, or tenant switcher is inferred from navigation.
+
 ## Coverage
 
 | Reference | Implemented counterparts |
 | --- | --- |
-| Official events infographic | Home/official list, category filters, month calendar, detail dialog, member reservation, guest simulated checkout, full-event waitlist |
+| Official events infographic | Community Home/official list, category filters, month calendar, detail dialog, member reservation, guest simulated checkout, full-event waitlist |
 | Meet & Play infographic | Table browser, search/category/location/beginner filters, details, creation form, My Tables, host request approval, seat requests, waitlists, confirmed-player chat |
 | Championship infographic | Overview/detail, how it works/rules, registration, leaderboard, past champions, Final Table and provisional qualifiers; result submission/confirmation/dispute added from the docs |
 | Community infographic | Topic board, discussion/replies, searchable member directory, member details, recommendations/save list, illustrative Local Spots map/cards |
@@ -18,21 +26,21 @@ Desktop uses a left navigation rail and wider multi-column layouts. At small wid
 
 ## Useful walkthroughs
 
-1. **Home:** open Azul, take a seat, observe confirmation and the fictional address, then cancel. Switch to Calendar and select an event. Wingspan starts full to demonstrate a waitlist.
+1. **Community Home:** open Azul, take a seat, observe confirmation and the fictional address, then cancel. Switch to Calendar and select an event. Wingspan starts full to demonstrate a waitlist.
 2. **Meet & Play:** take a seat at Codenames & coffee, then send a chat message. Request a Cascadia seat; pending requests do not unlock an address or chat. Commander starts full.
 3. **Hosting:** open Sunday birds & brunch and accept or decline David's seeded request. Create a table with a fictional address; it appears under My Tables, and the address stays out of listing cards.
 4. **Matching:** use Find my people and save preferences; reopen to revise them.
 5. **Championship:** register, open My Matches, and confirm or dispute the seeded result from Lucía. Confirmation updates both players' standings. Submit your own result; you cannot confirm it yourself.
-6. **Community:** create a conversation, reply to it, search members, save a game recommendation, and explore the illustrative places.
+6. **Discussion:** create a conversation, reply to it, search members, save a game recommendation, and explore the illustrative places.
 7. **Profile:** edit name/bio/interests and see the shell update. Upcoming activity reflects reservations and hosted tables. Toggle/save preferences and preview the member-facing profile.
-8. **Guest:** use the header switch. Meet & Play and Community become paywalls. Official events and Championship remain accessible with simulated paid entry. Payments do not unlock membership; use the separate membership preview action.
+8. **Guest:** use the header switch. Meet & Play and Discussion become paywalls. Official events and Championship remain accessible with simulated paid entry. Payments do not unlock membership; use the separate membership preview action.
 
 Changes within these five mock sections survive page navigation in the current browser session; a full refresh resets that preview state. Those mock interactions do not persist or send data to a backend. The separate account flows persist real Auth sessions, create communities in Supabase, and read the saved owner list.
 
 ## Reconciled design choices
 
-- Use the settled five navigation destinations, rather than the inconsistent Events/Community/Profile combinations in the generated images. Official events live within Home.
-- No member tables on the Home feed. The list currently includes all five example official events so the full event range can be reviewed.
+- Use the settled five navigation destinations, rather than the inconsistent Events/Community/Profile combinations in the generated images. Official events live within Community Home; My Home is a separate personal destination.
+- No member tables on the Community Home feed. The list currently includes all five example official events so the full event range can be reviewed.
 - Use L300 membership, L125 eligible drop-in, and illustrative L200 championship entry from the handoff, rather than conflicting infographic prices. Special-event L250 is sample data only.
 - October 2026 dates match their actual weekdays; the Codenames example uses Friday October 9. Qualifying closes October 24 before the October 25 final.
 - Private addresses appear only after confirmed seats or to the host. All built-in addresses are explicitly fictional. No real personal addresses should be entered in the preview.

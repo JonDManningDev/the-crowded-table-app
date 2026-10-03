@@ -4,7 +4,7 @@ Status: mobile PWA and product scope established; rollout and offline policy pro
 
 ## Mobile experience
 
-Deliver the same responsive application in browser and installed mode, with Home, Meet & Play, Championship, Community, Profile navigation. Include manifest/icons, HTTPS, sensible install guidance, deep links, and safe update behavior. Browser/platform installation behavior varies; see [MDN PWA documentation](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps).
+Deliver the same responsive application in browser and installed mode, with community-scoped Community Home, Meet & Play, Championship, Discussion, and Profile navigation, plus separate personal My Home/My Communities links. My Home is the application landing page; the personal pages start as stubs and gain data as prerequisite features arrive. Include manifest/icons, HTTPS, sensible install guidance, deep links, and safe update behavior. Browser/platform installation behavior varies; see [MDN PWA documentation](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps).
 
 Mobile layouts, form ergonomics, accessible controls, and safe-area handling start in the first slice. No separate native app is planned.
 
@@ -31,7 +31,7 @@ These milestones sequence the full handoff MVP; the first working slice is not t
 | 0. Rules and UX | Resolve critical entitlement/payment/capacity questions; mobile wireframes and visual direction | Agreed state transitions and permission examples |
 | 1. Foundation | Auth, tenant association, manual entitlement/admin audit, five-tab shell/paywalls, safe profiles | Two-tenant isolation; guest/member/suspended behavior |
 | 2. Private table slice | Member creates public/private-location table; instant/request seats; cancellation; FIFO waitlist; manual matching intake if approved | Host acceptance, capacity races, address protection, offer expiry |
-| 3. Official-event funnel | Home official feed, list/calendar, member/guest admission, manual paid verification, special-event pricing | Drop-in trial works without opening private network |
+| 3. Official-event funnel | Community Home official feed, list/calendar, member/guest admission, manual paid verification, special-event pricing | Drop-in trial works without opening private network |
 | 4. Communication and Community | Table chat, notifications, minimal topics/posts/directory, content removal | Confirmed-only chat, revocation, moderation |
 | 5. Championship | Entry, versioned first ruleset, submit/confirm/dispute, standings, Final Table, achievements/history | Nonmember entrants work; disputed results do not count |
 | 6. Complete pilot | Profile/activity views, attendance, PWA refinement, operating procedures, real-device checks | Complete MVP journeys and founder/admin readiness |
@@ -42,7 +42,9 @@ If scope must shrink, make an explicit product decision. Do not relabel Champion
 
 | Scenario | Required outcome |
 | --- | --- |
-| Visitor browses Home | Only official public summaries; no home address/member table feed |
+| Visitor browses Community Home | Only official public summaries; no home address/member table feed |
+| User opens My Home | Personal stub initially; future feed aggregates only authorized updates/RSVPs/suggestions across related communities |
+| User opens My Communities | Clearly marked stub initially; future list distinguishes ownership/management from community participation |
 | Guest pays eligible drop-in manually | Staff verification and capacity precede confirmation; no network entitlement |
 | Member creates private table | Safe listing; exact address available only after confirmed seat or authorized host/admin access |
 | Pending request/waitlist/offer/payment | No private address or chat access |

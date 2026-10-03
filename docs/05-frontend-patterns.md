@@ -1,6 +1,6 @@
 # Frontend code patterns
 
-Status: **current canonical client architecture direction**, recorded from the user's architecture decisions on 2026-10-02. Required stack: Vite, TypeScript, React Compiler. This guides the upcoming prototype refactor; it is reviewable and may evolve as real requirements emerge.
+Status: **current canonical client architecture direction**, recorded from the user's architecture decisions on 2026-10-02. Required stack: Vite, TypeScript, React Compiler. This guides the upcoming prototype refactor; it is reviewable and may evolve as real requirements emerge. Updated 2026-10-03 to distinguish the user's personal home from the selected community's home.
 
 This document owns client boundaries, data/state, and styling decisions. The [file structure plan](07-file-structure.md) owns illustrative paths, migration steps, and the current-code conflict inventory. The [decision register](08-decisions-and-open-questions.md#client-architecture-review-questions) tracks questions to revisit. Neither document requires the target structure to exist immediately.
 
@@ -17,9 +17,9 @@ This document owns client boundaries, data/state, and styling decisions. The [fi
 
 ## Recommended ownership and dependency conventions
 
-A feature represents a business capability, not a screen or visual variation. Likely owners are auth, events, Meet & Play, championships, community, profile, and games. Learn & Play, RPG One-Shot, Social Game Night, Halloween Game Night, and Murder Mystery should remain event types/configurations when they use the same underlying Events capability.
+A feature represents a business capability, not a screen or visual variation. Likely owners are auth, events, Meet & Play, championships, communities (creation/management and user associations), discussion (community social content), profile, and games. Learn & Play, RPG One-Shot, Social Game Night, Halloween Game Night, and Murder Mystery should remain event types/configurations when they use the same underlying Events capability.
 
-If a route primarily exposes one domain capability, its page belongs to that feature. Keep route-level composition recognizable under `pages`, separate from ordinary components. The application router imports those pages. Home belongs under `app/pages/HomePage` as application-level composition and can consume feature APIs without becoming a business feature itself. Its possible future cross-feature content is distinct from the current product rules below.
+If a route primarily exposes one domain capability, its page belongs to that feature. Keep route-level composition recognizable under `pages`, separate from ordinary components. The application router imports those pages. My Home belongs under `app/pages/MyHomePage` as personal cross-feature composition. Community Home is a separate composition scoped to the browsed community (eventually `app/pages/CommunityHomePage`); its current mock remains `features/Home.tsx`. Community creation/management belongs to `communities`, social content to `discussion`, and global identity/session behavior to `auth`. The current `Community.tsx` is a legacy filename, not the future owner of all community capabilities.
 
 The general dependency direction is:
 
@@ -41,11 +41,11 @@ Keep a component in its feature until actual reuse justifies moving it. Neither 
 
 ## Product navigation and visual language
 
-Use the five bottom destinations: Home, Meet & Play, Championship, Community, Profile. Official-event list/calendar/detail sit under Home; My Tables and My Events are reachable from their feature and Profile. Admin is a separately authorized area.
+Use five community destinations: Community Home, Meet & Play, Championship, Discussion, Profile. Official-event list/calendar/detail sit within Community Home's navigation area; Profile is community-specific. The sidebar name, subtitle, location, links, and motto describe the selected community. Its lower account area contains My Communities and My Home. On mobile, keep those personal links reachable alongside the community tabs. Admin is a separately authorized area.
 
-Nonmembers see a membership paywall on Meet & Play and Community, with no private member names, tables, seat counts, or message previews fetched for those screens. Championship remains usable by competition-only entrants.
+Nonmembers see a membership paywall on Meet & Play and Discussion, with no private member names, tables, seat counts, or message previews fetched for those screens. Championship remains usable by competition-only entrants.
 
-Home's current event feed queries only official events. A personalized greeting or My Tables link is fine; do not blend member-created tables into its event feed. Application-level Home ownership permits a future composition of events, Meet & Play, championships, community activity, and profile information, but the architecture example does not itself approve that product expansion. Revisit the content and audience explicitly before implementing it; see CA-001 in the decision register.
+Community Home's event feed remains scoped to official events from that community. My Home is now the approved default app destination: a personalized feed of announcements/discussions, RSVPs, and possible interest/history-based event suggestions across the user's related communities. Start with honest placeholders and wire sections as prerequisites are completed. Preserve per-community authorization and safe payloads when aggregating; the old official-events-only Home restriction applies to Community Home, not My Home. My Communities is a separate stub; the working owner-only list does not yet provide the complete relationship list. CA-001 records this resolved scope distinction.
 
 Build a warm cream/forest-green/sage/terracotta visual system, serif headings, readable sans-serif body, rounded cards, generous space, and welcoming language. The prototype uses DM Sans and Libre Caslon Display; the final semantic token set and permitted theme presets remain to be designed. Keep accessible contrast, semantic structure, visible focus, keyboard support, touch targets, and screen-reader status announcements.
 
@@ -66,7 +66,7 @@ Preserve a useful distinction between presentation and data coordination: `Event
 
 Keep render logic pure; use effects for synchronization, not derived state. React Compiler is the baseline; optimize measured issues rather than adding blanket memoization. See [React Compiler](https://react.dev/learn/react-compiler).
 
-Share visual event/table cards and seat-state components only when useful; keep official admission and member-table authorization separate. A shared card must never accidentally display a private location or feed private table data into Home.
+Share visual event/table cards and seat-state components only when useful; keep official admission and member-table authorization separate. A shared card must never accidentally display a private location or feed private table data into Community Home.
 
 ## Server state, UI state, and types
 
@@ -154,14 +154,14 @@ Initial message history uses authorized paginated reads; Realtime adds/deduplica
 
 Re-check resource access after participation/standing changes. Honor read-only/archive state and server rejection. Never broadcast message bodies to a public topic. Use safe in-app notification links for requests, seat offers, result disputes, and membership changes; do not include private addresses.
 
-## Championship and Community
+## Championship and Discussion
 
 Championship screens support overview, eligible entry, match submission, independent confirm/dispute, leaderboard, and Final Table. Nonmember entrants select from permitted competition identities rather than the private community directory. Show pending/disputed results separately from counted standings and identify rules/version context.
 
-Community starts with topics, posts/comments, and a limited-field member directory. Profile uses interests and practical play context; no follower counts or public person ratings. Render member content safely without arbitrary HTML execution. Report/block controls depend on agreed scope; admin content removal and suspension need working interfaces.
+Discussion starts with topics, posts/comments, and a limited-field member directory. Profile uses interests and practical play context; no follower counts or public person ratings. Render member content safely without arbitrary HTML execution. Report/block controls depend on agreed scope; admin content removal and suspension need working interfaces.
 
 ## Error handling and tests
 
 Use stable domain errors: unauthenticated, membership_required, forbidden, capacity_reached, approval_required, payment_unverified, offer_expired, conflict, validation, and unexpected. Map errors to actionable copy without exposing private resource existence or raw database errors.
 
-Test real behavior: guest paywall without private fetch, Home without member tables, host accept/decline, pending versus confirmed address access, reconnecting chat, expired waitlist offer, guest championship entry, disputed-result exclusion, and clearing private state on logout. Include mobile empty/loading/error/offline states. Avoid tests that merely mirror markup.
+Test real behavior: guest paywall without private fetch, Community Home without member tables; My Home aggregating only authorized source data, host accept/decline, pending versus confirmed address access, reconnecting chat, expired waitlist offer, guest championship entry, disputed-result exclusion, and clearing private state on logout. Include mobile empty/loading/error/offline states. Avoid tests that merely mirror markup.

@@ -1,6 +1,6 @@
 # Decisions and open questions
 
-Status: reconciled with accepted auth/account/tenant decisions, provider selection, and the current canonical client architecture direction through 2026-10-02. Initial migration scope is settled; broader MVP and client-refactor questions remain open. Dashboard recommendations and future review triggers are recorded separately from verified applied settings in the [Auth operations record](11-auth-operations.md).
+Status: reconciled with accepted auth/account/tenant decisions, provider selection, and the current canonical client architecture direction through 2026-10-03, including personal versus community navigation and ownership. Initial migration scope is settled; broader MVP and client-refactor questions remain open. Dashboard recommendations and future review triggers are recorded separately from verified applied settings in the [Auth operations record](11-auth-operations.md).
 
 ## Established direction
 
@@ -10,9 +10,9 @@ Status: reconciled with accepted auth/account/tenant decisions, provider selecti
 | D-002 | Supabase, multi-tenancy, RLS | Explicit current user requirement |
 | D-003 | Mobile-first web/PWA; no native launch apps | User requirement and handoff |
 | D-004 | Product concept plus separate technical planning documents | User requirement |
-| D-005 | Private Tegucigalpa gaming community independent of permanent café | Handoff core concept |
-| D-006 | Five tabs: Home, Meet & Play, Championship, Community, Profile | Handoff settled navigation |
-| D-007 | Home features official events; no member-created table feed | Handoff |
+| D-005 | Initial sample community: private Tegucigalpa gaming group independent of a permanent café; the broader platform supports user-created communities | Handoff context, clarified by D-043 on 2026-10-03 |
+| D-006 | Five community tabs: Community Home, Meet & Play, Championship, Discussion, Profile; personal navigation is separate | Labels/scope revised by user on 2026-10-03; D-044 |
+| D-007 | Community Home features that community's official events; no member-created table feed. This restriction does not apply to authorized personal aggregation on My Home | Handoff, scope clarified 2026-10-03; D-045 |
 | D-008 | Member-only tables/Community; nonmembers may buy eligible official admission and competition entry | Handoff |
 | D-009 | Members create tables; instant/request joining; capacity and FIFO waitlist | Handoff |
 | D-010 | Exact private addresses accessible only to host, confirmed participants, authorized admin | Handoff privacy requirement |
@@ -40,7 +40,7 @@ Status: reconciled with accepted auth/account/tenant decisions, provider selecti
 | D-032 | Initial admin assignment selects existing verified users through same-tenant community accounts, gated by `can_create_admin`; owners can perform it and delegate through that flag. Invitations and their persistence/UI follow later | User direction, 2026-10-01; schema/auth milestone scope; staff-to-global-user relationship remains independent |
 | D-033 | First migrations include the eight tables listed in the schema milestone, self-profile access, narrow administrative candidate/approval lists, joining/approval, owner-only permission editing command and website-copy editing; defer directory access, suspension/removal/reinstatement commands, and broader admin editing flags | User acceptance of milestone recommendations, 2026-10-01; schema/auth plans |
 | D-034 | Use Resend for initial authentication email delivery; `thecrowdedtable.app` purchased through Cloudflare Registrar. Amazon SES may be evaluated later for experience or growth | User selection, recorded 2026-10-02; verification/setup and recommended sender subdomain tracked in the Auth operations record |
-| D-035 | Pragmatic feature-oriented / vertical-slice client: `app` owns composition, `features` own business capabilities and their route `pages`; cross-feature Home composition belongs to `app` | User architecture direction, 2026-10-02; locality and clear ownership before the prototype refactor |
+| D-035 | Pragmatic feature-oriented / vertical-slice client: `app` owns composition, `features` own business capabilities and their route `pages`; personal My Home and community-scoped Community Home composition belong to `app` | User architecture direction, 2026-10-02; locality and clear ownership before the prototype refactor |
 | D-036 | Generic visuals use `components/primitives`; Crowded Table visuals use `components/shared` only with genuine independent cross-feature reuse | User architecture direction, 2026-10-02; avoid speculative reuse and mixed component ownership |
 | D-037 | `lib` is reusable technical infrastructure; feature UI accesses Supabase through feature data functions and appropriate hooks/providers | User architecture direction, 2026-10-02; separate presentation, server-state lifecycle, and backend access without mandatory extra layers |
 | D-038 | Plan for TanStack Query as the server-state layer; ordinary UI state remains local React state; no default Redux/global store | User architecture direction, 2026-10-02; intended adoption, not a claim that the library is installed |
@@ -50,6 +50,16 @@ Status: reconciled with accepted auth/account/tenant decisions, provider selecti
 | D-042 | Grow directories and abstractions with actual code; replace mocks behind useful feature interfaces while retaining presentation contracts | User architecture direction, 2026-10-02; no empty scaffolding, compulsory repository/service layers, or immediate whole-client rewrite |
 
 D-035 through D-042 are the **current canonical client direction**, not immutable rules or claims of implementation. The [frontend patterns](05-frontend-patterns.md) contain the normative direction and recommended conventions; the [file structure plan](07-file-structure.md) contains illustrative future paths, current conflicts, and migration steps. Revisit these choices when concrete coupling, reuse, testing needs, or new requirements warrant it, and revise the related documents together.
+
+## Personal and community scope — 2026-10-03
+
+| ID | Decision / direction | Source |
+| --- | --- | --- |
+| D-043 | The platform lets users create/manage their own communities and belong to multiple communities. A community owner is independent of the `thecrowdedtable.app` owner. Keep community management/associations, discussion, account identity, and personal aggregation distinct. | Explicit user clarification, 2026-10-03 |
+| D-044 | The sidebar's community area is name → subtitle → location → Community Home / Meet & Play / Championship / Discussion / Profile → motto. The lower global-account area adds My Communities and My Home; provide access on mobile too. | Explicit user UI direction, 2026-10-03; renames old Home and Community labels |
+| D-045 | My Home is the new app landing and personal feed for related community announcements/discussions, RSVPs, and possible interest/tag/history-based event suggestions. Stub it now, connect sections as prerequisites arrive. My Communities may also start as a stub. | Explicit user direction, 2026-10-03; does not authorize an AI recommender, expanded data access, or a completed multi-community backend |
+
+The first implementation uses `#my-home` and `#my-communities`, `#community-home` and `#discussion`, with legacy `#home`/`#community` aliases for existing community bookmarks. Successful account flows return to My Home. Current community data remains a sample; personal feed sections remain placeholders and the working owner-only list stays separate. Final tenant URLs, relationship queries, and feed ranking will be designed with their dependent features.
 
 ## Hosted testing and email setup
 
@@ -79,7 +89,7 @@ Proposals are not approved by silence. The weekly examples, featured games, Octo
 
 The first draft's café/venue-centered organization model, staff-only creation, member-only official discovery, minimal join/cancel-only MVP, and deferral of chat/Championship/Community/waitlists have been replaced. Public locations and private-address separation are now explicit. Hosting venues are optional context, not the domain's foundation.
 
-The earlier frontend proposal's `features/home`, `components/ui`, global generated `types/database.ts`, and entirely undecided query/styling strategy are superseded by D-035 through D-042. The [refactor inventory](07-file-structure.md#current-conflicts-and-refactor-candidates) records both previous path conventions and current code that differs. Home's potential future cross-feature content remains illustrative; it does not silently replace D-007.
+The earlier frontend proposal's `features/home`, `components/ui`, global generated `types/database.ts`, and entirely undecided query/styling strategy are superseded by D-035 through D-042. The [refactor inventory](07-file-structure.md#current-conflicts-and-refactor-candidates) records both previous path conventions and current code that differs. The 2026-10-03 clarification separates personal My Home from Community Home; D-007 applies only to the latter. D-043 through D-045 supersede the old single-community application assumption.
 
 ## Initial migration readiness
 
@@ -112,9 +122,9 @@ These refine the accepted direction; they do not block recording it or require s
 
 | ID | Question / review trigger | Current position |
 | --- | --- | --- |
-| CA-001 | Before expanding Home, which cross-feature sections and audiences are intended? How would that change D-007 and the vision/delivery acceptance rules? | Home is app-owned. Events, Meet & Play, championships, community, and profile are illustrative future inputs; the current feed remains official events only. |
+| CA-001 | Resolved 2026-10-03: distinguish My Home from Community Home. Refine section ranking/filtering as each source becomes available. | My Home is the personal landing/feed across related communities: announcements/discussions, RSVPs, and interest/history-based event suggestions. Community Home retains its official feed. D-043 through D-045. |
 | CA-002 | Before replacing hash navigation, which router, exact URLs, tenant slug placement, and old-link compatibility are needed? | Central app route map is settled; preserve five destinations and working Auth callback/recovery URLs, redirect allowlists, and startup order. Reconcile reserved slugs with actual routes. |
-| CA-003 | Before moving community creation and mixed activity logic, who owns tenant management versus social Community, membership, participation, chat, admin, and game concepts? | Business capabilities drive ownership; do not create a feature for every screen or event variant. Share visuals/contracts only when useful and preserve distinct admission/privacy rules. |
+| CA-003 | Resolved for community versus account scope on 2026-10-03: community creation/management and associations belong to `communities`; social content belongs to `discussion`; identity/session belongs to `auth`; personal aggregation belongs to `app`. Further partitioning of participation/chat/admin remains incremental. | Community identity and its five pages are tenant-scoped, including Profile; account navigation is global. The new communities stub starts the ownership split; existing creation/owner-list code moves in a later refactor slice. |
 | CA-004 | When adopting TanStack Query, what are the query-key conventions, cache lifetimes, mutation invalidations, and cleanup rules on identity/tenant/access changes? Where does the Auth session provider sit? | TanStack Query is intended for resource server state; Auth subscriptions and ordinary UI state have separate lifecycles. Private caches need user/tenant scope and stale-response protection. |
 | CA-005 | When adding theme presets, which semantic tokens, palettes/fonts, density/corner options, defaults, persistence, and application scope are supported? | CSS Modules plus semantic variables and controlled presets are settled; no arbitrary CSS, no new branding/settings schema required by this decision. Check accessibility for supported combinations. |
 | CA-006 | For each real data slice, which mock contracts should survive, where are row-to-UI mappings useful, and is a form/schema library needed? | Keep presentation independent of fixtures and Supabase; choose tools/mappers only for concrete needs. Update aliases, tests, type-generation paths, and docs with the actual moves. |

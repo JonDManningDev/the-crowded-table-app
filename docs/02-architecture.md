@@ -1,6 +1,6 @@
 # Architecture plan
 
-Status: required stack and current canonical client architecture direction established; broader backend implementation designs remain proposals where identified.
+Status: required stack and current canonical client architecture direction established; broader backend implementation designs remain proposals where identified. Personal versus community scope was clarified on 2026-10-03.
 
 ## Baseline
 
@@ -14,7 +14,7 @@ The current canonical direction is pragmatic feature-oriented / vertical-slice o
 
 Plan for TanStack Query as the server-state layer and local React state for ordinary UI state. Use colocated CSS Modules and semantic CSS custom properties for controlled community theme presets. These are accepted directions for the upcoming refactor, not a claim that the prototype already follows them. Grow directories and abstractions only as actual code warrants; revisit choices when requirements change.
 
-The [frontend patterns](05-frontend-patterns.md) own these boundaries and conventions, the [file structure plan](07-file-structure.md) distinguishes illustrative paths from current implementation/refactor candidates, and the [decision register](08-decisions-and-open-questions.md#client-architecture-review-questions) records open review points. This architecture update does not expand product scope or finalize routes.
+The [frontend patterns](05-frontend-patterns.md) own these boundaries and conventions, the [file structure plan](07-file-structure.md) distinguishes illustrative paths from current implementation/refactor candidates, and the [decision register](08-decisions-and-open-questions.md#client-architecture-review-questions) records open review points. The 2026-10-03 product clarification establishes My Home as the personal landing/feed and My Communities as the user's community hub, initially stubbed. Community Home, Meet & Play, Championship, Discussion, and Profile are scoped to the browsed community. Its owner is independent of the platform/domain owner. Community creation/management and social discussion have distinct feature ownership; see the vision and decision register. Production route/tenant URL design remains open.
 
 ## System responsibilities
 
@@ -36,7 +36,7 @@ Supabase Realtime is the proposed transport for table chat updates, with durable
 
 ## Tenant and identity design
 
-Use **one independently operated community per tenant**, initially The Crowded Table in Tegucigalpa (D-031). A home, café, or rented space is a location within a community, not a tenant. Accounts can associate with multiple communities structurally without requiring a launch tenant switcher.
+Use **one independently operated community per tenant**, initially The Crowded Table in Tegucigalpa (D-031). A home, café, or rented space is a location within a community, not a tenant. Accounts can associate with multiple communities. My Communities now has a stub; complete association listing and community switching will follow rather than being inferred from the existing owner-only list.
 
 The precise future tenant business model still needs agreement. Do not create a commercial venue-management system or per-table tenants. Domain examples use `tenant_id`; a selected slug/ID is never authority.
 
@@ -59,7 +59,8 @@ A nonmember may have a community account and buy a drop-in/competition entry. A 
 | Participation | Resource-specific eligibility, capacity, seat states, attendance |
 | Chat | Confirmed table participants, durable messages, archival |
 | Championship | Registrations, versioned rules, match evidence/confirmation, standings, finals |
-| Community | Private discussions, directory, moderation |
+| Communities | User-owned community creation/management, associations, and community identity |
+| Discussion | Community-scoped discussions, directory, moderation |
 | Admin | Authorized commands with audit records |
 | Notifications | Durable in-app notices and retryable delivery; external channels undecided |
 
@@ -68,7 +69,7 @@ Official events and member tables have distinct roots and authorization. A share
 ## Data exposure
 
 - Public: published official-event summaries, safe display locations, membership information, and championship overview. Public leaderboard identity details remain open.
-- Member-only: member tables, directory, and Community content.
+- Member-only: member tables, directory, and Discussion content.
 - Confirmed-participant-only: private addresses and table chat, subject to lifecycle rules.
 - Self-only: private account preferences, payment/entitlement history, pending requests.
 - Staff-restricted: manual grants, disputes, moderation reports, and audit data.

@@ -1,6 +1,6 @@
 # The Crowded Table — planning documents
 
-Status: revised from the user-supplied product handoff and subsequent explicit decisions. The client architecture direction recorded on 2026-10-02 is current and canonical; other implementation designs remain proposals where identified.
+Status: revised from the user-supplied product handoff and subsequent explicit decisions. The client architecture direction recorded on 2026-10-02, clarified on 2026-10-03 for personal versus community scope, is current and canonical; other implementation designs remain proposals where identified.
 
 ## Source and precedence
 
@@ -9,6 +9,8 @@ The user supplied an extensive summary of **Find Boardgame Cafe Ideas** after th
 The user's explicit Vite + TypeScript + React Compiler, Supabase, multi-tenancy/RLS, and mobile PWA requirements take precedence over the handoff's tentative stack suggestions. Prices, example dates, and eventual features retain the tentative status given in the handoff.
 
 The later client architecture decisions supersede overlapping tentative frontend/layout proposals. Read [frontend patterns](05-frontend-patterns.md) for accepted boundaries, data/state, and styling; [file structure](07-file-structure.md) for illustrative paths, current conflicts, and refactor progression; and [client review questions](08-decisions-and-open-questions.md#client-architecture-review-questions) for unresolved choices. The direction is reviewable, not immutable, and does not require empty folders or immediate implementation of every example.
+
+The platform supports user-created communities and multi-community accounts. **My Home** is the personal landing/feed; **My Communities** is the user's community hub. Both currently have stubs. **Community Home**, Meet & Play, Championship, **Discussion**, and Profile belong to the community being browsed. The Tegucigalpa sample community is not the whole platform; see D-043 through D-045.
 
 ## Planning set
 

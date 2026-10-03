@@ -1,14 +1,16 @@
 # Vision and concept
 
-Status: revised product baseline from the user-supplied handoff of **Find Boardgame Cafe Ideas**. Proposed prices and eventual features remain labeled.
+Status: current product baseline, updated 2026-10-03 for the user's multi-community and personal-home direction. The original **Find Boardgame Cafe Ideas** handoff describes the initial Tegucigalpa community, not the entire platform. Proposed prices and eventual features remain labeled.
 
 ## Core idea
 
-**The Crowded Table is a private board-gaming community and matchmaking app for people in Tegucigalpa who want more people to play with.**
+**The Crowded Table is an app where users create, manage, and participate in their own gaming communities. A user can belong to multiple communities.**
+
+The owner of a community is independent of the owner/operator of `thecrowdedtable.app`. The Crowded Table in Tegucigalpa is the initial sample community; its name, subtitle, location, motto, events, and membership model are community context, not platform-wide defaults. Account identity is global; profiles, participation, staff authority, and paid entitlements remain scoped as described in the auth plan.
 
 People may own games and have a small regular group yet struggle to find new players. The app helps them fill empty seats, meet people outside their usual circle, participate in recurring events, and enter a monthly championship.
 
-Build the community first; give it a physical home later. Member games can happen at homes, cafés, or other agreed locations. A permanent café is a long-term aspiration, not a launch dependency.
+For the initial Tegucigalpa community, build the community first; give it a physical home later. Member games can happen at homes, cafés, or other agreed locations. A permanent café is a long-term aspiration, not a launch dependency.
 
 The promise: **Never wonder who you're going to play with next.** Friendships that continue outside the app are a success. Retention comes from new players, tables, events, and shared experiences.
 
@@ -31,21 +33,31 @@ Exact colors, fonts, imagery, and component treatments still need a visual desig
 | Member host | Create a table, welcome new players, manage requests, and coordinate confirmed participants |
 | Founder / admin | Host official events, manage membership and competitions, moderate content, and support participants |
 
-Current pricing ideas: **L300/month** membership, **L125** drop-in for eligible official events, and an illustrative **L200** championship entry for nonmembers. These are proposed prices, not final billing rules. Larger special events can have separate tickets, with possible member discounts or early access.
+Initial Tegucigalpa community pricing ideas: **L300/month** membership, **L125** drop-in for eligible official events, and an illustrative **L200** championship entry for nonmembers. These are proposed prices, not final billing rules. Larger special events can have separate tickets, with possible member discounts or early access.
 
 A drop-in or tournament fee does not unlock the private member network. Manual payment handling and manual membership activation are acceptable initially; payment integration must not block the first launch.
 
 ## App sections and desired functionality
 
-The settled bottom navigation is **Home · Meet & Play · Championship · Community · Profile**. Nonmembers can access Home, Championship, and Profile; Meet & Play and Community show membership paywalls without leaking private previews.
+The community navigation is **Community Home · Meet & Play · Championship · Discussion · Profile**. All five destinations are scoped to the community being browsed, including Profile. This renames the old Home and Community labels; the existing Discussion mock still includes its member directory, game recommendations, and Local Spots tabs.
 
-### Home and official events
+The sidebar's upper area belongs to the browsed community, in order: name, subtitle, location, navigation links, motto. The lower area belongs to the logged-in user's global account and includes **My Communities** and **My Home**. A mock community profile must not masquerade as that account. Keep personal navigation reachable on mobile alongside community navigation.
 
-Home's main job is to show what The Crowded Table itself is hosting. Show the brand/location header, warm hero, membership CTA for nonmembers or welcome/member status for members, about three upcoming official events, and a small seasonal highlight.
+Nonmembers can access permitted Community Home, Championship, and Profile views; Meet & Play and Discussion retain community membership paywalls without leaking private previews.
 
-Do not list member-created tables on Home. A member welcome area may link to My Tables, but should not become a private-table feed. Do not add duplicate Championship shortcuts, an About Us button, or a redundant Our Game Nights top shortcut.
+### My Home and My Communities
 
-A dedicated official-events page is reached within the Home area, not added as a sixth bottom tab. Include list/calendar views, month selection, detail, capacity, waitlist, member/guest admission, and distinct special-event styling.
+**My Home** is the new application landing page and the destination after successful sign-in, signup confirmation, and completed password recovery. It is a personal feed across communities/events related to the user: recent community announcements and discussion posts, events they have RSVP'd to, and potential event suggestions based on matching interests/tags and play history. Every section must respect the user's access to each source community; aggregation does not grant new access or expose private addresses.
+
+Start with a basic page and clearly marked placeholders, then connect sections as their prerequisite features are completed. Suggestions do not imply an AI recommendation engine or a finalized ranking formula. **My Communities** will list the communities the user belongs to and manages; begin with a stub. The existing owner-only list remains available separately and does not represent all community associations.
+
+### Community Home and official events
+
+Community Home's main job is to show what the selected community itself is hosting. Show the brand/location header, warm hero, membership CTA for nonmembers or welcome/member status for members, about three upcoming official events, and a small seasonal highlight.
+
+Do not list member-created tables in Community Home's official-event feed. This restriction does not prohibit a user's authorized RSVPs from appearing on My Home. A member welcome area may link to My Tables, but should not become a private-table feed. Do not add duplicate Championship shortcuts, an About Us button, or a redundant Our Game Nights top shortcut.
+
+A dedicated official-events page is reached within the Community Home area, not added as a sixth bottom tab. Include list/calendar views, month selection, detail, capacity, waitlist, member/guest admission, and distinct special-event styling.
 
 Proposed weekly rhythm: Tuesday **Learn & Play** (“Never played it? Perfect. We'll teach you.”) and Thursday **Special Game Night**, typically 7:30–10:30 PM. The founder's home has an approximate maximum of 10 people; each event needs an explicit capacity and staffing interpretation. Examples include Azul teaching nights, RPG one-shots, social games, mystery/deduction, cooperative games, and seasonal themes.
 
@@ -77,7 +89,7 @@ Submit results with participants, scores/placements, winner, date, and optional 
 
 Scoring varies by game. The design must support versioned rules and eventual configuration for placement/participation points, match limits, raw-score tiebreaks, win percentage, counting-result limits, and finalist count. Settle a simple first ruleset before implementation. Final winners receive permanent achievements, with a history of past champions.
 
-### Community
+### Discussion
 
 A private member club board: minimal discussions and a member directory in MVP. Suggested topics include General, Game recommendations, Meetups & players, Event discussions, Rules & tips, and Off-topic.
 
@@ -86,6 +98,8 @@ Directory/profile information can include first name plus last initial, general 
 No follower counts, public popularity rankings, or star ratings of people. Admins must be able to remove content and suspend users. Reporting/blocking and their detailed interactions should be scoped before launch; the handoff treats the fuller trust toolkit as eventual.
 
 ### Profile
+
+This is the user's profile within the currently browsed community, distinct from their global account and personal home.
 
 Basic identity, photo, general location, short bio, interests, experience, play style, teaching/beginner-friendly tags, member-since information, and membership status. Provide My Events, My Tables, activity/history, settings, privacy, notifications, and support.
 
@@ -97,7 +111,7 @@ Create/edit official events; approve/suspend community accounts; manually manage
 
 ## MVP scope and later work
 
-MVP includes auth/account creation, member/nonmember states, Home, official events and drop-in reservation, capacity/waitlists, entitlement gating, member tables with both join modes, location privacy, temporary table chat, current championship/results/leaderboard/final information, minimal Community, Profile, and admin workflows.
+MVP includes auth/account creation, member/nonmember states, Community Home, official events and drop-in reservation, capacity/waitlists, entitlement gating, member tables with both join modes, location privacy, temporary table chat, current championship/results/leaderboard/final information, minimal Community, Profile, and admin workflows.
 
 A staged implementation does not remove Championship or Community from the MVP. Manual payments and simple operational processes are acceptable, but their confirmation rules still need to be defined.
 
@@ -113,4 +127,4 @@ North-star candidate: **distinct people actually playing together**, grounded in
 
 ## Remaining product decisions
 
-Tenant meaning beyond the initial community; final prices and collection process; membership expiry/grace behavior; waitlist claim/approval rules; host seat counting; first championship ruleset; chat retention; moderation/blocking scope; language(s) and age policy. These are tracked in the [decision register](08-decisions-and-open-questions.md).
+The platform/community boundary and personal versus community navigation are settled. Remaining choices include the personal feed's ranking/filtering and the complete My Communities workflow; final prices and collection process; membership expiry/grace behavior; waitlist claim/approval rules; host seat counting; first championship ruleset; chat retention; moderation/blocking scope; language(s) and age policy. These are tracked in the [decision register](08-decisions-and-open-questions.md).
