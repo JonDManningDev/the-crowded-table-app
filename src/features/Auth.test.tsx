@@ -53,7 +53,7 @@ describe('account workflows', () => {
     await start(); click('Sign in'); fill('Email address', 'person@example.com'); fill('Password', 'a-long-test-password'); submit()
     await screen.findByText('person@example.com')
     expect(auth.signInWithPassword).toHaveBeenCalledWith({ email: 'person@example.com', password: 'a-long-test-password' })
-    expect(window.location.hash).toBe('#home')
+    expect(window.location.hash).toBe('#my-home')
     expect(screen.getByText('Community preview')).toBeTruthy()
   })
   it('keeps failed sign-ins on the form with an actionable error', async () => {
@@ -114,7 +114,7 @@ describe('account workflows', () => {
     auth.getSession.mockResolvedValue({ data: { session }, error: null })
     await start()
     await screen.findByText('Your email is confirmed. Welcome to The Crowded Table.')
-    expect(window.location.pathname + window.location.hash).toBe('/#home')
+    expect(window.location.pathname + window.location.hash).toBe('/#my-home')
   })
   it('shows expired-link recovery even with an existing session', async () => {
     window.history.replaceState(null, '', '/auth/reset-password#error=access_denied&error_code=otp_expired')

@@ -1,0 +1,23 @@
+.page { color: var(--ink); }
+.heading { margin-bottom: 30px; }
+.heading h1 { margin: 8px 0 10px; }
+.heading p { color: var(--muted); font-size: 14px; line-height: 1.8; }
+.welcome { display: grid; grid-template-columns: 1.5fr 1fr; gap: 32px; padding: 38px; border: 1px solid var(--line); border-radius: 12px; background: var(--sage); }
+.label { font-size: 9px; letter-spacing: 2px; font-weight: 600; }
+.welcome h2 { font-size: clamp(36px, 4vw, 54px); line-height: 1.05; margin: 17px 0; }
+.welcome h2 em { font-weight: 400; }
+.welcome p { max-width: 460px; font-size: 13px; color: #53644f; line-height: 1.9; margin-bottom: 25px; }
+.illustration { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; border: 1px solid #bccbb3; border-radius: 50% 50% 8px 8px; color: #53694b; background: #f8f7f24d; padding: 28px; }
+.illustration span { font-size: 9px; letter-spacing: 1px; text-align: center; }
+.sections { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 28px; }
+.section { padding: 24px; border: 1px solid var(--line); border-radius: 10px; background: #fbfaf5; }
+.sectionTitle { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.icon { display: inline-flex; padding: 10px; border-radius: 50%; background: var(--sage); }
+.soon { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #6e7567; }
+.section h2 { font-size: 28px; line-height: 1.15; margin: 22px 0 12px; }
+.section p { color: var(--muted); font-size: 12px; line-height: 1.8; }
+.placeholder { border-top: 1px solid var(--line); margin-top: 25px; padding-top: 22px; }
+.placeholder h3 { font-size: 21px; line-height: 1.25; }
+.note { font-size: 11px; color: var(--muted); margin-top: 22px; }
+@media (max-width: 1100px) { .sections { grid-template-columns: 1fr; } .placeholder { margin-top: 18px; padding-top: 14px; } }
+@media (max-width: 700px) { .welcome { grid-template-columns: 1fr; padding: 26px; } .illustration { display: none; } .heading p { font-size: 13px; } .section { padding: 22px; } }

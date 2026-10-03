@@ -5,6 +5,7 @@ import { authInitialization, initialAuthRedirect, supabase } from '../lib/supaba
 import './Auth.css'
 import { CreateCommunity } from './CreateCommunity'
 import { OwnedCommunities } from './OwnedCommunities'
+import { AccountContext } from './auth/accountContext'
 
 type View = 'signup' | 'signin' | 'forgot' | 'check' | 'reset' | 'callback' | 'create-community' | 'communities' | null
 const redirect = (path: string) => `${window.location.origin}${path}`
@@ -45,7 +46,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
         // Remove tokens/errors from the address bar after the SDK consumes them.
         window.history.replaceState(null, '', window.location.pathname)
         if (callbackPath && hasCredentials && !callbackError && !failure && data.session?.user.email_confirmed_at) {
-          window.history.replaceState(null, '', '/#home')
+          window.history.replaceState(null, '', '/#my-home')
           setView(null)
           setNotice('Your email is confirmed. Welcome to The Crowded Table.')
         } else if ((!data.session || (callbackPath && !hasCredentials)) && !callbackError) setError('This link is missing or expired. Please request a new email.')
@@ -64,7 +65,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
   function navigate(next: View) {
     setError(''); setNotice(''); setView(next)
-    if (callbackPath || resetPath) window.history.replaceState(null, '', '/#home')
+    if (callbackPath || resetPath) window.history.replaceState(null, '', '/#my-home')
   }
   async function run(action: () => Promise<void>) {
     setBusy(true); setError(''); setNotice('')
@@ -88,7 +89,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
       } else if (view === 'signin') {
         const { error } = await client.auth.signInWithPassword({ email: address, password })
         if (error) throw error
-        form.reset(); navigate(null); window.location.hash = 'home'
+        form.reset(); navigate(null); window.location.hash = 'my-home'
       } else if (view === 'forgot') {
         const { error } = await client.auth.resetPasswordForEmail(address, { redirectTo: redirect('/auth/reset-password') })
         if (error) throw error
@@ -98,18 +99,18 @@ export function AuthShell({ children }: { children: ReactNode }) {
         if (password !== values.get('confirm')) throw new Error('The passwords do not match.')
         const { error } = await client.auth.updateUser({ password })
         if (error) throw error
-        form.reset(); navigate(null); setNotice('Your password has been updated.'); window.location.hash = 'home'
+        form.reset(); navigate(null); setNotice('Your password has been updated.'); window.location.hash = 'my-home'
       }
     })
   }
   const verified = Boolean(session?.user.email_confirmed_at)
   const titles = { signup: 'Pull up a chair.', signin: 'Welcome back.', forgot: 'Find your way back.', check: 'Check your email.', reset: 'Choose a new password.', callback: 'Confirm your account.' }
-  return <>
+  return <AccountContext.Provider value={{ status: !ready ? 'loading' : verified ? 'signed-in' : 'signed-out', email: verified ? session?.user.email ?? null : null }}>
     <section className={`auth-bar ${!view ? 'with-preview' : ''}`} aria-label="Your account">
       {!ready ? <span role="status">Checking your session…</span> : verified ? <><span>Signed in as <strong>{session?.user.email}</strong></span><div><button disabled={busy} onClick={() => navigate('communities')}>Your communities</button><button className="button" disabled={busy} onClick={() => navigate('create-community')}>Start New Community</button><button disabled={busy} onClick={() => void run(async () => { const result = await supabase!.auth.signOut({ scope: 'local' }); if (result.error) throw result.error; navigate(null) })}>Sign out</button></div></> : <><span>Your next game starts with good company.</span><div><button disabled={busy} onClick={() => navigate('signin')}>Sign in</button><button className="button" disabled={busy} onClick={() => navigate('signup')}>Create Account</button></div></>}
     </section>
     {!view && (notice || error) && <p className="auth-feedback" role={error ? 'alert' : 'status'}>{error || notice}</p>}
-    {view === 'create-community' || view === 'communities' ? verified && session ? (view === 'create-community' ? <CreateCommunity key={session.user.id} onBusyChange={setBusy} onClose={() => { navigate(null); window.location.hash = 'home' }} onList={() => navigate('communities')}/> : <OwnedCommunities key={session.user.id} userId={session.user.id} onCreate={() => navigate('create-community')} onClose={() => { navigate(null); window.location.hash = 'home' }}/>) : <main className="auth-page"><p>Please sign in with a verified account to continue.</p><button onClick={() => navigate('signin')}>Sign in</button></main> : view ? <main className="auth-page"><section className="panel auth-card"><span className="eyebrow">THE CROWDED TABLE</span><h1>{titles[view]}</h1>
+    {view === 'create-community' || view === 'communities' ? verified && session ? (view === 'create-community' ? <CreateCommunity key={session.user.id} onBusyChange={setBusy} onClose={() => { navigate(null); window.location.hash = 'my-home' }} onList={() => navigate('communities')}/> : <OwnedCommunities key={session.user.id} userId={session.user.id} onCreate={() => navigate('create-community')} onClose={() => { navigate(null); window.location.hash = 'my-home' }}/>) : <main className="auth-page"><p>Please sign in with a verified account to continue.</p><button onClick={() => navigate('signin')}>Sign in</button></main> : view ? <main className="auth-page"><section className="panel auth-card"><span className="eyebrow">THE CROWDED TABLE</span><h1>{titles[view]}</h1>
       {!supabase && <p role="alert">Account services are not configured yet. Please try again later.</p>}
       {error && <p className="auth-error" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
       {!ready ? <p role="status">Checking your link…</p> : <>
@@ -119,8 +120,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
         {view === 'reset' && <label>Confirm new password<input type="password" name="confirm" required minLength={12} autoComplete="new-password" disabled={busy}/></label>}
         <button className="button full" disabled={busy || !supabase || (view === 'forgot' && cooldown > 0)}>{busy ? 'Please wait…' : view === 'signup' ? 'Create Account' : view === 'signin' ? 'Sign in' : view === 'reset' ? 'Save new password' : cooldown ? `Try again in ${cooldown}s` : 'Send reset link'}</button>
       </form>}
-      <div className="auth-links"><button disabled={busy} onClick={() => navigate('signin')}>Sign in</button><button disabled={busy} onClick={() => navigate('forgot')}>Forgot password?</button><button disabled={busy} onClick={() => navigate('check')}>Resend confirmation</button><button disabled={busy} onClick={() => navigate(null)}>Back to home</button></div>
+      <div className="auth-links"><button disabled={busy} onClick={() => navigate('signin')}>Sign in</button><button disabled={busy} onClick={() => navigate('forgot')}>Forgot password?</button><button disabled={busy} onClick={() => navigate('check')}>Resend confirmation</button><button disabled={busy} onClick={() => { navigate(null); window.location.hash = 'my-home' }}>Back to My Home</button></div>
       </>}
     </section></main> : <><p className="preview-disclosure">Community pages show sample people and activities. Your account is real; preview membership does not grant community access.</p>{children}</>}
-  </>
+  </AccountContext.Provider>
 }

@@ -26,6 +26,6 @@ export function OwnedCommunities({ userId, onCreate, onClose }: { userId: string
   }, [userId, attempt])
   return <main className="auth-page"><section className="panel creation-card"><span className="eyebrow">A PLACE OF YOUR OWN</span><h1>Your communities.</h1><p>Communities you own. Your management access does not require a participant account.</p>
     {loading ? <p role="status">Loading your communities…</p> : error ? <><p role="alert" className="auth-error">{error}</p><button onClick={() => { setLoading(true); setError(''); setAttempt(value => value + 1) }}>Try again</button></> : rows.length ? <ul className="owned-communities">{rows.map(row => <li key={row.id}><h2>{row.name}</h2><p>{row.slug} · Owner · {row.operational_status === 'archived' ? 'Archived' : 'Active'}</p><p>{[row.city, row.state_province, row.country_code].filter(Boolean).join(', ')} · {row.timezone}</p></li>)}</ul> : <p>You haven’t created a community yet.</p>}
-    <div className="actions"><button className="button" onClick={onCreate}>Start New Community</button><button className="text-button" onClick={onClose}>Back to home</button></div>
+    <div className="actions"><button className="button" onClick={onCreate}>Start New Community</button><button className="text-button" onClick={onClose}>Back to My Home</button></div>
   </section></main>
 }

@@ -1,4 +1,9 @@
-export type Page = 'home' | 'meet-play' | 'championship' | 'community' | 'profile'
+export const previewCommunity = {
+  name: 'The Crowded Table',
+  subtitle: 'GAMES · PEOPLE · BELONGING',
+  location: 'Tegucigalpa, Honduras',
+  motto: 'Different games.\nSame table.',
+}
 export type Art = 'azul' | 'birds' | 'rpg' | 'social' | 'rail' | 'forest' | 'mystery'
 export type SeatStatus = 'confirmed' | 'requested' | 'waitlisted'
 export type Activity = {

@@ -1,0 +1,20 @@
+.sidebar { overflow-y: auto; }
+.sidebar > * { flex-shrink: 0; }
+.sidebar .brand > span { display: block; max-width: 170px; text-wrap: balance; }
+.sidebar .quote { min-height: clamp(110px, 17vh, 165px); }
+.quote p { white-space: pre-line; position: relative; }
+.userArea { border-top: 1px solid var(--line); padding-top: 17px; }
+.account { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+.account > div { min-width: 0; }
+.account strong { display: block; font-size: 11px; overflow-wrap: anywhere; }
+.account small { display: block; color: var(--muted); font-size: 10px; margin-top: 3px; }
+.sidebar .userArea nav { gap: 3px; }
+.sidebar .userArea nav a { padding: 10px 12px; font-size: 12px; }
+.mobileNavigation { display: none; }
+
+@media (max-width: 700px) {
+  .sidebar { overflow: visible; }
+  .mobileNavigation { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+  .mobileNavigation a { display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: var(--ink); }
+  .mobileNavigation a[aria-current="page"] { background: var(--sage); font-weight: 600; }
+}

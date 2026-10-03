@@ -22,7 +22,7 @@ it.each(['signup', 'recovery'])('handles %s when the real SDK consumes the URL b
   render(<StrictMode><AuthShell><div>Home</div></AuthShell></StrictMode>)
   if (type === 'signup') {
     await screen.findByText('Your email is confirmed. Welcome to The Crowded Table.')
-    expect(window.location.pathname + window.location.hash).toBe('/#home')
+    expect(window.location.pathname + window.location.hash).toBe('/#my-home')
   } else {
     await screen.findByRole('button', { name: 'Save new password' })
     expect(window.location.pathname + window.location.hash).toBe('/auth/reset-password')
