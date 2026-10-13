@@ -12,15 +12,17 @@ The later client architecture decisions supersede overlapping tentative frontend
 
 The platform supports user-created communities and multi-community accounts. **My Home** is the personal landing/feed; **My Communities** is the user's community hub. Both currently have stubs. **Community Home**, Meet & Play, Championship, **Discussion**, and Profile belong to the community being browsed. The Tegucigalpa sample community is not the whole platform; see D-043 through D-045.
 
+The 2026-10-12 decisions also settle per-person event/table records, atomic groups, pending-group edit priority, and `tables.manually_confirm_seats` (default false). Automatic tables confirm eligible whole groups as seats allow; manual tables use manager decisions with no second acceptance or deadline. Rejections leave the queue and notify the booker with timestamp, rejecting user, and optional reason. Payments and paid memberships are deferred until a late stage; current feature design must ignore them. Legacy prototype payment/member UI is a refactor discrepancy, not an accepted requirement.
+
 ## Planning set
 
 | Document | Purpose |
 | --- | --- |
 | [Vision and concept](01-vision-and-concept.md) | Community-first vision, brand, functionality, navigation, and MVP |
 | [Decisions and open questions](08-decisions-and-open-questions.md) | Established direction, proposed choices, and unresolved rules |
-| [Architecture](02-architecture.md) | System boundaries, public/private data, and entitlements |
+| [Architecture](02-architecture.md) | System boundaries, public/private data, and commercial deferral |
 | [Database schema plan](03-database-schema.md) | Entities, relationships, constraints, and migration sequence |
-| [Auth and multi-tenancy](04-auth-and-multi-tenancy.md) | Identity, paid access, roles, participation, and isolation |
+| [Auth and multi-tenancy](04-auth-and-multi-tenancy.md) | Identity, community standing, roles, participation, and isolation |
 | [Frontend patterns](05-frontend-patterns.md) | Canonical client boundaries, data/state, CSS Modules/theming, and product UI conventions |
 | [Backend patterns](06-backend-patterns.md) | Transactional commands, privacy, waitlists, results, and audit |
 | [File structure](07-file-structure.md) | Illustrative client layout, ownership, current-code conflicts, and refactor sequence |
@@ -39,12 +41,12 @@ The platform supports user-created communities and multi-community accounts. **M
 - **Open:** a rule that needs resolution before its dependent implementation.
 - **Later:** explicitly deferred or eventual functionality.
 
-The MVP includes official events, membership gating, member tables, private table chat, Championship, minimal Community, Profile, and admin controls. Implementation milestones are smaller than the MVP; completing one milestone does not silently reduce the launch scope.
+The current build covers events, tables, private table chat, Championship pending separate review, Discussion, Profile, and authorized management. Payments, paid memberships, and their UI/gates are absent until the late commercial stage. Implementation milestones remain smaller than the product scope.
 
 ## Best next steps
 
-1. Preserve the established community/tenant and Auth decisions; settle membership-state access, payment confirmation, and expiry effects on existing participation.
-2. Draw the main mobile flows: nonmember drop-in, member hosting/requesting a seat, and championship registration/result confirmation.
+1. Preserve Auth/community persistence; implement the settled standing, per-person reservation, automatic/manual confirmation, group-edit, and notification rules without payment/member dependencies.
+2. Draw mobile account-holder/guest registration, automatic confirmation, manager approve/reject/issue, and group-edit flows; keep championship design separate.
 3. Use the canonical client boundaries to refactor the prototype incrementally, preserving working Auth and community persistence; resolve the review questions needed for each slice.
 4. Agree on permission/state-transition rules for subsequent domain migrations; build the private-table flow with synthetic tenants and address-leak tests, then the remaining MVP flows.
 5. Select routing, form/validation, and PWA tools; adopt the planned TanStack Query layer and CSS Modules/token styling as the relevant slices need them.
@@ -57,10 +59,10 @@ Recommended additional artifacts: mobile wireframes with the warm club aesthetic
 | --- | --- |
 | Community / tenant | Established independently operated Crowded Table community boundary; initially Tegucigalpa |
 | Community account | A user's association with a tenant, including a nonpaying participant |
-| Membership entitlement | Time-bounded access to paid community benefits; independent of staff role and payment provider |
+| Membership entitlement | Deferred paid-access concept; no current gate or implementation dependency |
 | Official event | Activity hosted by The Crowded Table and eligible for its own admission rules |
-| Member table | A member-hosted activity in the private Meet & Play network |
-| Championship entry | Access to one competition; never a substitute for private-network membership |
+| Member table | Legacy term for a community-hosted game table; no paid membership implied |
+| Championship entry | Participation in one competition; does not grant unrelated private-resource access |
 | Confirmed participant | A person whose seat/registration has completed the required checks |
 | The Final Table | Official in-person championship final |
 

@@ -4,6 +4,12 @@ Status: interactive frontend exploration, not a production implementation.
 
 This guide describes the five mock sections. Real Supabase Auth, community creation, and the owner-only community list have since been added alongside them; see the [root README](../README.md). The [canonical client architecture](05-frontend-patterns.md) and [refactor inventory](07-file-structure.md#current-conflicts-and-refactor-candidates) guide the upcoming structural changes without requiring the current prototype to match the illustrative tree immediately.
 
+## Current design differs from legacy simulations
+
+The 2026-10-12 decisions supersede the prototype's paid-member/guest preview, membership paywalls, prices, checkout/payment simulation, and commercial profile controls. The descriptions and walkthroughs below report existing mock behavior, not the target requirements. Remove those simulations during the domain refactor; payments and paid memberships are late-stage work, with no current feature dependency.
+
+The target table setting is `manually_confirm_seats = false` by default. Automatic confirmation and manual manager review both confirm whole groups directly, with no recipient acceptance, response window, or reservation expiration. Manager rejections remove requests from active queues and promptly notify the booking account with timestamp, rejecting user, and optional reason. Group-edit priority rules and per-person records are documented in the [schema plan](03-database-schema.md#automatic-and-manual-seat-confirmation). These are planning changes; this documentation update does not implement them in the mock client.
+
 ## Personal and community navigation — 2026-10-03
 
 The default app destination is now **My Home**, a personal-feed stub with placeholders for community updates, RSVPs, and interest/history-based event suggestions. **My Communities** is a separate stub with a clearly labeled sample-community link; the account bar's working **Your communities** owner list remains separate. These placeholders do not imply that personal data or all community associations have been fetched.

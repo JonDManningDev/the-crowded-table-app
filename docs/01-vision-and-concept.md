@@ -1,12 +1,12 @@
 # Vision and concept
 
-Status: current product baseline, updated 2026-10-03 for the user's multi-community and personal-home direction. The original **Find Boardgame Cafe Ideas** handoff describes the initial Tegucigalpa community, not the entire platform. Proposed prices and eventual features remain labeled.
+Status: current product baseline, updated 2026-10-12 for event/table confirmation and the deferral of payments/paid memberships, following the 2026-10-03 multi-community direction. The original handoff describes the initial Tegucigalpa community, not the entire platform. Legacy pricing/membership ideas are future proposals.
 
 ## Core idea
 
 **The Crowded Table is an app where users create, manage, and participate in their own gaming communities. A user can belong to multiple communities.**
 
-The owner of a community is independent of the owner/operator of `thecrowdedtable.app`. The Crowded Table in Tegucigalpa is the initial sample community; its name, subtitle, location, motto, events, and membership model are community context, not platform-wide defaults. Account identity is global; profiles, participation, staff authority, and paid entitlements remain scoped as described in the auth plan.
+The owner of a community is independent of the owner/operator of `thecrowdedtable.app`. The Crowded Table in Tegucigalpa is the initial sample community; its name, subtitle, location, motto, events, and membership model are community context, not platform-wide defaults. Account identity is global; profiles, participation, staff authority, and any eventual paid entitlements remain scoped as described in the auth plan; paid access has no role in current feature behavior.
 
 People may own games and have a small regular group yet struggle to find new players. The app helps them fill empty seats, meet people outside their usual circle, participate in recurring events, and enter a monthly championship.
 
@@ -26,16 +26,16 @@ Exact colors, fonts, imagery, and component treatments still need a visual desig
 
 ## Audience and commercial model
 
-| Audience | Experience |
+| Audience | Current target experience |
 | --- | --- |
-| Visitor / nonmember | Discover official events and membership benefits; use a free account to reserve eligible paid events or enter a championship |
-| Paid member | Access Meet & Play, private Community, included official game nights subject to capacity, and monthly championship participation |
-| Member host | Create a table, welcome new players, manage requests, and coordinate confirmed participants |
-| Founder / admin | Host official events, manage membership and competitions, moderate content, and support participants |
+| Visitor | Browse permitted public community/event content |
+| Approved community account | Participate under community standing, event/table registration, and privacy rules; no paid-member distinction |
+| Booking account / guest sponsor | Register themselves and/or guests, including unnamed guests without sponsor attendance |
+| Table manager / community staff | Manage resources only within explicit table/community permissions |
 
-Initial Tegucigalpa community pricing ideas: **L300/month** membership, **L125** drop-in for eligible official events, and an illustrative **L200** championship entry for nonmembers. These are proposed prices, not final billing rules. Larger special events can have separate tickets, with possible member discounts or early access.
+Payments and paid memberships will be among the last features implemented. Until then, app functionality acts as though they do not exist: no pricing/checkout/payment simulation, manual verification, member benefits, entitlement gating, or membership-status screens. Community accounts and their approval/standing remain essential and are separate from the deferred commercial concept.
 
-A drop-in or tournament fee does not unlock the private member network. Manual payment handling and manual membership activation are acceptable initially; payment integration must not block the first launch.
+The original Tegucigalpa price ideas (L300/month, L125 drop-in, illustrative L200 competition entry) remain historical future proposals only. They are not current configuration, access requirements, or launch blockers.
 
 ## App sections and desired functionality
 
@@ -43,7 +43,7 @@ The community navigation is **Community Home · Meet & Play · Championship · D
 
 The sidebar's upper area belongs to the browsed community, in order: name, subtitle, location, navigation links, motto. The lower area belongs to the logged-in user's global account and includes **My Communities** and **My Home**. A mock community profile must not masquerade as that account. Keep personal navigation reachable on mobile alongside community navigation.
 
-Nonmembers can access permitted Community Home, Championship, and Profile views; Meet & Play and Discussion retain community membership paywalls without leaking private previews.
+Access follows public/community/resource audiences. Meet & Play and Discussion have no paid membership paywall; approved standing and private-data authorization remain necessary.
 
 ### My Home and My Communities
 
@@ -53,27 +53,27 @@ Start with a basic page and clearly marked placeholders, then connect sections a
 
 ### Community Home and official events
 
-Community Home's main job is to show what the selected community itself is hosting. Show the brand/location header, warm hero, membership CTA for nonmembers or welcome/member status for members, about three upcoming official events, and a small seasonal highlight.
+Community Home's main job is to show what the selected community itself is hosting. Show the brand/location header, warm hero, community joining/standing information or a personalized welcome, about three upcoming official events, and a small seasonal highlight.
 
 Do not list member-created tables in Community Home's official-event feed. This restriction does not prohibit a user's authorized RSVPs from appearing on My Home. A member welcome area may link to My Tables, but should not become a private-table feed. Do not add duplicate Championship shortcuts, an About Us button, or a redundant Our Game Nights top shortcut.
 
-A dedicated official-events page is reached within the Community Home area, not added as a sixth bottom tab. Include list/calendar views, month selection, detail, capacity, waitlist, member/guest admission, and distinct special-event styling.
+A dedicated official-events page is reached within the Community Home area, not added as a sixth bottom tab. Include list/calendar views, month selection, detail, capacity, queued registration, account-holder/guest participation, and distinct event styling.
 
 Proposed weekly rhythm: Tuesday **Learn & Play** (“Never played it? Perfect. We'll teach you.”) and Thursday **Special Game Night**, typically 7:30–10:30 PM. The founder's home has an approximate maximum of 10 people; each event needs an explicit capacity and staffing interpretation. Examples include Azul teaching nights, RPG one-shots, social games, mystery/deduction, cooperative games, and seasonal themes.
 
-Public home-event location: **The Crowded Table · Tegucigalpa**. Reveal the actual address only to confirmed participants and authorized hosts/admins. Larger rented-space events can accommodate more people and be separately ticketed. Example dates and guest counts in the handoff are illustrative, not published bookings.
+Public home-event location: **The Crowded Table · Tegucigalpa**. Reveal the actual address only to confirmed participants and authorized hosts/admins. Larger rented-space events can accommodate more people with their own capacity; ticketing is deferred. Example dates and guest counts in the handoff are illustrative, not published bookings.
 
 ### Meet & Play
 
-The centerpiece of membership has three prominent actions: **Find a Table**, **Create a Table**, and **Meet Someone New**.
+Meet & Play has three prominent actions: **Find a Table**, **Create a Table**, and **Meet Someone New**.
 
 Table details: game/activity title, host photo/profile, date and start/end time, seats and availability, description, category, experience level, beginner-friendly flag, and appropriate location information.
 
 Categories may include Board Game, RPG, TCG, Social / Party, Classic Games, and Other. Experience choices include First timers welcome, Any experience, and Experienced players.
 
-Hosts choose **Take a Seat** for instant joining or **Request a Seat** for approval. Hosts accept or decline requests. Full tables say **This Table Is Crowded ❤️**, with **Join Waitlist**. Start with FIFO waitlists; notification, claim windows, and approval interaction need explicit operating rules.
+Tables default to automatic confirmation (`manually_confirm_seats = false`): eligible non-withdrawn whole groups confirm in receipt order when they fit. With manual confirmation enabled, authorized table managers approve, reject, or notify the booking account of an issue at their discretion. Approval directly confirms the group. Rejection removes it from the active queue and promptly notifies the booker with timestamp, rejecting user, and optional reason. No second acceptance, response window, or expiration applies. Automatic queues skip non-fitting groups without changing their priority; voluntary group additions reset priority, while name corrections/removals preserve it.
 
-Public locations may be shown. For private locations, show **Private location · Tegucigalpa** until a seat is confirmed. A request, waitlist position, or payment awaiting verification does not reveal the address.
+Public locations may be shown. For private locations, show **Private location · Tegucigalpa** until a seat is confirmed. A pending request or waitlist position does not reveal the address.
 
 Provide My Tables, upcoming participation, cancellation, and host controls. Each table has a private temporary group chat for its confirmed players and host to coordinate rules, timing, and what to bring. Chat eventually becomes read-only/archived; the exact period is open. Broad direct messaging is outside MVP.
 
@@ -83,7 +83,7 @@ Meet Someone New collects availability, interests, game preferences, and experie
 
 A major MVP pillar: a different featured board game each month, qualifying play throughout the month at agreed locations, and **The Final Table** at the official home/base.
 
-Include featured game, dates, rules, registration, leaderboard, past champions, and Final Table date/time/finalists/prize/results. Membership includes entry; nonmembers can buy competition-only access. They need a championship-specific participation/result route without opening Meet & Play.
+Include featured game, dates, rules, registration, leaderboard, past champions, and Final Table date/time/finalists/prize/results. Payment/member conditions are deferred; competition eligibility and participation/result routes remain separate from table participation. The championship structure itself awaits its separate review.
 
 Submit results with participants, scores/placements, winner, date, and optional notes. Another participant confirms or disputes. Only confirmed results affect standings. Admins can correct, void, and resolve disputes.
 
@@ -91,7 +91,7 @@ Scoring varies by game. The design must support versioned rules and eventual con
 
 ### Discussion
 
-A private member club board: minimal discussions and a member directory in MVP. Suggested topics include General, Game recommendations, Meetups & players, Event discussions, Rules & tips, and Off-topic.
+A community-restricted board without paid membership gates: minimal discussions and a member directory in MVP. Suggested topics include General, Game recommendations, Meetups & players, Event discussions, Rules & tips, and Off-topic.
 
 Directory/profile information can include first name plus last initial, general location, interests, experience, play style, and willingness to teach. Recommendations can begin as discussion topics. Local Spots is later.
 
@@ -101,30 +101,30 @@ No follower counts, public popularity rankings, or star ratings of people. Admin
 
 This is the user's profile within the currently browsed community, distinct from their global account and personal home.
 
-Basic identity, photo, general location, short bio, interests, experience, play style, teaching/beginner-friendly tags, member-since information, and membership status. Provide My Events, My Tables, activity/history, settings, privacy, notifications, and support.
+Basic identity, photo, general location, short bio, interests, experience, play style, teaching/beginner-friendly tags, community join/standing information. Provide My Events, My Tables, activity/history, settings, privacy, notifications, and support.
 
 Possible statistics: attended events, tables hosted, games played, distinct people played with, championship entries, finals, and wins. These depend on verified activity, not merely bookings. **Played with 18 different Crowded Table members** is more aligned with the brand than a follower count.
 
 ### Admin
 
-Create/edit official events; approve/suspend community accounts; manually manage membership; manage championships and disputes; remove bad content; inspect users/tables within authorized scope. Administrative access is accountable and separate from payment status.
+Create/edit official events; approve/suspend community accounts; manage championships and disputes; remove bad content; inspect users/tables within authorized scope. Administrative access is accountable and permission-based.
 
 ## MVP scope and later work
 
-MVP includes auth/account creation, member/nonmember states, Community Home, official events and drop-in reservation, capacity/waitlists, entitlement gating, member tables with both join modes, location privacy, temporary table chat, current championship/results/leaderboard/final information, minimal Community, Profile, and admin workflows.
+The current build includes auth/account creation, community standing, Community Home, events, per-person group reservations, automatic/manual table confirmation, capacity/queues, location privacy, temporary table chat, championship functionality pending separate review, minimal Discussion, Profile, and authorized management. Payments, paid memberships, and their simulations/gates are absent until their late implementation stage.
 
-A staged implementation does not remove Championship or Community from the MVP. Manual payments and simple operational processes are acceptable, but their confirmation rules still need to be defined.
+Championship and Discussion remain part of the product plan. The user's explicit commercial deferral removes payment/membership dependencies from earlier work; it is not merely deferral of a payment-provider integration.
 
 Explicitly outside MVP: game catalog/library or inventory, café menu/food ordering/POS/retail, employee scheduling, commercial venue management, public social network, followers, user ratings, AI recommendations, native mobile apps, complicated Discord integration, broad DMs, physical membership cards, and QR passes.
 
 ## Business validation
 
-Central hypothesis: will Tegucigalpa gamers pay around L300/month for reliable access to a private network that helps them find new people to play with?
+Current validation asks whether communities reliably help people find others to play with. Willingness to pay and the original L300/month hypothesis belong to the later commercial stage.
 
-Watch whether members create tables independently, fill seats, meet new people, convert from drop-ins, remain subscribed after forming friendships, and return for championships. A ten-person home base should seed distributed play across the city.
+Watch whether community participants create tables independently, fill seats, meet new people, and return for events. Subscription/conversion experiments wait for commercial features.
 
-North-star candidate: **distinct people actually playing together**, grounded in attendance. Future analytics include active paying members, revenue/churn/retention, attendance, conversion, table creation/fill, waitlist demand, no-shows, repeat play, and competition engagement. Manual grants are not proof of paid revenue.
+North-star candidate: **distinct people actually playing together**, grounded in attendance. Future analytics include active paying members, revenue/churn/retention, attendance, conversion, table creation/fill, waitlist demand, no-shows, repeat play, and competition engagement. Commercial metrics are deferred until that work is implemented.
 
 ## Remaining product decisions
 
-The platform/community boundary and personal versus community navigation are settled. Remaining choices include the personal feed's ranking/filtering and the complete My Communities workflow; final prices and collection process; membership expiry/grace behavior; waitlist claim/approval rules; host seat counting; first championship ruleset; chat retention; moderation/blocking scope; language(s) and age policy. These are tracked in the [decision register](08-decisions-and-open-questions.md).
+The platform/community boundary, personal navigation, group-edit rules, automatic/manual confirmation, the confirmation modal and queue processing when switching to automatic mode, no response deadline, rejection notices, and the event cancellation/archive rules are settled. Events are retained; archive eligibility is no registrations at cancellation or 30 days cancelled. Cancelled events remain discoverable through a community filter; archived events are staff-only. Event cancellation notifies queued/confirmed registrants, while event/table cancellation preserves per-person booking rows. Remaining choices include personal-feed ranking, complete My Communities workflows, remaining cancellation/archive access and child-table behavior, host seat counting, championship rules, chat retention, moderation, language(s), and age policy. Prices, payment processing, and membership lapse are deferred commercial questions rather than current blockers. See the [decision register](08-decisions-and-open-questions.md).

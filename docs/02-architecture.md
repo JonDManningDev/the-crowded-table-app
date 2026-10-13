@@ -1,6 +1,6 @@
 # Architecture plan
 
-Status: required stack and current canonical client architecture direction established; broader backend implementation designs remain proposals where identified. Personal versus community scope was clarified on 2026-10-03.
+Status: required stack and current canonical client architecture direction established; broader backend implementation designs remain proposals where identified. Personal versus community scope was clarified on 2026-10-03; event/table boundaries and access rules were clarified on 2026-10-12 and remain unimplemented.
 
 ## Baseline
 
@@ -30,7 +30,7 @@ flowchart LR
     JOBS --> WORKER[Trusted worker / Edge Function]
 ```
 
-Simple permitted reads and narrow updates use caller-scoped data access. Atomic seat, entitlement, result, and administrative operations use database commands. Edge Functions handle external services, future payment integrations, or delivery workers where required. Several independent database calls from an Edge Function do not form one transaction.
+Simple permitted reads and narrow updates use caller-scoped data access. Atomic seat, result, and administrative operations use database commands. Edge Functions handle external services, future payment integrations, or delivery workers where required. Several independent database calls from an Edge Function do not form one transaction.
 
 Supabase Realtime is the proposed transport for table chat updates, with durable database messages as the source of truth. Storage supports profile photos if introduced; its access rules must match the profile audience. No general-purpose server or external chat network is needed by default.
 
@@ -44,19 +44,19 @@ Keep four independent concepts:
 
 1. Account identity: who is signed in.
 2. Community association and standing: tenant participation, approval, suspension/removal.
-3. Membership entitlement: time-bounded access to paid benefits.
+3. Future paid membership entitlement: deferred until a late stage; no current runtime access checks.
 4. Resource participation: a particular confirmed seat, chat, or championship entry.
 
-A nonmember may have a community account and buy a drop-in/competition entry. A paid member may be suspended. A staff role does not automatically mean paid benefits.
+Current participation uses community standing, privacy, and resource registration. Payments and paid memberships are absent from current functionality; their later implementation must remain separate from staff authority.
 
 ## Domain boundaries
 
 | Domain | Responsibility |
 | --- | --- |
-| Official events | Public discovery, member admission, eligible drop-ins, separate special tickets |
-| Meet & Play | Member-created tables, requests, confirmation, waiting, and matching requests |
-| Membership | Access periods and manual grant/revocation independent of payment provider |
-| Participation | Resource-specific eligibility, capacity, seat states, attendance |
+| Events | Gatherings with zero or more tables; sponsorship, public/private audience, invitations, registration, admission, and attendance |
+| Tables / Meet & Play | Individual game sessions, account-holder and guest seats, requests, confirmation, waiting, and matching requests |
+| Membership / payments (deferred) | No current feature or authorization dependency; design commercial behavior near the end of implementation |
+| Participation | One event registration per attendee and table participation per person; separate booking account, atomic group acceptance, eligibility, capacity, states, and attendance |
 | Chat | Confirmed table participants, durable messages, archival |
 | Championship | Registrations, versioned rules, match evidence/confirmation, standings, finals |
 | Communities | User-owned community creation/management, associations, and community identity |
@@ -64,26 +64,33 @@ A nonmember may have a community account and buy a drop-in/competition entry. A 
 | Admin | Authorized commands with audit records |
 | Notifications | Durable in-app notices and retryable delivery; external channels undecided |
 
-Official events and member tables have distinct roots and authorization. A shared scheduling/seat-control record is proposed to support common capacity and location invariants; see the schema plan. Sharing UI or transaction helpers must not share admission permissions accidentally.
+Events and tables have separate roots; the former shared activity/subtype proposal is superseded. A table may stand alone or belong to an event. Event registration approval precedes associated table seating, and explicitly cancelling an attendee's registration clears that attendee's associated reservations. Cancelling the event/table itself preserves every registration/participation row. Only organizers may add tables to an event. Event attendance capacity and table seat capacity remain separate; guest seats count toward capacity, and new guest bookings require `tables.allow_guests` (default true). Disabling guests preserves existing bookings and prompts the table manager with optional guest-removal controls; removal is an explicit table-management action available at any time. See the [schema direction](03-database-schema.md#events-tables-locations-and-seats) for confirmed rules and remaining physical-design choices. Shared presentation or transaction helpers must preserve each domain's authorization and lifecycle.
+
+Use one event registration per actual attendee and one table participation per person. Track the booking account separately, so guest-only bookings create no sponsor attendance/seat. An event-table participation references its occupant's exact event registration; standalone participation carries attendee/guest information directly. Groups must be accepted together in one database transaction, validating every member and full capacity before any approval/confirmation. Durable group membership supports this operation while retaining per-person identity and cancellation. The UI may submit a party in one action; feature data access must use a transactional group command rather than loop over per-person acceptance calls.
+
+The initial table setting is `manually_confirm_seats = false`: eligible non-withdrawn whole groups confirm automatically in receipt order when they fit. True enables manager approval/rejection/issue notices; approval directly confirms without booker acceptance or expiry. Rejections leave the active queue and promptly notify the booking account with timestamp, actor, and optional reason. Guest-name edits/removals preserve pending-group priority; additions reset it after explanation. Offered seats, claim windows, and payment holds are deferred.
+
+Switching an existing manual table to automatic mode requires a modal explaining that queued requests will be processed automatically in receipt order as eligible whole groups fit. Continue triggers the switch and queue processing; Cancel closes the modal and leaves manual mode true. Preserve the existing queue priority rules during the switch.
+
+Events have retained cancelled/archived lifecycle states, with no hard deletion. Archive eligibility is no registrations at cancellation or 30 continuous cancelled days. Cancelled events remain discoverable through a community-user filter; archived events are staff-only. Cancellation notifies queued/confirmed event registrants with timestamp, actor, and optional reason. Recommended child behavior derives availability from the table and parent event without rewriting historical booking rows. See the [cancellation policy and remaining choices](03-database-schema.md#event-cancellation-and-archival--accepted-rules).
 
 ## Data exposure
 
-- Public: published official-event summaries, safe display locations, membership information, and championship overview. Public leaderboard identity details remain open.
-- Member-only: member tables, directory, and Discussion content.
-- Confirmed-participant-only: private addresses and table chat, subject to lifecycle rules.
-- Self-only: private account preferences, payment/entitlement history, pending requests.
-- Staff-restricted: manual grants, disputes, moderation reports, and audit data.
+- Public: summaries of events published to the community, including permitted user-posted events, safe display locations and championship overview. Public leaderboard identity details remain open.
+- Community participation: approved, non-banned account holders, plus sponsored guests where allowed. Guest names are optional; sponsors may book guests without registering themselves, attending, or playing. Public visibility does not confer participation or reveal private invitations/tables. Admission conditions remain separate; payment and membership gates are deferred.
+- Community-restricted: directory and Discussion content under audience policies; no paid-membership gate.
+- Resource-restricted: private addresses and table chat, subject to their respective participant, host, staff, and lifecycle rules.
+- Self-only: private account preferences and pending requests; commercial history is deferred.
+- Staff-restricted: scoped management decisions, disputes, moderation reports, and audit data. `can_see_private_events` allows same-community private event/invitation/table visibility and table chat reads without write authority; it excludes private addresses. `can_manage_events` permits cancellation in place of deletion, but no other changes, to publicly posted user events. Archived events are staff-only; archive write authority and the private-audience intersection remain to finalize.
 
 Store exact addresses separately from safe location summaries. Never include private addresses in list/detail payloads, public views, notifications, logs, or Realtime broadcasts. Access to an address needs a dedicated authorized read.
 
 ## Money versus access
 
-Prices and entitlement rules are configuration. Manual verification can satisfy a payment requirement initially. Record payment evidence and approval separately from the entitlement or seat it enables. A claimed payment, uploaded proof, or browser success state is not trusted confirmation. Future provider webhooks must feed the same audited commands.
-
-Payment automation is deferred; paid admission and membership workflows are MVP scope. Expiry and refund behavior must be resolved before dependent flows ship.
+Payments and paid memberships are among the last features to implement. Current flows act as though they do not exist: no pricing/checkout, payment simulation or manual verification, entitlements, or member-only gates. Community association/approval and resource authorization remain necessary. Retain old commercial concepts only as deferred proposals; they must not block event/table/refactor work or become hidden backend eligibility dependencies.
 
 ## Operations and tooling
 
 Use separate local, non-production, and production data/configuration. Version migrations, grants, policies, functions, and generated types. Keep Supabase secret/service credentials in trusted runtimes; only public configuration goes to the browser. [Vite environment guidance](https://vite.dev/guide/env-and-mode) explains client-exposed environment variables.
 
-Router, form/validation libraries, any primitive-component library, PWA tooling, and hosting remain unselected. TanStack Query is the planned server-state choice; CSS Modules and token-based preset theming are the client styling direction. Resend is selected for initial Auth email; broader notification delivery channels remain open. Keep the app at the repository root. Add scheduled work for waitlist expiry and chat archival only with an explicit reliable execution mechanism and retry/monitoring plan.
+Router, form/validation libraries, any primitive-component library, PWA tooling, and hosting remain unselected. TanStack Query is the planned server-state choice; CSS Modules and token-based preset theming are the client styling direction. Resend is selected for initial Auth email; broader notification delivery channels remain open. Keep the app at the repository root. There is no current seat-expiry worker. Add scheduled work for chat archival only with an explicit reliable execution mechanism and retry/monitoring plan.

@@ -41,6 +41,8 @@ After signing in with a verified account, choose **Start New Community** in the 
 
 ## Explore the prototype
 
+Current design note (2026-10-12): the member/guest paywalls and payment simulations described below are legacy prototype behavior awaiting removal in the domain refactor. [Accepted plans](docs/08-decisions-and-open-questions.md#events-tables-and-invitations--2026-10-12) defer payments and paid memberships to a late stage. The planned table flow supports automatic/manual whole-group confirmation with no response window; the prototype does not yet implement the complete new domain model.
+
 The sidebar's name, subtitle, location, five community links, and motto belong to the sample community. The lower account area contains My Communities and My Home and shows the real account identity when signed in. Personal links also appear above content on mobile. My Home has clearly marked placeholders for community updates, upcoming RSVPs, and interest/history-based event suggestions; it does not currently load personal activity. My Communities links to the sample community without claiming the user has joined it.
 
 The community preview starts as sample member Ana M.; use **Preview as Member / Guest** to compare simulated access. Community activities/profile edits remain in-memory and refreshing restores sample data. Simulated payments never charge anyone. The separate account bar uses real Supabase Auth and supports persisted community creation and an owner list when configured. The five preview sections still use sample data. Client-side preview gating is not production security, and installed/offline PWA support remains unimplemented.

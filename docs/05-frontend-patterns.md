@@ -1,8 +1,10 @@
 # Frontend code patterns
 
-Status: **current canonical client architecture direction**, recorded from the user's architecture decisions on 2026-10-02. Required stack: Vite, TypeScript, React Compiler. This guides the upcoming prototype refactor; it is reviewable and may evolve as real requirements emerge. Updated 2026-10-03 to distinguish the user's personal home from the selected community's home.
+Status: **current canonical client architecture direction**, recorded from the user's architecture decisions on 2026-10-02. Required stack: Vite, TypeScript, React Compiler. This guides the upcoming prototype refactor; it is reviewable and may evolve as real requirements emerge. Updated 2026-10-03 for personal/community scope and 2026-10-12 for the planned table guest-management interaction.
 
 This document owns client boundaries, data/state, and styling decisions. The [file structure plan](07-file-structure.md) owns illustrative paths, migration steps, and the current-code conflict inventory. The [decision register](08-decisions-and-open-questions.md#client-architecture-review-questions) tracks questions to revisit. Neither document requires the target structure to exist immediately.
+
+Current product scope (2026-10-12): payments and paid memberships are late-stage work. Current feature flows must have no member/guest payment previews, paywalls, pricing/checkout, payment verification, or entitlement-dependent behavior. Remove the legacy prototype simulations during the domain refactor rather than carrying them into the new client. Community approval, private audiences, and resource authorization still apply.
 
 ## Decisions made
 
@@ -43,11 +45,21 @@ Keep a component in its feature until actual reuse justifies moving it. Neither 
 
 Use five community destinations: Community Home, Meet & Play, Championship, Discussion, Profile. Official-event list/calendar/detail sit within Community Home's navigation area; Profile is community-specific. The sidebar name, subtitle, location, links, and motto describe the selected community. Its lower account area contains My Communities and My Home. On mobile, keep those personal links reachable alongside the community tabs. Admin is a separately authorized area.
 
-Nonmembers see a membership paywall on Meet & Play and Discussion, with no private member names, tables, seat counts, or message previews fetched for those screens. Championship remains usable by competition-only entrants.
+Meet & Play and Discussion use community standing, privacy, and resource authorization rather than paid membership gates. Do not fetch private data before its audience checks pass; payment/member status has no current access effect.
 
 Community Home's event feed remains scoped to official events from that community. My Home is now the approved default app destination: a personalized feed of announcements/discussions, RSVPs, and possible interest/history-based event suggestions across the user's related communities. Start with honest placeholders and wire sections as prerequisites are completed. Preserve per-community authorization and safe payloads when aggregating; the old official-events-only Home restriction applies to Community Home, not My Home. My Communities is a separate stub; the working owner-only list does not yet provide the complete relationship list. CA-001 records this resolved scope distinction.
 
 Build a warm cream/forest-green/sage/terracotta visual system, serif headings, readable sans-serif body, rounded cards, generous space, and welcoming language. The prototype uses DM Sans and Libre Caslon Display; the final semantic token set and permitted theme presets remain to be designed. Keep accessible contrast, semantic structure, visible focus, keyboard support, touch targets, and screen-reader status announcements.
+
+## Table guest management
+
+Accepted behavior, 2026-10-12: disabling `tables.allow_guests` prevents new guest bookings and preserves existing ones. Saving the flag does not remove people, release seats, or cancel event registrations. This is a planned table-management interaction; it is not implemented in the current prototype.
+
+On disabling guests, show the authorized table manager which current bookings belong to guests, with an optional selection interface for removal. List each guest's optional name or stable unnamed-guest label, booking account, booking status, and group context where relevant. Start with no rows selected. Provide a clear keep-all/dismiss path and an explicit "Remove selected guest bookings" action; if no guest bookings exist, say so and offer no removal action. Explain that existing bookings stay unless deliberately removed. Selected removals affect this table only, including when it belongs to an event.
+
+Saving the setting and removing selected bookings are separate mutations. Closing the prompt, selecting nothing, or a failed removal leaves existing bookings intact; report setting-save and removal outcomes separately so the user knows what succeeded. Refresh the authorized booking list and revalidate selected IDs when submitting removal. Use the standard cancellation command and reconcile capacity/group state from its result; do not optimistically remove unselected rows or infer removals from the flag's value.
+
+Keep the same guest-removal controls available in the ordinary table-management interface at any time, whether guests are currently allowed or blocked. Only users authorized to manage that table may edit the flag or remove bookings; private-view permission and cancellation-only event moderation do not confer those actions. Per-person cancellation remains distinct from accepting only part of a group, which is prohibited. The [schema rules](03-database-schema.md#disabling-guests-and-removing-existing-bookings) and [backend patterns](06-backend-patterns.md#eventtable-rules--confirmed-2026-10-12) define the persistence behavior.
 
 ## Components and data flow
 
@@ -70,9 +82,9 @@ Share visual event/table cards and seat-state components only when useful; keep 
 
 ## Server state, UI state, and types
 
-TanStack Query is the planned server-state layer for events, profiles, game libraries, community information/posts, championships/standings, registrations, memberships, Meet & Play availability, and notifications. Let it handle caching, request deduplication, loading/errors, stale data, refetching, invalidation, and mutation lifecycle instead of repeatedly rebuilding these with `useEffect` plus `useState`.
+TanStack Query is the planned server-state layer for events, profiles, game libraries, community information/posts, championships/standings, registrations, Meet & Play availability, and notifications. Let it handle caching, request deduplication, loading/errors, stale data, refetching, invalidation, and mutation lifecycle instead of repeatedly rebuilding these with `useEffect` plus `useState`.
 
-An illustrative query identity is `['events', eventId]`; protected or tenant-dependent reads need the identity/tenant dimensions described below. Joining an event should invalidate the relevant event and affected lists so dependent UI reconciles with canonical server state. Optimistic updates may be useful for appropriate interactions, subject to the restrictions on seats, payments, access, and results below.
+An illustrative query identity is `['events', eventId]`; protected or tenant-dependent reads need the identity/tenant dimensions described below. Joining an event should invalidate the relevant event and affected lists so dependent UI reconciles with canonical server state. Optimistic updates may be useful for appropriate interactions, subject to the restrictions on seats, access, and results below.
 
 Selected tabs, modal/drawer visibility, unsaved form text, and temporary display controls usually belong in local React state. Shareable filters belong in URL state. Introduce a lightweight global client-state library only if local state and existing providers cannot cleanly meet a concrete requirement. An Auth session/subscription lifecycle is distinct from ordinary cached resource queries; define that boundary during the refactor.
 
@@ -80,7 +92,7 @@ Prefer types such as `features/events/types.ts`, `features/championships/types.t
 
 ## Auth, access, and query state
 
-Maintain explicit loading/visitor/guest/member/suspended states. Entitlement status comes from the backend; UI gating mirrors server decisions. Role, paid benefits, confirmed participation, and payment verification are separate types.
+Maintain explicit loading, visitor, pending/approved/suspended community-account, and resource-participation states. Paid membership and payment verification are deferred and must not appear as current eligibility types or gates. UI gating mirrors backend authorization.
 
 Cache private data by user, tenant, resource, and filters. Example:
 
@@ -142,17 +154,37 @@ Do not automatically add `repositories`, `services`, `controllers`, `useCases`, 
 
 ## Forms and seat actions
 
-Table creation captures title/game, schedule, category, experience, beginner flag, capacity, join mode, description, and public/private location. Keep private address input clearly distinguished from publicly visible description/label fields. Warn against placing home addresses in public text without inventing an automated guarantee.
+Table creation captures title/game, schedule, category, experience, beginner flag, capacity, `manually_confirm_seats` (default false), `allow_guests` (default true), description, and public/private location. Keep private address input separate from public labels/descriptions.
 
-Show distinct states for requested, waitlisted, offered with expiry, payment awaiting verification, confirmed, declined, cancelled, and expired. Use Take a Seat, Request a Seat, Join Waitlist, and This Table Is Crowded ❤️ in the corresponding situations.
+Show requested/awaiting review, waiting for capacity, confirmed, rejected, and cancelled/withdrawn states. No current offer-acceptance button, offer countdown, reservation-expiry notice, checkout, or payment-pending screen exists. Confirmation is authoritative only after the backend commits.
 
-Do not optimistically confirm a seat, successful payment, entitlement, match result, or address access. Preserve input on failure; after a lost response reconcile server state before retrying. Disable duplicate submissions for UX and rely on backend idempotency for correctness.
+In automatic mode, reservation requests and eligible queue promotion confirm the entire group immediately when capacity permits. Explain first-come, first-served among whole groups that fit; skipped groups retain their priority. Show a waiting state when confirmation is not yet possible, with withdrawal available. No later confirmation by the booking user is required.
+
+In manual mode, authorized table managers review queued groups and choose Approve, Reject, or Notify about an issue. Approve confirms the group directly after server eligibility/capacity checks. Reject can include an optional reason; successful rejection removes the request from the active manager queue and promptly notifies the booking account with decision timestamp, rejecting user, and reason when present. Preserve decision details in history. An issue notice leaves the request pending and introduces no response deadline.
+
+Before switching from manual to automatic confirmation, show a confirmation modal: "Queued requests will be processed automatically in the order received. Eligible groups will be confirmed when the whole group fits the available seats; groups that do not fit will keep their place in the queue." **Continue** submits the switch; **Cancel** closes the modal and leaves `manually_confirm_seats = true`. Opening or dismissing the modal must not save the toggle or process requests. While Continue is being submitted, prevent duplicate submission and do not present Cancel as an undo of a submitted command. After success, refresh the authoritative setting, queue, and confirmed bookings; on a lost response, reconcile server state before offering a retry. Show switch failures without claiming any confirmation succeeded.
+
+Guest-name corrections and removals from a waiting group preserve queue position. Before an addition, clearly explain that the enlarged group receives a new queue timestamp; save the group change atomically and refresh its state. Approval actions reference the current request revision so stale manager screens cannot confirm the old group. If optional offers are introduced later, edits must revalidate those offers/capacity; that interface is deferred now.
+
+Do not optimistically confirm a seat, match result, or address access. Preserve input on failure; reconcile server state after a lost response before retrying. Disable duplicate submissions for UX and rely on backend idempotency for correctness.
+
+## Event cancellation and archive UI
+
+Use Cancel event rather than Delete; no event hard-delete action exists. Cancellation captures an optional reason. Queued and confirmed event registrants receive a notice with basic event details, cancellation timestamp, cancelling user's safe display identity, and the reason if supplied. Recommended guest handling routes the notice to the booking account; deduplicate when the same user has multiple registrations.
+
+Provide a Cancelled filter accessible to community users. Show an Archived filter only for same-community staff; non-staff cannot access archived event detail even as organizer or former attendee. Private-event audience behavior still needs the decision in the [schema follow-ups](03-database-schema.md#follow-up-design-questions). Hide controls according to authority while relying on the backend for access enforcement.
+
+A cancelled event can become eligible for archive immediately if it had no registrations at cancellation, or after at least 30 days continuously cancelled. Do not treat eligibility as a command to archive automatically; the archive actor/trigger and definition of no registrations remain open. The UI should eventually use a server-derived eligibility result rather than guessing from a filtered list of registrations.
+
+Distinguish "Event cancelled" or "Table cancelled" from a person's own cancelled reservation. Show retained per-person status as historical context without presenting a confirmed booking as an upcoming playable session. Recommended behavior disables booking/approval/promotion actions, removes cancelled gatherings from upcoming My Home sections and suggestions, and explains when an attached table is unavailable because its event was cancelled. Cancellation itself must not submit updates for the registration/participation rows.
+
+Recommend retaining a minimal cancellation notice after archival with an unavailable-details explanation for non-staff, without exposing the archived event through its deep link. Read-only chat, exact-address access, reopening, and independent table archival remain unresolved policies.
 
 ## Chat and notifications
 
 Initial message history uses authorized paginated reads; Realtime adds/deduplicates by message ID. On reconnect, fetch missed messages. Pending sends remain visibly pending and failed sends can retry with the same client-generated idempotency key.
 
-Re-check resource access after participation/standing changes. Honor read-only/archive state and server rejection. Never broadcast message bodies to a public topic. Use safe in-app notification links for requests, seat offers, result disputes, and membership changes; do not include private addresses.
+Re-check resource access after participation/standing changes. Honor read-only/archive state and server rejection. Never broadcast message bodies to a public topic. Use safe in-app notification links for requests, confirmations, rejections, issue notices, and result disputes; do not include private addresses.
 
 ## Championship and Discussion
 
@@ -162,6 +194,6 @@ Discussion starts with topics, posts/comments, and a limited-field member direct
 
 ## Error handling and tests
 
-Use stable domain errors: unauthenticated, membership_required, forbidden, capacity_reached, approval_required, payment_unverified, offer_expired, conflict, validation, and unexpected. Map errors to actionable copy without exposing private resource existence or raw database errors.
+Use stable current-domain errors such as unauthenticated, community_approval_required, forbidden, capacity_reached, event_approval_required, request_withdrawn, stale_request, conflict, validation, and unexpected. Payment/member/offer-expiry errors are deferred. Map errors to actionable copy without exposing private resource existence or raw database errors.
 
-Test real behavior: guest paywall without private fetch, Community Home without member tables; My Home aggregating only authorized source data, host accept/decline, pending versus confirmed address access, reconnecting chat, expired waitlist offer, guest championship entry, disputed-result exclusion, and clearing private state on logout. Include mobile empty/loading/error/offline states. Avoid tests that merely mirror markup.
+Test real behavior: private content never fetched without authorization, no payment/member gates, Community Home without private table leakage, My Home authorized aggregation, automatic queue confirmation, manager approval/rejection/issue notification, decision history, atomic group edits/priority reset, pending versus confirmed address access, reconnecting chat, independent championship result rules, and clearing private state on logout. Include mobile empty/loading/error/offline states. Avoid tests that merely mirror markup.
