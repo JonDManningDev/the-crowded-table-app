@@ -50,7 +50,7 @@ Changes within these five mock sections survive page navigation in the current b
 - Use L300 membership, L125 eligible drop-in, and illustrative L200 championship entry from the handoff, rather than conflicting infographic prices. Special-event L250 is sample data only.
 - October 2026 dates match their actual weekdays; the Codenames example uses Friday October 9. Qualifying closes October 24 before the October 25 final.
 - Private addresses appear only after confirmed seats or to the host. All built-in addresses are explicitly fictional. No real personal addresses should be entered in the preview.
-- Rename “Public Profile” to “member-facing profile.” No general DMs, friend/follower counts, public person ratings, or popularity rankings.
+- Rename “Public Profile” to “member-facing profile.” Community-scoped DMs are now MVP, with approved accounts at both endpoints in the same community, recipient controls, and initial report/block UI. Suspended/removed users retain their own DM history read-only. Recipient discovery must respect community/profile visibility; a main-account block must not expose that user's other community profiles. No friend/follower counts, public person ratings, or popularity rankings.
 - Local Spots is included as an exploratory infographic view, although it remains later product scope. Its map is schematic and venues/details are sample content, not verified directions.
 - Use original local vector illustrations and initials instead of reproducing distorted generated logos/photos. Colors, serif headings, botanical details, and warm visual tone follow the references.
 
