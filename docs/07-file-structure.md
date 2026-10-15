@@ -1,6 +1,6 @@
 # Application file structure and client refactor
 
-Status: **current canonical client architecture direction**, recorded 2026-10-02. Updated 2026-10-03 for personal versus community navigation. Ownership boundaries are accepted; paths and examples below illustrate how to apply them as the client evolves. They are not a scaffold checklist or a claim about what already exists. Create directories and abstractions only when there is actual code to put in them.
+Status: **current canonical client architecture direction**, recorded 2026-10-02. Updated 2026-10-03 for personal versus community navigation and 2026-10-15 for global/community profile ownership. Ownership boundaries are accepted; paths and examples below illustrate how to apply them as the client evolves. They are not a scaffold checklist or a claim about what already exists. Create directories and abstractions only when there is actual code to put in them.
 
 The [frontend patterns](05-frontend-patterns.md) define the decisions and recommended conventions. This document owns the illustrative structure, current implementation inventory, and refactor sequence. Open choices are tracked in the [decision register](08-decisions-and-open-questions.md#client-architecture-review-questions).
 
@@ -12,7 +12,7 @@ The five preview sections still use fixtures and in-memory actions. Real Supabas
 
 ## Illustrative future structure
 
-This tree makes ownership visible. It does not require every feature, page, hook, schema, provider, or stylesheet to be created immediately. `profile` is the suggested directory name for the profiles capability; `championships` is the suggested directory name while the navigation label remains “Championship.”
+This tree makes ownership visible. It does not require every feature, page, hook, schema, provider, or stylesheet to be created immediately. `user-accounts` owns global account/profile behavior; `communities` owns curated community profiles and joining. This replaces the earlier single `profile` feature suggestion. `championships` is the suggested directory name while the navigation label remains “Championship.”
 
 ```text
 src/
@@ -29,12 +29,12 @@ src/
 │       └── CommunityHomePage/       # Composition scoped to the browsed community
 ├── features/
 │   ├── auth/
+│   ├── user-accounts/              # Global account and user_account_profiles
 │   ├── events/
 │   ├── meet-and-play/
 │   ├── championships/
-│   ├── communities/                # Creation/management, associations, My Communities
+│   ├── communities/                # Management, associations, joining, community profiles
 │   ├── discussion/                 # Social content within one community
-│   ├── profile/
 │   └── games/
 ├── components/
 │   ├── primitives/                  # Generic visual building blocks
@@ -105,9 +105,12 @@ Pages that expose one capability belong to that feature; cross-feature orchestra
 | `/championships` | `features/championships/pages/ChampionshipsPage.tsx` |
 | `/championships/:id` | `features/championships/pages/ChampionshipDetailsPage.tsx` |
 | `/communities/:slug/discussion` | `features/discussion/pages/DiscussionPage.tsx` |
-| `/profile/:profileId` | `features/profile/pages/ProfilePage.tsx` |
+| `/my-profile` | `features/user-accounts/pages/MyProfilePage.tsx` |
+| `/communities/:slug/profile` | `features/communities/pages/CommunityProfilePage.tsx` |
 
-The five community destinations are Community Home, Meet & Play, Championship, Discussion, and Profile. Each must resolve the browsed community; the example URLs above do not finalize how all tenant routes will be scoped. The account area contains My Communities and My Home. My Home is the personal landing/feed across the user's related communities; Community Home retains the official-event feed. Global accounts and community profiles are distinct. CA-001 is resolved by this split.
+The five community destinations are Community Home, Meet & Play, Championship, Discussion, and Profile. Each must resolve the browsed community; the example URLs above do not finalize how all tenant routes will be scoped. The account area currently contains My Communities and My Home; access to global profile editing belongs in this personal area, with placement still to design. My Home is the personal landing/feed across the user's related communities; Community Home retains the official-event feed. Global user profiles and curated community profiles are distinct. CA-001 is resolved by this split; D-111/D-112 extend it without replacing the community Profile destination.
+
+The community join page consumes the caller's global name/bio through the user-account feature's explicit contract, initializes an editable local draft, and submits community account/profile together through one communities command. Share form controls only where useful; shared fields do not imply shared persistence, audiences, or cache entries. `communities` owns `show_global_profile` (default false); `user-accounts` owns global `user_is_discoverable` and `enable_matchmaking` (both default true), plus private account labels. Global account search and global matchmaking consume separate eligibility contracts. Account-level blocking and private labels are selected; Q-016 retains detailed routes/audiences and label UX, not a choice of public identification codes.
 
 The current incremental implementation uses hashes: default/`#my-home`, `#my-communities`, `#community-home`, and `#discussion`; legacy `#home` and `#community` remain community aliases. Other community hashes are unchanged. Both personal pages are stubs; only a sample community is browsable. The working owner-only saved-community list remains separate.
 
@@ -123,6 +126,7 @@ This inventory was first checked on 2026-10-02 and updated for the 2026-10-03 na
 
 | Current code or previous plan | Difference from canonical direction / refactor candidate |
 | --- | --- |
+| `src/features/Profile.tsx` and `src/mock/useMockState.ts` have one mock profile; the backend has community profiles only | Add global profiles under `user-accounts`, retain curated profiles under `communities`, and wire editable pre-fill plus atomic join/profile submission. Preserve working Auth and existing profile data; no two-profile implementation exists yet. |
 | `src/App.tsx` still composes the shell, legacy membership preview, notifications, and dialogs; navigation lives in `src/app/navigation.ts` and sidebar/personal links in `src/app/layout/Sidebar.tsx`; `src/main.tsx` wraps `AuthShell` | Move composition into `app` and extract feature behavior. Remove the obsolete paid-member preview/gates under D-064 while preserving working Auth/community persistence. |
 | Flat `src/features/Home.tsx`, `MeetPlay.tsx`, `Championship.tsx`, `Community.tsx`, `Profile.tsx`, plus account/community screens | Group by capability with route pages under `pages`. The personal stub now lives in `app/pages/MyHomePage`, and My Communities in `features/communities/pages`. Move the legacy Home's community composition to `app/pages/CommunityHomePage` later; put official-event behavior under `events`. Do not mistake every current screen or modal for a separate feature or route. |
 | `src/components/ui.tsx` mixes controls, decorative/game art, and an import of mock `Art` | Extract generic primitives and remove domain/mock dependencies from them. Keep product visuals feature-local or genuinely shared according to actual consumers. |
