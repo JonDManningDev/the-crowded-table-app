@@ -8,11 +8,11 @@ import { MeetPlay } from './features/MeetPlay'
 import { Championship } from './features/Championship'
 import { Community as Discussion } from './features/Community'
 import { ProfilePage } from './features/Profile'
-import { MyHomePage } from './app/pages/MyHomePage/MyHomePage'
-import { MyCommunitiesPage } from './features/communities/pages/MyCommunitiesPage'
+import { AccountPage, PremiumFeaturesPage } from './features/AccountPage'
 import { Sidebar, MobilePersonalNavigation } from './app/layout/Sidebar'
 import { currentPage, navigation } from './app/navigation'
 import type { Page } from './app/navigation'
+import { AccountActions } from './features/auth/AccountActions'
 import './App.css'
 
 export default function App() {
@@ -24,7 +24,7 @@ export default function App() {
   useEffect(() => { const change = () => { setPage(currentPage()); setActivity(null); setMembership(false); setNotifications(false); window.scrollTo({ top: 0 }) }; window.addEventListener('hashchange', change); return () => window.removeEventListener('hashchange', change) }, [])
   const pageLabel = navigation.find(item => item.id === page)?.label
   useEffect(() => { document.title = `${pageLabel} · The Crowded Table` }, [pageLabel])
-  const personal = page === 'my-home' || page === 'my-communities'
+  const personal = page === 'my-home' || page === 'my-communities' || page === 'account' || page === 'account-settings' || page === 'premium-features'
   const locked = !model.member && (page === 'meet-play' || page === 'discussion')
   const activityAllowed = activity && (model.member || model.items.find(i => i.id === activity)?.kind === 'official')
   function switchMode() { model.setMember(!model.member); setActivity(null); setNotifications(false) }
@@ -34,11 +34,12 @@ export default function App() {
     <Sidebar page={page} member={model.member} community={previewCommunity}/>
     <div className="main-wrap">
       <header className="topbar"><span className="breadcrumb">{personal ? 'Your space' : previewCommunity.name}<span>/</span><strong>{pageLabel}</strong></span>
-        {!personal && <div className="topbar-actions"><div className="preview-mode"><span>Preview as</span><button onClick={switchMode} aria-label={`Switch to ${model.member ? 'guest' : 'member'} preview`}><span className={`dot ${!model.member ? 'rust' : ''}`}/>{model.member ? 'Member' : 'Guest'}<Icon name="chevron" size={13}/></button></div><button className="icon-button notification-button" onClick={() => setNotifications(true)} aria-label="Open community notifications"><Icon name="bell"/>{model.notices.length > 0 && <span/>}</button><button className="top-avatar" aria-label="Open your community profile" onClick={() => { window.location.hash = 'profile' }}><Avatar name={model.profile.name}/></button></div>}
+        <div className="topbar-actions">{!personal && <div className="topbar-actions"><div className="preview-mode"><span>Preview as</span><button onClick={switchMode} aria-label={`Switch to ${model.member ? 'guest' : 'member'} preview`}><span className={`dot ${!model.member ? 'rust' : ''}`}/>{model.member ? 'Member' : 'Guest'}<Icon name="chevron" size={13}/></button></div><button className="icon-button notification-button" onClick={() => setNotifications(true)} aria-label="Open community notifications"><Icon name="bell"/>{model.notices.length > 0 && <span/>}</button><button className="top-avatar" aria-label="Open your community profile" onClick={() => { window.location.hash = 'profile' }}><Avatar name={model.profile.name}/></button></div>}
+        <AccountActions/></div>
       </header>
       <MobilePersonalNavigation page={page}/>
       <main id="main-content" tabIndex={-1}><div className="content">
-        {page === 'my-home' ? <MyHomePage/> : page === 'my-communities' ? <MyCommunitiesPage previewName={previewCommunity.name} previewLocation={previewCommunity.location}/> : locked ? <section className="paywall"><span className="round-icon"><Icon name="lock" size={27}/></span><span className="eyebrow">A LITTLE MORE BELONGING</span><h1>{page === 'meet-play' ? 'Your people are here.' : 'Come into the conversation.'}</h1><p>{page === 'meet-play' ? 'Find local players. Create your own table. Meet people outside your usual gaming circle.' : 'Share a favorite game, ask a question, and get to know your private community.'}</p><div className="paywall-price">L300<span>/ month</span></div><button className="button" onClick={() => setMembership(true)}>Become a Member <Icon name="arrow" size={18}/></button><small>Meet & Play · Discussion · Game nights · Championship</small><Botanical/></section> : page === 'community-home' ? <CommunityHome model={model} open={setActivity} membership={() => setMembership(true)}/> : page === 'meet-play' ? <MeetPlay model={model} open={setActivity}/> : page === 'championship' ? <Championship model={model}/> : page === 'discussion' ? <Discussion model={model}/> : <ProfilePage model={model} open={setActivity} membership={() => setMembership(true)}/>}
+        {page === 'premium-features' ? <PremiumFeaturesPage/> : personal ? <AccountPage page={page}/> : locked ? <section className="paywall"><span className="round-icon"><Icon name="lock" size={27}/></span><span className="eyebrow">A LITTLE MORE BELONGING</span><h1>{page === 'meet-play' ? 'Your people are here.' : 'Come into the conversation.'}</h1><p>{page === 'meet-play' ? 'Find local players. Create your own table. Meet people outside your usual gaming circle.' : 'Share a favorite game, ask a question, and get to know your private community.'}</p><div className="paywall-price">L300<span>/ month</span></div><button className="button" onClick={() => setMembership(true)}>Become a Member <Icon name="arrow" size={18}/></button><small>Meet & Play · Discussion · Game nights · Championship</small><Botanical/></section> : page === 'community-home' ? <CommunityHome model={model} open={setActivity} membership={() => setMembership(true)}/> : page === 'meet-play' ? <MeetPlay model={model} open={setActivity}/> : page === 'championship' ? <Championship model={model}/> : page === 'discussion' ? <Discussion model={model}/> : <ProfilePage model={model} open={setActivity} membership={() => setMembership(true)}/>}
         <footer><span><Icon name="leaf" size={16}/> Good games bring good people together.</span><span>PLAY WELL. BELONG ALWAYS.</span></footer>
       </div></main>
     </div>

@@ -6,7 +6,7 @@
 .userArea { border-top: 1px solid var(--line); padding-top: 17px; }
 .account { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
 .account > div { min-width: 0; }
-.account strong { display: block; font-size: 11px; overflow-wrap: anywhere; }
+.account strong { display: block; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .account small { display: block; color: var(--muted); font-size: 10px; margin-top: 3px; }
 .sidebar .userArea nav { gap: 3px; }
 .sidebar .userArea nav a { padding: 10px 12px; font-size: 12px; }
@@ -18,3 +18,8 @@
   .mobileNavigation a { display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: var(--ink); }
   .mobileNavigation a[aria-current="page"] { background: var(--sage); font-weight: 600; }
 }
+
+.account { color: var(--ink); border-radius: 6px; padding: 5px 0; }
+.account > :first-child { flex-shrink: 0; }
+.account > div { flex: 1; overflow: hidden; }
+.account[aria-current="page"] { background: var(--sage); }

@@ -2,6 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AuthShell } from './Auth'
+import { AccountActions } from './auth/AccountActions'
+import { MyCommunitiesPage } from './communities/pages/MyCommunitiesPage'
 
 const auth = vi.hoisted(() => ({
   getSession: vi.fn(), onAuthStateChange: vi.fn(), signUp: vi.fn(), signInWithPassword: vi.fn(),
@@ -26,7 +28,7 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 async function start() {
-  render(<AuthShell><div>Community preview</div></AuthShell>)
+  render(<AuthShell><AccountActions/><MyCommunitiesPage previewName="Sample" previewLocation="Sample location"/><div>Community preview</div></AuthShell>)
   await waitFor(() => expect(screen.queryByText('Checking your session…')).toBeNull())
 }
 function click(name: string) { fireEvent.click(screen.getAllByRole('button', { name }).at(-1)!) }
@@ -51,7 +53,7 @@ describe('account workflows', () => {
   it('signs in and returns home without changing community access', async () => {
     auth.signInWithPassword.mockImplementation(async () => { listener('SIGNED_IN', session); return { error: null } })
     await start(); click('Sign in'); fill('Email address', 'person@example.com'); fill('Password', 'a-long-test-password'); submit()
-    await screen.findByText('person@example.com')
+    await screen.findByRole('button', { name: 'Sign Out' })
     expect(auth.signInWithPassword).toHaveBeenCalledWith({ email: 'person@example.com', password: 'a-long-test-password' })
     expect(window.location.hash).toBe('#my-home')
     expect(screen.getByText('Community preview')).toBeTruthy()
@@ -61,7 +63,7 @@ describe('account workflows', () => {
     await start(); click('Sign in'); fill('Email address', 'person@example.com'); fill('Password', 'incorrect-password'); submit()
     expect((await screen.findByRole('alert')).textContent).toContain('Invalid login credentials')
     expect(screen.getByLabelText('Password')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Sign Out' })).toBeNull()
   })
   it('requests signup with the exact callback and waits for verification', async () => {
     await start(); click('Create Account')
@@ -127,8 +129,8 @@ describe('account workflows', () => {
   it('restores an authenticated session and signs out on this browser', async () => {
     auth.getSession.mockResolvedValue({ data: { session }, error: null })
     auth.signOut.mockImplementation(async () => { listener('SIGNED_OUT', null); return { error: null } })
-    await start(); expect(screen.getByText('person@example.com')).toBeTruthy(); click('Sign out')
-    await waitFor(() => expect(screen.queryByText('person@example.com')).toBeNull())
+    await start(); expect(screen.getByRole('button', { name: 'Sign Out' })).toBeTruthy(); click('Sign Out')
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Sign Out' })).toBeNull())
     expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' })
   })
 })

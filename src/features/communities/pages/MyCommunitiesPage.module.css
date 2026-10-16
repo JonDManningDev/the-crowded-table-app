@@ -10,3 +10,7 @@
 .preview h2 { font-size: 30px; margin: 8px 0; }
 .preview p { display: flex; gap: 7px; align-items: center; }
 @media (max-width: 700px) { .preview { align-items: flex-start; flex-direction: column; } .placeholder { padding: 24px; } }
+
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 24px; }
+.toolbar button { flex-shrink: 0; }
+@media (max-width: 700px) { .toolbar { align-items: flex-start; flex-direction: column; } }

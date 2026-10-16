@@ -3636,3 +3636,15 @@ dialog::backdrop {
   }
 
 }
+
+.account-settings > .panel { margin-bottom: 24px; }
+.profile-summary h2 { overflow-wrap: anywhere; }
+
+.premium-feature-list { list-style: none; padding: 0; margin: 24px 0; }
+.premium-feature-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.premium-feature-list small { display: block; color: var(--muted); margin-top: 5px; }
+
+.account-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+.community-list { list-style: none; padding: 0; margin: 0; }
+.community-list > li { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 28px; margin: 0 0 18px; border: 1px solid var(--line); border-radius: 10px; }
+@media (max-width: 700px) { .community-list > li { align-items: flex-start; flex-direction: column; } .topbar { flex-wrap: wrap; gap: 12px; } }

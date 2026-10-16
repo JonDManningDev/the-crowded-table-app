@@ -17,10 +17,10 @@ export function Sidebar({ page, member, community }: { page: Page; member: boole
     <div className="sidebar-bottom">
       <div className={`sidebar-quote ${styles.quote}`}><Botanical/><p>{community.motto}</p></div>
       <section className={styles.userArea} aria-label="Your space">
-        <div className={styles.account}>
-          {account.email ? <Avatar name={account.email}/> : <Icon name="user"/>}
-          <div><strong>{account.status === 'loading' ? 'Checking your account…' : account.email || 'Your space'}</strong><small>{account.status === 'signed-in' ? 'Your Crowded Table account' : 'Sign in to make yourself at home'}</small></div>
-        </div>
+        <a href="#account" className={styles.account} aria-current={page === 'account' || page === 'account-settings' ? 'page' : undefined}>
+          <Avatar name={(account.displayName || 'Your account').slice(0, 1)}/>
+          <div><strong title={account.displayName || 'Your account'}>{account.status === 'loading' ? 'Checking your account…' : account.displayName || 'Your account'}</strong></div>
+        </a>
         <nav aria-label="Personal navigation">{personalNavigation.map(item => <a key={item.id} href={`#${item.id}`} className={page === item.id ? 'active' : ''} aria-current={page === item.id ? 'page' : undefined}><Icon name={item.icon} size={18}/>{item.label}</a>)}</nav>
       </section>
     </div>
@@ -28,5 +28,5 @@ export function Sidebar({ page, member, community }: { page: Page; member: boole
 }
 
 export function MobilePersonalNavigation({ page }: { page: Page }) {
-  return <nav className={styles.mobileNavigation} aria-label="Personal navigation">{personalNavigation.map(item => <a key={item.id} href={`#${item.id}`} aria-current={page === item.id ? 'page' : undefined}><Icon name={item.icon} size={17}/>{item.label}</a>)}</nav>
+  return <nav className={styles.mobileNavigation} aria-label="Personal navigation"><a href="#account" aria-current={page === 'account' || page === 'account-settings' ? 'page' : undefined}><Icon name="user" size={17}/>My Account</a>{personalNavigation.map(item => <a key={item.id} href={`#${item.id}`} aria-current={page === item.id ? 'page' : undefined}><Icon name={item.icon} size={17}/>{item.label}</a>)}</nav>
 }

@@ -11,7 +11,12 @@ export const personalNavigation = [
   { id: 'my-home', label: 'My Home', icon: 'home' },
 ] as const
 
-export const navigation = [...communityNavigation, ...personalNavigation]
+export const accountNavigation = [
+  { id: 'account', label: 'My Account', icon: 'user' },
+  { id: 'account-settings', label: 'Settings', icon: 'user' },
+  { id: 'premium-features', label: 'Premium Features', icon: 'leaf' },
+] as const
+export const navigation = [...communityNavigation, ...personalNavigation, ...accountNavigation]
 export type Page = typeof navigation[number]['id']
 
 export function currentPage(): Page {
