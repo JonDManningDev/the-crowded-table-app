@@ -9,6 +9,7 @@ export type Database = {
                   Row: {
                     "bio": string | null,"created_at": string,"created_by": string | null,"display_name": string,"tenant_id": string,"updated_at": string,"updated_by": string | null,"user_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "bio"?: string | null,"created_at"?: string,"created_by"?: string | null,"display_name": string,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
                   }
@@ -38,13 +39,14 @@ isOneToOne: false
                   ]
                 },"community_accounts": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"standing": string,"tenant_id": string,"updated_at": string,"updated_by": string | null,"user_id": string
+                    "created_at": string,"created_by": string | null,"show_global_profile": boolean,"standing": string,"tenant_id": string,"updated_at": string,"updated_by": string | null,"user_id": string
                   }
+                  ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"standing"?: string,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
+                    "created_at"?: string,"created_by"?: string | null,"show_global_profile"?: boolean,"standing"?: string,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"standing"?: string,"tenant_id"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
+                    "created_at"?: string,"created_by"?: string | null,"show_global_profile"?: boolean,"standing"?: string,"tenant_id"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -77,6 +79,7 @@ isOneToOne: false
                   Row: {
                     "action": string,"content_key": string | null,"created_at": string,"created_by": string | null,"id": string,"target_user_id": string | null,"tenant_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "action": string,"content_key"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"target_user_id"?: string | null,"tenant_id": string
                   }
@@ -108,6 +111,7 @@ isOneToOne: false
                   Row: {
                     "auto_approve_users": boolean,"created_at": string,"created_by": string | null,"tenant_id": string,"updated_at": string,"updated_by": string | null
                   }
+                  ComputedFields: never
                   Insert: {
                     "auto_approve_users"?: boolean,"created_at"?: string,"created_by"?: string | null,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null
                   }
@@ -139,6 +143,7 @@ isOneToOne: false
                   Row: {
                     "can_approve_users": boolean,"can_create_admin": boolean,"created_at": string,"created_by": string | null,"role": string,"status": string,"tenant_id": string,"updated_at": string,"updated_by": string | null,"user_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "can_approve_users"?: boolean,"can_create_admin"?: boolean,"created_at"?: string,"created_by"?: string | null,"role": string,"status"?: string,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
                   }
@@ -176,6 +181,7 @@ isOneToOne: false
                   Row: {
                     "content_key": string,"created_at": string,"created_by": string | null,"tenant_id": string,"text_value": string,"updated_at": string,"updated_by": string | null
                   }
+                  ComputedFields: never
                   Insert: {
                     "content_key": string,"created_at"?: string,"created_by"?: string | null,"tenant_id": string,"text_value": string,"updated_at"?: string,"updated_by"?: string | null
                   }
@@ -207,6 +213,7 @@ isOneToOne: false
                   Row: {
                     "city": string | null,"country_code": string,"created_at": string,"created_by": string | null,"id": string,"name": string,"operational_status": string,"slug": string,"state_province": string | null,"timezone": string,"updated_at": string,"updated_by": string | null
                   }
+                  ComputedFields: never
                   Insert: {
                     "city"?: string | null,"country_code": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"name": string,"operational_status"?: string,"slug": string,"state_province"?: string | null,"timezone": string,"updated_at"?: string,"updated_by"?: string | null
                   }
@@ -228,15 +235,48 @@ isOneToOne: false
       referencedColumns: ["user_id"]
     }
                   ]
-                },"user_accounts": {
+                },"user_account_profiles": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"updated_at": string,"updated_by": string | null,"user_id": string
+                    "bio": string | null,"created_at": string,"created_by": string | null,"display_name": string,"updated_at": string,"updated_by": string | null,"user_id": string
                   }
+                  ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
+                    "bio"?: string | null,"created_at"?: string,"created_by"?: string | null,"display_name": string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
+                    "bio"?: string | null,"created_at"?: string,"created_by"?: string | null,"display_name"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "user_account_profiles_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "user_accounts"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "user_account_profiles_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "user_accounts"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "user_account_profiles_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "user_accounts"
+      referencedColumns: ["user_id"]
+    }
+                  ]
+                },"user_accounts": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"enable_matchmaking": boolean,"updated_at": string,"updated_by": string | null,"user_id": string,"user_is_discoverable": boolean
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"enable_matchmaking"?: boolean,"updated_at"?: string,"updated_by"?: string | null,"user_id": string,"user_is_discoverable"?: boolean
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"enable_matchmaking"?: boolean,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string,"user_is_discoverable"?: boolean
                   }
                   Relationships: [
                     {
@@ -289,14 +329,23 @@ isOneToOne: false
 "save_community_profile":
 { Args: { "p_bio"?: string,"p_display_name": string,"p_tenant_id": string }; Returns: undefined
                            },
+"save_user_account_profile":
+{ Args: { "p_bio"?: string,"p_display_name": string }; Returns: undefined
+                           },
 "set_admin_permissions":
 { Args: { "p_can_approve_users": boolean,"p_can_create_admin": boolean,"p_tenant_id": string,"p_user_id": string }; Returns: undefined
                            },
 "set_auto_approve_users":
 { Args: { "p_enabled": boolean,"p_tenant_id": string }; Returns: undefined
                            },
+"set_community_global_profile_visibility":
+{ Args: { "p_show_global_profile": boolean,"p_tenant_id": string }; Returns: undefined
+                           },
 "set_tenant_archived":
 { Args: { "p_archived": boolean,"p_tenant_id": string }; Returns: undefined
+                           },
+"set_user_account_preferences":
+{ Args: { "p_enable_matchmaking"?: boolean,"p_user_is_discoverable"?: boolean }; Returns: undefined
                            },
 "set_website_content_override":
 { Args: { "p_content_key": string,"p_tenant_id": string,"p_text_value": string }; Returns: undefined
