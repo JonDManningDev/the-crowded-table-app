@@ -1,3 +1,4 @@
+import { BrowserRouter } from 'react-router'
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -28,7 +29,7 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 async function start() {
-  render(<AuthShell><AccountActions/><MyCommunitiesPage previewName="Sample" previewLocation="Sample location"/><div>Community preview</div></AuthShell>)
+  render(<BrowserRouter><AuthShell><AccountActions/><MyCommunitiesPage previewName="Sample" previewLocation="Sample location"/><div>Community preview</div></AuthShell></BrowserRouter>)
   await waitFor(() => expect(screen.queryByText('Checking your session…')).toBeNull())
 }
 function click(name: string) { fireEvent.click(screen.getAllByRole('button', { name }).at(-1)!) }
@@ -55,7 +56,7 @@ describe('account workflows', () => {
     await start(); click('Sign in'); fill('Email address', 'person@example.com'); fill('Password', 'a-long-test-password'); submit()
     await screen.findByRole('button', { name: 'Sign Out' })
     expect(auth.signInWithPassword).toHaveBeenCalledWith({ email: 'person@example.com', password: 'a-long-test-password' })
-    expect(window.location.hash).toBe('#my-home')
+    expect(window.location.pathname).toBe('/account/home')
     expect(screen.getByText('Community preview')).toBeTruthy()
   })
   it('keeps failed sign-ins on the form with an actionable error', async () => {
@@ -102,7 +103,7 @@ describe('account workflows', () => {
     fill('Confirm new password', 'a-long-test-password'); submit()
     await screen.findByText('Your password has been updated.')
     expect(auth.updateUser).toHaveBeenCalledWith({ password: 'a-long-test-password' })
-    expect(window.location.pathname).toBe('/')
+    expect(window.location.pathname).toBe('/account/home')
   })
   it('does not mistake an old session for a successful missing confirmation link', async () => {
     window.history.replaceState(null, '', '/auth/callback')
@@ -116,7 +117,7 @@ describe('account workflows', () => {
     auth.getSession.mockResolvedValue({ data: { session }, error: null })
     await start()
     await screen.findByText('Your email is confirmed. Welcome to The Crowded Table.')
-    expect(window.location.pathname + window.location.hash).toBe('/#my-home')
+    expect(window.location.pathname + window.location.hash).toBe('/account/home')
   })
   it('shows expired-link recovery even with an existing session', async () => {
     window.history.replaceState(null, '', '/auth/reset-password#error=access_denied&error_code=otp_expired')
@@ -133,4 +134,20 @@ describe('account workflows', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Sign Out' })).toBeNull())
     expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' })
   })
+})
+
+it('opens sign in directly from its URL', async () => {
+  window.history.replaceState(null, '', '/auth/sign-in')
+  await start()
+  expect(await screen.findByRole('heading', { name: 'Welcome back.' })).toBeTruthy()
+})
+it('waits for session restoration before allowing community creation', async () => {
+  window.history.replaceState(null, '', '/account/communities/new')
+  let resolve!: (value: unknown) => void
+  auth.getSession.mockReturnValue(new Promise(done => { resolve = done }))
+  render(<BrowserRouter><AuthShell><div>Home</div></AuthShell></BrowserRouter>)
+  expect(screen.getByRole('status').textContent).toBe('Checking your session…')
+  expect(screen.queryByText('Please sign in with a verified account to continue.')).toBeNull()
+  resolve({ data: { session: null }, error: null })
+  await screen.findByText('Please sign in with a verified account to continue.')
 })

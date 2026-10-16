@@ -18,11 +18,12 @@ it.each(['signup', 'recovery'])('handles %s when the real SDK consumes the URL b
   const initialized = await client.authInitialization
   expect(initialized?.error).toBeNull()
   expect(window.location.hash).toBe('')
+  const { BrowserRouter } = await import('react-router')
   const { AuthShell } = await import('../features/Auth')
-  render(<StrictMode><AuthShell><div>Home</div></AuthShell></StrictMode>)
+  render(<StrictMode><BrowserRouter><AuthShell><div>Home</div></AuthShell></BrowserRouter></StrictMode>)
   if (type === 'signup') {
     await screen.findByText('Your email is confirmed. Welcome to The Crowded Table.')
-    expect(window.location.pathname + window.location.hash).toBe('/#my-home')
+    expect(window.location.pathname + window.location.hash).toBe('/account/home')
   } else {
     await screen.findByRole('button', { name: 'Save new password' })
     expect(window.location.pathname + window.location.hash).toBe('/auth/reset-password')

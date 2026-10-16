@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react'
-import App from '../App'
+import { BrowserRouter } from 'react-router'
+import { ApplicationRoutes } from './router'
+import { pagePaths, type Page } from './navigation'
+function App() { return <BrowserRouter><ApplicationRoutes/></BrowserRouter> }
 import { AccountContext } from '../features/auth/accountContext'
 
 // jsdom does not implement native dialog open/close behavior.
@@ -10,9 +13,9 @@ Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true
 beforeEach(() => { window.history.replaceState(null, '', '/'); vi.spyOn(window, 'scrollTo').mockImplementation(() => {}) })
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
-function navigate(hash: string) {
-  window.history.replaceState(null, '', `/#${hash}`)
-  fireEvent(window, new HashChangeEvent('hashchange'))
+function navigate(page: Page) {
+  window.history.replaceState(null, '', pagePaths[page])
+  fireEvent(window, new PopStateEvent('popstate'))
 }
 
 it('lands on the personal home without presenting the community preview as personal activity', () => {
@@ -23,7 +26,7 @@ it('lands on the personal home without presenting the community preview as perso
   expect(screen.queryByText('Ana M.')).toBeNull()
   navigate('my-communities')
   expect(screen.getByRole('heading', { name: 'My Account' })).toBeTruthy()
-  expect(screen.getByRole('link', { name: 'Explore community' }).getAttribute('href')).toBe('#community-home')
+  expect(screen.getByRole('link', { name: 'Explore community' }).getAttribute('href')).toBe('/community/preview')
 })
 
 it('separates the account identity from the mock community profile', () => {
@@ -36,11 +39,11 @@ it('separates the account identity from the mock community profile', () => {
   expect(screen.getByRole('navigation', { name: 'Community navigation' }).querySelector('[aria-current="page"]')?.textContent).toBe('Profile')
 })
 
-it('keeps legacy bookmarks scoped to the community and retains guest access boundaries', () => {
-  window.history.replaceState(null, '', '/#home')
+it('retains community guest access boundaries on clean routes', () => {
+  window.history.replaceState(null, '', '/community/preview')
   render(<App/>)
   expect(document.title).toBe('Community Home · The Crowded Table')
-  navigate('community')
+  navigate('discussion')
   expect(document.title).toBe('Discussion · The Crowded Table')
   expect(screen.getByRole('button', { name: 'Start a conversation' })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Switch to guest preview' }))
@@ -52,15 +55,15 @@ it('keeps legacy bookmarks scoped to the community and retains guest access boun
 })
 
 it('places account tabs above the contents and keeps the summary only on Overview', () => {
-  window.history.replaceState(null, '', '/#account')
+  window.history.replaceState(null, '', '/account')
   render(<AccountContext.Provider value={{ status: 'signed-in', email: 'private@example.com', displayName: 'Alex' }}><App/></AccountContext.Provider>)
-  expect(screen.getByRole('link', { name: 'Alex' }).getAttribute('href')).toBe('#account')
+  expect(screen.getByRole('link', { name: 'Alex' }).getAttribute('href')).toBe('/account')
   expect(document.querySelector('.profile-summary')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Overview' }).getAttribute('aria-pressed')).toBe('true')
   navigate('account-settings')
   expect(document.querySelector('.profile-summary')).toBeNull()
   expect(screen.getByRole('heading', { name: 'My Premium Features' })).toBeTruthy()
-  expect(screen.getByRole('link', { name: 'Explore Premium Features' }).getAttribute('href')).toBe('#premium-features')
+  expect(screen.getByRole('link', { name: 'Explore Premium Features' }).getAttribute('href')).toBe('/account/premium-features')
   navigate('my-home')
   expect(document.querySelector('.profile-summary')).toBeNull()
   expect(screen.getByRole('button', { name: 'My Home' }).getAttribute('aria-pressed')).toBe('true')
@@ -80,7 +83,7 @@ it('places sign out in the breadcrumb header', () => {
 })
 
 it('blocks every account edit entry point when the profile failed to load', () => {
-  window.history.replaceState(null, '', '/#account')
+  window.history.replaceState(null, '', '/account')
   render(<AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', profileError: 'Profile unavailable', saveProfile: vi.fn() }}><App/></AccountContext.Provider>)
   expect(screen.getByRole('button', { name: 'Edit Profile' }).hasAttribute('disabled')).toBe(true)
   expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
@@ -88,7 +91,7 @@ it('blocks every account edit entry point when the profile failed to load', () =
 })
 
 it('shows a newly unavailable profile inside the open editor and preserves the draft', () => {
-  window.history.replaceState(null, '', '/#account')
+  window.history.replaceState(null, '', '/account')
   const account = { status: 'signed-in' as const, email: 'owner@example.test', displayName: 'Original', saveProfile: vi.fn() }
   const view = render(<AccountContext.Provider value={account}><App/></AccountContext.Provider>)
   fireEvent.click(screen.getByRole('button', { name: 'Edit Profile' }))
@@ -102,7 +105,7 @@ it('shows a newly unavailable profile inside the open editor and preserves the d
 })
 
 it('retains the profile draft and reports a failed save without claiming success', async () => {
-  window.history.replaceState(null, '', '/#account')
+  window.history.replaceState(null, '', '/account')
   const saveProfile = vi.fn().mockRejectedValue(new Error('Could not save'))
   render(<AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', saveProfile }}><App/></AccountContext.Provider>)
   fireEvent.click(screen.getByRole('button', { name: 'Edit Profile' }))
@@ -111,4 +114,38 @@ it('retains the profile draft and reports a failed save without claiming success
   await waitFor(() => expect(within(screen.getByRole('dialog')).getByRole('alert').textContent).toBe('Could not save'))
   expect((screen.getByLabelText('Display name') as HTMLInputElement).value).toBe('My draft')
   expect(screen.queryByText('Your account profile has been saved.')).toBeNull()
+})
+
+it('does not interpret legacy hash routes', () => {
+  window.history.replaceState(null, '', '/#profile')
+  render(<App/>)
+  expect(window.location.pathname).toBe('/account/home')
+  expect(screen.getByRole('heading', { name: 'My Account' })).toBeTruthy()
+})
+it('shows not found for unknown paths instead of sample tenant data', () => {
+  window.history.replaceState(null, '', '/communities/unknown/profile')
+  render(<App/>)
+  expect(screen.getByRole('heading', { name: 'Page not found' })).toBeTruthy()
+})
+it('uses browser history for tabs and sidebar links', async () => {
+  window.history.replaceState(null, '', '/account')
+  render(<App/>)
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
+  expect(window.location.pathname).toBe('/account/settings')
+  window.history.back()
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Overview' }).getAttribute('aria-pressed')).toBe('true'))
+  window.history.forward()
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('aria-pressed')).toBe('true'))
+  fireEvent.click(within(screen.getByRole('navigation', { name: 'Community navigation' })).getByRole('link', { name: 'Profile' }))
+  expect(window.location.pathname).toBe('/community/preview/profile')
+  expect(document.activeElement?.id).toBe('main-content')
+})
+
+it.each(Object.entries(pagePaths))('loads %s directly with consistent navigation metadata', (page, path) => {
+  window.history.replaceState(null, '', path + '/')
+  render(<App/>)
+  expect(screen.queryByRole('heading', { name: 'Page not found' })).toBeNull()
+  expect(document.title).not.toContain('Page not found')
+  expect(window.location.pathname).toBe(path + '/')
+  if (page === 'profile') expect(screen.getByRole('heading', { name: 'Ana M.' })).toBeTruthy()
 })

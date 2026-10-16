@@ -19,10 +19,28 @@ export const accountNavigation = [
 export const navigation = [...communityNavigation, ...personalNavigation, ...accountNavigation]
 export type Page = typeof navigation[number]['id']
 
-export function currentPage(): Page {
-  const hash = window.location.hash.slice(1)
-  // Preserve existing community bookmarks while giving the app its own landing page.
-  if (hash === 'home') return 'community-home'
-  if (hash === 'community') return 'discussion'
-  return navigation.find(item => item.id === hash)?.id ?? 'my-home'
+export const pagePaths: Record<Page, string> = {
+  'account': '/account',
+  'my-home': '/account/home',
+  'my-communities': '/account/communities',
+  'account-settings': '/account/settings',
+  'premium-features': '/account/premium-features',
+  'community-home': '/community/preview',
+  'meet-play': '/community/preview/meet-play',
+  'championship': '/community/preview/championship',
+  'discussion': '/community/preview/discussion',
+  'profile': '/community/preview/profile',
+}
+
+export const authPaths = {
+  signup: '/auth/sign-up', signin: '/auth/sign-in', forgot: '/auth/forgot-password',
+  check: '/auth/check-email', reset: '/auth/reset-password', callback: '/auth/callback',
+  'create-community': '/account/communities/new',
+} as const
+export type AuthView = keyof typeof authPaths
+export function authViewAt(pathname: string): AuthView | null {
+  return (Object.keys(authPaths) as AuthView[]).find(view => authPaths[view] === pathname) ?? null
+}
+export function pageAt(pathname: string): Page | undefined {
+  return (Object.keys(pagePaths) as Page[]).find(page => pagePaths[page] === pathname.replace(/\/+$/, ''))
 }

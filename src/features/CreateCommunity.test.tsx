@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router'
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -103,13 +104,13 @@ it('keeps frontend country and reserved-handle hints aligned with the database c
 it('combines fetched communities and the sample row in the account tab and clears private rows on sign-out', async () => {
   api.order.mockResolvedValue({ data: [{ id: 'a', name: 'Saved community', slug: 'saved-community', country_code: 'HN', timezone: 'UTC', operational_status: 'active' }], error: null })
   const create = vi.fn()
-  const view = render(<AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', userId: 'owner', createCommunity: create }}><MyCommunitiesPage embedded previewName="Sample community" previewLocation="Sample location"/></AccountContext.Provider>)
+  const view = render(<MemoryRouter><AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', userId: 'owner', createCommunity: create }}><MyCommunitiesPage embedded previewName="Sample community" previewLocation="Sample location"/></AccountContext.Provider></MemoryRouter>)
   await screen.findByText('Saved community')
   expect(screen.getAllByRole('listitem')).toHaveLength(2)
   expect(screen.getByRole('heading', { name: 'Sample community' })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Start New Community' }))
   expect(create).toHaveBeenCalledOnce()
-  view.rerender(<AccountContext.Provider value={{ status: 'signed-out', email: null }}><MyCommunitiesPage embedded previewName="Sample community" previewLocation="Sample location"/></AccountContext.Provider>)
+  view.rerender(<MemoryRouter><AccountContext.Provider value={{ status: 'signed-out', email: null }}><MyCommunitiesPage embedded previewName="Sample community" previewLocation="Sample location"/></AccountContext.Provider></MemoryRouter>)
   expect(screen.queryByText('Saved community')).toBeNull()
   expect(screen.getAllByRole('listitem')).toHaveLength(1)
   expect(screen.queryByRole('button', { name: 'Start New Community' })).toBeNull()

@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router'
+import { authPaths, authViewAt, pagePaths, type AuthView } from '../app/navigation'
+import { useEffect, useEffectEvent, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { authInitialization, initialAuthRedirect, supabase } from '../lib/supabase'
@@ -7,14 +9,17 @@ import { CreateCommunity } from './CreateCommunity'
 import { AccountProfileProvider } from './auth/AccountProfileProvider'
 import { AccountContext } from './auth/accountContext'
 
-type View = 'signup' | 'signin' | 'forgot' | 'check' | 'reset' | 'callback' | 'create-community' | null
+type View = AuthView | null
 const redirect = (path: string) => `${window.location.origin}${path}`
 
 export function AuthShell({ children }: { children: ReactNode }) {
   const [{ callbackPath, resetPath, callbackError, hasCredentials }] = useState(() => initialAuthRedirect)
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(!supabase)
-  const [view, setView] = useState<View>(resetPath ? 'reset' : callbackPath ? 'callback' : null)
+  const location = useLocation()
+  const routeNavigate = useNavigate()
+  const authNavigate = useEffectEvent((path: string) => routeNavigate(path, { replace: true }))
+  const view = authViewAt(location.pathname)
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(callbackError ? 'This link is invalid or expired. Please request a new email.' : '')
@@ -28,8 +33,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, next) => {
       if (!active) return
       setSession(next)
-      if (event === 'PASSWORD_RECOVERY') setView('reset')
-      if (event === 'SIGNED_OUT') { setSession(null); setView(null) }
+      if (event === 'PASSWORD_RECOVERY') authNavigate(authPaths.reset)
+      if (event === 'SIGNED_OUT') { setSession(null); authNavigate(pagePaths['my-home']) }
     })
     const client = supabase
     void (async () => {
@@ -44,10 +49,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
       if (failure) setError(callbackPath || resetPath ? 'This link could not be verified. Please request a new email.' : 'We could not restore your session. Please sign in again.')
       if (callbackPath || resetPath) {
         // Remove tokens/errors from the address bar after the SDK consumes them.
-        window.history.replaceState(null, '', window.location.pathname)
+        authNavigate(resetPath ? authPaths.reset : authPaths.callback)
         if (callbackPath && hasCredentials && !callbackError && !failure && data.session?.user.email_confirmed_at) {
-          window.history.replaceState(null, '', '/#my-home')
-          setView(null)
+          authNavigate(pagePaths['my-home'])
           setNotice('Your email is confirmed. Welcome to The Crowded Table.')
         } else if ((!data.session || (callbackPath && !hasCredentials)) && !callbackError) setError('This link is missing or expired. Please request a new email.')
       }
@@ -64,8 +68,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
   }, [cooldown])
 
   function navigate(next: View) {
-    setError(''); setNotice(''); setView(next)
-    if (callbackPath || resetPath) window.history.replaceState(null, '', '/#my-home')
+    setError(''); setNotice(''); routeNavigate(next ? authPaths[next] : pagePaths['my-home'])
   }
   async function run(action: () => Promise<void>) {
     setBusy(true); setError(''); setNotice('')
@@ -85,11 +88,11 @@ export function AuthShell({ children }: { children: ReactNode }) {
       if (view === 'signup') {
         const { error } = await client.auth.signUp({ email: address, password, options: { emailRedirectTo: redirect('/auth/callback') } })
         if (error) throw error
-        form.reset(); setView('check'); setCooldown(60)
+        form.reset(); navigate('check'); setCooldown(60)
       } else if (view === 'signin') {
         const { error } = await client.auth.signInWithPassword({ email: address, password })
         if (error) throw error
-        form.reset(); navigate(null); window.location.hash = 'my-home'
+        form.reset(); navigate(null)
       } else if (view === 'forgot') {
         const { error } = await client.auth.resetPasswordForEmail(address, { redirectTo: redirect('/auth/reset-password') })
         if (error) throw error
@@ -99,16 +102,16 @@ export function AuthShell({ children }: { children: ReactNode }) {
         if (password !== values.get('confirm')) throw new Error('The passwords do not match.')
         const { error } = await client.auth.updateUser({ password })
         if (error) throw error
-        form.reset(); navigate(null); setNotice('Your password has been updated.'); window.location.hash = 'my-home'
+        form.reset(); navigate(null); setNotice('Your password has been updated.')
       }
     })
   }
   const verified = Boolean(session?.user.email_confirmed_at)
   const titles = { signup: 'Pull up a chair.', signin: 'Welcome back.', forgot: 'Find your way back.', check: 'Check your email.', reset: 'Choose a new password.', callback: 'Confirm your account.' }
   return <AccountContext.Provider value={{ status: !ready ? 'loading' : verified ? 'signed-in' : 'signed-out', email: verified ? session?.user.email ?? null : null, userId: verified ? session?.user.id : undefined, busy, signIn: () => navigate('signin'), signUp: () => navigate('signup'), createCommunity: () => navigate('create-community'), signOut: () => void run(async () => { const result = await supabase!.auth.signOut({ scope: 'local' }); if (result.error) throw result.error; setSession(null); navigate(null) }) }}>
-    <AccountProfileProvider userId={session?.user.email_confirmed_at ? session.user.id : null} manageCommunities={() => { navigate(null); window.location.hash = 'my-communities' }}>
+    <AccountProfileProvider userId={session?.user.email_confirmed_at ? session.user.id : null} manageCommunities={() => { setError(''); setNotice(''); routeNavigate(pagePaths['my-communities']) }}>
     {!view && (notice || error) && <p className="auth-feedback" role={error ? 'alert' : 'status'}>{error || notice}</p>}
-    {view === 'create-community' ? verified && session ? <CreateCommunity key={session.user.id} onBusyChange={setBusy} onClose={() => { navigate(null); window.location.hash = 'my-communities' }} onList={() => { navigate(null); window.location.hash = 'my-communities' }}/> : <main className="auth-page"><p>Please sign in with a verified account to continue.</p><button onClick={() => navigate('signin')}>Sign in</button></main> : view ? <main className="auth-page"><section className="panel auth-card"><span className="eyebrow">THE CROWDED TABLE</span><h1>{titles[view]}</h1>
+    {view === 'create-community' ? !ready ? <main className="auth-page"><p role="status">Checking your session…</p></main> : verified && session ? <CreateCommunity key={session.user.id} onBusyChange={setBusy} onClose={() => { setError(''); setNotice(''); routeNavigate(pagePaths['my-communities']) }} onList={() => { setError(''); setNotice(''); routeNavigate(pagePaths['my-communities']) }}/> : <main className="auth-page"><p>Please sign in with a verified account to continue.</p><button onClick={() => navigate('signin')}>Sign in</button></main> : view ? <main className="auth-page"><section className="panel auth-card"><span className="eyebrow">THE CROWDED TABLE</span><h1>{titles[view]}</h1>
       {!supabase && <p role="alert">Account services are not configured yet. Please try again later.</p>}
       {error && <p className="auth-error" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
       {!ready ? <p role="status">Checking your link…</p> : <>
@@ -118,7 +121,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
         {view === 'reset' && <label>Confirm new password<input type="password" name="confirm" required minLength={12} autoComplete="new-password" disabled={busy}/></label>}
         <button className="button full" disabled={busy || !supabase || (view === 'forgot' && cooldown > 0)}>{busy ? 'Please wait…' : view === 'signup' ? 'Create Account' : view === 'signin' ? 'Sign in' : view === 'reset' ? 'Save new password' : cooldown ? `Try again in ${cooldown}s` : 'Send reset link'}</button>
       </form>}
-      <div className="auth-links"><button disabled={busy} onClick={() => navigate('signin')}>Sign in</button><button disabled={busy} onClick={() => navigate('forgot')}>Forgot password?</button><button disabled={busy} onClick={() => navigate('check')}>Resend confirmation</button><button disabled={busy} onClick={() => { navigate(null); window.location.hash = 'my-home' }}>Back to My Home</button></div>
+      <div className="auth-links"><button disabled={busy} onClick={() => navigate('signin')}>Sign in</button><button disabled={busy} onClick={() => navigate('forgot')}>Forgot password?</button><button disabled={busy} onClick={() => navigate('check')}>Resend confirmation</button><button disabled={busy} onClick={() => { navigate(null) }}>Back to My Home</button></div>
       </>}
     </section></main> : children}
   </AccountProfileProvider></AccountContext.Provider>

@@ -1,3 +1,5 @@
+import { Link } from 'react-router'
+import { pagePaths } from '../../navigation'
 import { Icon } from '../../../components/ui'
 import styles from './MyHomePage.module.css'
 
@@ -10,7 +12,7 @@ const sections = [
 export function MyHomePage({ embedded = false }: { embedded?: boolean }) {
   return <div className={styles.page}>
     {!embedded && <header className={styles.heading}><span className="eyebrow">YOUR SPACE AT THE CROWDED TABLE</span><h1>My Home</h1><p>Different communities. More people to play with.<br/>A place to bring it all together.</p></header>}
-    <section className={styles.welcome} aria-labelledby="welcome-title"><div><span className={styles.label}>WELCOME HOME</span><h2 id="welcome-title">All your tables,<br/><em>in one place.</em></h2><p>Your personal feed is taking shape. Soon, you’ll find updates from your communities, your next games, and a little inspiration for what to play next.</p><a className="button" href="#my-communities">My Communities <Icon name="arrow" size={18}/></a></div><div className={styles.illustration} aria-hidden="true"><Icon name="people" size={76}/><span>Games · People · Belonging</span></div></section>
+    <section className={styles.welcome} aria-labelledby="welcome-title"><div><span className={styles.label}>WELCOME HOME</span><h2 id="welcome-title">All your tables,<br/><em>in one place.</em></h2><p>Your personal feed is taking shape. Soon, you’ll find updates from your communities, your next games, and a little inspiration for what to play next.</p><Link className="button" to={pagePaths['my-communities']}>My Communities <Icon name="arrow" size={18}/></Link></div><div className={styles.illustration} aria-hidden="true"><Icon name="people" size={76}/><span>Games · People · Belonging</span></div></section>
     <div className={styles.sections}>{sections.map(section => <section className={styles.section} key={section.title}><div className={styles.sectionTitle}><span className={styles.icon}><Icon name={section.icon} size={22}/></span><span className={styles.soon}>Coming soon</span></div><h2>{section.title}</h2><p>{section.description}</p><div className={styles.placeholder}><h3>{section.empty}</h3><p>{section.detail}</p></div></section>)}</div>
     <p className={styles.note}>These sections are coming soon. No community updates, RSVPs, or suggestions are loaded yet.</p>
   </div>
