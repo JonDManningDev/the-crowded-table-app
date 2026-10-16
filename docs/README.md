@@ -1,6 +1,6 @@
 # The Crowded Table — planning documents
 
-Status: revised from the user-supplied product handoff and subsequent explicit decisions. The client architecture direction recorded on 2026-10-02, clarified on 2026-10-03 for personal versus community scope, is current and canonical; other implementation designs remain proposals where identified.
+Status: revised from the user-supplied product handoff and subsequent explicit decisions. Current implementation/deployment evidence is in [implementation status](12-implementation-status.md). The client architecture direction recorded on 2026-10-02, clarified on 2026-10-03 for personal versus community scope, is current and canonical; other implementation designs remain proposals where identified.
 
 ## Source and precedence
 
@@ -10,7 +10,7 @@ The user's explicit Vite + TypeScript + React Compiler, Supabase, multi-tenancy/
 
 The later client architecture decisions supersede overlapping tentative frontend/layout proposals. Read [frontend patterns](05-frontend-patterns.md) for accepted boundaries, data/state, and styling; [file structure](07-file-structure.md) for illustrative paths, current conflicts, and refactor progression; and [client review questions](08-decisions-and-open-questions.md#client-architecture-review-questions) for unresolved choices. The direction is reviewable, not immutable, and does not require empty folders or immediate implementation of every example.
 
-The platform supports user-created communities and multi-community accounts. **My Home** is the personal landing/feed; **My Communities** is the user's community hub. Both currently have stubs. **Community Home**, Meet & Play, Championship, **Discussion**, and Profile belong to the community being browsed. The Tegucigalpa sample community is not the whole platform; see D-043 through D-045.
+The platform supports user-created communities and multi-community accounts. **My Home** is the personal landing/feed; **My Communities** is the user's community hub. My Home remains a feed placeholder; My Communities now combines fetched owned communities with the sample-community row under My Account. **Community Home**, Meet & Play, Championship, **Discussion**, and Profile belong to the community being browsed. The Tegucigalpa sample community is not the whole platform; see D-043 through D-045.
 
 The 2026-10-12 decisions also settle per-person event/table records, atomic groups, pending-group edit priority, and `tables.manually_confirm_seats` (default false). Automatic tables confirm eligible whole groups as seats allow; manual tables use manager decisions with no second acceptance or deadline. Rejections leave the queue and notify the booker with timestamp, rejecting user, and optional reason. Payments and paid memberships are deferred until a late stage; current feature design must ignore them. Legacy prototype payment/member UI is a refactor discrepancy, not an accepted requirement.
 
@@ -18,6 +18,7 @@ The 2026-10-12 decisions also settle per-person event/table records, atomic grou
 
 | Document | Purpose |
 | --- | --- |
+| [Implementation status](12-implementation-status.md) | Account/navigation audit, deployed migrations, verification boundaries and remaining work |
 | [Vision and concept](01-vision-and-concept.md) | Community-first vision, brand, functionality, navigation, and MVP |
 | [Decisions and open questions](08-decisions-and-open-questions.md) | Established direction, proposed choices, and unresolved rules |
 | [Architecture](02-architecture.md) | System boundaries, public/private data, and commercial deferral |
@@ -41,7 +42,7 @@ The 2026-10-12 decisions also settle per-person event/table records, atomic grou
 - **Open:** a rule that needs resolution before its dependent implementation.
 - **Later:** explicitly deferred or eventual functionality.
 
-The current build covers events, tables, private table chat, Championship pending separate review, Discussion, Profile, and authorized management. Payments, paid memberships, and their UI/gates are absent until the late commercial stage. Implementation milestones remain smaller than the product scope.
+The current build combines real Auth, global profiles, discovery preferences, community creation and owner-list reads with mock community screens. The target excludes paid gates; legacy community simulations remain pending refactor, and D-120 explicitly retains account premium placeholders without billing. See [implementation status](12-implementation-status.md) for verified boundaries.
 
 ## Best next steps
 

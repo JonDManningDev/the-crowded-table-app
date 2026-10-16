@@ -2,7 +2,7 @@
 
 Status: required stack and current canonical client architecture direction established; broader backend implementation designs remain proposals where identified. Personal versus community scope was clarified on 2026-10-03; event/table boundaries and access rules were clarified on 2026-10-12 and remain unimplemented.
 
-The 2026-10-15 profile plan adds global user profiles alongside curated community profiles and atomic join/profile submission (D-111/D-112). D-113–D-115 settle independent community visibility/global search/global matchmaking controls and account-level blocking with private labels. Remaining audience/lifecycle/UX details are Q-016. These changes are not implemented.
+The 2026-10-15 profile plan adds global user profiles alongside curated community profiles and atomic join/profile submission (D-111/D-112). D-113–D-115 settle independent community visibility/global search/global matchmaking controls and account-level blocking with private labels. Remaining audience/lifecycle/UX details are Q-016. Global-profile self-management and the three preference columns are implemented; audience APIs, private labels/blocks, and atomic profile-bearing joins remain planned. See [implementation status](12-implementation-status.md).
 
 ## Baseline
 

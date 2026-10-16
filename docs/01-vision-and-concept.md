@@ -1,6 +1,6 @@
 # Vision and concept
 
-Status: current product baseline, updated 2026-10-15 for global and curated community profiles, following the 2026-10-12 event/table and commercial deferral decisions and the 2026-10-03 multi-community direction. Profile/join changes are plans, not implemented behavior. The original handoff describes the initial Tegucigalpa community, not the entire platform. Legacy pricing/membership ideas are future proposals.
+Status: current product baseline, updated 2026-10-15 for global and curated community profiles, following the 2026-10-12 event/table and commercial deferral decisions and the 2026-10-03 multi-community direction. Global-profile self-management and preference persistence are implemented; profile-bearing joins and wider audiences remain planned. The original handoff describes the initial Tegucigalpa community, not the entire platform. Legacy pricing/membership ideas are future proposals.
 
 ## Core idea
 
@@ -103,7 +103,7 @@ No follower counts, public popularity rankings, or star ratings of people. Admin
 
 The community navigation's Profile remains the user's presentation within the browsed community. Add a global user-account profile as a separate personal capability. Both initially contain `display_name` and optional `bio`; users may curate different introductions for different communities.
 
-When joining a community, pre-fill the community profile's name and bio from the user's existing global profile, allow edits, and submit the community profile with the join request. Account/profile creation succeeds or fails together. The saved community profile is independent: future global edits do not overwrite it, and community edits do not change the global profile. Apply this flow to optional participation during community creation as well. Global-profile editing/navigation placement remains to design.
+When joining a community, pre-fill the community profile's name and bio from the user's existing global profile, allow edits, and submit the community profile with the join request. Account/profile creation succeeds or fails together. The saved community profile is independent: future global edits do not overwrite it, and community edits do not change the global profile. Apply this flow to optional participation during community creation as well. Global-profile editing is available on My Account → Overview; remaining onboarding policy is Q-016.
 
 Three independent self-controlled flags govern presentation and discovery: `community_accounts.show_global_profile` defaults false and lets other users in that community see the global profile through the authorized community audience; `user_accounts.user_is_discoverable` defaults true and controls standard global account search; `user_accounts.enable_matchmaking` defaults true and enables global, non-community matchmaking. A user may share their global profile through a community while remaining absent from global searches, or participate in global matchmaking without being searchable. These are separate from permission to contact someone.
 

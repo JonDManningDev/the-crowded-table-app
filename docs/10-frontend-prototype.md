@@ -12,11 +12,15 @@ The target table setting is `manually_confirm_seats = false` by default. Automat
 
 ## Personal and community navigation — 2026-10-03
 
-The default app destination is now **My Home**, a personal-feed stub with placeholders for community updates, RSVPs, and interest/history-based event suggestions. **My Communities** is a separate stub with a clearly labeled sample-community link; the account bar's working **Your communities** owner list remains separate. These placeholders do not imply that personal data or all community associations have been fetched.
+The default destination remains My Home (`#my-home`), now a tab under My Account. Account tabs appear between the heading and content: Overview (`#account`), My Home, My Communities (`#my-communities`), and Settings (`#account-settings`). The summary card appears only on Overview. Global name/bio and discovery preferences persist; sample statistics/interests/games and notification preferences remain placeholders.
 
-The sidebar identity/subtitle/location, five community links, and motto belong to the sample community. The lower section belongs to the global account and has My Communities/My Home links. It shows the signed-in account summary rather than Ana's mock community profile. Personal navigation remains accessible above the content on mobile; the five community links remain in the bottom bar.
+The sidebar account row uses the persisted display name, first-character badge and one-line ellipsis, links to `#account`, and omits the former account subtitle. Missing profiles display “Your account” until explicitly edited; no name is fabricated from email or a community profile. Mobile navigation includes My Account.
 
-Community hashes are `#community-home`, `#meet-play`, `#championship`, `#discussion`, and `#profile`; `#home` and `#community` remain legacy aliases. Personal hashes are `#my-home` and `#my-communities`. Sign-in, successful confirmation, and completed recovery now return to My Home. No new membership, owner authority, or tenant switcher is inferred from navigation.
+The auth bar and global sample disclaimer are removed. Sign Out sits at the right of the breadcrumb; signed-out users can Sign in/Create Account there. My Communities contains Start New Community, fetched owned communities, and a labeled sample row. Creation/cancellation returns to this list and reloads it. There is no separate auth-bar community-list screen. Joined-but-not-owned communities and actual community switching remain unimplemented.
+
+Community hashes remain `#community-home`, `#meet-play`, `#championship`, `#discussion`, and `#profile`; `#home` and `#community` remain legacy aliases. The sample community Profile retains its original mock tabs and independent in-memory edits. Successful sign-in, confirmation and recovery return to My Home.
+
+D-120 explicitly retains My Premium Features and the `#premium-features` placeholder for future work. The sample ownership row's Manage button opens My Communities; there is no subscription source, per-feature management interface, billing, or purchased access. This is a scoped prototype exception, not implementation of deferred commercial features.
 
 ## Coverage
 
@@ -62,7 +66,7 @@ Seats count the host in this prototype. Waitlists support join/cancel but not ti
 
 Payment is a clearly labeled simulation. Championship currently models two-player matches with illustrative 5/3-point scoring; ties go to review. Initial rankings/history/achievements are seeded; confirmed demo matches increment standings, but this is not a full championship engine. Finalists remain provisional.
 
-Chat has in-memory messages and an illustrative 48-hour lifecycle label, with no actual clock-based archival or Realtime. Notifications are a simple in-memory inbox. Settings and support notes are local preview interactions; they trigger no external delivery. Photos, admin dashboards, backend moderation, PWA installation/offline, and payment-provider integration remain unimplemented. Real sign-in/callback/recovery flows now exist separately; their verification status is in the [Auth operations record](11-auth-operations.md#url-configuration).
+Chat has in-memory messages and an illustrative 48-hour lifecycle label, with no actual clock-based archival or Realtime. Notifications are a simple in-memory inbox. Global profile/discovery settings are persisted; other settings and support notes are local preview interactions; they trigger no external delivery. Photos, admin dashboards, backend moderation, PWA installation/offline, and payment-provider integration remain unimplemented. Real sign-in/callback/recovery flows now exist separately; their verification status is in the [Auth operations record](11-auth-operations.md#url-configuration).
 
 ## Validation
 
