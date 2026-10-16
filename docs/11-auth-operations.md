@@ -38,7 +38,7 @@ The 2026-10-02 dashboard screenshot matches the earlier CLI verification and `su
 
 Keep these exact values for current localhost testing. Site URL is the frontend origin, not the Supabase API URL or Resend sending domain. Route handlers are now implemented; allowlist configuration alone does not prove successful email delivery or end-to-end authentication.
 
-The signup implementation should explicitly supply the callback URL as `options.emailRedirectTo`; password recovery should explicitly supply the recovery URL as `redirectTo`. Keep verification links functional in the email templates. The callback must handle success and invalid/expired links, and recovery must not immediately redirect home before the password is changed. The current prototype's hash navigation does not replace these Auth route handlers.
+The signup implementation should explicitly supply the callback URL as `options.emailRedirectTo`; password recovery should explicitly supply the recovery URL as `redirectTo`. Keep verification links functional in the email templates. The callback must handle success and invalid/expired links, and recovery must not immediately redirect home before the password is changed. React Router preserves these exact Auth paths and SDK initialization/token cleanup. Its account and sample-community routes do not interpret token fragments as page navigation.
 
 Use the configured host and port consistently: `127.0.0.1`, a different port, or another callback path needs its own deliberately allowed URL. When opening localhost email links, use the computer running the frontend; localhost on a phone points to the phone. Choose a reachable, explicitly allowed development URL before testing cross-device/PWA flows.
 

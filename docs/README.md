@@ -50,7 +50,7 @@ The current build combines real Auth, global profiles, discovery preferences, co
 2. Draw mobile account-holder/guest registration, automatic confirmation, manager approve/reject/issue, and group-edit flows; keep championship design separate.
 3. Use the canonical client boundaries to refactor the prototype incrementally, preserving working Auth and community persistence; resolve the review questions needed for each slice.
 4. Agree on permission/state-transition rules for subsequent domain migrations; build the private-table flow with synthetic tenants and address-leak tests, then the remaining MVP flows.
-5. Select routing, form/validation, and PWA tools; adopt the planned TanStack Query layer and CSS Modules/token styling as the relevant slices need them.
+5. Select form/validation and PWA tools; adopt the planned TanStack Query layer and CSS Modules/token styling as the relevant slices need them.
 
 Recommended additional artifacts: mobile wireframes with the warm club aesthetic, a concise visual system, and a state-transition/acceptance specification as the open rules are resolved. Operational setup instructions belong in a runbook before pilot deployment.
 

@@ -1,13 +1,13 @@
 # Account and navigation implementation audit — 2026-10-16
 
-Scope: the sidebar/account/community-list changes and profile migrations implemented in the 2026-10-15–16 chat. This is an implementation record, not approval to implement all planned domain features. Sources: the user's requests (D-120), D-111–D-114, Q-016, schema/auth/backend/frontend plans, and the delivery acceptance criteria.
+Scope: the sidebar/account/community-list changes, profile migrations, and subsequent router implementation in the 2026-10-15–16 chat. This is an implementation record, not approval to implement all planned domain features. Sources: the user's requests (D-120), D-111–D-114, Q-016, schema/auth/backend/frontend plans, and the delivery acceptance criteria.
 
 ## Implemented
 
 | Area | Current behavior |
 | --- | --- |
-| Sidebar and account routing | Display name, first-character badge, one-line ellipsis, no account subtitle, account link to `#account`; mobile account link included. Missing profiles use a neutral label, not email or curated profile data. |
-| Account tabs | Overview, My Home, My Communities, Settings between heading and contents. Summary card only on Overview; original personal hashes remain usable. |
+| Sidebar and account routing | Display name, first-character badge, one-line ellipsis, no account subtitle, account link to `/account`; mobile account link included. Missing profiles use a neutral label, not email or curated profile data. |
+| Account tabs | Overview, My Home, My Communities, Settings between heading and contents. Summary card only on Overview; tabs use clean account paths. |
 | Account profile | Verified caller can create/edit name and optional bio without community participation. Limits are 80/2,000 characters. API data access belongs to `user-accounts`; the existing Auth-context provider supplies the shared account identity. |
 | Profile form failures | All entry points respect load/auth availability. Changes in availability are explained inside an open editor; failed saves retain drafts and do not claim success. |
 | Auth actions | Auth bar and global sample disclaimer removed. Sign Out appears opposite breadcrumb; signed-out Sign in/Create Account remain available. Auth confirmation/recovery behavior preserved. |
@@ -33,3 +33,14 @@ Frontend changes are in this working tree and have a production build. **No fron
 ## Verification
 
 The profile correction passed 120 local pgTAP assertions covering validation, trusted actors, direct-write denial, self-only reads, independent flags, retry preservation, and community/global lifecycle separation. Database lint passed. Frontend tests cover account routing, sign-in/out, consolidated lists, profile load/save behavior, saved preference independence and failure handling. The final audit run passed all 38 frontend tests, production build, and ESLint. Vite retained its existing bundle-size warning; no new bundling work was included. No new manual browser or responsive visual check is claimed by this audit.
+
+
+## Router implementation — 2026-10-16
+
+Implemented locally with React Router 8.4: BrowserRouter, centralized URL constants and route composition, a shared layout/Outlet, router links, URL-driven account/auth screens, and a not-found page. The ordinary root path redirects to `/account/home`. All old hash routing and compatibility aliases are removed as explicitly requested; hashes are not inspected for page selection. Supabase's token-fragment processing remains intact.
+
+Account paths are `/account`, `/account/home`, `/account/communities`, `/account/settings`, and `/account/premium-features`. Community creation uses `/account/communities/new` and waits for restored, verified authentication. Auth forms use `/auth/sign-in`, `/auth/sign-up`, `/auth/forgot-password`, and `/auth/check-email`; configured callback/reset URLs stay unchanged. Sample community pages live under `/community/preview`. Unknown real-community URLs show not found, never sample tenant data.
+
+Verification: **53 frontend tests pass**, including direct application paths/trailing slashes, legacy-hash non-routing, unknown paths, tab/sidebar navigation, browser Back/Forward, community-creation auth gating, and real-SDK confirmation/recovery before React mounts. TypeScript/production build, ESLint, and diff whitespace checks pass. The existing large-bundle warning remains. The Windows sandbox test run could not read Vitest temporary files; rerunning outside that sandbox passed. No manual browser/visual acceptance or frontend hosting deployment is claimed.
+
+No new SQL was needed and the previously verified hosted migration status above is unchanged; no fresh database deployment check was needed for this client-only change. Production hosting still needs an SPA fallback to `index.html` for direct application route requests. Real tenant routing, server-state/query refactoring, and the domain features listed above remain planned.

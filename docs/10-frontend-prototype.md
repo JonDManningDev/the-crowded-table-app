@@ -12,15 +12,15 @@ The target table setting is `manually_confirm_seats = false` by default. Automat
 
 ## Personal and community navigation — 2026-10-03
 
-The default destination remains My Home (`#my-home`), now a tab under My Account. Account tabs appear between the heading and content: Overview (`#account`), My Home, My Communities (`#my-communities`), and Settings (`#account-settings`). The summary card appears only on Overview. Global name/bio and discovery preferences persist; sample statistics/interests/games and notification preferences remain placeholders.
+The default destination remains My Home (`/account/home`), now a tab under My Account. Account tabs appear between the heading and content: Overview (`/account`), My Home, My Communities (`/account/communities`), and Settings (`/account/settings`). The summary card appears only on Overview. Global name/bio and discovery preferences persist; sample statistics/interests/games and notification preferences remain placeholders.
 
-The sidebar account row uses the persisted display name, first-character badge and one-line ellipsis, links to `#account`, and omits the former account subtitle. Missing profiles display “Your account” until explicitly edited; no name is fabricated from email or a community profile. Mobile navigation includes My Account.
+The sidebar account row uses the persisted display name, first-character badge and one-line ellipsis, links to `/account`, and omits the former account subtitle. Missing profiles display “Your account” until explicitly edited; no name is fabricated from email or a community profile. Mobile navigation includes My Account.
 
 The auth bar and global sample disclaimer are removed. Sign Out sits at the right of the breadcrumb; signed-out users can Sign in/Create Account there. My Communities contains Start New Community, fetched owned communities, and a labeled sample row. Creation/cancellation returns to this list and reloads it. There is no separate auth-bar community-list screen. Joined-but-not-owned communities and actual community switching remain unimplemented.
 
-Community hashes remain `#community-home`, `#meet-play`, `#championship`, `#discussion`, and `#profile`; `#home` and `#community` remain legacy aliases. The sample community Profile retains its original mock tabs and independent in-memory edits. Successful sign-in, confirmation and recovery return to My Home.
+Sample community routes are `/community/preview`, `/community/preview/meet-play`, `/community/preview/championship`, `/community/preview/discussion`, and `/community/preview/profile`. Old hash routes are unsupported. The sample community Profile retains its original mock tabs and independent in-memory edits. Successful sign-in, confirmation and recovery return to My Home.
 
-D-120 explicitly retains My Premium Features and the `#premium-features` placeholder for future work. The sample ownership row's Manage button opens My Communities; there is no subscription source, per-feature management interface, billing, or purchased access. This is a scoped prototype exception, not implementation of deferred commercial features.
+D-120 explicitly retains My Premium Features and the `/account/premium-features` placeholder for future work. The sample ownership row's Manage button opens My Communities; there is no subscription source, per-feature management interface, billing, or purchased access. This is a scoped prototype exception, not implementation of deferred commercial features.
 
 ## Coverage
 

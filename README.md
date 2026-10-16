@@ -11,11 +11,11 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite to land on **My Home** (`#my-home`), a personal-feed stub. **My Communities** (`#my-communities`) combines fetched owned communities and the sample row. Both are tabs of **My Account**, alongside **Overview** (`#account`) and **Settings** (`#account-settings`). The community sections are **Community Home** (`#community-home`), **Meet & Play** (`#meet-play`), **Championship** (`#championship`), **Discussion** (`#discussion`), and **Profile** (`#profile`). Legacy `#home` and `#community` bookmarks still open Community Home and Discussion.
+Open the local URL printed by Vite to land on **My Home** (`/account/home`), a personal-feed stub. **My Communities** (`/account/communities`) combines fetched owned communities and the sample row. Both are tabs of **My Account**, alongside **Overview** (`/account`) and **Settings** (`/account/settings`). The community sections are **Community Home** (`/community/preview`), **Meet & Play** (`/community/preview/meet-play`), **Championship** (`/community/preview/championship`), **Discussion** (`/community/preview/discussion`), and **Profile** (`/community/preview/profile`). Old hash routes are unsupported; no compatibility redirects are installed.
 
 For real authentication, copy `.env.example` to ignored `.env.local` and set the Supabase project URL and public publishable (or legacy anon) key. Never use a secret/service-role key in Vite variables. Restart Vite after changing environment configuration. Use `http://localhost:5173` for the currently configured hosted redirects; do not silently switch ports. Without public client configuration, the preview remains available and account forms report that services are not configured.
 
-Auth supports email/password signup, confirmation/resend, sign-in, persistent sessions, sign-out on this browser, and password recovery. `/auth/callback` completes confirmation and returns to My Home; `/auth/reset-password` keeps the user in the password-change flow. Deployment hosting must serve the app at these paths. This client-only implementation explicitly uses Supabase's implicit flow and consumes/removes callback credentials through the SDK. Reassess PKCE when introducing server-side rendering. Authentication grants no simulated membership or tenant permissions.
+Auth supports email/password signup, confirmation/resend, sign-in, persistent sessions, sign-out on this browser, and password recovery. `/auth/callback` completes confirmation and returns to My Home; `/auth/reset-password` keeps the user in the password-change flow. Deployment hosting must serve `index.html` for direct application-route requests (SPA fallback), including all account, auth, and sample-community paths, while serving assets normally. Vite supplies this fallback locally. This client-only implementation explicitly uses Supabase's implicit flow and consumes/removes callback credentials through the SDK. Reassess PKCE when introducing server-side rendering. Authentication grants no simulated membership or tenant permissions.
 
 ```sh
 npm run build
@@ -41,7 +41,7 @@ After signing in with a verified account, choose **Start New Community** in the 
 
 ## Account implementation and deployment
 
-Global display name/bio and the two discovery preferences persist through verified-caller commands. Account Overview alone shows the profile summary. Other overview statistics/interests/games, notification preferences, premium subscriptions and the Explore Premium Features destination remain explicit placeholders. `#profile` still edits the sample community profile in memory, separately from the global profile.
+Global display name/bio and the two discovery preferences persist through verified-caller commands. Account Overview alone shows the profile summary. Other overview statistics/interests/games, notification preferences, premium subscriptions and the Explore Premium Features destination remain explicit placeholders. `/community/preview/profile` still edits the sample community profile in memory, separately from the global profile.
 
 All five migration versions through `20261016000200` were applied to local and hosted testing Supabase (`fsnipgsrlclbnfepcbvz`). Hosted migration history matched and the post-deployment dry run was empty on 2026-10-16. Frontend changes are local source/build work; no frontend hosting deployment was performed. See the [implementation audit](docs/12-implementation-status.md) for verification and remaining scope.
 
@@ -59,7 +59,7 @@ See the [prototype guide](docs/10-frontend-prototype.md) for the available flows
 
 These paths describe the current implementation. The [canonical client architecture](docs/05-frontend-patterns.md) and [illustrative layout/refactor inventory](docs/07-file-structure.md) guide upcoming work; they distinguish accepted boundaries from conventions and structures to introduce only when needed.
 
-- `src/App.tsx`: application composition, membership preview, and shared dialogs; `src/app/navigation.ts` owns current hash navigation.
+- `src/App.tsx`: application composition, membership preview, and shared dialogs; `src/app/router.tsx` composes React Router routes and `src/app/navigation.ts` owns shared URL constants.
 - `src/app/layout/`: community sidebar and personal navigation; `src/app/pages/MyHomePage/`: personal-feed stub.
 - `src/features/`: community Home/events, Meet & Play, Championship, Discussion (legacy `Community.tsx`), and community Profile; `src/features/communities/pages/`: consolidated My Communities list.
 - `src/features/Auth.tsx`, `CreateCommunity.tsx`, `OwnedCommunities.tsx`: real account flows, community creation, and the owner list, alongside the preview screens.
