@@ -1,3 +1,6 @@
+import { Button } from '../components/primitives/Controls'
+import { ActionLink, Link } from '../components/primitives/Controls'
+import { pagePaths } from '../app/navigation'
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
@@ -15,7 +18,7 @@ function timezones() {
 }
 const zones = timezones()
 
-export function CreateCommunity({ onClose, onList, onBusyChange }: { onClose: () => void; onList: () => void; onBusyChange: (busy: boolean) => void }) {
+export function CreateCommunity({ onBusyChange }: { onBusyChange: (busy: boolean) => void }) {
   const [draft, setDraft] = useState<TenantDraft>(() => ({ name: '', slug: '', country: '', region: '', city: '', timezone: browserTimezone(), join: false }))
   const [saved, setSaved] = useState<TenantDraft | null>(null)
   const [busy, setBusy] = useState(false)
@@ -49,7 +52,7 @@ export function CreateCommunity({ onClose, onList, onBusyChange }: { onClose: ()
       <dl className="community-summary"><dt>Community handle</dt><dd>{saved.slug}</dd><dt>Location</dt><dd>{[saved.city.trim(), saved.region.trim(), countryNames.of(saved.country)].filter(Boolean).join(', ')}</dd><dt>Time zone</dt><dd>{saved.timezone.trim()}</dd></dl>
       <p>{saved.join ? 'You’ve also joined as an approved participant.' : 'You can manage this community without joining as a participant.'}</p>
       <p>Other people will need approval to join. Profile setup and community management are coming next.</p>
-      <div className="actions"><button className="button" onClick={onList}>View your communities</button><button className="text-button" onClick={onClose}>Back to home</button></div>
+      <div className="actions"><ActionLink to={pagePaths['my-communities']}>View your communities</ActionLink><Link to={pagePaths['my-home']}>Back to My Home</Link></div>
     </> : <><h1>Start a new community.</h1><p>You’ll become its owner. Give your community a name and a place to call home.</p>
       {error && <p className="auth-error" role="alert" tabIndex={-1} ref={errorRef}>{error}</p>}
       <form className="form" onSubmit={submit} aria-busy={busy}>
@@ -63,9 +66,9 @@ export function CreateCommunity({ onClose, onList, onBusyChange }: { onClose: ()
           <datalist id="community-timezones">{zones.map(zone => <option key={zone} value={zone}/>)}</datalist>
           <p id="timezone-help" className="muted">Starts with your device’s time zone. Choose the zone where your community meets.</p>
           <div className="participation-choice"><label className="check-label"><input name="join" type="checkbox" checked={draft.join} onChange={e => update('join', e.target.checked)}/>Would you also like to join this community as a participant?</label><p>You can manage this community either way. You can join later.</p></div>
-          <button className="button full" type="submit">{busy ? 'Creating your community…' : 'Create community'}</button>
+          <Button appearance="primary" full className="button full" type="submit" loading={busy}>{busy ? 'Creating your community…' : 'Create community'}</Button>
         </fieldset>
-      </form><div className="auth-links"><button disabled={busy} onClick={onClose}>Cancel</button><button disabled={busy} onClick={onList}>Your communities</button></div>
+      </form><div className="auth-links">{busy ? <span>Creating your community…</span> : <><Link to={pagePaths['my-communities']}>Cancel</Link><Link to={pagePaths['my-communities']}>Your communities</Link></>}</div>
     </>}
   </section></main>
 }

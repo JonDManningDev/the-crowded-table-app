@@ -1,3 +1,5 @@
+import { Button } from '../components/primitives/Controls'
+import { Link, ActionLink } from '../components/primitives/Controls'
 import { useLocation, useNavigate } from 'react-router'
 import { authPaths, authViewAt, pagePaths, type AuthView } from '../app/navigation'
 import { useEffect, useEffectEvent, useState } from 'react'
@@ -23,9 +25,12 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(callbackError ? 'This link is invalid or expired. Please request a new email.' : '')
+  const [feedbackPath, setFeedbackPath] = useState(location.pathname)
   const [notice, setNotice] = useState('')
   const [linkFailed, setLinkFailed] = useState(callbackError)
   const [cooldown, setCooldown] = useState(0)
+
+  if (feedbackPath !== location.pathname) { setFeedbackPath(location.pathname); setError(''); if (location.pathname !== pagePaths['my-home']) setNotice('') }
 
   useEffect(() => {
     if (!supabase) return
@@ -108,20 +113,20 @@ export function AuthShell({ children }: { children: ReactNode }) {
   }
   const verified = Boolean(session?.user.email_confirmed_at)
   const titles = { signup: 'Pull up a chair.', signin: 'Welcome back.', forgot: 'Find your way back.', check: 'Check your email.', reset: 'Choose a new password.', callback: 'Confirm your account.' }
-  return <AccountContext.Provider value={{ status: !ready ? 'loading' : verified ? 'signed-in' : 'signed-out', email: verified ? session?.user.email ?? null : null, userId: verified ? session?.user.id : undefined, busy, signIn: () => navigate('signin'), signUp: () => navigate('signup'), createCommunity: () => navigate('create-community'), signOut: () => void run(async () => { const result = await supabase!.auth.signOut({ scope: 'local' }); if (result.error) throw result.error; setSession(null); navigate(null) }) }}>
-    <AccountProfileProvider userId={session?.user.email_confirmed_at ? session.user.id : null} manageCommunities={() => { setError(''); setNotice(''); routeNavigate(pagePaths['my-communities']) }}>
+  return <AccountContext.Provider value={{ status: !ready ? 'loading' : verified ? 'signed-in' : 'signed-out', email: verified ? session?.user.email ?? null : null, userId: verified ? session?.user.id : undefined, busy, signOut: () => void run(async () => { const result = await supabase!.auth.signOut({ scope: 'local' }); if (result.error) throw result.error; setSession(null); navigate(null) }) }}>
+    <AccountProfileProvider userId={session?.user.email_confirmed_at ? session.user.id : null}>
     {!view && (notice || error) && <p className="auth-feedback" role={error ? 'alert' : 'status'}>{error || notice}</p>}
-    {view === 'create-community' ? !ready ? <main className="auth-page"><p role="status">Checking your session…</p></main> : verified && session ? <CreateCommunity key={session.user.id} onBusyChange={setBusy} onClose={() => { setError(''); setNotice(''); routeNavigate(pagePaths['my-communities']) }} onList={() => { setError(''); setNotice(''); routeNavigate(pagePaths['my-communities']) }}/> : <main className="auth-page"><p>Please sign in with a verified account to continue.</p><button onClick={() => navigate('signin')}>Sign in</button></main> : view ? <main className="auth-page"><section className="panel auth-card"><span className="eyebrow">THE CROWDED TABLE</span><h1>{titles[view]}</h1>
+    {view === 'create-community' ? !ready ? <main className="auth-page"><p role="status">Checking your session…</p></main> : verified && session ? <CreateCommunity key={session.user.id} onBusyChange={setBusy}/> : <main className="auth-page"><p>Please sign in with a verified account to continue.</p><Link to={authPaths.signin}>Sign in</Link></main> : view ? <main className="auth-page"><section className="panel auth-card"><span className="eyebrow">THE CROWDED TABLE</span><h1>{titles[view]}</h1>
       {!supabase && <p role="alert">Account services are not configured yet. Please try again later.</p>}
       {error && <p className="auth-error" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
       {!ready ? <p role="status">Checking your link…</p> : <>
-      {view === 'check' ? <><p>If signup can proceed, we’ll send a confirmation link to your email. Open it to finish creating your account.</p><p>Already have an account? Sign in or reset your password.</p><form className="form" onSubmit={e => { e.preventDefault(); void run(async () => { const { error } = await supabase!.auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: redirect('/auth/callback') } }); if (error) throw error; setCooldown(60); setNotice('If your account needs confirmation, a new link is on its way.') }) }}><label>Email address<input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} disabled={busy}/></label><button className="button" disabled={busy || cooldown > 0 || !supabase}>{cooldown ? `Resend in ${cooldown}s` : 'Resend confirmation email'}</button></form></> : view === 'callback' ? <p>Request another confirmation email or sign in to continue.</p> : view === 'reset' && (!session || linkFailed) ? <button className="button" onClick={() => navigate('forgot')}>Request a new reset link</button> : <form className="form" onSubmit={submit}>
+      {view === 'check' ? <><p>If signup can proceed, we’ll send a confirmation link to your email. Open it to finish creating your account.</p><p>Already have an account? Sign in or reset your password.</p><form className="form" onSubmit={e => { e.preventDefault(); void run(async () => { const { error } = await supabase!.auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: redirect('/auth/callback') } }); if (error) throw error; setCooldown(60); setNotice('If your account needs confirmation, a new link is on its way.') }) }}><label>Email address<input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} disabled={busy}/></label><Button appearance="primary" type="submit" loading={busy} className="button" disabled={busy || cooldown > 0 || !supabase}>{cooldown ? `Resend in ${cooldown}s` : 'Resend confirmation email'}</Button></form></> : view === 'callback' ? <p>Request another confirmation email or sign in to continue.</p> : view === 'reset' && (!session || linkFailed) ? <ActionLink to={authPaths.forgot}>Request a new reset link</ActionLink> : <form className="form" onSubmit={submit}>
         {view !== 'reset' && <label>Email address<input type="email" name="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} disabled={busy}/></label>}
         {view !== 'forgot' && <label>{view === 'reset' ? 'New password' : 'Password'}<input type="password" name="password" required minLength={view === 'signin' ? undefined : 12} autoComplete={view === 'signin' ? 'current-password' : 'new-password'} disabled={busy}/>{view !== 'signin' && <small>Use at least 12 characters.</small>}</label>}
         {view === 'reset' && <label>Confirm new password<input type="password" name="confirm" required minLength={12} autoComplete="new-password" disabled={busy}/></label>}
-        <button className="button full" disabled={busy || !supabase || (view === 'forgot' && cooldown > 0)}>{busy ? 'Please wait…' : view === 'signup' ? 'Create Account' : view === 'signin' ? 'Sign in' : view === 'reset' ? 'Save new password' : cooldown ? `Try again in ${cooldown}s` : 'Send reset link'}</button>
+        <Button appearance="primary" full type="submit" loading={busy} className="button full" disabled={busy || !supabase || (view === 'forgot' && cooldown > 0)}>{busy ? 'Please wait…' : view === 'signup' ? 'Create Account' : view === 'signin' ? 'Sign in' : view === 'reset' ? 'Save new password' : cooldown ? `Try again in ${cooldown}s` : 'Send reset link'}</Button>
       </form>}
-      <div className="auth-links"><button disabled={busy} onClick={() => navigate('signin')}>Sign in</button><button disabled={busy} onClick={() => navigate('forgot')}>Forgot password?</button><button disabled={busy} onClick={() => navigate('check')}>Resend confirmation</button><button disabled={busy} onClick={() => { navigate(null) }}>Back to My Home</button></div>
+      <div className="auth-links">{busy ? <span>Please wait…</span> : <><Link to={authPaths.signin}>Sign in</Link><Link to={authPaths.forgot}>Forgot password?</Link><Link to={authPaths.check}>Resend confirmation</Link><Link to={pagePaths['my-home']}>Back to My Home</Link></>}</div>
       </>}
     </section></main> : children}
   </AccountProfileProvider></AccountContext.Provider>

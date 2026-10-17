@@ -32,7 +32,7 @@ async function start() {
   render(<BrowserRouter><AuthShell><AccountActions/><MyCommunitiesPage previewName="Sample" previewLocation="Sample location"/><div>Community preview</div></AuthShell></BrowserRouter>)
   await waitFor(() => expect(screen.queryByText('Checking your session…')).toBeNull())
 }
-function click(name: string) { fireEvent.click(screen.getAllByRole('button', { name }).at(-1)!) }
+function click(name: string) { fireEvent.click((screen.queryAllByRole('link', { name }).at(-1) || screen.getAllByRole('button', { name }).at(-1)!)) }
 function fill(name: string | RegExp, value: string) { fireEvent.change(screen.getByLabelText(name), { target: { value } }) }
 function submit() { fireEvent.submit(document.querySelector('form')!) }
 
@@ -48,7 +48,7 @@ describe('account workflows', () => {
   it('does not offer community creation to an unverified account', async () => {
     auth.getSession.mockResolvedValue({ data: { session: { user: { ...session.user, email_confirmed_at: null } } }, error: null })
     await start()
-    expect(screen.queryByRole('button', { name: 'Start New Community' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Start New Community' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Your communities' })).toBeNull()
   })
   it('signs in and returns home without changing community access', async () => {
@@ -90,7 +90,7 @@ describe('account workflows', () => {
   it('requires a session before offering password update', async () => {
     window.history.replaceState(null, '', '/auth/reset-password')
     await start()
-    expect(screen.getByRole('button', { name: 'Request a new reset link' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Request a new reset link' })).toBeTruthy()
     expect(auth.updateUser).not.toHaveBeenCalled()
   })
   it('keeps recovery on the reset form and rejects mismatched passwords', async () => {
@@ -124,7 +124,7 @@ describe('account workflows', () => {
     auth.getSession.mockResolvedValue({ data: { session }, error: null })
     await start()
     expect((await screen.findByRole('alert')).textContent).toContain('invalid or expired')
-    expect(screen.getByRole('button', { name: 'Request a new reset link' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Request a new reset link' })).toBeTruthy()
     expect(window.location.hash).toBe('')
   })
   it('restores an authenticated session and signs out on this browser', async () => {

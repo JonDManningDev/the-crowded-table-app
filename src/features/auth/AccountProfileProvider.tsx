@@ -2,11 +2,11 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { readOwnProfile, saveOwnProfile } from '../user-accounts/api'
 import { AccountContext, useAccount } from './accountContext'
 
-export function AccountProfileProvider({ userId, manageCommunities, children }: { userId: string | null; manageCommunities: () => void; children: ReactNode }) {
-  return <ProfileProvider key={userId || 'guest'} userId={userId} manageCommunities={manageCommunities}>{children}</ProfileProvider>
+export function AccountProfileProvider({ userId, children }: { userId: string | null; children: ReactNode }) {
+  return <ProfileProvider key={userId || 'guest'} userId={userId}>{children}</ProfileProvider>
 }
 
-function ProfileProvider({ userId, manageCommunities, children }: { userId: string | null; manageCommunities: () => void; children: ReactNode }) {
+function ProfileProvider({ userId, children }: { userId: string | null; children: ReactNode }) {
   const account = useAccount()
   const [profile, setProfile] = useState({ display_name: '', bio: '' })
   const [loading, setLoading] = useState(Boolean(userId))
@@ -28,5 +28,5 @@ function ProfileProvider({ userId, manageCommunities, children }: { userId: stri
     await saveOwnProfile(name, bio)
     setProfile({ display_name: name.trim(), bio: bio.trim() }); setError('')
   }
-  return <AccountContext.Provider value={{ ...account, displayName: profile.display_name, bio: profile.bio, profileLoading: loading, profileError: error, saveProfile, manageCommunities }}>{children}</AccountContext.Provider>
+  return <AccountContext.Provider value={{ ...account, displayName: profile.display_name, bio: profile.bio, profileLoading: loading, profileError: error, saveProfile }}>{children}</AccountContext.Provider>
 }

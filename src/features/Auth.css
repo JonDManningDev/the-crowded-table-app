@@ -2,7 +2,7 @@
 .auth-card { width:100%; max-width:520px; }
 .auth-card h1 { font-size:48px; margin:12px 0 24px; }
 .auth-links { margin-top:24px; font-size:13px; }
-.auth-links button { text-decoration:underline; }
+.auth-links { display:flex; flex-wrap:wrap; gap:12px; }
 .auth-error { color:#913d27; }
 .auth-feedback { margin:0; padding:14px 28px; background:var(--sage); }
 .auth-feedback { margin-left:238px; }

@@ -1,3 +1,4 @@
+import { Button } from './primitives/Controls'
 import { useEffect, useId, useRef } from 'react'
 import type { ReactNode } from 'react'
 import type { Art } from '../mock/data'
@@ -36,7 +37,7 @@ export function Heading({ eyebrow, title, children, action }: { eyebrow: string;
   return <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{children && <p>{children}</p>}</div>{action}</div>
 }
 export function Tabs({ items, value, onChange }: { items: string[]; value: string; onChange: (value: string) => void }) {
-  return <div className="tabs" aria-label="View options">{items.map(item => <button key={item} className={item === value ? 'active' : ''} aria-pressed={item === value} onClick={() => onChange(item)}>{item}</button>)}</div>
+  return <div className="tabs" aria-label="View options">{items.map(item => <Button appearance="unstyled" key={item} className={item === value ? 'active' : ''} aria-pressed={item === value} onClick={() => onChange(item)}>{item}</Button>)}</div>
 }
 export function Empty({ title, children }: { title: string; children: ReactNode }) { return <div className="empty"><Icon name="leaf" size={32}/><h3>{title}</h3><p>{children}</p></div> }
 export function Modal({ title, children, onClose, wide = false }: { title: string; children: ReactNode; onClose: () => void; wide?: boolean }) {
@@ -48,7 +49,7 @@ export function Modal({ title, children, onClose, wide = false }: { title: strin
     dialog?.showModal()
     return () => { dialog?.close(); previous?.focus() }
   }, [])
-  return <dialog ref={ref} aria-labelledby={titleId} className={wide ? 'wide' : ''} onCancel={onClose} onClick={event => { if (event.target === event.currentTarget) onClose() }}><div className="modal-header"><h2 id={titleId}>{title}</h2><button className="icon-button" aria-label="Close dialog" onClick={onClose}><Icon name="close"/></button></div><div className="modal-content">{children}</div></dialog>
+  return <dialog ref={ref} aria-labelledby={titleId} className={wide ? 'wide' : ''} onCancel={onClose} onClick={event => { if (event.target === event.currentTarget) onClose() }}><div className="modal-header"><h2 id={titleId}>{title}</h2><Button appearance="unstyled" className="icon-button" aria-label="Close dialog" onClick={onClose}><Icon name="close"/></Button></div><div className="modal-content">{children}</div></dialog>
 }
 export function Botanical() {
   return <svg className="botanical" viewBox="0 0 120 200" fill="none" aria-hidden="true"><path d="M24 190C65 124 65 59 90 8" stroke="currentColor" strokeWidth="2"/>{[0, 1, 2, 3, 4].map(i => <g key={i} transform={`translate(${32 + i * 9} ${153 - i * 31}) rotate(${i % 2 ? -30 : 5})`}><path d="M0 0C-45-5-37-36-37-36-6-34 1-13 0 0Z" fill="currentColor" opacity=".17" stroke="currentColor"/><path d="M3-8C43-19 31-47 31-47 8-35 2-21 3-8Z" fill="currentColor" opacity=".28" stroke="currentColor"/></g>)}</svg>

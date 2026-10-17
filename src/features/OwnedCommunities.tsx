@@ -1,3 +1,4 @@
+import { Button } from '../components/primitives/Controls'
 import { useEffect, useState, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
@@ -25,7 +26,7 @@ export function OwnedCommunities({ userId, sample }: { userId: string; sample?: 
     return () => { active = false }
   }, [userId, attempt])
   return <>
-    {!supabase ? <p role="alert">Community services are not configured.</p> : loading ? <p role="status">Loading your communities…</p> : error ? <><p role="alert" className="auth-error">{error}</p><button onClick={() => { setLoading(true); setError(''); setAttempt(value => value + 1) }}>Try again</button></> : !rows.length && <p>You haven’t created a community yet.</p>}
+    {!supabase ? <p role="alert">Community services are not configured.</p> : loading ? <p role="status">Loading your communities…</p> : error ? <><p role="alert" className="auth-error">{error}</p><Button appearance="unstyled" onClick={() => { setLoading(true); setError(''); setAttempt(value => value + 1) }}>Try again</Button></> : !rows.length && <p>You haven’t created a community yet.</p>}
     <ul className="owned-communities community-list">{rows.map(row => <li key={row.id}><div><span className="eyebrow">YOUR COMMUNITY</span><h2>{row.name}</h2><p>{row.slug} · Owner · {row.operational_status === 'archived' ? 'Archived' : 'Active'}</p><p>{[row.city, row.state_province, row.country_code].filter(Boolean).join(', ')} · {row.timezone}</p></div></li>)}{sample}</ul>
   </>
 }

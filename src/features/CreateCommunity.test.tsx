@@ -19,7 +19,7 @@ beforeEach(() => {
   api.order.mockResolvedValue({ data: [], error: null })
 })
 afterEach(cleanup)
-function start() { render(<CreateCommunity onClose={vi.fn()} onList={vi.fn()} onBusyChange={vi.fn()}/>) }
+function start() { render(<MemoryRouter><CreateCommunity onBusyChange={vi.fn()}/></MemoryRouter>) }
 function fill() {
   fireEvent.change(screen.getByLabelText('Community name'), { target: { value: '  Our games  ' } })
   fireEvent.change(screen.getByLabelText('Community handle'), { target: { value: 'our-games' } })
@@ -103,15 +103,13 @@ it('keeps frontend country and reserved-handle hints aligned with the database c
 
 it('combines fetched communities and the sample row in the account tab and clears private rows on sign-out', async () => {
   api.order.mockResolvedValue({ data: [{ id: 'a', name: 'Saved community', slug: 'saved-community', country_code: 'HN', timezone: 'UTC', operational_status: 'active' }], error: null })
-  const create = vi.fn()
-  const view = render(<MemoryRouter><AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', userId: 'owner', createCommunity: create }}><MyCommunitiesPage embedded previewName="Sample community" previewLocation="Sample location"/></AccountContext.Provider></MemoryRouter>)
+  const view = render(<MemoryRouter><AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', userId: 'owner' }}><MyCommunitiesPage embedded previewName="Sample community" previewLocation="Sample location"/></AccountContext.Provider></MemoryRouter>)
   await screen.findByText('Saved community')
   expect(screen.getAllByRole('listitem')).toHaveLength(2)
   expect(screen.getByRole('heading', { name: 'Sample community' })).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Start New Community' }))
-  expect(create).toHaveBeenCalledOnce()
+  expect(screen.getByRole('link', { name: 'Start New Community' }).getAttribute('href')).toBe('/account/communities/new')
   view.rerender(<MemoryRouter><AccountContext.Provider value={{ status: 'signed-out', email: null }}><MyCommunitiesPage embedded previewName="Sample community" previewLocation="Sample location"/></AccountContext.Provider></MemoryRouter>)
   expect(screen.queryByText('Saved community')).toBeNull()
   expect(screen.getAllByRole('listitem')).toHaveLength(1)
-  expect(screen.queryByRole('button', { name: 'Start New Community' })).toBeNull()
+  expect(screen.queryByRole('link', { name: 'Start New Community' })).toBeNull()
 })

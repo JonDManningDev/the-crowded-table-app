@@ -1,9 +1,10 @@
 import { useAccount } from './accountContext'
-
+import { Link, ActionLink, Button } from '../../components/primitives/Controls'
+import { authPaths } from '../../app/navigation'
 export function AccountActions() {
   const account = useAccount()
   if (account.status === 'loading') return <span role="status">Checking your session…</span>
   return <div className="account-actions">{account.status === 'signed-in'
-    ? <button className="text-button" disabled={account.busy} onClick={account.signOut}>Sign Out</button>
-    : <><button className="text-button" disabled={account.busy} onClick={account.signIn}>Sign in</button><button className="button secondary" disabled={account.busy} onClick={account.signUp}>Create Account</button></>}</div>
+    ? <Button appearance="ghost" loading={account.busy} onClick={account.signOut}>Sign Out</Button>
+    : <><Link to={authPaths.signin}>Sign in</Link><ActionLink appearance="outline" to={authPaths.signup}>Create Account</ActionLink></>}</div>
 }
