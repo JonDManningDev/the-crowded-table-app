@@ -49,11 +49,11 @@ All five migration versions through `20261016000200` were applied to local and h
 
 Current design note (2026-10-12): the member/guest paywalls and payment simulations described below are legacy prototype behavior awaiting removal in the domain refactor. [Accepted plans](docs/08-decisions-and-open-questions.md#events-tables-and-invitations--2026-10-12) defer payments and paid memberships to a late stage. The planned table flow supports automatic/manual whole-group confirmation with no response window; the prototype does not yet implement the complete new domain model.
 
-The sidebar's name, subtitle, location, five community links, and motto belong to the sample community. The lower account area contains My Communities and My Home and shows the real account identity when signed in. Personal links also appear above content on mobile. My Home has clearly marked placeholders for community updates, upcoming RSVPs, and interest/history-based event suggestions; it does not currently load personal activity. My Communities includes the sample as a labeled row alongside fetched owned communities, without claiming it is joined. The account row links to Overview and uses the persisted display name with a one-character badge and ellipsis truncation.
+The sidebar's name, subtitle, location, five community links, and motto belong to the sample community. The lower account area contains a single padded account link and shows the real account identity when signed in. It stays active across account pages; the mobile personal navigation uses the same single account destination. My Communities and My Home remain in the account tabs. My Home has clearly marked placeholders for community updates, upcoming RSVPs, and interest/history-based event suggestions; it does not currently load personal activity. My Communities includes the sample as a labeled row alongside fetched owned communities, without claiming it is joined. The account row links to Overview and uses the persisted display name with a one-character badge and ellipsis truncation.
 
 The community preview starts as sample member Ana M.; use **Preview as Member / Guest** to compare simulated access. Community activities/profile edits remain in-memory and refreshing restores sample data. Simulated payments never charge anyone. The auth bar and global preview disclaimer are removed. Sign Out is at the right of the breadcrumb; signed-out users get Sign in/Create Account there. Community creation returns to the consolidated My Communities tab. The five preview sections still use sample data. Client-side preview gating is not production security, and installed/offline PWA support remains unimplemented.
 
-See the [prototype guide](docs/10-frontend-prototype.md) for the available flows, design decisions, and limitations. See [planning documents](docs/README.md) for the product and architecture plans, and `docs/visuals/` for the reference infographics.
+See the [prototype guide](docs/10-frontend-prototype.md) for the available flows, design decisions, and limitations. See the [UI style guide](docs/13-ui-style-guide.md) for canonical control patterns. See [planning documents](docs/README.md) for the product and architecture plans, and `docs/visuals/` for the reference infographics.
 
 ## Source layout
 
@@ -66,7 +66,7 @@ These paths describe the current implementation. The [canonical client architect
 - `src/features/auth/accountContext.ts`: safe account summary for application UI, separate from the mock community profile.
 - `src/lib/`: Supabase setup/generated schema types and current tenant-creation helpers (domain helpers are a refactor candidate).
 - `src/mock/`: typed sample data, in-memory state/actions, date formatting.
-- `src/components/`: reusable controls, local vector game art, activity cards/details.
+- `src/components/`: reusable controls, local vector game art, activity cards/details; `primitives/Controls.tsx` provides semantic links, action links, buttons and route-aware navigation with shared CSS Module styles.
 - `src/index.css`, `src/App.css`, and feature `.css` files: current global visual system and layouts; component styles will migrate to CSS Modules.
 
 The illustrations and icons are local SVG components. Google Fonts supplies DM Sans and Libre Caslon Display when available; system sans-serif and Georgia are fallbacks. Real account flows use `@supabase/supabase-js`; component tests use Vitest and Testing Library.

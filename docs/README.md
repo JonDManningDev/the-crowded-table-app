@@ -24,6 +24,7 @@ The 2026-10-12 decisions also settle per-person event/table records, atomic grou
 | [Architecture](02-architecture.md) | System boundaries, public/private data, and commercial deferral |
 | [Database schema plan](03-database-schema.md) | Entities, relationships, constraints, and migration sequence |
 | [Auth and multi-tenancy](04-auth-and-multi-tenancy.md) | Identity, community standing, roles, participation, and isolation |
+| [UI style guide](13-ui-style-guide.md) | Canonical navigation, links, buttons, shared appearances, tokens and accessibility |
 | [Frontend patterns](05-frontend-patterns.md) | Canonical client boundaries, data/state, CSS Modules/theming, and product UI conventions |
 | [Backend patterns](06-backend-patterns.md) | Transactional commands, privacy, waitlists, results, and audit |
 | [File structure](07-file-structure.md) | Illustrative client layout, ownership, current-code conflicts, and refactor sequence |

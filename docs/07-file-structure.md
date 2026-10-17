@@ -168,3 +168,8 @@ Auth pages use `/auth/sign-in`, `/auth/sign-up`, `/auth/forgot-password`, `/auth
 Redirect `/` to personal home. Per explicit user direction, do not preserve or redirect old hash routes: the application has no existing users. Auth token fragments remain solely the SDK's responsibility. Use router links, nested outlets, active-route matching, browser Back/Forward support, and a not-found destination. Existing auth callback URLs/allowlists stay unchanged. Production static hosting must rewrite non-asset application paths to `index.html`; Vite handles development fallback. No hosting deployment or schema migration is required by this slice.
 
 Automated verification covers direct routes, root redirect and absence of legacy hash routing, unknown paths, sidebar/tab links, history traversal, community-creation session gates, and real-SDK callback-before-mount/recovery regression tests. See implementation status for results and deployment limits.
+
+
+## Shared UI controls — 2026-10-16
+
+`src/components/primitives/Controls.tsx` and its CSS Module implement Link, ActionLink, Button and NavItem, with behavioral tests alongside. Existing `components/ui.tsx` retains unrelated primitives and uses Button for local view selectors and modal dismissal. Root semantic tokens remain in `src/index.css`. Shared action presentation has moved out of `App.css`; specialized legacy layout hooks and page styles remain until their feature slices migrate. Route callbacks have been removed from AccountContext: consumers use declarative destinations from the central path map. See the [UI style guide](13-ui-style-guide.md) and D-122.

@@ -202,6 +202,10 @@ Grow feature subdirectories, reusable components, schemas, query infrastructure,
 
 Do not automatically add `repositories`, `services`, `controllers`, `useCases`, `entities`, `domain`, or `infrastructure` layers to imitate backend/Clean Architecture patterns. Add an abstraction when it removes meaningful coupling, clarifies ownership, or makes change/testing substantially easier. Passing a simple Supabase call through several files is not sufficient justification. Selective barrels, row-to-UI mappers, global client state, and a configurable theme system need the same concrete justification.
 
+## Navigation and control semantics
+
+The [UI style guide](13-ui-style-guide.md) is canonical for links, buttons, route navigation and shared control styling. Use the existing primitives in `components/primitives/Controls.tsx`: Link for text destinations, ActionLink for prominent destinations, NavItem for persistent navigation, and Button for actions. Their colocated CSS Module consumes the existing root token system; navigation selection has separate tokens from primary action emphasis. Account route tabs use exact NavItems; local view/filter selectors remain buttons. Never substitute a click-handler button for an ordinary route destination.
+
 ## Forms and seat actions
 
 Table creation captures title/game, schedule, category, experience, beginner flag, capacity, `manually_confirm_seats` (default false), `allow_guests` (default true), description, and public/private location. Keep private address input separate from public labels/descriptions.
