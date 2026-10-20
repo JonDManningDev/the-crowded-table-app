@@ -1,14 +1,16 @@
 import { Button } from './components/primitives/Controls'
 import { Link, Outlet, useLocation } from 'react-router'
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { lazy, useEffect, useLayoutEffect, useState } from 'react'
 import { useMockState } from './mock/useMockState'
 import { previewCommunity } from './mock/data'
 import { Avatar, Icon, Modal } from './components/ui'
-import { ActivityDialog } from './components/Activity'
+import { LazyContent } from './app/LazyContent'
 import { Sidebar, MobilePersonalNavigation } from './app/layout/Sidebar'
 import { pageAt, pagePaths, navigation } from './app/navigation'
 import { AccountActions } from './features/auth/AccountActions'
 import './App.css'
+
+const ActivityDialog = lazy(() => import('./components/Activity').then(module => ({ default: module.ActivityDialog })))
 
 export default function App() {
   const model = useMockState()
@@ -39,11 +41,11 @@ export default function App() {
       </header>
       <MobilePersonalNavigation/>
       <main id="main-content" tabIndex={-1}><div className="content">
-        <Outlet context={{ model, open: setActivity, membership: () => setMembership(true) }}/>
+        <LazyContent resetKey={location.pathname}><Outlet context={{ model, open: setActivity, membership: () => setMembership(true) }}/></LazyContent>
         <footer><span><Icon name="leaf" size={16}/> Good games bring good people together.</span><span>PLAY WELL. BELONG ALWAYS.</span></footer>
       </div></main>
     </div>
-    {activityAllowed && <ActivityDialog key={activity} id={activity} model={model} onClose={() => setActivity(null)}/>}
+    {activityAllowed && <LazyContent key={activity}><ActivityDialog id={activity} model={model} onClose={() => setActivity(null)}/></LazyContent>}
     {membership && <Modal title={model.member ? 'A little more belonging, every month' : 'Pull up a chair. Stay a while.'} onClose={() => setMembership(false)}><div className="membership-dialog"><span className="round-icon gold"><Icon name="leaf" size={32}/></span><h2>The Crowded Table Membership</h2><div className="paywall-price">L300<span>/ month</span></div><ul className="benefits">{['Find and create member-hosted tables', 'Meet people in our private community', 'Reserve included official game nights', 'Enter the monthly championship'].map(t => <li key={t}><Icon name="check" size={18}/>{t}</li>)}</ul><p className="meta">Interactive preview only. No account, payment, or subscription is created. Changes last until you refresh.</p><Button appearance="primary" full className="button full" onClick={() => { model.setMember(!model.member); setMembership(false); setActivity(null) }}>{model.member ? 'Preview without membership' : 'Try the member experience'}<Icon name="arrow" size={18}/></Button></div></Modal>}
     {notifications && <Modal title="A little news from your table" onClose={() => setNotifications(false)}>{!model.member ? <p className="muted">Your official-event and championship updates will appear here. Member-table notifications are private.</p> : model.notices.length ? model.notices.map((n, i) => <div className="notification" key={i}><Icon name="leaf"/><p>{n}</p></div>) : <p className="muted">You’re all caught up. A quiet moment before the next game.</p>}{model.member && model.notices.length > 0 && <Button appearance="ghost" className="text-button" onClick={() => model.setNotices([])}>Mark all as read <Icon name="check" size={16}/></Button>}</Modal>}
   </div>

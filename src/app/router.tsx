@@ -3,15 +3,18 @@ import { ActionLink } from '../components/primitives/Controls'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import App from '../App'
 import { AuthShell } from '../features/Auth'
-import { AccountPage, PremiumFeaturesPage } from '../features/AccountPage'
-import { Home } from '../features/Home'
-import { MeetPlay } from '../features/MeetPlay'
-import { Championship } from '../features/Championship'
-import { Community } from '../features/Community'
-import { ProfilePage } from '../features/Profile'
+import { lazy } from 'react'
 import { Botanical, Icon } from '../components/ui'
 import { pagePaths, type Page } from './navigation'
 import { useAppRouteContext } from './routeContext'
+
+const AccountPage = lazy(() => import('../features/AccountPage').then(module => ({ default: module.AccountPage })))
+const PremiumFeaturesPage = lazy(() => import('../features/AccountPage').then(module => ({ default: module.PremiumFeaturesPage })))
+const Home = lazy(() => import('../features/Home').then(module => ({ default: module.Home })))
+const MeetPlay = lazy(() => import('../features/MeetPlay').then(module => ({ default: module.MeetPlay })))
+const Championship = lazy(() => import('../features/Championship').then(module => ({ default: module.Championship })))
+const Community = lazy(() => import('../features/Community').then(module => ({ default: module.Community })))
+const ProfilePage = lazy(() => import('../features/Profile').then(module => ({ default: module.ProfilePage })))
 
 function CommunityPage({ page }: { page: Page }) {
   const { model, open, membership } = useAppRouteContext()
