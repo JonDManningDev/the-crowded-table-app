@@ -3,7 +3,8 @@ import { formatDate, formatTime } from '../mock/format'
 import { useState } from 'react'
 import type { MockModel } from '../mock/useMockState'
 import { ActivityCard } from '../components/Activity'
-import { Botanical, Empty, GameArt, Heading, Icon, Tabs, Tag } from '../components/ui'
+import { Botanical, Empty, Heading, Icon, Tabs, Tag } from '../components/ui'
+import { GameArt } from '../components/GameArt'
 
 export function Home({ model, open, membership }: { model: MockModel; open: (id: string) => void; membership: () => void }) {
   const [view, setView] = useState('Upcoming')

@@ -2,7 +2,8 @@ import { Button } from '../components/primitives/Controls'
 import { useState } from 'react'
 import type { MockModel } from '../mock/useMockState'
 import { members, topics } from '../mock/data'
-import { Avatar, Botanical, Empty, GameArt, Heading, Icon, Modal, Tabs, Tag } from '../components/ui'
+import { Avatar, Botanical, Empty, Heading, Icon, Modal, Tabs, Tag } from '../components/ui'
+import { GameArt } from '../components/GameArt'
 
 export function Community({ model }: { model: MockModel }) {
   const [tab, setTab] = useState('Discussions')

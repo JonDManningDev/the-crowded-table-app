@@ -2,14 +2,16 @@ import { Button } from '../components/primitives/Controls'
 import { Link, ActionLink } from '../components/primitives/Controls'
 import { useLocation, useNavigate } from 'react-router'
 import { authPaths, authViewAt, pagePaths, type AuthView } from '../app/navigation'
-import { useEffect, useEffectEvent, useState } from 'react'
+import { lazy, useEffect, useEffectEvent, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { authInitialization, initialAuthRedirect, supabase } from '../lib/supabase'
 import './Auth.css'
-import { CreateCommunity } from './CreateCommunity'
+import { LazyContent } from '../app/LazyContent'
 import { AccountProfileProvider } from './auth/AccountProfileProvider'
 import { AccountContext } from './auth/accountContext'
+
+const CreateCommunity = lazy(() => import('./CreateCommunity').then(module => ({ default: module.CreateCommunity })))
 
 type View = AuthView | null
 const redirect = (path: string) => `${window.location.origin}${path}`
@@ -116,7 +118,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
   return <AccountContext.Provider value={{ status: !ready ? 'loading' : verified ? 'signed-in' : 'signed-out', email: verified ? session?.user.email ?? null : null, userId: verified ? session?.user.id : undefined, busy, signOut: () => void run(async () => { const result = await supabase!.auth.signOut({ scope: 'local' }); if (result.error) throw result.error; setSession(null); navigate(null) }) }}>
     <AccountProfileProvider userId={session?.user.email_confirmed_at ? session.user.id : null}>
     {!view && (notice || error) && <p className="auth-feedback" role={error ? 'alert' : 'status'}>{error || notice}</p>}
-    {view === 'create-community' ? !ready ? <main className="auth-page"><p role="status">Checking your session…</p></main> : verified && session ? <CreateCommunity key={session.user.id} onBusyChange={setBusy}/> : <main className="auth-page"><p>Please sign in with a verified account to continue.</p><Link to={authPaths.signin}>Sign in</Link></main> : view ? <main className="auth-page"><section className="panel auth-card"><span className="eyebrow">THE CROWDED TABLE</span><h1>{titles[view]}</h1>
+    {view === 'create-community' ? !ready ? <main className="auth-page"><p role="status">Checking your session…</p></main> : verified && session ? <LazyContent key={session.user.id}><CreateCommunity onBusyChange={setBusy}/></LazyContent> : <main className="auth-page"><p>Please sign in with a verified account to continue.</p><Link to={authPaths.signin}>Sign in</Link></main> : view ? <main className="auth-page"><section className="panel auth-card"><span className="eyebrow">THE CROWDED TABLE</span><h1>{titles[view]}</h1>
       {!supabase && <p role="alert">Account services are not configured yet. Please try again later.</p>}
       {error && <p className="auth-error" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
       {!ready ? <p role="status">Checking your link…</p> : <>

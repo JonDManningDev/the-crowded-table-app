@@ -3,7 +3,8 @@ import { formatDate, formatTime } from '../mock/format'
 import { useState } from 'react'
 import type { Activity } from '../mock/data'
 import type { MockModel } from '../mock/useMockState'
-import { Avatar, GameArt, Icon, Modal, Tag } from './ui'
+import { Avatar, Icon, Modal, Tag } from './ui'
+import { GameArt } from './GameArt'
 
 export function ActivityCard({ item, onOpen, status }: { item: Activity; onOpen: () => void; status?: string }) {
   const left = item.capacity - item.filled

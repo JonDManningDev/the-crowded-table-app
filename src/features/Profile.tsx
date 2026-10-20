@@ -3,7 +3,8 @@ import { formatDate } from '../mock/format'
 import { useState } from 'react'
 import type { MockModel } from '../mock/useMockState'
 import { interests } from '../mock/data'
-import { Avatar, Botanical, Empty, GameArt, Heading, Icon, Modal, Tabs, Tag } from '../components/ui'
+import { Avatar, Botanical, Empty, Heading, Icon, Modal, Tabs, Tag } from '../components/ui'
+import { GameArt } from '../components/GameArt'
 
 export function ProfilePage({ model, open, membership }: { model: MockModel; open: (id: string) => void; membership: () => void }) {
   const [tab, setTab] = useState('Overview')

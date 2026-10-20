@@ -1,7 +1,7 @@
 import { BrowserRouter } from 'react-router'
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AuthShell } from './Auth'
 import { AccountActions } from './auth/AccountActions'
 import { MyCommunitiesPage } from './communities/pages/MyCommunitiesPage'
@@ -40,7 +40,7 @@ describe('account workflows', () => {
   it('opens community creation for a verified account', async () => {
     auth.getSession.mockResolvedValue({ data: { session }, error: null })
     await start(); click('Start New Community')
-    expect(screen.getByRole('heading', { name: 'Start a new community.' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Start a new community.' })).toBeTruthy()
     expect(screen.queryByText('Community preview')).toBeNull()
     click('Cancel')
     expect(screen.getByText('Community preview')).toBeTruthy()
@@ -150,4 +150,20 @@ it('waits for session restoration before allowing community creation', async () 
   expect(screen.queryByText('Please sign in with a verified account to continue.')).toBeNull()
   resolve({ data: { session: null }, error: null })
   await screen.findByText('Please sign in with a verified account to continue.')
+})
+
+it('loads creation after verified session restoration and retains its draft on token refresh', async () => {
+  window.history.replaceState(null, '', '/account/communities/new')
+  let resolve!: (value: unknown) => void
+  auth.getSession.mockReturnValue(new Promise(done => { resolve = done }))
+  render(<BrowserRouter><AuthShell><div>Home</div></AuthShell></BrowserRouter>)
+  expect(screen.queryByLabelText('Community name')).toBeNull()
+  await act(async () => { resolve({ data: { session }, error: null }) })
+  const name = await screen.findByLabelText('Community name')
+  fireEvent.change(name, { target: { value: 'My draft community' } })
+  await act(async () => { listener('TOKEN_REFRESHED', { ...session }) })
+  expect((screen.getByLabelText('Community name') as HTMLInputElement).value).toBe('My draft community')
+  await act(async () => { listener('SIGNED_OUT', null) })
+  await waitFor(() => expect(screen.queryByLabelText('Community name')).toBeNull())
+  expect(window.location.pathname).toBe('/account/home')
 })
