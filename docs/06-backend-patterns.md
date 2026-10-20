@@ -255,6 +255,8 @@ Version tables, constraints, indexes, grants, RLS, functions, and generated type
 
 Return stable domain outcomes. Log safe correlation IDs and diagnostics, excluding credentials, exact private addresses, payment proof, and unnecessary personal data. Limit payloads and never retry unauthorized/invalid operations indefinitely.
 
+Accepted error-handling direction (2026-10-20; implementation deferred): introduce a typed taxonomy such as ValidationError, DatabaseError and BadRequestError when codifying error handling. Return the specific failure reason and response code for retained inline feedback; do not collapse every failure into a generic message. Toasts carry only the concise action outcome under the UI style guide. Exact taxonomy, code mapping and response shape remain to be designed. API error messages remain subject to existing authorization/privacy boundaries; specific reasons must not disclose protected data or credentials.
+
 Use additive migrations compatible with existing installed PWA versions. Test clean installs and upgrades. Document forward repair and backup/restore before production.
 
 ## Required tests

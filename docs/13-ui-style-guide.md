@@ -245,3 +245,72 @@ Verification must cover native link destinations/new-tab semantics, exact active
 ## Page Layout and Scrolling
 
 Reserve a stable scrollbar gutter on the document root. Switching between short and long pages must not shift the horizontal position of the shared heading, navigation, or content. Keep the shared page container responsible for alignment; do not compensate with tab-specific offsets.
+
+Account-tab content uses the full width of the shared tab container. In particular, My Communities must not apply a narrower page-level maximum width; its community list aligns with the right edge of the tabs row.
+
+
+### Account cards and signed-out views
+
+Use Overview's standard panel as the account-card baseline: warm off-white (#fffef9), 27px padding (22px at widths up to 1200px, matching Overview’s responsive panels), 9px corners, and the existing line-color border. Shared card tokens apply to account panels, My Home cards and hero, and community rows. Preserve the Overview summary's specialized internal composition.
+
+Remove standalone introductory/placeholder notes. Signed-out account tabs show only their tab-specific message below the shared heading/navigation: “Sign in to see your account.”, “Sign in to review your activity feed.”, “Sign in to see your communities.”, or “Sign in to manage your account settings.” Do not render mock content, sample rows or settings behind these messages. During session restoration show a loading state, not mock content. Signed-in unfinished features remain placeholders; this change does not implement new data sources. Typography follows the accepted roles below.
+
+
+## Typography
+
+| Role | Font size | Line height | Account usage |
+| --- | --- | --- | --- |
+| Body copy | 13px | 1.8 | Descriptions, explanatory paragraphs, status/sign-in messages and setting labels |
+| Secondary metadata | 11px | 1.8 | Locations, community handle/role/status, statistics labels, setting help text, tags and subscription details |
+| Eyebrows | 9px | 1.6 | Uppercase section labels, including Coming soon |
+
+Use shared typography tokens for these roles at all account breakpoints. Headings, statistics values, decorative serif quotes, navigation and button labels keep their own sizes. Account overrides must not alter the separate community preview pages.
+
+### Text colors
+
+Accepted 2026-10-20; apply these canonical roles across the account tabs. Preserve existing weight and letter spacing.
+
+| Role | Color | Token |
+| --- | --- | --- |
+| Heading | #173f32 | --text-heading-color |
+| Body copy | #53644f | --text-body-color |
+| Secondary metadata | #6b665e | --text-meta-color |
+| Eyebrow | #173f32 | --text-eyebrow-color |
+
+Eyebrows complement headings; size, capitalization and tracking distinguish them. Keep separate semantic tokens even where colors match. Preserve interactive control and feedback styles. Decorative quotes, mottos and illustration lettering remain unchanged: review them once more content is available to compare, with a possible small set of distinct variants. No decorative palette has been approved yet.
+
+The warm-gray metadata color #6b665e supersedes #8a8f7f following the user's Overview browser comparison on 2026-10-20. Its calculated contrast is 5.64:1 on card #fffef9, 5.31:1 on page #f8f7f2, and 4.83:1 on tag #e9eee3. Preserve the 11px/1.8 metadata role; hue and size distinguish it from green body copy. The shared source token is now updated; deployment evidence remains in the implementation status document.
+
+Apply approved colors and check readability against actual surfaces; report findings without silently substituting another palette.
+
+## Feedback
+
+### Accepted toast behavior — 2026-10-20
+
+Use toasts for API success/error feedback after explicit actions, with politely announced success. Avoid duplicate announcements and success toasts for background reads. These are accepted requirements, not implemented infrastructure.
+
+- Both success and failure auto-dismiss after 4 seconds. This supersedes the earlier 10-second failure duration: detailed recovery information is retained inline.
+- Begin with an icon representing success or failure, followed by a concise, outcome-specific action message. Examples: “Account profile updated.” / “Failed to update account profile.” and “Seat reserved for {person}.” / “Failed to reserve seat for {person}.” The placeholder represents the relevant person's name, not literal UI text. Keep codes, detailed reasons and recovery instructions in the affected interface rather than the toast.
+- Show at most 3 toasts on desktops/larger tablets and 2 on smaller screens.
+- Start the timer when the toast becomes visible. Pause while hovered, keyboard-focused, or the browser tab is hidden.
+- Every toast has a dismiss button.
+- At capacity, a new toast replaces the oldest toast, except a toast currently receiving keyboard focus must not be removed.
+- Combine repeated identical notifications instead of filling the stack.
+
+Still open: the exact responsive breakpoint, placement, visual styles, component/library choice, duplicate matching/timer-reset semantics, and how to admit a new toast if focus protection prevents normal oldest-toast eviction. Do not silently choose a policy that violates either the visible limit or focus protection.
+
+### Accepted form-validation behavior
+
+Show field-specific text beside the input, associated accessibly with the field. Validate on blur or submit, then revalidate as users correct errors. Preserve entered values on failure, focus the first invalid field after an invalid submission, and avoid duplicate toast/inline announcements. Feedback must not rely on color alone. The validation pattern is accepted; it is not yet a shared implementation.
+
+### Accepted inline recovery
+
+“Inline” means within the affected form or content section, rather than only in the transient toast stack. Retain detailed error feedback and applicable recovery actions after a toast expires or is evicted. For API failures, include the response code and the specific error message returned by the API, rather than substituting only a generic failure message. A future typed error taxonomy (for example ValidationError, DatabaseError and BadRequestError) will classify failures and preserve their specific reasons; its exact types and response contract are deferred, not implemented here.
+
+- Profile save failure: retain the open editor and draft; show a form-level message near Save so the user can retry.
+- Community-list load failure: show an error and Retry within the list area.
+- Invalid display name: show the explanation beside that field; correct it there without a toast for each validation error.
+
+This is contextual recovery, not a second permanent notification stack. Proposed lifecycle: retain unresolved failures while the affected UI is present; clear or update the message when the operation succeeds or the relevant validation error is corrected. Exact clearing behavior and presentation remain under discussion. Network failures without an API response need a defined representation in the future error contract; do not fabricate a response code.
+
+Recommended implementation details, not additional approved UI decisions: connect field messages using aria-describedby and aria-invalid, preserve normal help text, map server field errors to the same presentation, and consider a summary for forms with multiple errors. Final feedback colors, layout and components remain open.

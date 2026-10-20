@@ -63,3 +63,54 @@ Sidebar refinement (2026-10-16): removed direct My Home/My Communities links fro
 Account-tab scroll refinement (2026-10-16): route changes focus main content with preventScroll and reset the viewport to the top before paint, keeping the breadcrumb visible regardless of page height. The explicit skip link retains its scroll behavior. Browser checks switching Overview and My Communities both reported scrollY 0 with main-content focused. All 21 navigation tests, build and lint pass; existing bundle warning remains. Local frontend change only.
 
 Horizontal alignment refinement (2026-10-16): the short My Communities page removed the document scrollbar, moving the centered shared content about 7px right. Added scrollbar-gutter: stable on html and recorded the layout rule in the style guide. Browser measurements now show the same heading left edge (297.286px) for Overview and My Communities at the checked desktop viewport. Build, lint and whitespace checks pass; no deployment or schema changes.
+
+## Account tab width and styling review — 2026-10-17
+
+Removed My Communities' 900px page cap; its wrapper now uses the shared container width. Browser measurements confirm the list and tab row share both edges at desktop (1280px wide) and the right edge at 390px mobile, with no horizontal overflow. Build and lint pass; existing bundle warning remains. Documentation updated; no deployment or database changes.
+
+Other differences identified for discussion, not changed or accepted as new standards:
+
+- Card geometry: ordinary panels use 27px padding/9px corners, community rows 28px/10px, My Home small cards 24px/10px, and its hero 38px/12px. Recommend a shared standard card treatment with a deliberate spacious hero variant.
+- Surfaces: Overview/Settings panels are warm white, My Home small cards use a slightly different off-white and its hero is sage, while community rows are transparent over the page background. Consider one standard surface for ordinary cards; keep sage for intentional emphasis.
+- Body typography: community paragraphs are 13px with the muted token; standard panels generally use 12px and a separate hard-coded muted green. My Home mixes 12px small-card copy and 13px hero copy. Consider shared body/metadata sizes and muted color tokens.
+- Introductory spacing: My Home/Settings start with a card directly below the tabs; Overview inserts a placeholder note; My Communities inserts toolbar text and a separate signed-out prompt before its list. Consider a consistent location and spacing for introductory/status text, without requiring identical page composition.
+
+The browser review used signed-out pages. Signed-in-only actions/preferences were inspected in source, not exercised through hosted writes. Overview's summary column and My Home's hero/grid are intentional content structures under D-120, not automatically defects to remove.
+
+## Account presentation decisions applied — 2026-10-17
+
+The follow-up annotations approve the Overview standard panel baseline: #fffef9 background, 27px padding (22px up to 1200px), 9px corners and the existing border. Shared tokens now cover account panels, My Home hero/cards and community rows. Overview summary composition remains specialized. Standalone introduction/placeholder notes were removed; in-card feature descriptions and labels remain for signed-in unfinished features.
+
+All four signed-out account tabs render only the requested tab-specific sign-in message beneath their shared heading/navigation. Account contents, editors, settings and mock/sample cards are not mounted. Loading session state shows a loading message. My Communities also gates its standalone component. This supersedes the prior signed-out sample-row presentation; community preview routes themselves remain unchanged.
+
+Validation: 62 tests pass, including all four signed-out messages, no mock content during restoration, removal of community rows on sign-out, and signed-in profile/workflow regressions. Build and lint pass; the existing bundle-size warning remains. Browser inspection confirmed the signed-out My Communities message without sample content. Signed-in visual rendering was not manually verified in the signed-out browser. No hosted deployment or SQL changes.
+
+Typography breakdown (unchanged, for decision): standard Overview/Settings panel paragraphs are 12px, line-height 1.8, #7b8770; Overview descriptions may override to 13px. Community body/location/status paragraphs are uniformly 13px, line-height 1.8, muted #747c70. My Home small-card paragraphs are 12px/1.8/#747c70, while hero paragraphs are 13px/1.9/#53644f. Secondary metadata is not uniform: generic .meta is 11px/#747c70; profile location is 10px/#8a8f7f; setting descriptions are 10px/#8e987e. Eyebrow/Coming soon labels are a separate 9px uppercase, letter-spaced style. Recommend defining semantic body, secondary metadata and eyebrow roles separately, and deciding their size/color/line-height before implementation; no typography values were changed here.
+
+## Account typography — 2026-10-17
+
+Applied the approved type roles through shared tokens: body 13px/1.8, secondary metadata 11px/1.8, eyebrows 9px/1.6. Account-scoped CSS Modules normalize inherited legacy paragraph, notice, settings-label/help, location, statistic-label, tag and subscription-detail rules without changing the community profile screens. My Home module uses the tokens for hero/card copy, labels and illustration metadata; community handle/role/status/location copy is explicitly classified as metadata. Headings, decorative serif text, statistic values and navigation/action labels remain separate. Existing colors and letter spacing remain unchanged.
+
+Verification: 62 regression tests pass. Production build and lint pass; existing bundle warning remains. Browser-computed styles on the signed-out account page confirm 13px/23.4px body text and 9px/14.4px eyebrows. Signed-in metadata styling was inspected in source; no authenticated visual check is claimed. No database or deployment changes.
+
+## Account text colors — 2026-10-20
+
+Applied approved semantic tokens across account tabs: heading/eyebrow #173f32, body #53644f, metadata #8a8f7f. Scoped account overrides cover legacy panels, descriptions, settings labels/help, community details, tags and statistic labels; My Home's local eyebrow styles use the same token. Preserve decorative copy, illustration lettering, controls and feedback styling. The style guide records a deferred decorative-variant review and proposed toast/inline-validation patterns; no feedback infrastructure was added.
+
+Verification: production build and lint pass; the existing bundle-size warning remains. Source/cascade inspection and numerical contrast calculations completed; authenticated browser visual verification was not performed. No database changes or hosted deployment.
+
+Contrast against card #fffef9 / page #f8f7f2: heading/eyebrow 11.60:1 / 10.92:1; body 6.30:1 / 5.93:1; metadata 3.29:1 / 3.10:1. Metadata on tag #e9eee3 is 2.82:1; body on notice #e4ebd9 is 5.20:1. The selected 11px metadata color is below the 4.5:1 normal-text threshold in [WCAG contrast minimum](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html). Keep the explicitly chosen color for review; improving metadata contrast remains outstanding and is not a verified accessibility pass. Numerical contrast does not replace visual review of small text at different viewport sizes.
+
+## Styling decision reconciliation — 2026-10-20
+
+Documentation-only follow-up: the UI style guide and D-122 now record the accepted metadata replacement #6b665e, toast timings/capacity/timer pauses/dismissal/focus protection/deduplication, and the approved basic form-validation pattern. Existing navigation, account alignment/scrolling, cards, signed-out views, type metrics, body/heading/eyebrow colors and decorative-review deferral remain canonical. Earlier entries above are historical implementation snapshots; the current requirements live in the style guide.
+
+The user reports visually checking #6b665e on Overview through browser tools. Calculated contrast is 5.64:1 on cards, 5.31:1 on the page and 4.83:1 on tags. The repository still uses #8a8f7f in --text-meta-color; applying the accepted replacement remains pending. Toast infrastructure and shared form-validation behavior are also pending. Inline API recovery is clarified as a proposal, with examples, rather than silently treated as an implemented or fully settled lifecycle. Remaining feedback details are explicitly listed in the style guide.
+
+Verification: reviewed the documentation against the confirmed conversation decisions and checked documentation whitespace. No application code, tests, database state or deployment changed in this follow-up.
+
+## Metadata applied and feedback refined — 2026-10-20
+
+Changed src/index.css --text-meta-color to #6b665e; existing account metadata consumers now use the accepted warm gray. This completes the pending token change noted above. Production build passes with the existing bundle-size warning. No new browser review or hosted deployment is claimed.
+
+Documentation now accepts concise icon-led outcome toasts with 4-second dismissal for both success and failure (superseding 10 seconds for failure), and retained inline API errors containing the response code and specific API message. The style guide, decision register and backend error direction are reconciled. Typed error taxonomy and shared feedback components remain future implementation; no toast/error-handling code changed. Exact error contract, clearing behavior and previously listed toast edge cases remain open.
