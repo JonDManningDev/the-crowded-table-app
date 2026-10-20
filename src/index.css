@@ -9,6 +9,19 @@
   font-weight:400;
   font-size:14px;
   line-height:1.6;
+  --text-body-size:13px;
+  --text-body-leading:1.8;
+  --text-meta-size:11px;
+  --text-meta-leading:1.8;
+  --text-eyebrow-size:9px;
+  --text-eyebrow-leading:1.6;
+  --text-heading-color:#173f32;
+  --text-body-color:#53644f;
+  --text-meta-color:#6b665e;
+  --text-eyebrow-color:var(--text-heading-color);
+  --card-bg:#fffef9;
+  --card-padding:27px;
+  --card-radius:9px;
   --control-radius:6px;
   --control-height:43px;
   --control-transition:.18s;
@@ -151,3 +164,5 @@ input::placeholder,textarea::placeholder {
 ::selection {
   background:#d7e0cd
 }
+
+@media (max-width: 1200px) { :root { --card-padding:22px; } }

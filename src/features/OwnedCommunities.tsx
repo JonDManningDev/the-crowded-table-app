@@ -27,6 +27,6 @@ export function OwnedCommunities({ userId, sample }: { userId: string; sample?: 
   }, [userId, attempt])
   return <>
     {!supabase ? <p role="alert">Community services are not configured.</p> : loading ? <p role="status">Loading your communities…</p> : error ? <><p role="alert" className="auth-error">{error}</p><Button appearance="unstyled" onClick={() => { setLoading(true); setError(''); setAttempt(value => value + 1) }}>Try again</Button></> : !rows.length && <p>You haven’t created a community yet.</p>}
-    <ul className="owned-communities community-list">{rows.map(row => <li key={row.id}><div><span className="eyebrow">YOUR COMMUNITY</span><h2>{row.name}</h2><p>{row.slug} · Owner · {row.operational_status === 'archived' ? 'Archived' : 'Active'}</p><p>{[row.city, row.state_province, row.country_code].filter(Boolean).join(', ')} · {row.timezone}</p></div></li>)}{sample}</ul>
+    <ul className="owned-communities community-list">{rows.map(row => <li key={row.id}><div><span className="eyebrow">YOUR COMMUNITY</span><h2>{row.name}</h2><p className="account-metadata">{row.slug} · Owner · {row.operational_status === 'archived' ? 'Archived' : 'Active'}</p><p className="account-metadata">{[row.city, row.state_province, row.country_code].filter(Boolean).join(', ')} · {row.timezone}</p></div></li>)}{sample}</ul>
   </>
 }

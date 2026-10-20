@@ -110,6 +110,6 @@ it('combines fetched communities and the sample row in the account tab and clear
   expect(screen.getByRole('link', { name: 'Start New Community' }).getAttribute('href')).toBe('/account/communities/new')
   view.rerender(<MemoryRouter><AccountContext.Provider value={{ status: 'signed-out', email: null }}><MyCommunitiesPage embedded previewName="Sample community" previewLocation="Sample location"/></AccountContext.Provider></MemoryRouter>)
   expect(screen.queryByText('Saved community')).toBeNull()
-  expect(screen.getAllByRole('listitem')).toHaveLength(1)
+  expect(screen.queryAllByRole('listitem')).toHaveLength(0)
   expect(screen.queryByRole('link', { name: 'Start New Community' })).toBeNull()
 })

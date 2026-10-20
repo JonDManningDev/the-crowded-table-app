@@ -1,0 +1,35 @@
+/* Scope legacy shared components to account pages without changing community profiles. */
+.page[data-account-page] p:not(:where(:global(.profile-quote), :global(.profile-side-note) > p)),
+.page[data-account-page] :global(.panel) p:not(:where(:global(.profile-quote))),
+.page[data-account-page] :global(.notice),
+.page[data-account-page] :global(.setting-row) strong,
+.page[data-account-page] :global(.premium-feature-list) strong {
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-leading);
+}
+
+/* Keep decorative copy and feedback outside the ordinary paragraph palette. */
+.page[data-account-page] p:not(:where(:global(.profile-quote), :global(.profile-side-note) > p, [role="alert"], [role="status"], :global(.auth-error))),
+.page[data-account-page] :global(.notice),
+.page[data-account-page] :global(.setting-row) strong,
+.page[data-account-page] :global(.premium-feature-list) strong {
+  color: var(--text-body-color);
+}
+
+.page[data-account-page] :is(h1, h2, h3) {
+  color: var(--text-heading-color);
+}
+
+.page[data-account-page] :is(small, :global(.meta), :global(.location), :global(.tag), :global(.account-metadata)),
+.page[data-account-page] :global(.profile-stats) span,
+.page[data-account-page] :global(.panel) p:global(.account-metadata) {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-leading);
+  color: var(--text-meta-color);
+}
+
+.page[data-account-page] :global(.eyebrow) {
+  font-size: var(--text-eyebrow-size);
+  line-height: var(--text-eyebrow-leading);
+  color: var(--text-eyebrow-color);
+}

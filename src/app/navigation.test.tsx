@@ -19,9 +19,9 @@ function navigate(page: Page) {
 }
 
 it('lands on the personal home without presenting the community preview as personal activity', () => {
-  render(<App/>)
+  render(<AccountContext.Provider value={{ status: 'signed-in', email: 'person@example.test' }}><App/></AccountContext.Provider>)
   expect(screen.getByRole('heading', { name: 'My Account' })).toBeTruthy()
-  expect(screen.getByText('No community updates, RSVPs, or suggestions are loaded yet.', { exact: false })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: /All your tables/  })).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Switch to guest preview' })).toBeNull()
   expect(screen.queryByText('Ana M.')).toBeNull()
   navigate('my-communities')
@@ -152,4 +152,25 @@ it.each(Object.entries(pagePaths))('loads %s directly with consistent navigation
   expect(within(screen.getByRole('region', { name: 'Your space' })).queryByRole('link', { name: 'My Communities' })).toBeNull()
   expect(within(screen.getByRole('region', { name: 'Your space' })).queryByRole('link', { name: 'My Home' })).toBeNull()
   if (page === 'profile') expect(screen.getByRole('heading', { name: 'Ana M.' })).toBeTruthy()
+})
+
+
+it.each([
+  ['/account', 'Sign in to see your account.'],
+  ['/account/home', 'Sign in to review your activity feed.'],
+  ['/account/communities', 'Sign in to see your communities.'],
+  ['/account/settings', 'Sign in to manage your account settings.'],
+])('shows only the signed-out prompt under account navigation at %s', (path, message) => {
+  window.history.replaceState(null, '', path)
+  render(<App/>)
+  expect(screen.getByText(message)).toBeTruthy()
+  expect(screen.getByRole('navigation', { name: 'Account navigation' })).toBeTruthy()
+  expect(document.querySelector('.account-content')).toBeNull()
+  expect(screen.queryByRole('link', { name: 'Explore community' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Edit Profile' })).toBeNull()
+})
+it('does not flash mock account content while the session is loading', () => {
+  render(<AccountContext.Provider value={{ status: 'loading', email: null }}><App/></AccountContext.Provider>)
+  expect(screen.getByText('Loading your account…')).toBeTruthy()
+  expect(document.querySelector('.account-content')).toBeNull()
 })
