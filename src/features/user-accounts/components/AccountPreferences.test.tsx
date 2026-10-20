@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { AccountPreferences } from './AccountPreferences'
 
 const db = vi.hoisted(() => ({ from: vi.fn(), select: vi.fn(), eq: vi.fn(), single: vi.fn(), rpc: vi.fn() }))
-vi.mock('../../lib/supabase', () => ({ supabase: db }))
+vi.mock('../../../lib/supabase', () => ({ supabase: db }))
 afterEach(() => { cleanup(); vi.resetAllMocks() })
 
 it('loads saved preferences and saves independent values without resetting them to defaults', async () => {

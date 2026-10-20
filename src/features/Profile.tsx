@@ -1,3 +1,5 @@
+import { ProfileOverview } from './user-accounts/components/ProfileOverview'
+import { ProfilePreferences } from './user-accounts/components/ProfilePreferences'
 import { Button } from '../components/primitives/Controls'
 import { formatDate } from '../mock/format'
 import { useState } from 'react'
@@ -21,16 +23,4 @@ export function ProfilePage({ model, open, membership }: { model: MockModel; ope
     {modal === 'preview' && <Modal title="Your member-facing profile" onClose={() => setModal(null)}><div className="member-preview"><Avatar name={model.profile.name} large tone="peach"/><h2>{model.profile.name}</h2><p>{model.profile.location}</p><p className="description">{model.profile.bio}</p><div className="tags">{model.profile.interests.map(t => <Tag key={t}>{t}</Tag>)}</div>{preferences.history && <div className="notice">12 events attended · 3 tables hosted</div>}<div className="notice"><Icon name="lock"/> Visible to community members. Membership settings and private contact details stay private.</div></div></Modal>}
     {modal === 'support' && <Modal title="There’s a person on the other side" onClose={() => setModal(null)}><form className="form" onSubmit={e => { e.preventDefault(); const note = String(new FormData(e.currentTarget).get('note')).trim(); if (!note) return; model.notify(`Demo support note saved: ${note}`); setModal(null) }}><p className="muted">This preview records the note locally; it does not contact anyone.</p><label>Your note<textarea name="note" required maxLength={2000}/></label><Button appearance="primary" className="button" type="submit">Save support note</Button></form></Modal>}
   </>
-}
-
-
-export function ProfileOverview({ profile, onEdit }: { profile: MockModel["profile"]; onEdit?: () => void }) {
-  return <><section className="panel"><span className="eyebrow">A LITTLE INTRODUCTION</span><h2>About me</h2><p className="description">{profile.bio}</p><div className="section-heading"><h3>At the table, I’m…</h3>{onEdit && <Button appearance="ghost" className="text-button" onClick={onEdit}>Edit <Icon name="arrow" size={16}/></Button>}</div><div className="tags"><Tag>{profile.style}</Tag>{profile.teach && <Tag><Icon name="leaf" size={14}/> Happy to teach</Tag>}<Tag>Always up for a new game</Tag></div></section><section className="panel connection-panel"><span className="round-icon"><Icon name="people" size={28}/></span><div><span className="eyebrow">YOUR CIRCLE IS GROWING</span><h2>18 different people.<br/>So many shared stories.</h2><p>That’s how many community members you’ve played with.<br/>Here’s to the people you haven’t met yet.</p></div></section><section className="panel"><div className="section-heading"><h2>A few favorite games</h2><Icon name="dice"/></div><div className="favorites">{[{ name: 'Wingspan', art: 'birds' as const }, { name: 'Codenames', art: 'social' as const }, { name: 'Azul', art: 'azul' as const }].map(g => <div key={g.name}><GameArt type={g.art}/><h3>{g.name}</h3></div>)}</div></section></>
-}
-
-export function ProfilePreferences({ model, onSupport }: { model: MockModel; onSupport: () => void }) {
- const preferences = model.preferences
- const setPreferences = model.setPreferences
- const [saved, setSaved] = useState(false)
- return <section className="panel"><h2>Make yourself comfortable</h2><p className="muted">Choose what you hear from us and what your community sees.</p>{([{ key: 'reminders', title: 'Event reminders', text: 'A little nudge before your next game.' }, { key: 'replies', title: 'Conversation replies', text: 'Know when someone responds to you.' }, { key: 'digest', title: 'Weekly community letter', text: 'A quiet round-up of what’s happening.' }, { key: 'history', title: 'Share my activity history', text: 'Visible only to other community members.' }] as const).map(p => <label className="setting-row" key={p.key}><span><strong>{p.title}</strong><small>{p.text}</small></span><input type="checkbox" role="switch" checked={preferences[p.key]} onChange={e => { setPreferences(previous => ({ ...previous, [p.key]: e.target.checked })); setSaved(false) }}/></label>)}<div className="actions"><Button appearance="primary" className="button" onClick={() => setSaved(true)}>Save preferences</Button>{saved && <span role="status" className="availability"><Icon name="check" size={16}/> Saved for this visit</span>}</div><Button appearance="ghost" className="text-button support-link" onClick={onSupport}>A question? We’re here for you. <Icon name="arrow" size={17}/></Button></section>
 }

@@ -60,9 +60,10 @@ See the [prototype guide](docs/10-frontend-prototype.md) for the available flows
 These paths describe the current implementation. The [canonical client architecture](docs/05-frontend-patterns.md) and [illustrative layout/refactor inventory](docs/07-file-structure.md) guide upcoming work; they distinguish accepted boundaries from conventions and structures to introduce only when needed.
 
 - `src/App.tsx`: application composition, membership preview, and shared dialogs; `src/app/router.tsx` composes React Router routes and `src/app/navigation.ts` owns shared URL constants.
-- `src/app/layout/`: community sidebar and personal navigation; `src/app/pages/MyHomePage/`: personal-feed stub.
-- `src/features/`: community Home/events, Meet & Play, Championship, Discussion (legacy `Community.tsx`), and community Profile; `src/features/communities/pages/`: consolidated My Communities list.
-- `src/features/Auth.tsx`, `CreateCommunity.tsx`, `OwnedCommunities.tsx`: real account flows, community creation, and the owner list, alongside the preview screens.
+- `src/app/layout/`: community sidebar and personal navigation.
+- `src/features/`: community Home/events, Meet & Play, Championship, Discussion (legacy `Community.tsx`), and community Profile.
+- `src/features/Auth.tsx`, `CreateCommunity.tsx`: real authentication flows and community creation.
+- `src/features/user-accounts/pages/`: UserAccountPage and PremiumFeaturesPage; `components/`: AccountOverviewTab, MyHomeTab, MyCommunitiesTab, AccountSettingsTab and their account-specific children (including OwnedCommunities and AccountPreferences).
 - `src/features/auth/accountContext.ts`: safe account summary for application UI, separate from the mock community profile.
 - `src/lib/`: Supabase setup/generated schema types and current tenant-creation helpers (domain helpers are a refactor candidate).
 - `src/mock/`: typed sample data, in-memory state/actions, date formatting.

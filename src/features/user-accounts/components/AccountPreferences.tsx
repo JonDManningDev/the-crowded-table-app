@@ -1,6 +1,6 @@
-import { Button } from '../../components/primitives/Controls'
+import { Button } from '../../../components/primitives/Controls'
 import { useEffect, useState } from 'react'
-import { readDiscoveryPreferences, saveDiscoveryPreferences, type DiscoveryPreferences } from './api'
+import { readDiscoveryPreferences, saveDiscoveryPreferences, type DiscoveryPreferences } from '../api'
 
 export function AccountPreferences({ userId }: { userId: string }) {
   const [preferences, setPreferences] = useState<DiscoveryPreferences | null>(null)

@@ -8,8 +8,8 @@ import { Botanical, Icon } from '../components/ui'
 import { pagePaths, type Page } from './navigation'
 import { useAppRouteContext } from './routeContext'
 
-const AccountPage = lazy(() => import('../features/AccountPage').then(module => ({ default: module.AccountPage })))
-const PremiumFeaturesPage = lazy(() => import('../features/AccountPage').then(module => ({ default: module.PremiumFeaturesPage })))
+const UserAccountPage = lazy(() => import('../features/user-accounts/pages/UserAccountPage').then(module => ({ default: module.UserAccountPage })))
+const PremiumFeaturesPage = lazy(() => import('../features/user-accounts/pages/PremiumFeaturesPage').then(module => ({ default: module.PremiumFeaturesPage })))
 const Home = lazy(() => import('../features/Home').then(module => ({ default: module.Home })))
 const MeetPlay = lazy(() => import('../features/MeetPlay').then(module => ({ default: module.MeetPlay })))
 const Championship = lazy(() => import('../features/Championship').then(module => ({ default: module.Championship })))
@@ -31,7 +31,7 @@ function CommunityPage({ page }: { page: Page }) {
 export function ApplicationRoutes() {
   return <Routes><Route element={<App/>}>
     <Route index element={<Navigate to={pagePaths['my-home']} replace/>}/>
-    {(['account', 'my-home', 'my-communities', 'account-settings'] as const).map(page => <Route key={page} caseSensitive path={pagePaths[page]} element={<AccountPage page={page}/>}/>)}
+    {(['account', 'my-home', 'my-communities', 'account-settings'] as const).map(page => <Route key={page} caseSensitive path={pagePaths[page]} element={<UserAccountPage page={page}/>}/>)}
     <Route caseSensitive path={pagePaths['premium-features']} element={<PremiumFeaturesPage/>}/>
     {(['community-home', 'meet-play', 'championship', 'discussion', 'profile'] as const).map(page => <Route key={page} caseSensitive path={pagePaths[page]} element={<CommunityPage page={page}/>}/>)}
     <Route path="*" element={<section className="panel"><h1>Page not found</h1><p>This page does not exist.</p><ActionLink className="button" to={pagePaths['my-home']}>Back to My Home</ActionLink></section>}/>

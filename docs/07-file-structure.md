@@ -25,7 +25,6 @@ src/
 │   │   ├── BottomNav.tsx
 │   │   └── Header.tsx
 │   └── pages/
-│       ├── MyHomePage/              # Personal feed across related communities
 │       └── CommunityHomePage/       # Composition scoped to the browsed community
 ├── features/
 │   ├── auth/
@@ -96,8 +95,8 @@ Pages that expose one capability belong to that feature; cross-feature orchestra
 
 | Example route | Illustrative page owner |
 | --- | --- |
-| `/` | `app/pages/MyHomePage/` |
-| `/my-communities` | `features/communities/pages/MyCommunitiesPage.tsx` |
+| `/account/home` | `features/user-accounts/pages/UserAccountPage.tsx` with `components/MyHomeTab.tsx` |
+| `/account/communities` | `features/user-accounts/pages/UserAccountPage.tsx` with `components/MyCommunitiesTab.tsx` |
 | `/communities/:slug` | `app/pages/CommunityHomePage/` |
 | `/events` | `features/events/pages/EventsPage.tsx` |
 | `/events/:eventId` | `features/events/pages/EventDetailsPage.tsx` |
@@ -128,10 +127,10 @@ This inventory was first checked on 2026-10-02 and updated for the 2026-10-03 na
 | --- | --- |
 | `src/features/Profile.tsx` and `src/mock/useMockState.ts` have one mock profile; the backend has both profile types, while the community UI remains mocked | Add global profiles under `user-accounts`, retain curated profiles under `communities`, and wire editable pre-fill plus atomic join/profile submission. Preserve working Auth and existing profile data; global editing is implemented; curated community editing still uses mock UI and atomic join/profile submission remains planned. |
 | `src/App.tsx` still composes the shell, legacy membership preview, notifications, and dialogs; navigation lives in `src/app/navigation.ts` and sidebar/personal links in `src/app/layout/Sidebar.tsx`; `src/main.tsx` wraps `AuthShell` | Move composition into `app` and extract feature behavior. Remove the obsolete paid-member preview/gates under D-064 while preserving working Auth/community persistence. |
-| Flat `src/features/Home.tsx`, `MeetPlay.tsx`, `Championship.tsx`, `Community.tsx`, `Profile.tsx`, plus account/community screens | Group by capability with route pages under `pages`. The personal stub now lives in `app/pages/MyHomePage`, and My Communities in `features/communities/pages`. Move the legacy Home's community composition to `app/pages/CommunityHomePage` later; put official-event behavior under `events`. Do not mistake every current screen or modal for a separate feature or route. |
+| Flat `src/features/Home.tsx`, `MeetPlay.tsx`, `Championship.tsx`, `Community.tsx`, `Profile.tsx`, plus account/community screens | Group by capability with route pages under `pages`. Account composition now lives in `features/user-accounts/pages`, with all four tabs and their account-specific children in `features/user-accounts/components`. Move the legacy Home's community composition to `app/pages/CommunityHomePage` later; put official-event behavior under `events`. Do not mistake every current screen or modal for a separate feature or route. |
 | `src/components/ui.tsx` mixes controls, decorative/game art, and an import of mock `Art` | Extract generic primitives and remove domain/mock dependencies from them. Keep product visuals feature-local or genuinely shared according to actual consumers. |
 | `src/components/Activity.tsx` combines cards/dialogs with `MockModel`, seats, payment simulation, and chat | Split Events/Tables presentation and behavior. Replace old join/offer assumptions with `manually_confirm_seats` and atomic per-person groups; remove payment/member simulations rather than preserving them behind a new module. |
-| `src/features/Auth.tsx`, `CreateCommunity.tsx`, and `OwnedCommunities.tsx` call Supabase directly | Put Supabase calls behind feature APIs and hooks/providers. Preserve the existing single atomic `create_tenant` RPC, owner-only reads, verification requirements, and callback/subscription cleanup. |
+| `src/features/Auth.tsx`, `CreateCommunity.tsx`, and `user-accounts/components/OwnedCommunities.tsx` call Supabase directly | Put Supabase calls behind feature APIs and hooks/providers. Preserve the existing single atomic `create_tenant` RPC, owner-only reads, verification requirements, and callback/subscription cleanup. |
 | `src/lib/tenantCreation.ts` holds tenant draft types, domain validation, and error copy | Move to the feature owning community creation; only genuinely generic validation/utilities belong in `lib`. Community management belongs to `communities`, social content to `discussion` (CA-003); moving existing live code remains a later slice. |
 | `src/lib/supabase.ts` mixes SDK creation with Auth callback routing metadata/initialization; `src/lib/database.types.ts` holds generated types | Target `lib/supabase/client.ts` and `lib/supabase/database.types.ts`; place Auth-specific coordination with its owner while preserving capture before SDK credential consumption. Update imports, tests, and the type-generation command in `supabase/README.md` when files actually move. |
 | `src/mock/data.ts` owns domain types/fixtures and the navigation `Page` type; `src/mock/useMockState.ts` owns behavior across features; UI accepts the whole `MockModel` | Move domain contracts to features and navigation types to the app. Narrow component props/hooks so fixtures no longer define production contracts. Keep a `mocks` area only as useful; moving/renaming it alone does not establish the data boundary. |
@@ -177,3 +176,30 @@ Automated verification covers direct routes, root redirect and absence of legacy
 Route-loading refinement (2026-10-20): the central router now dynamically imports account and community feature pages; App retains the shell and wraps its Outlet with app/LazyContent loading/error recovery. The activity dialog is also loaded on demand. Account tabs share a module and shared profile presentation may be fetched with account content. AuthShell/session initialization stays eager. This changes loading boundaries only; the URL contract above remains unchanged. See implementation status for bundle measurements and verification limits.
 
 Shared-bundle follow-up (2026-10-20): GameArt now lives in components/GameArt.tsx so deferred pages can import artwork without putting it in the shell UI helper module. AuthShell retains eager session initialization and lazily imports CreateCommunity after its verified-session gate. No URLs or feature ownership changed.
+
+## Implemented user-account structure — 2026-10-20
+
+UserAccountPage replaces the flat AccountPage. It owns the shared heading/navigation, auth gate, account mock-state lifetime and global editor/support state, and imports the four tabs. Current source layout:
+
+```text
+src/features/user-accounts/
+  pages/
+    UserAccountPage.tsx
+    UserAccountPage.module.css
+    PremiumFeaturesPage.tsx
+  components/
+    AccountOverviewTab.tsx
+    MyHomeTab.tsx
+    MyHomeTab.module.css
+    MyCommunitiesTab.tsx
+    MyCommunitiesTab.module.css
+    AccountSettingsTab.tsx
+    AccountPreferences.tsx
+    AccountPreferences.test.tsx
+    OwnedCommunities.tsx
+    ProfileOverview.tsx
+    ProfilePreferences.tsx
+  api.ts
+```
+
+The tab modules replace the old MyHomePage/MyCommunitiesPage files and no longer need standalone-page/embedded variants. Shared primitives/visuals remain in src/components by explicit user clarification. ProfileOverview/ProfilePreferences are the existing stateless/stateful presenters moved intact; the community Profile page imports them too, passing its separate mock profile/preferences. UserAccountPage does not import the community Profile page. OwnedCommunities retains its existing Supabase read and stylesheet dependency; moving that data access and shared legacy CSS is a later concern, not part of this structural change. PremiumFeaturesPage has its own lazy route module. All URLs are unchanged.

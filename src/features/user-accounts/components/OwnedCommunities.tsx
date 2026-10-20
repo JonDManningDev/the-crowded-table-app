@@ -1,8 +1,8 @@
-import { Button } from '../components/primitives/Controls'
+import { Button } from '../../../components/primitives/Controls'
 import { useEffect, useState, type ReactNode } from 'react'
-import { supabase } from '../lib/supabase'
-import type { Database } from '../lib/database.types'
-import './CreateCommunity.css'
+import { supabase } from '../../../lib/supabase'
+import type { Database } from '../../../lib/database.types'
+import '../../CreateCommunity.css'
 
 type Tenant = Pick<Database['public']['Tables']['tenants']['Row'], 'id' | 'name' | 'slug' | 'country_code' | 'state_province' | 'city' | 'timezone' | 'operational_status'>
 export function OwnedCommunities({ userId, sample }: { userId: string; sample?: ReactNode }) {

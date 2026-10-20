@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AuthShell } from './Auth'
 import { AccountActions } from './auth/AccountActions'
-import { MyCommunitiesPage } from './communities/pages/MyCommunitiesPage'
+import { MyCommunitiesTab } from './user-accounts/components/MyCommunitiesTab'
 
 const auth = vi.hoisted(() => ({
   getSession: vi.fn(), onAuthStateChange: vi.fn(), signUp: vi.fn(), signInWithPassword: vi.fn(),
@@ -29,7 +29,7 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 async function start() {
-  render(<BrowserRouter><AuthShell><AccountActions/><MyCommunitiesPage previewName="Sample" previewLocation="Sample location"/><div>Community preview</div></AuthShell></BrowserRouter>)
+  render(<BrowserRouter><AuthShell><AccountActions/><MyCommunitiesTab previewName="Sample" previewLocation="Sample location"/><div>Community preview</div></AuthShell></BrowserRouter>)
   await waitFor(() => expect(screen.queryByText('Checking your session…')).toBeNull())
 }
 function click(name: string) { fireEvent.click((screen.queryAllByRole('link', { name }).at(-1) || screen.getAllByRole('button', { name }).at(-1)!)) }
