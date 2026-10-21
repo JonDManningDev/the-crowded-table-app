@@ -15,7 +15,12 @@ vi.mock('../lib/supabase', () => ({
   authInitialization: Promise.resolve({ error: null }),
   get initialAuthRedirect() {
     const hash = new URLSearchParams(window.location.hash.slice(1))
-    return { callbackPath: window.location.pathname === '/auth/callback', resetPath: window.location.pathname === '/auth/reset-password', callbackError: hash.has('error') || new URLSearchParams(window.location.search).has('error'), hasCredentials: hash.has('access_token') && hash.has('refresh_token') }
+    return {
+      callbackPath: window.location.pathname === '/auth/callback',
+      resetPath: window.location.pathname === '/auth/reset-password',
+      callbackError: hash.has('error') || new URLSearchParams(window.location.search).has('error'),
+      hasCredentials: hash.has('access_token') && hash.has('refresh_token'),
+    }
   },
 }))
 const session = { user: { id: 'test-user', email: 'person@example.com', email_confirmed_at: '2026-10-02' } }
@@ -25,11 +30,26 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/')
   auth.getSession.mockResolvedValue({ data: { session: null }, error: null })
   auth.onAuthStateChange.mockImplementation(callback => { listener = callback; return { data: { subscription: { unsubscribe: vi.fn() } } } })
-  for (const method of [auth.signUp, auth.signInWithPassword, auth.resend, auth.resetPasswordForEmail, auth.updateUser, auth.signOut]) method.mockResolvedValue({ error: null })
+  for (const method of [
+    auth.signUp,
+    auth.signInWithPassword,
+    auth.resend,
+    auth.resetPasswordForEmail,
+    auth.updateUser,
+    auth.signOut,
+  ]) method.mockResolvedValue({ error: null })
 })
 afterEach(cleanup)
 async function start() {
-  render(<BrowserRouter><AuthShell><AccountActions/><MyCommunitiesTab previewName="Sample" previewLocation="Sample location"/><div>Community preview</div></AuthShell></BrowserRouter>)
+  render(
+    <BrowserRouter>
+      <AuthShell>
+        <AccountActions/>
+        <MyCommunitiesTab previewName="Sample" previewLocation="Sample location"/>
+        <div>Community preview</div>
+      </AuthShell>
+    </BrowserRouter>,
+  )
   await waitFor(() => expect(screen.queryByText('Checking your session…')).toBeNull())
 }
 function click(name: string) { fireEvent.click((screen.queryAllByRole('link', { name }).at(-1) || screen.getAllByRole('button', { name }).at(-1)!)) }
@@ -71,7 +91,11 @@ describe('account workflows', () => {
     fill('Email address', 'person@example.com'); fill(/Password/, 'a-long-test-password')
     submit()
     await screen.findByText('Check your email.')
-    expect(auth.signUp).toHaveBeenCalledWith({ email: 'person@example.com', password: 'a-long-test-password', options: { emailRedirectTo: 'http://localhost:3000/auth/callback' } })
+    expect(auth.signUp).toHaveBeenCalledWith({
+      email: 'person@example.com',
+      password: 'a-long-test-password',
+      options: { emailRedirectTo: 'http://localhost:3000/auth/callback' },
+    })
     expect(screen.queryByText('Signed in as')).toBeNull()
     expect(screen.getByRole('button', { name: 'Resend in 60s' }).hasAttribute('disabled')).toBe(true)
     expect(document.querySelector('input[type=password]')).toBeNull()

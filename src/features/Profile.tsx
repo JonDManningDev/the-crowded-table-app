@@ -8,19 +8,288 @@ import { interests } from '../mock/data'
 import { Avatar, Botanical, Empty, Heading, Icon, Modal, Tabs, Tag } from '../components/ui'
 import { GameArt } from '../components/GameArt'
 
-export function ProfilePage({ model, open, membership }: { model: MockModel; open: (id: string) => void; membership: () => void }) {
+const history = [
+  { title: 'Codenames & good company', date: 'September 26', art: 'social' as const },
+  { title: 'Learn & Play: Azul', date: 'September 22', art: 'azul' as const },
+  { title: 'A Sunday in Cascadia', date: 'September 20', art: 'forest' as const },
+]
+const achievements = [
+  ['people', 'A wider circle', 'Played with 10 different people'],
+  ['home', 'A welcoming host', 'Hosted your first community table'],
+  ['leaf', 'A helping hand', 'Shared a game with a new player'],
+]
+const benefits = [
+  'Create and join member tables',
+  'Be part of our private community',
+  'Included official game nights, with a reservation',
+  'Monthly championship participation',
+]
+
+export function ProfilePage({
+  model,
+  open,
+  membership,
+}: {
+  model: MockModel
+  open: (id: string) => void
+  membership: () => void
+}) {
   const [tab, setTab] = useState('Overview')
   const [modal, setModal] = useState<'edit' | 'preview' | 'support' | null>(null)
   const [historyTab, setHistoryTab] = useState('Upcoming')
   const preferences = model.preferences
-  const upcoming = model.items.filter(row => (model.member || row.kind === 'official') && (model.seats[row.id] || row.host === 'You'))
-  return <><Heading eyebrow="REAL PEOPLE. REAL GAMES." title="Your seat at the table." action={<Button appearance="outline" className="button secondary" onClick={() => setModal('edit')}><Icon name="user" size={17}/> Edit Profile</Button>}>A little about you. A whole lot of good memories ahead.</Heading><div className="profile-layout"><aside><section className="panel profile-summary"><Botanical/><Avatar name={model.profile.name} large tone="peach"/><h2>{model.profile.name}</h2><span className="location"><Icon name="pin" size={15}/>{model.profile.location}</span><p className="profile-quote">“Good games. Good people.”</p><div className="tags">{model.profile.interests.map(t => <Tag key={t}>{t}</Tag>)}</div><div className="profile-stats"><div><strong>12</strong><span>events</span></div><div><strong>3</strong><span>tables hosted</span></div><div><strong>18</strong><span>co-players</span></div></div><Button appearance="unstyled" className="member-status" onClick={membership}><Icon name="leaf" size={27}/><span><strong>{model.member ? 'Crowded Table Member' : 'Your next chapter awaits'}</strong><small>{model.member ? 'Belonging since September 2026' : 'Explore membership · L300/month'}</small></span><Icon name="chevron" size={17}/></Button><Button appearance="ghost" className="text-button" onClick={() => setModal('preview')}>Preview member-facing profile <Icon name="arrow" size={16}/></Button></section><div className="profile-side-note"><Icon name="heart"/><p>Different people.<br/><em>Same table.</em></p></div></aside><div><Tabs items={['Overview', 'My Activity', 'Membership & Settings']} value={tab} onChange={setTab}/>
-    {tab === 'Overview' && <ProfileOverview profile={model.profile} onEdit={() => setModal('edit')}/>}
-    {tab === 'My Activity' && <section className="panel"><h2>Every table tells a story</h2><Tabs items={['Upcoming', 'History', 'Achievements']} value={historyTab} onChange={setHistoryTab}/>{historyTab === 'Upcoming' && <>{upcoming.map(item => <Button appearance="unstyled" className="activity-row" key={item.id} onClick={() => open(item.id)}><GameArt type={item.art}/><div><strong>{item.title}</strong><small>{formatDate(item.date, true)}</small></div><Tag>{item.host === 'You' ? 'Hosting' : model.seats[item.id]}</Tag><Icon name="chevron" size={18}/></Button>)}{!upcoming.length && <Empty title="Your next table is out there">Find a game night to add something lovely to your calendar.</Empty>}</>}{historyTab === 'History' && [{ title: 'Codenames & good company', date: 'September 26', art: 'social' as const }, { title: 'Learn & Play: Azul', date: 'September 22', art: 'azul' as const }, { title: 'A Sunday in Cascadia', date: 'September 20', art: 'forest' as const }].map(g => <div className="activity-row" key={g.title}><GameArt type={g.art}/><div><strong>{g.title}</strong><small>{g.date}</small></div><Tag><Icon name="check" size={13}/> Attended</Tag></div>)}{historyTab === 'Achievements' && <div className="achievement-grid">{[['people', 'A wider circle', 'Played with 10 different people'], ['home', 'A welcoming host', 'Hosted your first community table'], ['leaf', 'A helping hand', 'Shared a game with a new player']].map(([icon, title, text]) => <div className="achievement" key={title}><span className="round-icon gold"><Icon name={icon} size={28}/></span><h3>{title}</h3><p>{text}</p></div>)}</div>}</section>}
-    {tab === 'Membership & Settings' && <><section className="panel membership-settings"><Tag tone="gold">{model.member ? 'YOUR MEMBERSHIP' : 'MAKE ROOM FOR MORE'}</Tag><h2>Games. People. Belonging.</h2><p><strong>L300 / month</strong> · {model.member ? 'Active in this preview' : 'A whole community, one membership'}</p><ul className="benefits">{['Create and join member tables', 'Be part of our private community', 'Included official game nights, with a reservation', 'Monthly championship participation'].map(t => <li key={t}><Icon name="check" size={18}/>{t}</li>)}</ul><Button appearance="primary" className="button" onClick={membership}>{model.member ? 'Manage membership' : 'Become a Member'}</Button></section><AccountPreferencesPanel model={model} onSupport={() => setModal('support')}/></>}
-    </div></div>
-    {modal === 'edit' && <Modal title="Make your profile feel like you" onClose={() => setModal(null)}><form className="form" onSubmit={e => { e.preventDefault(); const f = new FormData(e.currentTarget); const name = String(f.get('name')).trim(); if (!name) return; model.setProfile({ name, location: String(f.get('location')).trim(), bio: String(f.get('bio')).trim(), interests: f.getAll('interests').map(String), style: String(f.get('style')), teach: f.get('teach') === 'on' }); setModal(null); model.notify('Your profile has been updated.') }}><div className="form-row"><label>Your display name<input name="name" defaultValue={model.profile.name} required maxLength={40}/></label><label>General location<input name="location" defaultValue={model.profile.location} required maxLength={60}/></label></div><label>A little about you<textarea name="bio" defaultValue={model.profile.bio} maxLength={300}/></label><fieldset><legend>What brings you to the table?</legend><div className="interest-options">{interests.map(t => <label key={t}><input type="checkbox" name="interests" value={t} defaultChecked={model.profile.interests.includes(t)}/>{t}</label>)}</div></fieldset><label>Play style<select name="style" defaultValue={model.profile.style}><option>Casual</option><option>Learner</option><option>Competitive (sometimes)</option></select></label><label className="check-label"><input type="checkbox" name="teach" defaultChecked={model.profile.teach}/> I’m happy to teach new players</label><Button appearance="primary" className="button" type="submit">Save my profile <Icon name="check" size={18}/></Button></form></Modal>}
-    {modal === 'preview' && <Modal title="Your member-facing profile" onClose={() => setModal(null)}><div className="member-preview"><Avatar name={model.profile.name} large tone="peach"/><h2>{model.profile.name}</h2><p>{model.profile.location}</p><p className="description">{model.profile.bio}</p><div className="tags">{model.profile.interests.map(t => <Tag key={t}>{t}</Tag>)}</div>{preferences.history && <div className="notice">12 events attended · 3 tables hosted</div>}<div className="notice"><Icon name="lock"/> Visible to community members. Membership settings and private contact details stay private.</div></div></Modal>}
-    {modal === 'support' && <Modal title="There’s a person on the other side" onClose={() => setModal(null)}><form className="form" onSubmit={e => { e.preventDefault(); const note = String(new FormData(e.currentTarget).get('note')).trim(); if (!note) return; model.notify(`Demo support note saved: ${note}`); setModal(null) }}><p className="muted">This preview records the note locally; it does not contact anyone.</p><label>Your note<textarea name="note" required maxLength={2000}/></label><Button appearance="primary" className="button" type="submit">Save support note</Button></form></Modal>}
-  </>
+  const upcoming = model.items.filter(row => (
+    (model.member || row.kind === 'official') && (model.seats[row.id] || row.host === 'You')
+  ))
+  return (
+    <>
+      <Heading
+        eyebrow="REAL PEOPLE. REAL GAMES."
+        title="Your seat at the table."
+        action={(
+          <Button appearance="outline" className="button secondary" onClick={() => setModal('edit')}>
+            <Icon name="user" size={17}/> Edit Profile
+          </Button>
+        )}
+      >
+        A little about you. A whole lot of good memories ahead.
+      </Heading>
+      <div className="profile-layout">
+        <aside>
+          <section className="panel profile-summary">
+            <Botanical/>
+            <Avatar name={model.profile.name} large tone="peach"/>
+            <h2>{model.profile.name}</h2>
+            <span className="location">
+              <Icon name="pin" size={15}/>
+              {model.profile.location}
+            </span>
+            <p className="profile-quote">“Good games. Good people.”</p>
+            <div className="tags">
+              {model.profile.interests.map(interest => (
+                <Tag key={interest}>{interest}</Tag>
+              ))}
+            </div>
+            <div className="profile-stats">
+              <div><strong>12</strong><span>events</span></div>
+              <div><strong>3</strong><span>tables hosted</span></div>
+              <div><strong>18</strong><span>co-players</span></div>
+            </div>
+            <Button appearance="unstyled" className="member-status" onClick={membership}>
+              <Icon name="leaf" size={27}/>
+              <span>
+                <strong>{model.member ? 'Crowded Table Member' : 'Your next chapter awaits'}</strong>
+                <small>
+                  {model.member ? 'Belonging since September 2026' : 'Explore membership · L300/month'}
+                </small>
+              </span>
+              <Icon name="chevron" size={17}/>
+            </Button>
+            <Button appearance="ghost" className="text-button" onClick={() => setModal('preview')}>
+              Preview member-facing profile <Icon name="arrow" size={16}/>
+            </Button>
+          </section>
+          <div className="profile-side-note">
+            <Icon name="heart"/>
+            <p>
+              Different people.<br/>
+              <em>Same table.</em>
+            </p>
+          </div>
+        </aside>
+        <div>
+          <Tabs
+            items={['Overview', 'My Activity', 'Membership & Settings']}
+            value={tab}
+            onChange={setTab}
+          />
+          {tab === 'Overview' && (
+            <ProfileOverview profile={model.profile} onEdit={() => setModal('edit')}/>
+          )}
+          {tab === 'My Activity' && (
+            <section className="panel">
+              <h2>Every table tells a story</h2>
+              <Tabs
+                items={['Upcoming', 'History', 'Achievements']}
+                value={historyTab}
+                onChange={setHistoryTab}
+              />
+              {historyTab === 'Upcoming' && (
+                <>
+                  {upcoming.map(item => (
+                    <Button
+                      appearance="unstyled"
+                      className="activity-row"
+                      key={item.id}
+                      onClick={() => open(item.id)}
+                    >
+                      <GameArt type={item.art}/>
+                      <div>
+                        <strong>{item.title}</strong>
+                        <small>{formatDate(item.date, true)}</small>
+                      </div>
+                      <Tag>{item.host === 'You' ? 'Hosting' : model.seats[item.id]}</Tag>
+                      <Icon name="chevron" size={18}/>
+                    </Button>
+                  ))}
+                  {!upcoming.length && (
+                    <Empty title="Your next table is out there">
+                      Find a game night to add something lovely to your calendar.
+                    </Empty>
+                  )}
+                </>
+              )}
+              {historyTab === 'History' && history.map(game => (
+                <div className="activity-row" key={game.title}>
+                  <GameArt type={game.art}/>
+                  <div>
+                    <strong>{game.title}</strong>
+                    <small>{game.date}</small>
+                  </div>
+                  <Tag><Icon name="check" size={13}/> Attended</Tag>
+                </div>
+              ))}
+              {historyTab === 'Achievements' && (
+                <div className="achievement-grid">
+                  {achievements.map(([icon, title, text]) => (
+                    <div className="achievement" key={title}>
+                      <span className="round-icon gold"><Icon name={icon} size={28}/></span>
+                      <h3>{title}</h3>
+                      <p>{text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+          {tab === 'Membership & Settings' && (
+            <>
+              <section className="panel membership-settings">
+                <Tag tone="gold">{model.member ? 'YOUR MEMBERSHIP' : 'MAKE ROOM FOR MORE'}</Tag>
+                <h2>Games. People. Belonging.</h2>
+                <p>
+                  <strong>L300 / month</strong>
+                  {' · '}
+                  {model.member ? 'Active in this preview' : 'A whole community, one membership'}
+                </p>
+                <ul className="benefits">
+                  {benefits.map(benefit => (
+                    <li key={benefit}><Icon name="check" size={18}/>{benefit}</li>
+                  ))}
+                </ul>
+                <Button appearance="primary" className="button" onClick={membership}>
+                  {model.member ? 'Manage membership' : 'Become a Member'}
+                </Button>
+              </section>
+              <AccountPreferencesPanel model={model} onSupport={() => setModal('support')}/>
+            </>
+          )}
+        </div>
+      </div>
+      {modal === 'edit' && (
+        <Modal title="Make your profile feel like you" onClose={() => setModal(null)}>
+          <form className="form" onSubmit={event => {
+            event.preventDefault()
+            const form = new FormData(event.currentTarget)
+            const name = String(form.get('name')).trim()
+            if (!name) return
+            model.setProfile({
+              name,
+              location: String(form.get('location')).trim(),
+              bio: String(form.get('bio')).trim(),
+              interests: form.getAll('interests').map(String),
+              style: String(form.get('style')),
+              teach: form.get('teach') === 'on',
+            })
+            setModal(null)
+            model.notify('Your profile has been updated.')
+          }}>
+            <div className="form-row">
+              <label>
+                Your display name
+                <input name="name" defaultValue={model.profile.name} required maxLength={40}/>
+              </label>
+              <label>
+                General location
+                <input name="location" defaultValue={model.profile.location} required maxLength={60}/>
+              </label>
+            </div>
+            <label>
+              A little about you
+              <textarea name="bio" defaultValue={model.profile.bio} maxLength={300}/>
+            </label>
+            <fieldset>
+              <legend>What brings you to the table?</legend>
+              <div className="interest-options">
+                {interests.map(interest => (
+                  <label key={interest}>
+                    <input
+                      type="checkbox"
+                      name="interests"
+                      value={interest}
+                      defaultChecked={model.profile.interests.includes(interest)}
+                    />
+                    {interest}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <label>
+              Play style
+              <select name="style" defaultValue={model.profile.style}>
+                <option>Casual</option>
+                <option>Learner</option>
+                <option>Competitive (sometimes)</option>
+              </select>
+            </label>
+            <label className="check-label">
+              <input type="checkbox" name="teach" defaultChecked={model.profile.teach}/>
+              I’m happy to teach new players
+            </label>
+            <Button appearance="primary" className="button" type="submit">
+              Save my profile <Icon name="check" size={18}/>
+            </Button>
+          </form>
+        </Modal>
+      )}
+      {modal === 'preview' && (
+        <Modal title="Your member-facing profile" onClose={() => setModal(null)}>
+          <div className="member-preview">
+            <Avatar name={model.profile.name} large tone="peach"/>
+            <h2>{model.profile.name}</h2>
+            <p>{model.profile.location}</p>
+            <p className="description">{model.profile.bio}</p>
+            <div className="tags">
+              {model.profile.interests.map(interest => (
+                <Tag key={interest}>{interest}</Tag>
+              ))}
+            </div>
+            {preferences.history && <div className="notice">12 events attended · 3 tables hosted</div>}
+            <div className="notice">
+              <Icon name="lock"/>
+              Visible to community members. Membership settings and private contact details stay private.
+            </div>
+          </div>
+        </Modal>
+      )}
+      {modal === 'support' && (
+        <Modal title="There’s a person on the other side" onClose={() => setModal(null)}>
+          <form className="form" onSubmit={event => {
+            event.preventDefault()
+            const note = String(new FormData(event.currentTarget).get('note')).trim()
+            if (!note) return
+            model.notify(`Demo support note saved: ${note}`)
+            setModal(null)
+          }}>
+            <p className="muted">This preview records the note locally; it does not contact anyone.</p>
+            <label>
+              Your note
+              <textarea name="note" required maxLength={2000}/>
+            </label>
+            <Button appearance="primary" className="button" type="submit">Save support note</Button>
+          </form>
+        </Modal>
+      )}
+    </>
+  )
 }

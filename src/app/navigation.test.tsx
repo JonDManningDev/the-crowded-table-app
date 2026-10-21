@@ -19,7 +19,10 @@ async function renderReady(ui: Parameters<typeof render>[0]) {
 }
 
 // jsdom does not implement native dialog open/close behavior.
-Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: function (this: HTMLDialogElement) { this.setAttribute('open', '') } })
+Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+  configurable: true,
+  value: function (this: HTMLDialogElement) { this.setAttribute('open', '') },
+})
 Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function (this: HTMLDialogElement) { this.removeAttribute('open') } })
 
 beforeEach(() => { window.history.replaceState(null, '', '/'); vi.spyOn(window, 'scrollTo').mockImplementation(() => {}) })
@@ -45,7 +48,13 @@ it('lands on the personal home without presenting the community preview as perso
 })
 
 it('separates the account identity from the mock community profile', async () => {
-  await act(async () => { render(<AccountContext.Provider value={{ status: 'signed-in', email: 'actual-user@example.com', displayName: 'Actual User' }}><App/></AccountContext.Provider>) })
+  await act(async () => {
+    render(
+      <AccountContext.Provider value={{ status: 'signed-in', email: 'actual-user@example.com', displayName: 'Actual User' }}>
+        <App/>
+      </AccountContext.Provider>,
+    )
+  })
   await waitForContent()
   const space = within(screen.getByRole('region', { name: 'Your space' }))
   expect(space.getByText('Actual User')).toBeTruthy()
@@ -73,11 +82,21 @@ it('retains community guest access boundaries on clean routes', async () => {
 
 it('places account tabs above the contents and keeps the summary only on Overview', async () => {
   window.history.replaceState(null, '', '/account')
-  await act(async () => { render(<AccountContext.Provider value={{ status: 'signed-in', email: 'private@example.com', displayName: 'Alex' }}><App/></AccountContext.Provider>) })
+  await act(async () => {
+    render(
+      <AccountContext.Provider value={{ status: 'signed-in', email: 'private@example.com', displayName: 'Alex' }}>
+        <App/>
+      </AccountContext.Provider>,
+    )
+  })
   await waitForContent()
   expect(screen.getByRole('link', { name: 'Alex' }).getAttribute('href')).toBe('/account')
   expect(document.querySelector('.profile-summary')).toBeTruthy()
-  expect(within(screen.getByRole('navigation', { name: 'Account navigation' })).getByRole('link', { name: 'Overview' }).getAttribute('aria-current')).toBe('page')
+  expect(
+    within(screen.getByRole('navigation', { name: 'Account navigation' }))
+      .getByRole('link', { name: 'Overview' })
+      .getAttribute('aria-current'),
+  ).toBe('page')
   await navigate('account-settings')
   expect(document.querySelector('.profile-summary')).toBeNull()
   expect(screen.getByRole('heading', { name: 'My Premium Features' })).toBeTruthy()
@@ -85,7 +104,11 @@ it('places account tabs above the contents and keeps the summary only on Overvie
   expect(screen.getByRole('link', { name: 'Explore Premium Features' }).getAttribute('href')).toBe('/account/premium-features')
   await navigate('my-home')
   expect(document.querySelector('.profile-summary')).toBeNull()
-  expect(within(screen.getByRole('navigation', { name: 'Account navigation' })).getByRole('link', { name: 'My Home' }).getAttribute('aria-current')).toBe('page')
+  expect(
+    within(screen.getByRole('navigation', { name: 'Account navigation' }))
+      .getByRole('link', { name: 'My Home' })
+      .getAttribute('aria-current'),
+  ).toBe('page')
   await navigate('profile')
   expect(screen.getByRole('button', { name: 'Membership & Settings' })).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Ana M.' })).toBeTruthy()
@@ -96,7 +119,13 @@ it('places account tabs above the contents and keeps the summary only on Overvie
 
 it('places sign out in the breadcrumb header', async () => {
   const signOut = vi.fn()
-  await act(async () => { render(<AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', signOut }}><App/></AccountContext.Provider>) })
+  await act(async () => {
+    render(
+      <AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', signOut }}>
+        <App/>
+      </AccountContext.Provider>,
+    )
+  })
   await waitForContent()
   const header = screen.getByRole('banner')
   fireEvent.click(within(header).getByRole('button', { name: 'Sign Out' }))
@@ -107,7 +136,18 @@ it('places sign out in the breadcrumb header', async () => {
 
 it('blocks every account edit entry point when the profile failed to load', async () => {
   window.history.replaceState(null, '', '/account')
-  await act(async () => { render(<AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', profileError: 'Profile unavailable', saveProfile: vi.fn() }}><App/></AccountContext.Provider>) })
+  await act(async () => {
+    render(
+      <AccountContext.Provider value={{
+        status: 'signed-in',
+        email: 'owner@example.test',
+        profileError: 'Profile unavailable',
+        saveProfile: vi.fn(),
+      }}>
+        <App/>
+      </AccountContext.Provider>,
+    )
+  })
   await waitForContent()
   expect(screen.getByRole('button', { name: 'Edit Profile' }).hasAttribute('disabled')).toBe(true)
   expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
@@ -131,7 +171,13 @@ it('shows a newly unavailable profile inside the open editor and preserves the d
 it('retains the profile draft and reports a failed save without claiming success', async () => {
   window.history.replaceState(null, '', '/account')
   const saveProfile = vi.fn().mockRejectedValue(new Error('Could not save'))
-  await act(async () => { render(<AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', saveProfile }}><App/></AccountContext.Provider>) })
+  await act(async () => {
+    render(
+      <AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', saveProfile }}>
+        <App/>
+      </AccountContext.Provider>,
+    )
+  })
   await waitForContent()
   fireEvent.click(screen.getByRole('button', { name: 'Edit Profile' }))
   fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'My draft' } })
@@ -161,9 +207,17 @@ it('uses browser history for tabs and sidebar links', async () => {
   fireEvent.click(within(screen.getByRole('navigation', { name: 'Account navigation' })).getByRole('link', { name: 'Settings' }))
   expect(window.location.pathname).toBe('/account/settings')
   window.history.back()
-  await waitFor(() => expect(within(screen.getByRole('navigation', { name: 'Account navigation' })).getByRole('link', { name: 'Overview' }).getAttribute('aria-current')).toBe('page'))
+  await waitFor(() => expect(
+    within(screen.getByRole('navigation', { name: 'Account navigation' }))
+      .getByRole('link', { name: 'Overview' })
+      .getAttribute('aria-current'),
+  ).toBe('page'))
   window.history.forward()
-  await waitFor(() => expect(within(screen.getByRole('navigation', { name: 'Account navigation' })).getByRole('link', { name: 'Settings' }).getAttribute('aria-current')).toBe('page'))
+  await waitFor(() => expect(
+    within(screen.getByRole('navigation', { name: 'Account navigation' }))
+      .getByRole('link', { name: 'Settings' })
+      .getAttribute('aria-current'),
+  ).toBe('page'))
   fireEvent.click(within(screen.getByRole('navigation', { name: 'Community navigation' })).getByRole('link', { name: 'Profile' }))
   expect(window.location.pathname).toBe('/community/preview/profile')
   await waitFor(() => expect(document.title).toBe('Profile · The Crowded Table'))

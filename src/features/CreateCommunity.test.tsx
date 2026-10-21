@@ -31,7 +31,15 @@ function submit() { fireEvent.submit(document.querySelector('form')!) }
 it('creates an owner without participation by default using one transactional command', async () => {
   start(); fill(); submit()
   await screen.findByText('Your community is ready.')
-  expect(api.rpc).toHaveBeenCalledExactlyOnceWith('create_tenant', { p_name: 'Our games', p_slug: 'our-games', p_country_code: 'HN', p_timezone: 'America/Tegucigalpa', p_state_province: undefined, p_city: undefined, p_join_community: false })
+  expect(api.rpc).toHaveBeenCalledExactlyOnceWith('create_tenant', {
+    p_name: 'Our games',
+    p_slug: 'our-games',
+    p_country_code: 'HN',
+    p_timezone: 'America/Tegucigalpa',
+    p_state_province: undefined,
+    p_city: undefined,
+    p_join_community: false,
+  })
   expect(screen.getByText('You can manage this community without joining as a participant.')).toBeTruthy()
 })
 it('passes explicit participation and trimmed optional location without choosing owner/audit fields', async () => {
@@ -41,7 +49,15 @@ it('passes explicit participation and trimmed optional location without choosing
   fireEvent.change(screen.getByLabelText('State / province (optional)'), { target: { value: '  ' } })
   submit()
   await screen.findByText('You’ve also joined as an approved participant.')
-  expect(api.rpc.mock.calls[0][1]).toEqual({ p_name: 'Our games', p_slug: 'our-games', p_country_code: 'HN', p_timezone: 'America/Tegucigalpa', p_city: 'Tegucigalpa', p_state_province: undefined, p_join_community: true })
+  expect(api.rpc.mock.calls[0][1]).toEqual({
+    p_name: 'Our games',
+    p_slug: 'our-games',
+    p_country_code: 'HN',
+    p_timezone: 'America/Tegucigalpa',
+    p_city: 'Tegucigalpa',
+    p_state_province: undefined,
+    p_join_community: true,
+  })
 })
 it('rejects reserved handles and missing countries before sending', async () => {
   start(); fill(); fireEvent.change(screen.getByLabelText('Community handle'), { target: { value: 'auth' } }); submit()
@@ -82,7 +98,19 @@ it('shows actionable timezone and verified-account errors', async () => {
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('verified account'))
 })
 it('reads saved owned communities without requesting audit or staff fields', async () => {
-  api.order.mockResolvedValue({ data: [{ id: 'a', name: 'Saved community', slug: 'saved-community', country_code: 'HN', city: null, state_province: null, timezone: 'America/Tegucigalpa', operational_status: 'active' }], error: null })
+  api.order.mockResolvedValue({
+    data: [{
+      id: 'a',
+      name: 'Saved community',
+      slug: 'saved-community',
+      country_code: 'HN',
+      city: null,
+      state_province: null,
+      timezone: 'America/Tegucigalpa',
+      operational_status: 'active',
+    }],
+    error: null,
+  })
   render(<OwnedCommunities userId="owner"/>)
   await screen.findByText('Saved community')
   expect(api.select).toHaveBeenCalledWith('id,name,slug,country_code,state_province,city,timezone,operational_status')
@@ -98,17 +126,49 @@ it('keeps frontend country and reserved-handle hints aligned with the database c
   const dbCodes = sql.match(/'(AD AE [A-Z ]+)',' '/)![1].split(' ')
   expect(countryCodes).toEqual(dbCodes)
   const handles = [...sql.match(/slug not in \(([^)]+)\)/)![1].matchAll(/'([^']+)'/g)].map(match => match[1])
-  for (const slug of handles) expect(validateTenant({ name: 'Test', slug, country: 'HN', timezone: 'UTC', city: '', region: '', join: false })).not.toBeNull()
+  for (const slug of handles) {
+    expect(validateTenant({
+      name: 'Test',
+      slug,
+      country: 'HN',
+      timezone: 'UTC',
+      city: '',
+      region: '',
+      join: false,
+    })).not.toBeNull()
+  }
 })
 
 it('combines fetched communities and the sample row in the account tab and clears private rows on sign-out', async () => {
-  api.order.mockResolvedValue({ data: [{ id: 'a', name: 'Saved community', slug: 'saved-community', country_code: 'HN', timezone: 'UTC', operational_status: 'active' }], error: null })
-  const view = render(<MemoryRouter><AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', userId: 'owner' }}><MyCommunitiesTab previewName="Sample community" previewLocation="Sample location"/></AccountContext.Provider></MemoryRouter>)
+  api.order.mockResolvedValue({
+    data: [{
+      id: 'a',
+      name: 'Saved community',
+      slug: 'saved-community',
+      country_code: 'HN',
+      timezone: 'UTC',
+      operational_status: 'active',
+    }],
+    error: null,
+  })
+  const view = render(
+    <MemoryRouter>
+      <AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', userId: 'owner' }}>
+        <MyCommunitiesTab previewName="Sample community" previewLocation="Sample location"/>
+      </AccountContext.Provider>
+    </MemoryRouter>,
+  )
   await screen.findByText('Saved community')
   expect(screen.getAllByRole('listitem')).toHaveLength(2)
   expect(screen.getByRole('heading', { name: 'Sample community' })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Start New Community' }).getAttribute('href')).toBe('/account/communities/new')
-  view.rerender(<MemoryRouter><AccountContext.Provider value={{ status: 'signed-out', email: null }}><MyCommunitiesTab previewName="Sample community" previewLocation="Sample location"/></AccountContext.Provider></MemoryRouter>)
+  view.rerender(
+    <MemoryRouter>
+      <AccountContext.Provider value={{ status: 'signed-out', email: null }}>
+        <MyCommunitiesTab previewName="Sample community" previewLocation="Sample location"/>
+      </AccountContext.Provider>
+    </MemoryRouter>,
+  )
   expect(screen.queryByText('Saved community')).toBeNull()
   expect(screen.queryAllByRole('listitem')).toHaveLength(0)
   expect(screen.queryByRole('link', { name: 'Start New Community' })).toBeNull()

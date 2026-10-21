@@ -4,8 +4,25 @@ import { supabase } from '../../../lib/supabase'
 import type { Database } from '../../../lib/database.types'
 import '../../CreateCommunity.css'
 
-type Tenant = Pick<Database['public']['Tables']['tenants']['Row'], 'id' | 'name' | 'slug' | 'country_code' | 'state_province' | 'city' | 'timezone' | 'operational_status'>
-export function OwnedCommunities({ userId, sample }: { userId: string; sample?: ReactNode }) {
+type Tenant = Pick<
+  Database['public']['Tables']['tenants']['Row'],
+  | 'id'
+  | 'name'
+  | 'slug'
+  | 'country_code'
+  | 'state_province'
+  | 'city'
+  | 'timezone'
+  | 'operational_status'
+>
+
+export function OwnedCommunities({
+  userId,
+  sample,
+}: {
+  userId: string
+  sample?: ReactNode
+}) {
   const [rows, setRows] = useState<Tenant[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -16,17 +33,60 @@ export function OwnedCommunities({ userId, sample }: { userId: string; sample?: 
     if (!supabase) { return }
     void (async () => {
       try {
-        const { data, error: failure } = await supabase.from('tenants').select('id,name,slug,country_code,state_province,city,timezone,operational_status').order('created_at', { ascending: false })
+        const { data, error: failure } = await supabase
+          .from('tenants')
+          .select('id,name,slug,country_code,state_province,city,timezone,operational_status')
+          .order('created_at', { ascending: false })
         if (!active) return
-        if (failure) { setError('We couldn’t load your communities. Please try again.'); return }
+        if (failure) {
+          setError('We couldn’t load your communities. Please try again.')
+          return
+        }
         setRows(data || [])
-      } catch { if (active) setError('We couldn’t load your communities. Please try again.') }
-      finally { if (active) setLoading(false) }
+      } catch {
+        if (active) setError('We couldn’t load your communities. Please try again.')
+      } finally {
+        if (active) setLoading(false)
+      }
     })()
     return () => { active = false }
   }, [userId, attempt])
-  return <>
-    {!supabase ? <p role="alert">Community services are not configured.</p> : loading ? <p role="status">Loading your communities…</p> : error ? <><p role="alert" className="auth-error">{error}</p><Button appearance="unstyled" onClick={() => { setLoading(true); setError(''); setAttempt(value => value + 1) }}>Try again</Button></> : !rows.length && <p>You haven’t created a community yet.</p>}
-    <ul className="owned-communities community-list">{rows.map(row => <li key={row.id}><div><span className="eyebrow">YOUR COMMUNITY</span><h2>{row.name}</h2><p className="account-metadata">{row.slug} · Owner · {row.operational_status === 'archived' ? 'Archived' : 'Active'}</p><p className="account-metadata">{[row.city, row.state_province, row.country_code].filter(Boolean).join(', ')} · {row.timezone}</p></div></li>)}{sample}</ul>
-  </>
+  const retry = () => {
+    setLoading(true)
+    setError('')
+    setAttempt(value => value + 1)
+  }
+  return (
+    <>
+      {!supabase ? (
+        <p role="alert">Community services are not configured.</p>
+      ) : loading ? (
+        <p role="status">Loading your communities…</p>
+      ) : error ? (
+        <>
+          <p role="alert" className="auth-error">{error}</p>
+          <Button appearance="unstyled" onClick={retry}>Try again</Button>
+        </>
+      ) : (
+        !rows.length && <p>You haven’t created a community yet.</p>
+      )}
+      <ul className="owned-communities community-list">
+        {rows.map(row => {
+          const place = [row.city, row.state_province, row.country_code].filter(Boolean).join(', ')
+          const status = row.operational_status === 'archived' ? 'Archived' : 'Active'
+          return (
+            <li key={row.id}>
+              <div>
+                <span className="eyebrow">YOUR COMMUNITY</span>
+                <h2>{row.name}</h2>
+                <p className="account-metadata">{row.slug} · Owner · {status}</p>
+                <p className="account-metadata">{place} · {row.timezone}</p>
+              </div>
+            </li>
+          )
+        })}
+        {sample}
+      </ul>
+    </>
+  )
 }

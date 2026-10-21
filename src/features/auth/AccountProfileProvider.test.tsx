@@ -9,14 +9,26 @@ afterEach(() => { cleanup(); vi.resetAllMocks() })
 
 function Consumer() {
   const account = useAccount()
-  return <><span>{account.displayName}</span><span>{account.profileError}</span><button onClick={() => void account.saveProfile?.('  Updated Name  ', 'Updated bio')}>Save</button></>
+  return (
+    <>
+      <span>{account.displayName}</span>
+      <span>{account.profileError}</span>
+      <button onClick={() => void account.saveProfile?.('  Updated Name  ', 'Updated bio')}>Save</button>
+    </>
+  )
 }
 
 it('loads the signed-in account profile and refreshes its shared display name after saving', async () => {
   db.from.mockReturnValue(db); db.select.mockReturnValue(db); db.eq.mockReturnValue(db)
   db.maybeSingle.mockResolvedValue({ data: { display_name: 'Original Name', bio: 'Original bio' }, error: null })
   db.rpc.mockResolvedValue({ error: null })
-  const view = render(<AccountContext.Provider value={{ status: 'signed-in', email: 'private@example.com' }}><AccountProfileProvider userId="account-1"><Consumer/></AccountProfileProvider></AccountContext.Provider>)
+  const view = render(
+    <AccountContext.Provider value={{ status: 'signed-in', email: 'private@example.com' }}>
+      <AccountProfileProvider userId="account-1">
+        <Consumer/>
+      </AccountProfileProvider>
+    </AccountContext.Provider>,
+  )
   await screen.findByText('Original Name')
   expect(db.eq).toHaveBeenCalledWith('user_id', 'account-1')
   fireEvent.click(screen.getByRole('button', { name: 'Save' }))

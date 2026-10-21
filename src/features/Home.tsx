@@ -6,19 +6,193 @@ import { ActivityCard } from '../components/Activity'
 import { Botanical, Empty, Heading, Icon, Tabs, Tag } from '../components/ui'
 import { GameArt } from '../components/GameArt'
 
-export function Home({ model, open, membership }: { model: MockModel; open: (id: string) => void; membership: () => void }) {
+const filters = ['All evenings', 'Learn & Play', 'Special Game Night', 'Seasonal gathering']
+const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+export function Home({
+  model,
+  open,
+  membership,
+}: {
+  model: MockModel
+  open: (id: string) => void
+  membership: () => void
+}) {
   const [view, setView] = useState('Upcoming')
   const [month, setMonth] = useState(9)
   const [filter, setFilter] = useState('All evenings')
-  const events = model.items.filter(row => row.kind === 'official' && (filter === 'All evenings' || filter === row.category))
+  const events = model.items.filter(row => (
+    row.kind === 'official' && (filter === 'All evenings' || filter === row.category)
+  ))
   const shown = events.filter(row => new Date(row.date + 'T12:00:00').getMonth() === month)
-  return <><Heading eyebrow="YOUR LOCAL GAMING COMMUNITY" title={model.member ? 'Good games. Even better company.' : 'There’s always room for one more.'}>Pull up a chair. Find your people. Make a little room for play.</Heading>
-    <section className="home-hero"><div className="hero-copy"><span className="eyebrow">OCTOBER AT THE CROWDED TABLE</span><h2>A small table.<br/>A world of connection.</h2><p>New games, familiar smiles, and friends you haven’t met yet. Your next good evening starts here.</p><Button appearance="primary" className="button" onClick={() => open('azul')}>Find your next game night <Icon name="arrow" size={18}/></Button><div className="hero-note"><span className="avatar-stack"><span>LM</span><span>CR</span><span>VG</span></span><span>Good people. A growing community.</span></div></div><div className="hero-scene"><GameArt type="azul"/><div className="hero-art-card"><Icon name="dice" size={25}/><span>TUESDAY, OCTOBER 6<strong>Learn & Play: Azul</strong><small>Never played? Perfect. We’ll teach you.</small></span></div><Botanical/></div></section>
-    <div className="rhythm-row"><div><span className="round-icon"><Icon name="dice" size={23}/></span><div><span className="eyebrow">TUESDAYS</span><h3>Learn something new.</h3><p>One featured game. All experience levels.</p></div><span className="rhythm-time">7:30 – 10:30 PM</span></div><div><span className="round-icon peach"><Icon name="star" size={23}/></span><div><span className="eyebrow">THURSDAYS</span><h3>Expect a little different.</h3><p>RPGs, social games, and themed evenings.</p></div><span className="rhythm-time">7:30 – 10:30 PM</span></div></div>
-    <div className="section-heading"><div><span className="eyebrow">A REASON TO GET TOGETHER</span><h2>Upcoming at our table</h2></div><Tabs items={['Upcoming', 'Calendar']} value={view} onChange={setView}/></div>
-    <div className="filter-row"><div className="chips">{['All evenings', 'Learn & Play', 'Special Game Night', 'Seasonal gathering'].map(f => <Button appearance="unstyled" key={f} className={filter === f ? 'chip selected' : 'chip'} onClick={() => setFilter(f)}>{f}</Button>)}</div><span className="meta">All times in Tegucigalpa</span></div>
-    {view === 'Upcoming' ? <div className="card-grid">{events.map(item => <ActivityCard key={item.id} item={item} status={model.seats[item.id]} onOpen={() => open(item.id)}/>)}</div> : <section className="calendar-panel"><div className="calendar-heading"><Button appearance="unstyled" className="icon-button" aria-label="Previous month" onClick={() => setMonth(m => Math.max(0, m - 1))} disabled={month === 0}><span className="rotate"><Icon name="chevron"/></span></Button><h3>{new Date(2026, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3><Button appearance="unstyled" className="icon-button" aria-label="Next month" onClick={() => setMonth(m => Math.min(11, m + 1))} disabled={month === 11}><Icon name="chevron"/></Button></div><div className="calendar-grid">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div className="weekday" key={d}>{d}</div>)}{Array.from({ length: new Date(2026, month, 1).getDay() }, (_, i) => <div key={`blank${i}`} className="calendar-day blank"/>)}{Array.from({ length: new Date(2026, month + 1, 0).getDate() }, (_, i) => <div className="calendar-day" key={i}><span>{i + 1}</span>{shown.filter(row => new Date(row.date + 'T12:00:00').getDate() === i + 1).map(row => <Button appearance="unstyled" key={row.id} className={`calendar-event ${row.special ? 'lavender' : row.category === 'Learn & Play' ? 'sage' : 'peach'}`} onClick={() => open(row.id)}><b>{row.title}</b><small>{formatTime(row.time)}</small></Button>)}</div>)}</div>{shown.length === 0 && <Empty title="A little space for what’s next">Our {new Date(2026, month).toLocaleDateString('en-US', { month: 'long' })} evenings haven’t been announced. Browse October for our current gatherings.</Empty>}</section>}
-    <section className="season-banner"><div><Tag tone="peach">SOMETHING SPECIAL</Tag><h2>An evening with a twist.</h2><p>Costumes, curious clues, and a table full of suspects.<br/>{formatDate('2026-10-31')} · Separate ticket required</p><Button appearance="ghost" className="text-button" onClick={() => open('halloween')}>Discover our Halloween gathering <Icon name="arrow" size={18}/></Button></div><GameArt type="mystery"/></section>
-    {!model.member && <div className="membership-strip"><Icon name="leaf" size={32}/><div><h3>More tables. More friends.</h3><p>Unlock member-hosted games, our private community, and more for L300/month.</p></div><Button appearance="primary" className="button" onClick={membership}>Become a Member</Button></div>}
-  </>
+  const monthLabel = new Date(2026, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  return (
+    <>
+      <Heading
+        eyebrow="YOUR LOCAL GAMING COMMUNITY"
+        title={model.member ? 'Good games. Even better company.' : 'There’s always room for one more.'}
+      >
+        Pull up a chair. Find your people. Make a little room for play.
+      </Heading>
+      <section className="home-hero">
+        <div className="hero-copy">
+          <span className="eyebrow">OCTOBER AT THE CROWDED TABLE</span>
+          <h2>A small table.<br/>A world of connection.</h2>
+          <p>
+            New games, familiar smiles, and friends you haven’t met yet. Your next good evening
+            starts here.
+          </p>
+          <Button appearance="primary" className="button" onClick={() => open('azul')}>
+            Find your next game night <Icon name="arrow" size={18}/>
+          </Button>
+          <div className="hero-note">
+            <span className="avatar-stack"><span>LM</span><span>CR</span><span>VG</span></span>
+            <span>Good people. A growing community.</span>
+          </div>
+        </div>
+        <div className="hero-scene">
+          <GameArt type="azul"/>
+          <div className="hero-art-card">
+            <Icon name="dice" size={25}/>
+            <span>
+              TUESDAY, OCTOBER 6
+              <strong>Learn & Play: Azul</strong>
+              <small>Never played? Perfect. We’ll teach you.</small>
+            </span>
+          </div>
+          <Botanical/>
+        </div>
+      </section>
+      <div className="rhythm-row">
+        <div>
+          <span className="round-icon"><Icon name="dice" size={23}/></span>
+          <div>
+            <span className="eyebrow">TUESDAYS</span>
+            <h3>Learn something new.</h3>
+            <p>One featured game. All experience levels.</p>
+          </div>
+          <span className="rhythm-time">7:30 – 10:30 PM</span>
+        </div>
+        <div>
+          <span className="round-icon peach"><Icon name="star" size={23}/></span>
+          <div>
+            <span className="eyebrow">THURSDAYS</span>
+            <h3>Expect a little different.</h3>
+            <p>RPGs, social games, and themed evenings.</p>
+          </div>
+          <span className="rhythm-time">7:30 – 10:30 PM</span>
+        </div>
+      </div>
+      <div className="section-heading">
+        <div>
+          <span className="eyebrow">A REASON TO GET TOGETHER</span>
+          <h2>Upcoming at our table</h2>
+        </div>
+        <Tabs items={['Upcoming', 'Calendar']} value={view} onChange={setView}/>
+      </div>
+      <div className="filter-row">
+        <div className="chips">
+          {filters.map(name => (
+            <Button
+              appearance="unstyled"
+              key={name}
+              className={filter === name ? 'chip selected' : 'chip'}
+              onClick={() => setFilter(name)}
+            >
+              {name}
+            </Button>
+          ))}
+        </div>
+        <span className="meta">All times in Tegucigalpa</span>
+      </div>
+      {view === 'Upcoming' ? (
+        <div className="card-grid">
+          {events.map(item => (
+            <ActivityCard
+              key={item.id}
+              item={item}
+              status={model.seats[item.id]}
+              onOpen={() => open(item.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <section className="calendar-panel">
+          <div className="calendar-heading">
+            <Button
+              appearance="unstyled"
+              className="icon-button"
+              aria-label="Previous month"
+              onClick={() => setMonth(current => Math.max(0, current - 1))}
+              disabled={month === 0}
+            >
+              <span className="rotate"><Icon name="chevron"/></span>
+            </Button>
+            <h3>{monthLabel}</h3>
+            <Button
+              appearance="unstyled"
+              className="icon-button"
+              aria-label="Next month"
+              onClick={() => setMonth(current => Math.min(11, current + 1))}
+              disabled={month === 11}
+            >
+              <Icon name="chevron"/>
+            </Button>
+          </div>
+          <div className="calendar-grid">
+            {weekdays.map(day => <div className="weekday" key={day}>{day}</div>)}
+            {Array.from({ length: new Date(2026, month, 1).getDay() }, (_, index) => (
+              <div key={`blank${index}`} className="calendar-day blank"/>
+            ))}
+            {Array.from({ length: new Date(2026, month + 1, 0).getDate() }, (_, index) => (
+              <div className="calendar-day" key={index}>
+                <span>{index + 1}</span>
+                {shown.filter(row => new Date(row.date + 'T12:00:00').getDate() === index + 1).map(row => (
+                  <Button
+                    appearance="unstyled"
+                    key={row.id}
+                    className={`calendar-event ${row.special ? 'lavender' : row.category === 'Learn & Play' ? 'sage' : 'peach'}`}
+                    onClick={() => open(row.id)}
+                  >
+                    <b>{row.title}</b>
+                    <small>{formatTime(row.time)}</small>
+                  </Button>
+                ))}
+              </div>
+            ))}
+          </div>
+          {shown.length === 0 && (
+            <Empty title="A little space for what’s next">
+              Our {new Date(2026, month).toLocaleDateString('en-US', { month: 'long' })} evenings
+              haven’t been announced. Browse October for our current gatherings.
+            </Empty>
+          )}
+        </section>
+      )}
+      <section className="season-banner">
+        <div>
+          <Tag tone="peach">SOMETHING SPECIAL</Tag>
+          <h2>An evening with a twist.</h2>
+          <p>
+            Costumes, curious clues, and a table full of suspects.<br/>
+            {formatDate('2026-10-31')} · Separate ticket required
+          </p>
+          <Button appearance="ghost" className="text-button" onClick={() => open('halloween')}>
+            Discover our Halloween gathering <Icon name="arrow" size={18}/>
+          </Button>
+        </div>
+        <GameArt type="mystery"/>
+      </section>
+      {!model.member && (
+        <div className="membership-strip">
+          <Icon name="leaf" size={32}/>
+          <div>
+            <h3>More tables. More friends.</h3>
+            <p>Unlock member-hosted games, our private community, and more for L300/month.</p>
+          </div>
+          <Button appearance="primary" className="button" onClick={membership}>Become a Member</Button>
+        </div>
+      )}
+    </>
+  )
 }
