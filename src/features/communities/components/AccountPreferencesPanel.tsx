@@ -3,7 +3,7 @@ import { Icon } from '../../../components/ui'
 import type { MockModel } from '../../../mock/useMockState'
 import { useState } from 'react'
 
-export function ProfilePreferences({ model, onSupport }: { model: MockModel; onSupport: () => void }) {
+export function AccountPreferencesPanel({ model, onSupport }: { model: MockModel; onSupport: () => void }) {
  const preferences = model.preferences
  const setPreferences = model.setPreferences
  const [saved, setSaved] = useState(false)

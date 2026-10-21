@@ -81,6 +81,7 @@ it('places account tabs above the contents and keeps the summary only on Overvie
   await navigate('account-settings')
   expect(document.querySelector('.profile-summary')).toBeNull()
   expect(screen.getByRole('heading', { name: 'My Premium Features' })).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: 'Make yourself comfortable' })).toBeNull()
   expect(screen.getByRole('link', { name: 'Explore Premium Features' }).getAttribute('href')).toBe('/account/premium-features')
   await navigate('my-home')
   expect(document.querySelector('.profile-summary')).toBeNull()
@@ -88,6 +89,9 @@ it('places account tabs above the contents and keeps the summary only on Overvie
   await navigate('profile')
   expect(screen.getByRole('button', { name: 'Membership & Settings' })).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Ana M.' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Membership & Settings' }))
+  expect(screen.getByRole('heading', { name: 'Make yourself comfortable' })).toBeTruthy()
+  expect(screen.getByRole('switch', { name: /Share my activity history/ })).toBeTruthy()
 })
 
 it('places sign out in the breadcrumb header', async () => {

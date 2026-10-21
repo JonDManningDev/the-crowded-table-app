@@ -24,7 +24,6 @@ export function UserAccountPage({ page }: { page: Page }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
-  const [support, setSupport] = useState(false)
   const profile = { ...model.profile, name: account.displayName || 'Your account', bio: account.bio || 'Add a little about yourself.', location: 'Location coming soon' }
   const tab = tabs[routes.indexOf(page)] || 'Overview'
   const signedOutMessage = { Overview: 'Sign in to see your account.', 'My Home': 'Sign in to review your activity feed.', 'My Communities': 'Sign in to see your communities.', Settings: 'Sign in to manage your account settings.' }[tab]
@@ -39,9 +38,8 @@ export function UserAccountPage({ page }: { page: Page }) {
     {tab === 'Overview' && <AccountOverviewTab profile={profile} onEdit={editUnavailable ? undefined : () => { setError(''); setEditing(true) }}/>}
     {tab === 'My Home' && <MyHomeTab/>}
     {tab === 'My Communities' && <MyCommunitiesTab previewName={previewCommunity.name} previewLocation={previewCommunity.location}/>}
-    {tab === 'Settings' && <AccountSettingsTab model={model} onSupport={() => setSupport(true)}/>}
+    {tab === 'Settings' && <AccountSettingsTab/>}
     {editing && <Modal title="Edit your account profile" onClose={() => { if (!busy) setEditing(false) }}><form className="form" onSubmit={async event => { event.preventDefault(); if (busy || editUnavailable) return; const values = new FormData(event.currentTarget); const name = String(values.get('name')).trim(); if (!name) { setError('Enter a display name.'); return } setBusy(true); setError(''); try { if (!account.saveProfile) throw new Error('Sign in to save your account profile.'); await account.saveProfile(name, String(values.get('bio'))); setEditing(false); setSaved(true) } catch (failure) { setError(failure instanceof Error ? failure.message : 'Unable to save your profile.') } finally { setBusy(false) } }}><label>Display name<input name="name" required maxLength={80} defaultValue={account.displayName} disabled={busy}/></label><label>About me<textarea name="bio" maxLength={2000} defaultValue={account.bio} disabled={busy}/></label>{(error || editUnavailable) && <p role="alert">{error || editUnavailable}</p>}<Button appearance="primary" type="submit" loading={busy} className="button" disabled={busy || Boolean(editUnavailable)}>{busy ? 'Saving…' : 'Save my profile'}</Button></form></Modal>}
-    {support && <Modal title="Account support" onClose={() => setSupport(false)}><p>Account support is coming soon. This placeholder does not send a message.</p></Modal>}
     </div>}
   </div>
 }

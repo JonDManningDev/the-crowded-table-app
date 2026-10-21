@@ -1,0 +1,12 @@
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+/* The action footer owns its separation from the preceding list. */
+.premiumList:global(.premium-feature-list) {
+  margin-bottom: 0;
+}
