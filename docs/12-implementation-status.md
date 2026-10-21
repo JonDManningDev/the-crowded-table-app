@@ -202,3 +202,9 @@ Verification: all 26 existing navigation tests, production build and lint pass. 
 Moved the remaining sidebar, brand, location, motto and responsive navigation rules from App.css to app/layout/Sidebar.module.css. Removed global sidebar hooks from Sidebar.tsx and scoped its Botanical override explicitly. Preserved values, selector specificity and the 1200/950/700px breakpoints. Removed unused legacy brand-the, brand-period and account-button rules after confirming they have no consumers. Shared primitive styling and shell content offsets remain shared.
 
 Verification: all 26 existing navigation tests, production build and lint pass; the existing shared-bundle warning remains. Source/cascade comparison only; no new live visual verification. No route, authentication, data, deployment or database changes.
+
+## Shared Footer extraction — 2026-10-21
+
+Extracted the existing footer into app/layout/Footer.tsx with Footer.module.css. Preserved its position within App content, shared leaf icon, wording, decorative colors, spacing and mobile stacking. Removed the corresponding global footer rules from App.css; post-card footers are unaffected.
+
+Verification: all 26 existing navigation tests, production build, lint and whitespace checks pass. The existing shared-bundle size warning remains. Source comparison only; no new live visual verification. No route, authentication, data, deployment or database changes.

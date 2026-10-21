@@ -8,6 +8,7 @@ import { LazyContent } from './app/LazyContent'
 import { Sidebar, MobilePersonalNavigation } from './app/layout/Sidebar'
 import { pageAt, navigation } from './app/navigation'
 import { Topbar } from './app/layout/Topbar'
+import { Footer } from './app/layout/Footer'
 import './App.css'
 
 const ActivityDialog = lazy(() => import('./components/Activity').then(module => ({
@@ -81,10 +82,7 @@ export default function App() {
             <LazyContent resetKey={location.pathname}>
               <Outlet context={{ model, open: setActivity, membership: () => setMembership(true) }}/>
             </LazyContent>
-            <footer>
-              <span><Icon name="leaf" size={16}/> Good games bring good people together.</span>
-              <span>PLAY WELL. BELONG ALWAYS.</span>
-            </footer>
+            <Footer/>
           </div>
         </main>
       </div>

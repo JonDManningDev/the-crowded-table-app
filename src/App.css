@@ -668,29 +668,6 @@
   color:var(--text-heading-color);
 }
 
-footer {
-  border-top:1px solid var(--line);
-  margin-top:44px;
-  padding:23px 0 28px;
-  display:flex;
-  justify-content:space-between;
-  color:#929886;
-  gap:10px;
-}
-
-footer span:first-child {
-  font-family:var(--serif);
-  font-size:17px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-footer span:last-child {
-  font-size:8px;
-  letter-spacing:2px;
-}
-
 .meet-banner {
   position:relative;
   overflow:hidden;
@@ -2890,22 +2867,6 @@ dialog::backdrop {
 
   .membership-strip .button {
     margin:0;
-  }
-
-  footer {
-    flex-direction:column;
-    gap:15px;
-    margin-top:32px;
-    align-items:center;
-    text-align:center;
-  }
-
-  footer span:first-child {
-    font-size:17px;
-  }
-
-  footer span:last-child {
-    font-size:7px;
   }
 
   .meet-banner .eyebrow {

@@ -1,5 +1,7 @@
 # Application file structure and client refactor
 
+Footer extraction (2026-10-21): `app/layout/Footer.tsx` renders the shared footer in the existing App content position. Its colocated `Footer.module.css` owns the decorative text, border, spacing and mobile stacking rules previously in App.css. The footer continues to use the shared Icon primitive.
+
 Sidebar style ownership (2026-10-21): `app/layout/Sidebar.module.css` now owns all sidebar-specific presentation, including brand/location/motto, account area and desktop/tablet/mobile rules. Sidebar.tsx uses only module classes for these elements. Shared primitives (Avatar, Botanical, NavItem) retain their shared base styles; the module scopes its Botanical positioning override. App.css retains main-content offsets, which belong to the application shell.
 
 Implemented layout extraction (2026-10-21): `app/layout/Topbar.tsx` owns the shared breadcrumb, community preview controls, notification trigger, profile link and AccountActions composition. Its colocated `Topbar.module.css` owns top-bar presentation and responsive rules. App supplies route labels, preview values and callbacks; preview/dialog state and route effects remain in App. Shared Avatar and AccountActions retain their own presentation responsibilities.
