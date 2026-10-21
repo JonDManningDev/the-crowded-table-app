@@ -16,7 +16,7 @@ export function PremiumFeaturesPanel() {
   const account = useAccount()
   return (
     <section className="panel">
-      <h2>My Premium Features</h2>
+      <h2 data-heading="card">My Premium Features</h2>
       <p className="muted">
         Your subscriptions will appear here, each with a Manage link to its feature settings.
       </p>

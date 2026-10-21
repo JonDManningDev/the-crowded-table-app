@@ -20,10 +20,10 @@ export function ProfileOverview({
     <>
       <section className="panel">
         <span className="eyebrow">A LITTLE INTRODUCTION</span>
-        <h2>About me</h2>
+        <h2 data-heading="card">About me</h2>
         <p className="description">{profile.bio}</p>
         <div className="section-heading">
-          <h3>At the table, I’m…</h3>
+          <h3 data-heading="subsection">At the table, I’m…</h3>
           {onEdit && (
             <Button appearance="ghost" className="text-button" onClick={onEdit}>
               Edit <Icon name="arrow" size={16}/>
@@ -46,7 +46,7 @@ export function ProfileOverview({
         </span>
         <div>
           <span className="eyebrow">YOUR CIRCLE IS GROWING</span>
-          <h2>
+          <h2 data-heading="card">
             18 different people.<br/>So many shared stories.
           </h2>
           <p>
@@ -57,14 +57,14 @@ export function ProfileOverview({
       </section>
       <section className="panel">
         <div className="section-heading">
-          <h2>A few favorite games</h2>
+          <h2 data-heading="card">A few favorite games</h2>
           <Icon name="dice"/>
         </div>
         <div className="favorites">
           {favorites.map(game => (
             <div key={game.name}>
               <GameArt type={game.art}/>
-              <h3>{game.name}</h3>
+              <h3 data-heading="item">{game.name}</h3>
             </div>
           ))}
         </div>

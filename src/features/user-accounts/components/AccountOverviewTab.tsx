@@ -15,7 +15,7 @@ export function AccountOverviewTab({
         <section className="panel profile-summary">
           <Botanical/>
           <Avatar name={profile.name.slice(0, 1)} large tone="peach"/>
-          <h2>{profile.name}</h2>
+          <h2 data-heading="card">{profile.name}</h2>
           <span className="location">
             <Icon name="pin" size={15}/>
             {profile.location}

@@ -3,7 +3,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 24px;
+  margin-top: var(--account-stack-gap);
 }
 
 /* The action footer owns its separation from the preceding list. */

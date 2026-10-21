@@ -19,7 +19,7 @@ export function MyCommunitiesTab({
     <li className={styles.preview}>
       <div>
         <span className="eyebrow">SAMPLE COMMUNITY</span>
-        <h2>{previewName}</h2>
+        <h2 data-heading="card">{previewName}</h2>
         <p className="account-metadata">
           <Icon name="pin" size={15}/>
           {previewLocation}

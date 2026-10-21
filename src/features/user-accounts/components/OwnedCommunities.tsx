@@ -65,7 +65,7 @@ export function OwnedCommunities({
       ) : error ? (
         <>
           <p role="alert" className="auth-error">{error}</p>
-          <Button appearance="unstyled" onClick={retry}>Try again</Button>
+          <Button appearance="outline" onClick={retry}>Try again</Button>
         </>
       ) : (
         !rows.length && <p>You haven’t created a community yet.</p>
@@ -78,7 +78,7 @@ export function OwnedCommunities({
             <li key={row.id}>
               <div>
                 <span className="eyebrow">YOUR COMMUNITY</span>
-                <h2>{row.name}</h2>
+                <h2 data-heading="card">{row.name}</h2>
                 <p className="account-metadata">{row.slug} · Owner · {status}</p>
                 <p className="account-metadata">{place} · {row.timezone}</p>
               </div>

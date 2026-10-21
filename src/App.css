@@ -1843,8 +1843,8 @@ footer span:last-child {
   height:63px
 }
 
-.connection-panel h2 {
-  font-size:28px!important
+.profile-layout .connection-panel h2 {
+  font-size:28px
 }
 
 .connection-panel p {

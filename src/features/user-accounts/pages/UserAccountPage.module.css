@@ -33,3 +33,46 @@
   line-height: var(--text-eyebrow-leading);
   color: var(--text-eyebrow-color);
 }
+
+/* Containers own stack spacing, including both fetched and sample cards. */
+.page[data-account-page] :global(.profile-layout) > div,
+.page[data-account-page] :global(.account-settings),
+.page[data-account-page] :global(.community-list) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--account-stack-gap);
+}
+
+.page[data-account-page] :global(.profile-layout) > div > :global(.panel),
+.page[data-account-page] :global(.account-settings) > :global(.panel),
+.page[data-account-page] :global(.community-list),
+.page[data-account-page] :global(.community-list) > li {
+  margin: 0;
+}
+
+/* Visual roles are independent of the semantic heading level. */
+.page[data-account-page] :global(.page-heading) h1 {
+  font-size: var(--heading-page-size);
+  line-height: var(--heading-title-leading);
+}
+.page[data-account-page] [data-heading="hero"] {
+  font-size: var(--heading-hero-size);
+  line-height: var(--heading-title-leading);
+}
+.page[data-account-page] [data-heading="card"] {
+  font-size: var(--heading-card-size);
+  line-height: var(--heading-content-leading);
+}
+.page[data-account-page] [data-heading="subsection"] {
+  font-size: var(--heading-subsection-size);
+  line-height: var(--heading-content-leading);
+}
+.page[data-account-page] [data-heading="item"] {
+  font-size: var(--heading-item-size);
+  line-height: var(--heading-content-leading);
+}
+@media (max-width: 700px) {
+  .page[data-account-page] :global(.page-heading) h1 {
+    font-size: var(--heading-page-small-size);
+  }
+}

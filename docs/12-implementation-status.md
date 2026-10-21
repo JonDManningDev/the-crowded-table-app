@@ -162,3 +162,15 @@ Verification: production build and lint pass; existing bundle-size warning remai
 Applied accepted shared spacing tokens: 20px vertical padding for personal discovery settings, community preferences and premium-feature rows; 5px between each label and block metadata. Existing standalone community-card padding and account action-footer separation remain unchanged. The style guide now records these as accepted rules rather than proposals, under Panel and Row Spacing.
 
 Verification: production build and lint pass; existing bundle-size warning remains. Source inspection confirmed all current setting-row and premium-feature-list consumers use the shared tokens. No live browser verification, deployment or database changes performed.
+
+## Account-tab styling consistency — 2026-10-21
+
+Applied the four approved review recommendations: outline retry action; direct body/metadata tokens in My Home/My Communities with unused standalone-page styles removed; shared 24px stack gaps/18px multi-column grid gaps; and the shared action footer on My Home, with its preceding paragraph margin removed. Overview main-panel stacks, Settings panels, and fetched/sample community cards now let their parent own separation without trailing/sample-specific margins. My Home uses 24px when its grid collapses to one column. Heading sizes, decorative colors and specialized profile-summary composition are unchanged; heading-role standardization remains a discussion item.
+
+Verification: production build and lint pass; whitespace checks pass. Source/CSS inspection only, no live browser visual verification. Existing bundle-size warning remains. No deployment or database changes.
+
+## Account heading roles — 2026-10-21
+
+Applied the accepted role scale with shared tokens and explicit heading-role attributes to Overview, My Home, My Communities (fetched and sample headings) and Settings panels. The shared account page title is 48px/1.1, 36px at widths up to 700px; hero stays responsive 36–54px/1.1. Card, subsection and item headings are 30px, 24px and 20px respectively, all at 1.2. Preserved semantic heading levels, heading color, layout margins and decorative text. Removed obsolete local size rules and replaced the legacy connection-heading !important with sufficient normal specificity so account roles can override it while community Profile keeps its prior styling.
+
+Verification: production build and lint pass; whitespace and heading-role source checks pass. Actual-font multiline visual review, mobile rendering and zoom checks have not been performed; the guide now defines their acceptance criteria. Existing bundle-size warning remains. No deployment/database changes.

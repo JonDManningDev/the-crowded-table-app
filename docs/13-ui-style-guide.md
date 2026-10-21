@@ -319,10 +319,32 @@ Recommended implementation details, not additional approved UI decisions: connec
 
 ### Account panel actions
 
-Account Settings panel footers use a shared AccountPanel CSS Module: 24px between the preceding content/divider and the action row, 12px between actions, and wrapping when needed. The footer owns this separation; preceding list bottom margins must not add a second gap. This implements the requested Save/Explore spacing consistency. Button/ActionLink internal padding and height continue to use the existing shared controls; panel padding remains governed by the card baseline.
+Account card-ending actions, including Settings panel footers and the My Home hero, use a shared AccountPanel CSS Module: 24px between the preceding content/divider and the action row, 12px between actions, and wrapping when needed. The footer owns this separation; preceding list bottom margins must not add a second gap. This implements the requested Save/Explore spacing consistency. Button/ActionLink internal padding and height continue to use the existing shared controls; panel padding remains governed by the card baseline.
 
 ### Settings and comparable list rows
 
 Accepted 2026-10-21: use 20px vertical padding for comparable settings/list rows and a 5px gap between the label and its secondary metadata. Metadata is displayed as a block below the label. Consume shared tokens --settings-row-padding-block and --label-metadata-gap instead of component-specific values.
 
 Apply this pattern to personal discovery settings, community preferences, and premium-feature rows. Preserve existing horizontal layout, control sizing, typography, colors and divider treatment. Standalone community cards retain the separate card-padding rule; these are not internal settings rows. Preserve intentional differences such as a placeholder notice or a Manage link versus a switch.
+
+
+### Account stacks and local role styling — accepted 2026-10-21
+
+Use 24px between vertically stacked sections/cards and 18px between cards in a multi-column grid. A grid that becomes a single-column stack uses 24px. Use shared spacing tokens; parent containers own gaps, and card children do not add sample-specific or trailing margins. Keep specialized Overview summary composition and decorative text unchanged.
+
+My Communities retry uses the shared outline action appearance. My Home and My Communities consume approved text-role tokens directly rather than relying on page overrides to hide obsolete colors. Remove unused standalone-page styles. Heading roles are now settled by the heading scale below; semantic HTML hierarchy is unchanged.
+
+
+### Heading roles — accepted 2026-10-21
+
+Choose HTML heading levels for document hierarchy, independently of visual role. Use explicit data-heading roles and shared size/leading tokens within account pages; never choose a heading element just to obtain a font size. Retain Libre Caslon Display and the approved heading color.
+
+| Visual role | Size | Line height | Account examples |
+| --- | --- | --- | --- |
+| Page | 48px; 36px at viewport widths up to 700px | 1.1 | My Account |
+| Hero | clamp(36px, 4vw, 54px) | 1.1 | All your tables, in one place |
+| Card/section | 30px | 1.2 | About me, profile name, community names, Settings panels, My Home cards |
+| Subsection | 24px | 1.2 | At the table, I'm; My Home placeholder headings |
+| Item | 20px | 1.2 | Favorite game names |
+
+Multiline review criteria: load the actual serif font before judging; check two/three-line headings, accents and descenders for collisions/clipping, long user names/community names for overflow, and wrapping for readable phrase groups without unnecessary forced breaks or an isolated short final word. Judge line cohesion separately from margins between heading and surrounding content. Check 360/390px mobile, tablet and desktop widths plus breakpoint boundaries, 200% browser zoom and increased user text spacing. No text should be lost, overlap controls, or require horizontal scrolling. Uneven wrapping in editable names is preferable to truncating essential text. Existing deliberate hero line breaks may remain but must survive narrow screens. These are review criteria, not a claim of completed visual QA or a reason to automatically change the agreed sizes.

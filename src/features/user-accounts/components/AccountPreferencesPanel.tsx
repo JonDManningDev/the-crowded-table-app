@@ -49,7 +49,7 @@ export function AccountPreferencesPanel({ userId }: { userId: string }) {
   }
   return (
     <section className="panel">
-      <h2>Discovery preferences</h2>
+      <h2 data-heading="card">Discovery preferences</h2>
       <p className="muted">
         Save your preferences for global search and matchmaking as these features take shape.
         Sharing your profile through a community is a separate community setting. These choices

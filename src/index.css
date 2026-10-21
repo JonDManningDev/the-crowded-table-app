@@ -15,6 +15,14 @@
   --text-meta-leading:1.8;
   --text-eyebrow-size:9px;
   --text-eyebrow-leading:1.6;
+  --heading-page-size:48px;
+  --heading-page-small-size:36px;
+  --heading-hero-size:clamp(36px, 4vw, 54px);
+  --heading-card-size:30px;
+  --heading-subsection-size:24px;
+  --heading-item-size:20px;
+  --heading-title-leading:1.1;
+  --heading-content-leading:1.2;
   --text-heading-color:#173f32;
   --text-body-color:#53644f;
   --text-meta-color:#6b665e;
@@ -22,6 +30,8 @@
   --card-bg:#fffef9;
   --card-padding:27px;
   --card-radius:9px;
+  --account-stack-gap:24px;
+  --account-grid-gap:18px;
   --settings-row-padding-block:20px;
   --label-metadata-gap:5px;
   --control-radius:6px;

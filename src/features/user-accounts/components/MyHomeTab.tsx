@@ -2,6 +2,7 @@ import { ActionLink } from '../../../components/primitives/Controls'
 import { pagePaths } from '../../../app/navigation'
 import { Icon } from '../../../components/ui'
 import styles from './MyHomeTab.module.css'
+import panelStyles from './AccountPanel.module.css'
 
 const sections = [
   {
@@ -34,7 +35,7 @@ export function MyHomeTab() {
       <section className={styles.welcome} aria-labelledby="welcome-title">
         <div>
           <span className={styles.label}>WELCOME HOME</span>
-          <h2 id="welcome-title">
+          <h2 id="welcome-title" data-heading="hero">
             All your tables,<br/><em>in one place.</em>
           </h2>
           <p>
@@ -42,9 +43,9 @@ export function MyHomeTab() {
             your communities, your next games, and a little inspiration for what
             to play next.
           </p>
-          <ActionLink className="button" to={pagePaths['my-communities']}>
+          <div className={panelStyles.actions}><ActionLink className="button" to={pagePaths['my-communities']}>
             My Communities <Icon name="arrow" size={18}/>
-          </ActionLink>
+          </ActionLink></div>
         </div>
         <div className={styles.illustration} aria-hidden="true">
           <Icon name="people" size={76}/>
@@ -60,10 +61,10 @@ export function MyHomeTab() {
               </span>
               <span className={styles.soon}>Coming soon</span>
             </div>
-            <h2>{section.title}</h2>
+            <h2 data-heading="card">{section.title}</h2>
             <p>{section.description}</p>
             <div className={styles.placeholder}>
-              <h3>{section.empty}</h3>
+              <h3 data-heading="subsection">{section.empty}</h3>
               <p>{section.detail}</p>
             </div>
           </section>
