@@ -12,12 +12,12 @@ export function Sidebar({ member, community }: { member: boolean; community: Com
   const account = useAccount()
   const accountName = account.displayName || 'Your account'
   return (
-    <aside className={`sidebar ${styles.sidebar}`} aria-label="Community and account">
-      <Link className={`brand ${styles.brand}`} to={pagePaths['community-home']}>
+    <aside className={styles.sidebar} aria-label="Community and account">
+      <Link className={styles.brand} to={pagePaths['community-home']}>
         <span>{community.name}</span>
         <small>{community.subtitle}</small>
       </Link>
-      <div className="community-location">
+      <div className={styles.location}>
         <Icon name="pin" size={15}/>
         {community.location}
       </div>
@@ -32,8 +32,8 @@ export function Sidebar({ member, community }: { member: boolean; community: Com
           </NavItem>
         ))}
       </nav>
-      <div className="sidebar-bottom">
-        <div className={`sidebar-quote ${styles.quote}`}>
+      <div className={styles.bottom}>
+        <div className={styles.quote}>
           <Botanical/>
           <p>{community.motto}</p>
         </div>

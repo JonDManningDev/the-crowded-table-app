@@ -1,13 +1,13 @@
 import { Button } from './components/primitives/Controls'
-import { Link, Outlet, useLocation } from 'react-router'
+import { Outlet, useLocation } from 'react-router'
 import { lazy, useEffect, useLayoutEffect, useState } from 'react'
 import { useMockState } from './mock/useMockState'
 import { previewCommunity } from './mock/data'
-import { Avatar, Icon, Modal } from './components/ui'
+import { Icon, Modal } from './components/ui'
 import { LazyContent } from './app/LazyContent'
 import { Sidebar, MobilePersonalNavigation } from './app/layout/Sidebar'
-import { pageAt, pagePaths, navigation } from './app/navigation'
-import { AccountActions } from './features/auth/AccountActions'
+import { pageAt, navigation } from './app/navigation'
+import { Topbar } from './app/layout/Topbar'
 import './App.css'
 
 const ActivityDialog = lazy(() => import('./components/Activity').then(module => ({
@@ -65,44 +65,16 @@ export default function App() {
       </a>
       <Sidebar member={model.member} community={previewCommunity}/>
       <div className="main-wrap">
-        <header className="topbar">
-          <span className="breadcrumb">
-            {personal ? 'Your space' : previewCommunity.name}
-            <span>/</span>
-            <strong>{pageLabel}</strong>
-          </span>
-          <div className="topbar-actions">
-            {!personal && (
-              <div className="topbar-actions">
-                <div className="preview-mode">
-                  <span>Preview as</span>
-                  <Button
-                    appearance="unstyled"
-                    onClick={switchMode}
-                    aria-label={`Switch to ${model.member ? 'guest' : 'member'} preview`}
-                  >
-                    <span className={`dot ${!model.member ? 'rust' : ''}`}/>
-                    {model.member ? 'Member' : 'Guest'}
-                    <Icon name="chevron" size={13}/>
-                  </Button>
-                </div>
-                <Button
-                  appearance="unstyled"
-                  className="icon-button notification-button"
-                  onClick={() => setNotifications(true)}
-                  aria-label="Open community notifications"
-                >
-                  <Icon name="bell"/>
-                  {model.notices.length > 0 && <span/>}
-                </Button>
-                <Link className="top-avatar" aria-label="Open your community profile" to={pagePaths.profile}>
-                  <Avatar name={model.profile.name}/>
-                </Link>
-              </div>
-            )}
-            <AccountActions/>
-          </div>
-        </header>
+        <Topbar
+          personal={personal}
+          pageLabel={pageLabel}
+          communityName={previewCommunity.name}
+          member={model.member}
+          profileName={model.profile.name}
+          hasNotices={model.notices.length > 0}
+          onSwitchMode={switchMode}
+          onOpenNotifications={() => setNotifications(true)}
+        />
         <MobilePersonalNavigation/>
         <main id="main-content" tabIndex={-1}>
           <div className="content">

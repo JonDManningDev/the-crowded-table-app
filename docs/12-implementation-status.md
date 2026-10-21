@@ -188,3 +188,17 @@ Verification: build, lint and whitespace checks pass; the existing shared-bundle
 Extended the established account roles through Community Home, Meet & Play, Championship, Discussion, community Profile, authentication, community creation, shared activity cards and dialogs/forms. Replaced legacy body/metadata/eyebrow declarations with shared tokens, standardized page/hero/card/subsection/item sizes and leading, and removed redundant responsive overrides. Shared defaults now cover body copy and headings, with explicit hero roles. Cards use the off-white surface, padding and radius tokens; comparable internal rows use 20px vertical padding and 5px metadata separation. Shared card footers own 24px separation; stacks/grids consume the existing spacing tokens. Mobile headers stack actions, tabs wrap, and form text stays 16px. Calendar content scrolls inside its panel instead of shrinking labels. Preserved decorative quotes, brand/artwork, selection/feedback colors, and mock behaviors; explicitly protected inline errors from ordinary panel paragraph colors.
 
 Verification: 65 existing tests pass. Production build and lint pass; existing approximately 519 KB shared-JavaScript bundle warning remains. Live visual checks: desktop Home, Championship and Discussion; mobile Discussion, Meet & Play, community Profile, table-creation dialog, sign-in and community-creation forms; tablet Home/calendar. Measured mobile Meet & Play and tablet Home had no document-level horizontal overflow. Forms were inspected without submitting. Actual 200% zoom, every modal/state combination, and backend writes were not tested. No hosting deployment, migrations or account-data changes. Deferred business features and feedback infrastructure remain deferred.
+
+
+## Shared Topbar extraction — 2026-10-21
+
+Extracted the existing App header into app/layout/Topbar.tsx with Topbar.module.css. Moved the breadcrumb, action-group, preview control, notification badge, avatar-link and responsive styles out of App.css. Generic icon-button/dot styles remain for other consumers; Topbar owns its local equivalents. Preserved personal/community differences, AccountActions authentication behavior, preview callbacks, notification dialog ownership and profile navigation.
+
+Verification: all 26 existing navigation tests, production build and lint pass. The existing shared-bundle size warning remains. CSS rules and breakpoints were compared against the extracted source; no new live visual or authentication-write verification was performed. No deployment or database changes.
+
+
+## Sidebar CSS Module completion — 2026-10-21
+
+Moved the remaining sidebar, brand, location, motto and responsive navigation rules from App.css to app/layout/Sidebar.module.css. Removed global sidebar hooks from Sidebar.tsx and scoped its Botanical override explicitly. Preserved values, selector specificity and the 1200/950/700px breakpoints. Removed unused legacy brand-the, brand-period and account-button rules after confirming they have no consumers. Shared primitive styling and shell content offsets remain shared.
+
+Verification: all 26 existing navigation tests, production build and lint pass; the existing shared-bundle warning remains. Source/cascade comparison only; no new live visual verification. No route, authentication, data, deployment or database changes.

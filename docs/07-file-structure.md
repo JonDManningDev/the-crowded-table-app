@@ -1,5 +1,9 @@
 # Application file structure and client refactor
 
+Sidebar style ownership (2026-10-21): `app/layout/Sidebar.module.css` now owns all sidebar-specific presentation, including brand/location/motto, account area and desktop/tablet/mobile rules. Sidebar.tsx uses only module classes for these elements. Shared primitives (Avatar, Botanical, NavItem) retain their shared base styles; the module scopes its Botanical positioning override. App.css retains main-content offsets, which belong to the application shell.
+
+Implemented layout extraction (2026-10-21): `app/layout/Topbar.tsx` owns the shared breadcrumb, community preview controls, notification trigger, profile link and AccountActions composition. Its colocated `Topbar.module.css` owns top-bar presentation and responsive rules. App supplies route labels, preview values and callbacks; preview/dialog state and route effects remain in App. Shared Avatar and AccountActions retain their own presentation responsibilities.
+
 Status: **current canonical client architecture direction**, recorded 2026-10-02. Updated 2026-10-03 for personal versus community navigation and 2026-10-15 for global/community profile ownership. Ownership boundaries are accepted; paths and examples below illustrate how to apply them as the client evolves. They are not a scaffold checklist or a claim about what already exists. Create directories and abstractions only when there is actual code to put in them.
 
 The [frontend patterns](05-frontend-patterns.md) define the decisions and recommended conventions. This document owns the illustrative structure, current implementation inventory, and refactor sequence. Open choices are tracked in the [decision register](08-decisions-and-open-questions.md#client-architecture-review-questions).
