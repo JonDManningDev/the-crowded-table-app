@@ -4,6 +4,12 @@ This guide establishes canonical UI patterns for The Crowded Table. Each UI face
 
 Frontend architecture remains in [frontend patterns](05-frontend-patterns.md); implementation and deployment evidence remains in [implementation status](12-implementation-status.md).
 
+## Application-wide scope — accepted 2026-10-21
+
+Apply the account-established text roles, heading scale, off-white card surfaces, card padding/corners, 24px section stacks, 18px multi-column grids, 20px internal row padding, 5px label-to-metadata spacing and 24px action-footer separation throughout the app. Page/hero leading is 1.1; other heading leading is 1.2. Choose visual heading roles by purpose, independently of semantic HTML level. Mobile page actions sit below heading copy, and layouts wrap without a document minimum width.
+
+Preserve decorative quotes, brand marks, illustration colors, chart/map geometry, and semantic success/error/selection treatments. Input text remains 16px on mobile to avoid focus zoom; inputs and navigation/action labels are distinct from body copy. Dense calendars and data tables may scroll within their own containers rather than compress text below the role sizes. This styling pass does not implement deferred billing, toast infrastructure, authorization or other domain behavior.
+
 ## Navigation, Links, and Buttons
 
 ### Objective

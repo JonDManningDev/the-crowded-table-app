@@ -1,14 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Libre+Caslon+Display&display=swap');
 :root {
   font-family:'DM Sans',sans-serif;
-  color:#253e34;
+  color:var(--text-body-color);
   background:#f8f7f2;
   font-synthesis:none;
   text-rendering:optimizeLegibility;
   -webkit-font-smoothing:antialiased;
   font-weight:400;
-  font-size:14px;
-  line-height:1.6;
+  font-size:var(--text-body-size);
+  line-height:var(--text-body-leading);
   --text-body-size:13px;
   --text-body-leading:1.8;
   --text-meta-size:11px;
@@ -113,32 +113,38 @@ h1,h2,h3 {
   font-family:var(--serif);
   font-weight:400;
   color:var(--ink);
-  line-height:1.12
+  line-height:var(--heading-content-leading)
 }
 
 h1 {
-  font-size:49px;
+  font-size:var(--heading-page-size);
+  line-height:var(--heading-title-leading);
   letter-spacing:-1px;
   margin-bottom:14px
 }
 
 h2 {
-  font-size:34px;
+  font-size:var(--heading-card-size);
   margin-bottom:15px;
   letter-spacing:-.5px
 }
 
 h3 {
-  font-size:25px;
+  font-size:var(--heading-subsection-size);
   margin-bottom:10px
 }
 
 p {
+  font-size:var(--text-body-size);
+  line-height:var(--text-body-leading);
+  color:var(--text-body-color);
   margin-bottom:16px
 }
 
 small {
-  font-size:12px
+  font-size:var(--text-meta-size);
+  line-height:var(--text-meta-leading);
+  color:var(--text-meta-color)
 }
 
 strong {
@@ -155,7 +161,7 @@ input,select,textarea {
   border-radius:7px;
   padding:11px 13px;
   background:#fffefa;
-  color:#253e34;
+  color:var(--text-body-color);
   min-width:0
 }
 

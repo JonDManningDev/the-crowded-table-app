@@ -102,7 +102,7 @@ export function Heading({
     <div className="page-heading">
       <div>
         <div className="eyebrow">{eyebrow}</div>
-        <h1>{title}</h1>
+        <h1 data-heading="page">{title}</h1>
         {children && <p>{children}</p>}
       </div>
       {action}
@@ -140,7 +140,7 @@ export function Empty({ title, children }: { title: string; children: ReactNode 
   return (
     <div className="empty">
       <Icon name="leaf" size={32}/>
-      <h3>{title}</h3>
+      <h3 data-heading="subsection">{title}</h3>
       <p>{children}</p>
     </div>
   )
@@ -179,7 +179,7 @@ export function Modal({
       }}
     >
       <div className="modal-header">
-        <h2 id={titleId}>{title}</h2>
+        <h2 data-heading="card" id={titleId}>{title}</h2>
         <Button appearance="unstyled" className="icon-button" aria-label="Close dialog" onClick={onClose}>
           <Icon name="close"/>
         </Button>

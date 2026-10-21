@@ -61,7 +61,7 @@ export function Championship({ model }: { model: MockModel }) {
       <section className="champ-hero">
         <div>
           <Tag tone="gold">OCTOBER 2026 CHAMPIONSHIP</Tag>
-          <h2>All aboard<br/>for good company.</h2>
+          <h2 data-heading="hero">All aboard<br/>for good company.</h2>
           <p>Build routes. Explore new cities. Meet your next favorite opponent.</p>
           <div className="champ-game">Ticket to Ride <span>October 1 – 24</span></div>
           <Button appearance="secondary" className="button light" onClick={openResult}>

@@ -96,7 +96,7 @@ export function Community({ model }: { model: MockModel }) {
       <div className="community-hero">
         <div>
           <span className="eyebrow">YOUR LITTLE CORNER OF TEGUCIGALPA</span>
-          <h2>Come for a game.<br/>Stay for the people.</h2>
+          <h2 data-heading="hero">Come for a game.<br/>Stay for the people.</h2>
         </div>
         <p>
           Ask a question. Share a favorite.<br/>

@@ -37,7 +37,7 @@ export function Home({
       <section className="home-hero">
         <div className="hero-copy">
           <span className="eyebrow">OCTOBER AT THE CROWDED TABLE</span>
-          <h2>A small table.<br/>A world of connection.</h2>
+          <h2 data-heading="hero">A small table.<br/>A world of connection.</h2>
           <p>
             New games, familiar smiles, and friends you haven’t met yet. Your next good evening
             starts here.

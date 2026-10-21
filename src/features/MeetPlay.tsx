@@ -41,7 +41,7 @@ export function MeetPlay({ model, open }: { model: MockModel; open: (id: string)
       <section className="meet-banner">
         <div>
           <span className="eyebrow">GOOD PEOPLE FIND GREAT GAMES HERE</span>
-          <h2>Your next favorite group<br/>starts with a hello.</h2>
+          <h2 data-heading="hero">Your next favorite group<br/>starts with a hello.</h2>
           <p>Homes, cafés, a sunny afternoon. There’s more than one way to gather.</p>
         </div>
         <div className="match-callout">
