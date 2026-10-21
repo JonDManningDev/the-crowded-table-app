@@ -144,3 +144,21 @@ Remaining candidates: separating Auth form presentation from its eager session c
 Renamed/moved AccountPage to user-accounts/pages/UserAccountPage.tsx with its CSS Module. Extracted the four requested tab components under user-accounts/components, moved My Home/My Communities styles, AccountPreferences and its tests, OwnedCommunities, and the existing ProfileOverview/ProfilePreferences presenters there. Updated the community Profile imports without changing its separate data/state. Shared primitives and visuals remain shared as clarified by the user. PremiumFeaturesPage now has its own page file/lazy import; old account/home/community-page entry files and embedded mode were removed. Existing account URLs, gating, profile editor behavior, placeholders and owner-list fetching remain intact.
 
 Verification: all 65 tests pass, including account tab composition, signed-out/session-loading states, profile draft/error behavior, discovery preferences, owner-list behavior, community preview, navigation/history and Auth callbacks. Production build and lint pass. Entry bundle remains approximately 519.19 KB / 152.99 KB gzip with the existing warning. UserAccountPage is deferred; it no longer imports the whole community Profile module, only the extracted presenters. No manual browser visual verification, hosted deployment or database changes are claimed. README and current architecture/file-structure guidance now reflect the implemented ownership; older implementation entries remain historical evidence.
+
+## Account and community preferences panels — 2026-10-21
+
+Renamed user-accounts/components/AccountPreferences and its test to AccountPreferencesPanel. Extracted the My Premium Features markup unchanged into PremiumFeaturesPanel. AccountSettingsTab now composes only the persisted discovery panel and premium placeholder panel. Moved ProfilePreferences to communities/components/AccountPreferencesPanel and updated community Profile to use it. Removed unused personal support state/dialog and Settings props; community support and preferences behavior are retained. Shared ProfileOverview remains reused with separate profile state.
+
+Verification: 65 tests pass, including updated navigation assertions that the community preferences panel is absent from personal Settings and present under community Membership & Settings. Existing discovery persistence tests pass under the renamed file. Production build, lint and whitespace checks pass; existing bundle-size warning remains. Documentation/README reflect current ownership. No hosted deployment, database change or manual browser verification performed.
+
+## Account Settings action spacing — 2026-10-21
+
+Fixed Save discovery preferences sitting flush against the last settings divider. Both it and Explore Premium Features now use the same AccountPanel.module.css action row with 24px top separation and 12px action gap. Removed the premium list bottom margin within this panel so the action row owns the gap. Shared button dimensions, panel padding and functionality are unchanged. Source review also found differing settings/premium row padding (20px versus 16px) and metadata label spacing (no explicit gap versus 5px); the style guide records proposed rules for review rather than applying unapproved adjustments.
+
+Verification: production build and lint pass; existing bundle-size warning remains. CSS/markup reviewed against the supplied screenshot; no live browser or authenticated write verification performed. No deployment/database changes.
+
+## Consistent settings-row rhythm — 2026-10-21
+
+Applied accepted shared spacing tokens: 20px vertical padding for personal discovery settings, community preferences and premium-feature rows; 5px between each label and block metadata. Existing standalone community-card padding and account action-footer separation remain unchanged. The style guide now records these as accepted rules rather than proposals, under Panel and Row Spacing.
+
+Verification: production build and lint pass; existing bundle-size warning remains. Source inspection confirmed all current setting-row and premium-feature-list consumers use the shared tokens. No live browser verification, deployment or database changes performed.

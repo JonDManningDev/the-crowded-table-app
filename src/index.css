@@ -22,6 +22,8 @@
   --card-bg:#fffef9;
   --card-padding:27px;
   --card-radius:9px;
+  --settings-row-padding-block:20px;
+  --label-metadata-gap:5px;
   --control-radius:6px;
   --control-height:43px;
   --control-transition:.18s;

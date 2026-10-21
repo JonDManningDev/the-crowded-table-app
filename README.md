@@ -41,7 +41,7 @@ After signing in with a verified account, choose **Start New Community** in the 
 
 ## Account implementation and deployment
 
-Global display name/bio and the two discovery preferences persist through verified-caller commands. Account Overview alone shows the profile summary. Other overview statistics/interests/games, notification preferences, premium subscriptions and the Explore Premium Features destination remain explicit placeholders. `/community/preview/profile` still edits the sample community profile in memory, separately from the global profile.
+Global display name/bio and the two discovery preferences persist through verified-caller commands. Account Overview alone shows the profile summary. Other overview statistics/interests/games, premium subscriptions and the Explore Premium Features destination remain explicit placeholders. `/community/preview/profile` still edits the sample community profile in memory, separately from the global profile.
 
 All five migration versions through `20261016000200` were applied to local and hosted testing Supabase (`fsnipgsrlclbnfepcbvz`). Hosted migration history matched and the post-deployment dry run was empty on 2026-10-16. Frontend changes are local source/build work; no frontend hosting deployment was performed. See the [implementation audit](docs/12-implementation-status.md) for verification and remaining scope.
 
@@ -63,7 +63,7 @@ These paths describe the current implementation. The [canonical client architect
 - `src/app/layout/`: community sidebar and personal navigation.
 - `src/features/`: community Home/events, Meet & Play, Championship, Discussion (legacy `Community.tsx`), and community Profile.
 - `src/features/Auth.tsx`, `CreateCommunity.tsx`: real authentication flows and community creation.
-- `src/features/user-accounts/pages/`: UserAccountPage and PremiumFeaturesPage; `components/`: AccountOverviewTab, MyHomeTab, MyCommunitiesTab, AccountSettingsTab and their account-specific children (including OwnedCommunities and AccountPreferences).
+- `src/features/user-accounts/pages/`: UserAccountPage and PremiumFeaturesPage; `components/`: AccountOverviewTab, MyHomeTab, MyCommunitiesTab, AccountSettingsTab and their account-specific children (including OwnedCommunities, AccountPreferencesPanel and PremiumFeaturesPanel).
 - `src/features/auth/accountContext.ts`: safe account summary for application UI, separate from the mock community profile.
 - `src/lib/`: Supabase setup/generated schema types and current tenant-creation helpers (domain helpers are a refactor candidate).
 - `src/mock/`: typed sample data, in-memory state/actions, date formatting.

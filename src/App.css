@@ -1948,7 +1948,7 @@ footer span:last-child {
   align-items:center;
   justify-content:space-between;
   gap:20px;
-  padding:20px 0;
+  padding:var(--settings-row-padding-block) 0;
   border-bottom:1px solid var(--line)
 }
 
@@ -1958,6 +1958,8 @@ footer span:last-child {
 }
 
 .setting-row small {
+  display:block;
+  margin-top:var(--label-metadata-gap);
   font-size:10px;
   color:#8e987e
 }
@@ -3554,8 +3556,8 @@ dialog::backdrop {
 .profile-summary h2 { overflow-wrap: anywhere; }
 
 .premium-feature-list { list-style: none; padding: 0; margin: 24px 0; }
-.premium-feature-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); }
-.premium-feature-list small { display: block; color: var(--muted); margin-top: 5px; }
+.premium-feature-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: var(--settings-row-padding-block) 0; border-bottom: 1px solid var(--line); }
+.premium-feature-list small { display: block; color: var(--muted); margin-top: var(--label-metadata-gap); }
 
 .account-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
 .community-list { list-style: none; padding: 0; margin: 0; }

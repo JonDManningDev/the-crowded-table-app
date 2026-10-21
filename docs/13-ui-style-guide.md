@@ -314,3 +314,15 @@ Show field-specific text beside the input, associated accessibly with the field.
 This is contextual recovery, not a second permanent notification stack. Proposed lifecycle: retain unresolved failures while the affected UI is present; clear or update the message when the operation succeeds or the relevant validation error is corrected. Exact clearing behavior and presentation remain under discussion. Network failures without an API response need a defined representation in the future error contract; do not fabricate a response code.
 
 Recommended implementation details, not additional approved UI decisions: connect field messages using aria-describedby and aria-invalid, preserve normal help text, map server field errors to the same presentation, and consider a summary for forms with multiple errors. Final feedback colors, layout and components remain open.
+
+## Panel and Row Spacing
+
+### Account panel actions
+
+Account Settings panel footers use a shared AccountPanel CSS Module: 24px between the preceding content/divider and the action row, 12px between actions, and wrapping when needed. The footer owns this separation; preceding list bottom margins must not add a second gap. This implements the requested Save/Explore spacing consistency. Button/ActionLink internal padding and height continue to use the existing shared controls; panel padding remains governed by the card baseline.
+
+### Settings and comparable list rows
+
+Accepted 2026-10-21: use 20px vertical padding for comparable settings/list rows and a 5px gap between the label and its secondary metadata. Metadata is displayed as a block below the label. Consume shared tokens --settings-row-padding-block and --label-metadata-gap instead of component-specific values.
+
+Apply this pattern to personal discovery settings, community preferences, and premium-feature rows. Preserve existing horizontal layout, control sizing, typography, colors and divider treatment. Standalone community cards retain the separate card-padding rule; these are not internal settings rows. Preserve intentional differences such as a placeholder notice or a Manage link versus a switch.

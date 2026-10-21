@@ -179,7 +179,7 @@ Shared-bundle follow-up (2026-10-20): GameArt now lives in components/GameArt.ts
 
 ## Implemented user-account structure — 2026-10-20
 
-UserAccountPage replaces the flat AccountPage. It owns the shared heading/navigation, auth gate, account mock-state lifetime and global editor/support state, and imports the four tabs. Current source layout:
+UserAccountPage replaces the flat AccountPage. It owns the shared heading/navigation, auth gate, account mock-state lifetime and global editor state, and imports the four tabs. Current source layout:
 
 ```text
 src/features/user-accounts/
@@ -194,12 +194,12 @@ src/features/user-accounts/
     MyCommunitiesTab.tsx
     MyCommunitiesTab.module.css
     AccountSettingsTab.tsx
-    AccountPreferences.tsx
-    AccountPreferences.test.tsx
+    AccountPreferencesPanel.tsx
+    AccountPreferencesPanel.test.tsx
     OwnedCommunities.tsx
     ProfileOverview.tsx
-    ProfilePreferences.tsx
+    PremiumFeaturesPanel.tsx
   api.ts
 ```
 
-The tab modules replace the old MyHomePage/MyCommunitiesPage files and no longer need standalone-page/embedded variants. Shared primitives/visuals remain in src/components by explicit user clarification. ProfileOverview/ProfilePreferences are the existing stateless/stateful presenters moved intact; the community Profile page imports them too, passing its separate mock profile/preferences. UserAccountPage does not import the community Profile page. OwnedCommunities retains its existing Supabase read and stylesheet dependency; moving that data access and shared legacy CSS is a later concern, not part of this structural change. PremiumFeaturesPage has its own lazy route module. All URLs are unchanged.
+The tab modules replace the old MyHomePage/MyCommunitiesPage files and no longer need standalone-page/embedded variants. Shared primitives/visuals remain in src/components by explicit user clarification. ProfileOverview is reused by the community Profile page with its separate mock profile. The community preferences presenter now lives at features/communities/components/AccountPreferencesPanel.tsx; personal Settings uses only its own persisted discovery AccountPreferencesPanel and PremiumFeaturesPanel. UserAccountPage does not import the community Profile page. OwnedCommunities retains its existing Supabase read and stylesheet dependency; moving that data access and shared legacy CSS is a later concern, not part of this structural change. PremiumFeaturesPage has its own lazy route module. All URLs are unchanged.
