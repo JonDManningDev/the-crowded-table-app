@@ -2,7 +2,7 @@ import { Button } from '../../../components/primitives/Controls'
 import { useEffect, useState, type ReactNode } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Database } from '../../../lib/database.types'
-import '../../CreateCommunity.css'
+import styles from './OwnedCommunities.module.css'
 
 type Tenant = Pick<
   Database['public']['Tables']['tenants']['Row'],
@@ -70,12 +70,12 @@ export function OwnedCommunities({
       ) : (
         !rows.length && <p>You haven’t created a community yet.</p>
       )}
-      <ul className="owned-communities community-list">
+      <ul className="community-list">
         {rows.map(row => {
           const place = [row.city, row.state_province, row.country_code].filter(Boolean).join(', ')
           const status = row.operational_status === 'archived' ? 'Archived' : 'Active'
           return (
-            <li key={row.id}>
+            <li key={row.id} className={styles.card}>
               <div>
                 <span className="eyebrow">YOUR COMMUNITY</span>
                 <h2 data-heading="card">{row.name}</h2>

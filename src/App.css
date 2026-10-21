@@ -2937,10 +2937,6 @@ dialog::backdrop {
 }
 
 @media(max-width:700px) {
-  body {
-    min-width:360px
-  }
-
   .sidebar {
     inset:auto 0 0;
     width:100%;
@@ -2969,7 +2965,10 @@ dialog::backdrop {
     gap:4px;
     padding:9px 6px;
     font-size:8px;
-    min-width:55px
+    min-width:0;
+    flex:1;
+    overflow-wrap:anywhere;
+    text-align:center
   }
 
   .sidebar nav a svg {

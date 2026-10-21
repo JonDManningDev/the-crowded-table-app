@@ -1,4 +1,11 @@
 /* Scope legacy shared components to account pages without changing community profiles. */
+.page { min-width: 0; overflow-wrap: anywhere; }
+.page[data-account-page] > :global(.tabs) { flex-wrap: wrap; }
+.page[data-account-page] :global(.community-list) > li > div { min-width: 0; }
+.page[data-account-page] :global(.section-heading),
+.page[data-account-page] :global(.setting-row),
+.page[data-account-page] :global(.premium-feature-list) > li { flex-wrap: wrap; }
+.page[data-account-page] :global(.favorites) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 90px), 1fr)); }
 .page[data-account-page] p:not(:where(:global(.profile-quote), :global(.profile-side-note) > p)),
 .page[data-account-page] :global(.panel) p:not(:where(:global(.profile-quote))),
 .page[data-account-page] :global(.notice),
@@ -72,6 +79,8 @@
   line-height: var(--heading-content-leading);
 }
 @media (max-width: 700px) {
+  .page[data-account-page] :global(.page-heading) { flex-direction: column; }
+  .page[data-account-page] :global(.page-heading) > button { flex-shrink: 0; }
   .page[data-account-page] :global(.page-heading) h1 {
     font-size: var(--heading-page-small-size);
   }

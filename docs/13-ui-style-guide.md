@@ -317,6 +317,10 @@ Recommended implementation details, not additional approved UI decisions: connec
 
 ## Panel and Row Spacing
 
+### Narrow account layouts — accepted 2026-10-21
+
+Do not impose a minimum document width. Account navigation and card contents must reflow within the available width, including zoom-reduced viewports. Allow tabs and comparable rows to wrap rather than hiding overflow or shrinking text. At mobile widths (up to 700px), place account header actions below the heading copy. Standalone community cards use card padding, never the internal-list-row padding rule; remove obsolete standalone-list styling rather than overriding it again.
+
 ### Account panel actions
 
 Account card-ending actions, including Settings panel footers and the My Home hero, use a shared AccountPanel CSS Module: 24px between the preceding content/divider and the action row, 12px between actions, and wrapping when needed. The footer owns this separation; preceding list bottom margins must not add a second gap. This implements the requested Save/Explore spacing consistency. Button/ActionLink internal padding and height continue to use the existing shared controls; panel padding remains governed by the card baseline.
