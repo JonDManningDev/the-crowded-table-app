@@ -8,7 +8,6 @@
 .page[data-account-page] :global(.favorites) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 90px), 1fr)); }
 .page[data-account-page] p:not(:where(:global(.profile-quote), :global(.profile-side-note) > p)),
 .page[data-account-page] :global(.panel) p:not(:where(:global(.profile-quote))),
-.page[data-account-page] :global(.notice),
 .page[data-account-page] :global(.setting-row) strong,
 .page[data-account-page] :global(.premium-feature-list) strong {
   font-size: var(--text-body-size);
@@ -17,7 +16,6 @@
 
 /* Keep decorative copy and feedback outside the ordinary paragraph palette. */
 .page[data-account-page] p:not(:where(:global(.profile-quote), :global(.profile-side-note) > p, [role="alert"], [role="status"], :global(.auth-error))),
-.page[data-account-page] :global(.notice),
 .page[data-account-page] :global(.setting-row) strong,
 .page[data-account-page] :global(.premium-feature-list) strong {
   color: var(--text-body-color);

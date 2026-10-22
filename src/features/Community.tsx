@@ -1,3 +1,6 @@
+import styles from './Community.module.css'
+import { GuidanceNote } from '../components/shared/GuidanceNote'
+import { Notice } from '../components/primitives/Notice'
 import { Button } from '../components/primitives/Controls'
 import { useState } from 'react'
 import type { MockModel } from '../mock/useMockState'
@@ -422,9 +425,10 @@ export function Community({ model }: { model: MockModel }) {
             <p>Tegucigalpa · Member since September 2026</p>
             <p className="description">{person.bio}</p>
             <div className="tags">{person.interests.map(interest => <Tag key={interest}>{interest}</Tag>)}</div>
-            <div className="notice">
-              <Icon name="people"/>
-              Get to know each other at a shared table. Conversations happen in your confirmed table’s chat.
+            <div className={styles.guidance}>
+              <GuidanceNote icon={<Icon name="people"/>}>
+                Get to know each other at a shared table. Conversations happen in your confirmed table’s chat.
+              </GuidanceNote>
             </div>
           </div>
         </Modal>
@@ -439,10 +443,10 @@ export function Community({ model }: { model: MockModel }) {
           <GameArt type={place.art} className="small-art"/>
           <p>{place.text}</p>
           <p className="muted">{place.area}</p>
-          <div className="notice">
-            <Icon name="pin"/>
+          <Notice variant="caution">
+
             This is a sample place for exploring the design, not a verified venue listing.
-          </div>
+          </Notice>
         </Modal>
       )}
     </>

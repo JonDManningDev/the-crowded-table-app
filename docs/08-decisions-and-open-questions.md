@@ -274,3 +274,26 @@ D-122 narrow-layout follow-up (2026-10-21): remove the document's 360px minimum 
 
 D-122 application-wide styling (2026-10-21): extend the account-established typography/color roles, heading scale, off-white card treatment, stack/grid spacing, row rhythm and responsive header patterns to the remaining pages and shared components. Preserve decorative/illustration treatments and semantic feedback states. Mobile form input text remains 16px; dense calendar/table content may scroll within its own container. This authorizes presentation cleanup, not implementation of deferred business features.
 D-122 CSS ownership refinement (2026-10-21): begin the accepted App.css cleanup with App layout and existing shared UI components. Colocated modules own their base and responsive styles; preserve page-specific overrides and presentation during incremental migration. Shared tokens and typography utilities remain global. Temporary global hooks for unmigrated feature overrides are compatibility boundaries, not global ownership of component base styles.
+
+D-122 Community Home CSS migration (2026-10-22): move Home-only hero, rhythm, filters, calendar and banners with their responsive rules to Home.module.css, preserving appearance and mock behavior. Shared primitives, activity cards, grids and typography remain shared. Verify member/guest previews and Upcoming/Calendar at mobile, tablet and desktop widths.
+
+D-122 filter-chip standardization (2026-10-22): accepted the reviewed FilterChip pattern and Home integration, with dedicated state tokens, 12px/1.6 labels, minimum 36px height, 8px wrapping group gaps, checkmark plus aria-pressed selection, shared focus ring, and parent-owned 24px results separation. Verify readability before completion. Callouts remain pending separate review.
+
+D-122 content-pattern definitions (2026-10-22): accepted Promotional banner, Featured-activity card (events or tables), Hero feature panel, Insight card and Guidance note definitions recorded in the style guide, replacing the generic Callout proposal. Notice remains the information-only contextual-message family; subclasses/visual emphasis are under discussion. Component implementation, responsive line-limit treatment, precise date styling and notice variants remain pending. No billing or new data-visibility behavior is authorized.
+
+
+D-122 content-pattern confirmation (2026-10-22): approved featured dates at 13px/1.8, weight 600, heading green; special callouts on a separate metadata row; all pattern line counts as wrapping-friendly layout targets rather than truncation limits; Notice variants informational, positive, pending and caution. Shared-table advice becomes Guidance note; unfinished-feature placeholders use informational Notice without a separate variant. These supersede the corresponding open items in the preceding checkpoint. Exact notice palette/icon details and component implementation remain pending.
+
+
+D-122 Notice implementation approval (2026-10-22): approved the four notice palettes, fixed semantic icons for positive/pending/caution, optional contextual informational icons, 20px first-line-aligned icons and 10px gap. Implement shared Notice across existing examples, preserving independent announcement/lifecycle behavior and reclassifying shared-table advice as guidance. Verify readability and responsive layouts.
+
+
+D-122 PromotionalBanner implementation (2026-10-22): authorized shared compact promotional banner and replacement of the Community Home membership strip. Preserve guest-only visibility and the existing mock unlock dialog action; no payment implementation. Optional icon/description, required heading/action, no eyebrow, and wrapping-friendly line targets follow the accepted style guide. Parent owns external spacing.
+
+D-122 FeaturedActivityCard implementation (2026-10-22): authorized shared presentation for events or tables and replacement of Community Home seasonal card. Required category tag, heading, date and details-modal action; optional description, special-callout metadata and image. Use accepted date emphasis and wrapping targets; preserve the existing mock activity dialog. No new domain or payment behavior.
+
+D-122 HeroFeaturePanel implementation (2026-10-22): authorized shared hero feature shortcut and replacement of Meet & Play matchmaking example. Optional icon, required heading/action and optional multiline description; caller retains feature state and dialog behavior. Shared styles own panel content, parent owns hero placement/divider. No new matchmaking backend or permission behavior.
+
+D-122 InsightCard implementation (2026-10-22): authorized shared informational insight with required category icon, mood eyebrow, heading and description. Replace the shared ProfileOverview example used by account and community profiles. Preserve sample metrics and existing visibility; no new data access. Line counts remain wrapping targets; parent controls stack/grid placement.
+
+D-122 GuidanceNote implementation (2026-10-22): authorized shared succinct policy/rule guidance with optional icon and required body, no heading or eyebrow. Replace Meet & Play etiquette and community member-dialog guidance. Preserve content and behavior; no new policy or permissions. Parent owns stack spacing; shared module owns dashed-note presentation.

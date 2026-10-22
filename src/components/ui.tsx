@@ -5,6 +5,9 @@ import type { ReactNode } from 'react'
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, ReactNode> = {
+    info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10h.01"/></>,
+    'check-circle': <><circle cx="12" cy="12" r="9"/><path d="m7 12 3 3 7-7"/></>,
+    warning: <><path d="m12 3 10 18H2zM12 9v5m0 3h.01"/></>,
     home: <><path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/></>,
     people: (
       <>

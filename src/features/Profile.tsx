@@ -1,3 +1,4 @@
+import { Notice } from '../components/primitives/Notice'
 import { ProfileOverview } from './user-accounts/components/ProfileOverview'
 import { AccountPreferencesPanel } from './communities/components/AccountPreferencesPanel'
 import { Button } from '../components/primitives/Controls'
@@ -264,11 +265,11 @@ export function ProfilePage({
                 <Tag key={interest}>{interest}</Tag>
               ))}
             </div>
-            {preferences.history && <div className="notice">12 events attended · 3 tables hosted</div>}
-            <div className="notice">
-              <Icon name="lock"/>
+            {preferences.history && <Notice icon={false}>12 events attended · 3 tables hosted</Notice>}
+            <Notice icon="lock">
+
               Visible to community members. Membership settings and private contact details stay private.
-            </div>
+            </Notice>
           </div>
         </Modal>
       )}

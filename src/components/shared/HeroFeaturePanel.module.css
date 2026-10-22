@@ -1,0 +1,25 @@
+.panel { min-width: 0; overflow-wrap: anywhere; }
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #d8e0cd;
+  color: var(--text-body-color);
+  margin-bottom: 10px;
+}
+.heading {
+  margin: 0;
+  font-size: var(--heading-subsection-size);
+  line-height: var(--heading-content-leading);
+  color: var(--text-heading-color);
+}
+.description {
+  margin: 10px 0 0;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-leading);
+  color: var(--text-body-color);
+}
+.action { margin-top: var(--account-stack-gap); }

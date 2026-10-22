@@ -358,3 +358,64 @@ Choose HTML heading levels for document hierarchy, independently of visual role.
 | Item | 20px | 1.2 | Favorite game names |
 
 Multiline review criteria: load the actual serif font before judging; check two/three-line headings, accents and descenders for collisions/clipping, long user names/community names for overflow, and wrapping for readable phrase groups without unnecessary forced breaks or an isolated short final word. Judge line cohesion separately from margins between heading and surrounding content. Check 360/390px mobile, tablet and desktop widths plus breakpoint boundaries, 200% browser zoom and increased user text spacing. No text should be lost, overlap controls, or require horizontal scrolling. Uneven wrapping in editable names is preferable to truncating essential text. Existing deliberate hero line breaks may remain but must survive narrow screens. These are review criteria, not a claim of completed visual QA or a reason to automatically change the agreed sizes.
+
+## Filter chips — accepted 2026-10-22
+
+FilterChip is a native button for filtering displayed content, not route navigation or a metadata tag. Use 12px/1.6 control text at weight 500, a pill shape, 12px horizontal padding and a minimum 36px height. Labels may wrap; groups wrap with 8px gaps and an accessible group label. The parent owns 24px separation from results.
+
+Use dedicated filter tokens: off-white default surface with body-color text and the shared line border; pale-green selected surface with heading-color text and a visible checkmark. Selected/unselected hover backgrounds remain distinct. Use the shared focus ring with a 4px offset, native disabled behavior, and aria-pressed for selection. Keep chip width stable across selection: unselected labels are centered with the 20px checkmark-and-gap allowance split equally into horizontal padding (22px per side). Selected chips use 12px per side around the centered icon-and-label group. Do not leave an invisible leading icon that offsets unselected labels. Home allows exactly one active category; reselecting it preserves the selection and All evenings resets the filter. Multi-select behavior may later compose the same controlled chip; it is not added to Home.
+
+The implementation must verify text/readability in normal, hover, selected and selected-hover states and responsive wrapping. Callout recommendations remain proposals and are excluded from this change.
+
+Filter-chip palette and verification (2026-10-22): default #fffef9/#53644f; hover #ecefe5/#53644f; selected #e6ebdc/#173f32; selected hover #dbe3cf/#173f32 (background/text). Text contrast is respectively 6.30:1, 5.46:1, 9.64:1 and 8.87:1. The shared #ad704c focus ring contrasts 3.77:1 against the page and 4.00:1 against the card surface. The subtle line border is decorative; text, grouping and the selected checkmark convey the control and state. Disabled controls retain native semantics and reduced opacity; contrast values above describe enabled states, not a full accessibility certification.
+
+## Purpose-specific content patterns — accepted definitions, 2026-10-22
+
+These definitions replace the proposed generic Callout abstraction. Implementation is incremental; see the implementation-status document for completed components. Shared text, card and control tokens still apply. Line counts are normal-layout targets, not truncation limits. Allow wrapping at narrow widths, with enlarged text and for long dynamic content; do not clip essential titles or descriptions. Detailed visual variants remain to be settled where noted.
+
+### Promotional banner
+
+Concisely advertises a currently locked in-app product that the user can unlock, usually but not always through payment. Optional leading icon; required one-row heading; optional one-row description; required unlocking action. No eyebrow. Implement only the current compact variant when authorized; small/large variants remain future possibilities. This presentation definition does not authorize billing implementation or reinstate legacy paid community access gates.
+
+Implemented as `components/shared/PromotionalBanner.tsx` with a colocated CSS Module. The compact presentation uses shared off-white card background, padding and radius, a 24px/1.2 subsection heading, body description, and an 18px internal gap. The parent owns external spacing. Use a shared Button or navigation control for the required action; the caller owns unlock behavior and visibility. At narrow widths the action moves below the icon/copy, and text wraps without truncation. The optional icon is decorative alongside the text. Semantic heading level is configurable independently of visual size. Community Home retains its guest-only mock membership promotion and existing preview dialog.
+
+### Featured-activity card
+
+Supports an event or table. Required prominent category tag (interest, game type or another category), required one-row heading, optional one-row description, required date, optional short special callouts such as Separate ticket required, and a required action below the content that opens the associated activity details modal. Optional image area at the right. Date uses 13px/1.8, weight 600 and heading green (#173f32), distinct from regular-weight body-green description text. Place special callouts on a separate row using the established secondary metadata role. No eyebrow is specified; the tag supplies category context.
+
+Implementation (2026-10-22): `components/shared/FeaturedActivityCard.tsx` and its CSS Module supply the shared presentation. The caller supplies the shared Tag, display date, action label and details-modal callback, plus optional description, special-callout text and image. A 30px/1.2 card heading is independent of semantic heading level. Use shared card background/border/padding/radius, a 24px action-footer gap and parent-owned 24px separation from surrounding stacked content. Artwork occupies the right 35% on larger screens; at 700px and below it moves beneath the copy into a 130px-high area. Preserve wrapping rather than enforcing line counts. Domain data, permissions and dialog state remain outside the presenter.
+
+### Hero feature panel
+
+A shortcut/invitation to an app feature within a hero. Optional icon, required heading, optional multiline description, followed by an action button related to the feature. Use destination/action semantics according to the existing navigation rules.
+
+Implementation (2026-10-22): `components/shared/HeroFeaturePanel.tsx` and its CSS Module own the content presentation. Use a 24px/1.2 subsection heading, body-role description, optional decorative 38px circular icon treatment and 24px action-footer gap. Heading level is configurable independently of visual size. Supply a shared Button for a local action or ActionLink for navigation. Text wraps naturally without forced line breaks. The parent owns placement, width and any divider within the hero; Meet & Play stacks the panel beneath the hero introduction at 950px and below. Feature state and modal behavior stay with the caller.
+
+### Insight card
+
+Informational only, concerning something concrete such as a metric, activity or calendar date. Scope can be personal, community-wide, app-wide or authorized information about another user's activity. Required category icon, required mood/idea eyebrow, required one- or two-line heading, and required one- or two-line description. Supports standalone or grid placement; full-width layout is not mandatory. This does not authorize new data visibility or access rules.
+
+Implementation (2026-10-22): `components/shared/InsightCard.tsx` and its CSS Module own this informational presentation. The typed API requires icon, eyebrow, heading and description and exposes no action slot. Use shared off-white card background, border, padding and radius, a 30px/1.2 heading, eyebrow and body role tokens. The category icon is decorative alongside text, in the existing 63px sage circle; content uses a 21px internal gap. Content-driven flex wrapping places the icon above copy when space is limited, including narrow grid columns. Heading level is independent of visual size. Do not hard-code line breaks or truncate to enforce line targets. Parent containers own external spacing and grid placement; the shared profile example uses 24px stacked gaps. Sample statistics remain placeholders.
+
+### Guidance note
+
+Succinct suggestions or instructions concerning policies/rules, in community or app-wide contexts. Optional icon and required note body. No eyebrow or heading.
+
+Implementation (2026-10-22): `components/shared/GuidanceNote.tsx` and GuidanceNote.module.css provide a required plain-text body and optional decorative icon, without heading, eyebrow, action or live-region behavior. Preserve the existing transparent surface, 1px dashed #cdd6bf border and 8px radius, with 25px/35px padding (20px at 700px and below). Body uses 13px/1.8 and #53644f; an 18px gap separates a nonshrinking icon aligned with the first line. Body text is left-aligned and wraps naturally. Parent modules own 24px stack separation. This is static editorial guidance, distinct from Notice's contextual states and error recovery.
+
+### Notice — accepted semantic variants, 2026-10-22
+
+A simple, information-only item supplying succinct additional information within a larger context. Review all existing notice usages under this definition, including contextual explanations, championship dates, reservation state and action feedback. Use one Notice component with semantic variants: informational (context/explanation, including championship dates and private-address explanations), positive (confirmed/favorable state or outcome, including confirmed seats), pending (unresolved state, including host approval and waitlists), and caution (information warranting care, including an unverified sample venue). Variant palette and icon rules are approved below. Existing toast/inline recovery requirements remain in force. A notice's visual variant must not automatically determine live announcements or expiry behavior.
+
+Accepted classification refinements: “Get to know each other at a shared table…” belongs to Guidance note. Unfinished-feature placeholders use informational Notice; do not introduce a permanent placeholder variant.
+
+Notice palette and icon requirements are settled below. Earlier generic-callout size/spacing proposals were not approved by accepting these purpose-specific definitions.
+
+
+#### Notice palette and icons — accepted 2026-10-22
+
+All notice bodies use 13px/1.8 and body color #53644f. Informational: background #eef0eb, icon #6b665e; optional circled information icon by default, with contextual icons such as calendar or lock permitted. Positive: background #e8ede3, icon #224c3a, required circled check. Pending: background #eeeaf2, icon #665578, required static clock. Caution: background #f6ecd9, icon #805b24, required warning triangle. Positive/pending/caution icons cannot be omitted or substituted. Use subtle shared-line borders.
+
+Icons are 20px outlines, nonshrinking, aligned to the first text line, with 10px separation from the body. Omit the slot entirely when informational icons are disabled. Wording must communicate meaning without color or icons; hide redundant icons from assistive technology. Visual variant does not automatically set an alert/live region or expiry; callers preserve appropriate existing announcement behavior.
+
+Calculated body/icon contrast respectively: informational 5.54/4.96, positive 5.34/8.16, pending 5.35/5.64, caution 5.42/5.21 (ratios to 1). Verify rendered text and wrapping as well as palette contrast.

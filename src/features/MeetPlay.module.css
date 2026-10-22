@@ -1,0 +1,17 @@
+.guidance { margin-top: var(--account-stack-gap); }
+.feature {
+  position: relative;
+  z-index: 1;
+  flex: 0 1 300px;
+  min-width: 0;
+  border-left: 1px solid #cfd8c1;
+  padding-left: 30px;
+}
+@media (max-width: 950px) {
+  .feature {
+    border-left: 0;
+    border-top: 1px solid #cfd8c1;
+    padding: var(--account-stack-gap) 0 0;
+    margin-top: var(--account-stack-gap);
+  }
+}

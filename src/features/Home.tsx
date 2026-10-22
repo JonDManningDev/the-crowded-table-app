@@ -1,3 +1,7 @@
+import styles from './Home.module.css'
+import { FeaturedActivityCard } from '../components/shared/FeaturedActivityCard'
+import { PromotionalBanner } from '../components/shared/PromotionalBanner'
+import { FilterChip, FilterChipGroup } from '../components/primitives/FilterChip'
 import { Button } from '../components/primitives/Controls'
 import { formatDate, formatTime } from '../mock/format'
 import { useState } from 'react'
@@ -34,8 +38,8 @@ export function Home({
       >
         Pull up a chair. Find your people. Make a little room for play.
       </Heading>
-      <section className="home-hero">
-        <div className="hero-copy">
+      <section className={styles['home-hero']}>
+        <div className={styles['hero-copy']}>
           <span className="eyebrow">OCTOBER AT THE CROWDED TABLE</span>
           <h2 data-heading="hero">A small table.<br/>A world of connection.</h2>
           <p>
@@ -45,14 +49,14 @@ export function Home({
           <Button appearance="primary" className="button" onClick={() => open('azul')}>
             Find your next game night <Icon name="arrow" size={18}/>
           </Button>
-          <div className="hero-note">
-            <span className="avatar-stack"><span>LM</span><span>CR</span><span>VG</span></span>
+          <div className={styles['hero-note']}>
+            <span className={styles['avatar-stack']}><span>LM</span><span>CR</span><span>VG</span></span>
             <span>Good people. A growing community.</span>
           </div>
         </div>
-        <div className="hero-scene">
+        <div className={styles['hero-scene']}>
           <GameArt type="azul"/>
-          <div className="hero-art-card">
+          <div className={styles['hero-art-card']}>
             <Icon name="dice" size={25}/>
             <span>
               TUESDAY, OCTOBER 6
@@ -63,7 +67,7 @@ export function Home({
           <Botanical/>
         </div>
       </section>
-      <div className="rhythm-row">
+      <div className={styles['rhythm-row']}>
         <div>
           <span className="round-icon"><Icon name="dice" size={23}/></span>
           <div>
@@ -71,7 +75,7 @@ export function Home({
             <h3>Learn something new.</h3>
             <p>One featured game. All experience levels.</p>
           </div>
-          <span className="rhythm-time">7:30 – 10:30 PM</span>
+          <span className={styles['rhythm-time']}>7:30 – 10:30 PM</span>
         </div>
         <div>
           <span className="round-icon peach"><Icon name="star" size={23}/></span>
@@ -80,7 +84,7 @@ export function Home({
             <h3>Expect a little different.</h3>
             <p>RPGs, social games, and themed evenings.</p>
           </div>
-          <span className="rhythm-time">7:30 – 10:30 PM</span>
+          <span className={styles['rhythm-time']}>7:30 – 10:30 PM</span>
         </div>
       </div>
       <div className="section-heading">
@@ -90,19 +94,18 @@ export function Home({
         </div>
         <Tabs items={['Upcoming', 'Calendar']} value={view} onChange={setView}/>
       </div>
-      <div className="filter-row">
-        <div className="chips">
+      <div className={styles['filter-row']}>
+        <FilterChipGroup label="Filter events by category">
           {filters.map(name => (
-            <Button
-              appearance="unstyled"
+            <FilterChip
               key={name}
-              className={filter === name ? 'chip selected' : 'chip'}
+              selected={filter === name}
               onClick={() => setFilter(name)}
             >
               {name}
-            </Button>
+            </FilterChip>
           ))}
-        </div>
+        </FilterChipGroup>
         <span className="meta">All times in Tegucigalpa</span>
       </div>
       {view === 'Upcoming' ? (
@@ -117,8 +120,8 @@ export function Home({
           ))}
         </div>
       ) : (
-        <section className="calendar-panel">
-          <div className="calendar-heading">
+        <section className={styles['calendar-panel']}>
+          <div className={styles['calendar-heading']}>
             <Button
               appearance="unstyled"
               className="icon-button"
@@ -126,7 +129,7 @@ export function Home({
               onClick={() => setMonth(current => Math.max(0, current - 1))}
               disabled={month === 0}
             >
-              <span className="rotate"><Icon name="chevron"/></span>
+              <span className={styles['rotate']}><Icon name="chevron"/></span>
             </Button>
             <h3>{monthLabel}</h3>
             <Button
@@ -139,19 +142,19 @@ export function Home({
               <Icon name="chevron"/>
             </Button>
           </div>
-          <div className="calendar-grid">
-            {weekdays.map(day => <div className="weekday" key={day}>{day}</div>)}
+          <div className={styles['calendar-grid']}>
+            {weekdays.map(day => <div className={styles['weekday']} key={day}>{day}</div>)}
             {Array.from({ length: new Date(2026, month, 1).getDay() }, (_, index) => (
-              <div key={`blank${index}`} className="calendar-day blank"/>
+              <div key={`blank${index}`} className={`${styles['calendar-day']} ${styles.blank}`}/>
             ))}
             {Array.from({ length: new Date(2026, month + 1, 0).getDate() }, (_, index) => (
-              <div className="calendar-day" key={index}>
+              <div className={styles['calendar-day']} key={index}>
                 <span>{index + 1}</span>
                 {shown.filter(row => new Date(row.date + 'T12:00:00').getDate() === index + 1).map(row => (
                   <Button
                     appearance="unstyled"
                     key={row.id}
-                    className={`calendar-event ${row.special ? 'lavender' : row.category === 'Learn & Play' ? 'sage' : 'peach'}`}
+                    className={`${styles['calendar-event']} ${row.special ? 'lavender' : row.category === 'Learn & Play' ? 'sage' : 'peach'}`}
                     onClick={() => open(row.id)}
                   >
                     <b>{row.title}</b>
@@ -169,28 +172,26 @@ export function Home({
           )}
         </section>
       )}
-      <section className="season-banner">
-        <div>
-          <Tag tone="peach">SOMETHING SPECIAL</Tag>
-          <h2>An evening with a twist.</h2>
-          <p>
-            Costumes, curious clues, and a table full of suspects.<br/>
-            {formatDate('2026-10-31')} · Separate ticket required
-          </p>
-          <Button appearance="ghost" className="text-button" onClick={() => open('halloween')}>
-            Discover our Halloween gathering <Icon name="arrow" size={18}/>
-          </Button>
-        </div>
-        <GameArt type="mystery"/>
-      </section>
+      <div className={styles.featuredActivity}>
+        <FeaturedActivityCard
+          tag={<Tag tone="peach">SOMETHING SPECIAL</Tag>}
+          heading="An evening with a twist."
+          description="Costumes, curious clues, and a table full of suspects."
+          date={formatDate('2026-10-31')}
+          specialCallouts="Separate ticket required"
+          actionLabel="Discover our Halloween gathering"
+          onOpen={() => open('halloween')}
+          image={<GameArt type="mystery"/>}
+        />
+      </div>
       {!model.member && (
-        <div className="membership-strip">
-          <Icon name="leaf" size={32}/>
-          <div>
-            <h3>More tables. More friends.</h3>
-            <p>Unlock member-hosted games, our private community, and more for L300/month.</p>
-          </div>
-          <Button appearance="primary" className="button" onClick={membership}>Become a Member</Button>
+        <div className={styles.promotion}>
+          <PromotionalBanner
+            icon={<Icon name="leaf" size={32}/>}
+            heading="More tables. More friends."
+            description="Unlock member-hosted games, our private community, and more for L300/month."
+            action={<Button appearance="primary" onClick={membership}>Become a Member</Button>}
+          />
         </div>
       )}
     </>

@@ -1,3 +1,4 @@
+import { Notice } from '../components/primitives/Notice'
 import { Button } from '../components/primitives/Controls'
 import { useState } from 'react'
 import type { MockModel } from '../mock/useMockState'
@@ -118,9 +119,9 @@ export function Championship({ model }: { model: MockModel }) {
               sport, and enjoy the people across the table.
             </p>
             <Botanical/>
-            <div className="notice">
-              <Icon name="star"/> Bragging rights. A little prize. A lot of belonging.
-            </div>
+            <Notice icon="star" className="championship-note">
+               Bragging rights. A little prize. A lot of belonging.
+            </Notice>
           </aside>
         </div>
       )}
@@ -231,7 +232,7 @@ export function Championship({ model }: { model: MockModel }) {
               </div>
             </div>
           ))}
-          {feedback && <div role="status" className="notice"><Icon name="check"/>{feedback}</div>}
+          {feedback && <Notice role="status" variant="positive">{feedback}</Notice>}
         </section>
       )}
       {tab === 'The Final Table' && (
@@ -244,7 +245,7 @@ export function Championship({ model }: { model: MockModel }) {
             <p>The Crowded Table · Tegucigalpa</p>
             <div className="tags"><Tag>Ticket to Ride</Tag><Tag tone="gold">Top 6 players</Tag></div>
             <p>One last game, a small surprise for our champion, and a celebration of everyone who pulled up a chair.</p>
-            <div className="notice"><Icon name="lock"/> Private address shared with confirmed finalists.</div>
+            <Notice icon="lock"> Private address shared with confirmed finalists.</Notice>
           </section>
           <section className="panel">
             <h2>The road to the final</h2>
@@ -286,7 +287,7 @@ export function Championship({ model }: { model: MockModel }) {
               ? 'Your entry is included with membership.'
               : 'L200 gives you access to this championship. Meet & Play and Community remain members-only.'}
           </p>
-          <div className="notice"><Icon name="trophy"/> Qualify October 1–24 · Final October 25</div>
+          <Notice icon="calendar"> Qualify October 1–24 · Final October 25</Notice>
           <p className="meta">
             {!model.member && 'Preview payment only; no charge will be made. '}
             All players agree to friendly play, honest results, and independent match confirmation.

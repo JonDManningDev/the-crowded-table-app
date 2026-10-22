@@ -213,3 +213,35 @@ The tab modules replace the old MyHomePage/MyCommunitiesPage files and no longer
 ### App and shared presenter style ownership (2026-10-21)
 
 `App.module.css` owns shell/content/skip-link styles. `components/ui.module.css` is colocated with the existing `ui.tsx` shared presenters (Avatar, Tag, Heading, Tabs, Empty, Modal), and `GameArt.module.css` owns artwork base styles. Account navigation reuses the tab-container module class. Temporary global component hooks support unmigrated feature overrides; they no longer own these components' base styles. Future component-file extraction should move each presenter's module rules with it. Shared tokens and typography utilities remain global; feature and remaining shared-pattern migration is incremental.
+
+### Community Home style ownership (2026-10-22)
+
+`features/Home.module.css` now owns Community Home's hero/artwork placement, avatar stack, weekly rhythm, event filter chips, calendar, seasonal banner and guest membership strip, including responsive rules. Home.tsx uses local classes; shared typography, grids, controls and ActivityCard remain shared. Scoped global selectors only target shared child visuals/controls such as GameArt, Botanical, eyebrow and button hooks. Calendar tone utilities remain shared.
+
+### Shared filter chips (2026-10-22)
+
+`components/primitives/FilterChip.tsx` exports controlled FilterChip and labeled FilterChipGroup with colocated FilterChip.module.css. Home supplies its single category state and filtering callbacks. Dedicated filter appearance tokens live in index.css; Home.module.css retains parent layout/results separation. This supersedes Home ownership of chip base styling from the previous migration milestone. Callouts remain unchanged.
+
+### Shared Notice (2026-10-22)
+
+`components/primitives/Notice.tsx` and Notice.module.css own contextual notices. Props enforce fixed positive/pending/caution icons; informational supports contextual icons or icon=false. Icon paths live in the existing shared Icon presenter. The component does not assign a live-region role by default; callers retain explicit announcements. All former .notice consumers now use Notice except shared-table advice, which uses the existing guidance-note presentation. Removed global notice rules and account overrides; the championship panel retains its local composition spacing through championship-note. Auth error/recovery paragraphs are outside this migration.
+
+### Shared PromotionalBanner (2026-10-22)
+
+`components/shared/PromotionalBanner.tsx` and PromotionalBanner.module.css own the compact promotional presentation. Home supplies its copy, optional icon, action and guest-only visibility; Home.module.css owns only the promotion's external spacing. This supersedes Home's ownership of membership-strip presentation above. No billing or membership state logic moved into the shared component.
+
+### Shared FeaturedActivityCard (2026-10-22)
+
+`components/shared/FeaturedActivityCard.tsx` and FeaturedActivityCard.module.css own the featured activity presentation, including its date/callout roles and responsive image placement. Home provides the sample data, shared Tag/GameArt and existing activity-open callback. Home.module.css now owns only the featured card's external spacing; obsolete season-banner rules were removed. This supersedes the earlier Home ownership milestone for the seasonal banner.
+
+### Shared HeroFeaturePanel (2026-10-22)
+
+`components/shared/HeroFeaturePanel.tsx` and HeroFeaturePanel.module.css own the reusable feature invitation content. MeetPlay.module.css owns its hero placement and responsive divider. Removed obsolete match-callout rules from App.css and scoped remaining hero text selectors to the introduction so they do not override the shared panel. The remainder of Meet & Play styling awaits incremental migration.
+
+### Shared InsightCard (2026-10-22)
+
+`components/shared/InsightCard.tsx` and InsightCard.module.css own informational insight presentation. ProfileOverview uses it for both account Overview and community Profile. ProfileOverview.module.css owns the three-section stack spacing, avoiding reliance on legacy panel sibling rules. Removed connection-panel styling from App.css. The shared card owns no profile data access or feature state.
+
+### Shared GuidanceNote (2026-10-22)
+
+`components/shared/GuidanceNote.tsx` and GuidanceNote.module.css own static guidance presentation. MeetPlay.module.css and Community.module.css own external spacing for the etiquette reminder and member-dialog advice. Removed obsolete community-note rules from App.css. Other community styles remain for later migration.

@@ -1,3 +1,5 @@
+import { InsightCard } from '../../../components/shared/InsightCard'
+import styles from './ProfileOverview.module.css'
 import { Button } from '../../../components/primitives/Controls'
 import { Icon, Tag } from '../../../components/ui'
 import type { MockModel } from '../../../mock/useMockState'
@@ -17,7 +19,7 @@ export function ProfileOverview({
   onEdit?: () => void
 }) {
   return (
-    <>
+    <div className={styles.sections}>
       <section className="panel">
         <span className="eyebrow">A LITTLE INTRODUCTION</span>
         <h2 data-heading="card">About me</h2>
@@ -40,21 +42,12 @@ export function ProfileOverview({
           <Tag>Always up for a new game</Tag>
         </div>
       </section>
-      <section className="panel connection-panel">
-        <span className="round-icon">
-          <Icon name="people" size={28}/>
-        </span>
-        <div>
-          <span className="eyebrow">YOUR CIRCLE IS GROWING</span>
-          <h2 data-heading="card">
-            18 different people.<br/>So many shared stories.
-          </h2>
-          <p>
-            That’s how many community members you’ve played with.<br/>
-            Here’s to the people you haven’t met yet.
-          </p>
-        </div>
-      </section>
+      <InsightCard
+        icon={<Icon name="people" size={28}/>}
+        eyebrow="YOUR CIRCLE IS GROWING"
+        heading="18 different people. So many shared stories."
+        description="That’s how many community members you’ve played with. Here’s to the people you haven’t met yet."
+      />
       <section className="panel">
         <div className="section-heading">
           <h2 data-heading="card">A few favorite games</h2>
@@ -69,6 +62,6 @@ export function ProfileOverview({
           ))}
         </div>
       </section>
-    </>
+    </div>
   )
 }

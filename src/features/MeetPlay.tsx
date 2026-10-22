@@ -1,3 +1,7 @@
+import { GuidanceNote } from '../components/shared/GuidanceNote'
+import styles from './MeetPlay.module.css'
+import { HeroFeaturePanel } from '../components/shared/HeroFeaturePanel'
+import { Notice } from '../components/primitives/Notice'
 import { Button } from '../components/primitives/Controls'
 import { useState } from 'react'
 import type { MockModel } from '../mock/useMockState'
@@ -44,17 +48,18 @@ export function MeetPlay({ model, open }: { model: MockModel; open: (id: string)
           <h2 data-heading="hero">Your next favorite group<br/>starts with a hello.</h2>
           <p>Homes, cafés, a sunny afternoon. There’s more than one way to gather.</p>
         </div>
-        <div className="match-callout">
-          <span className="round-icon"><Icon name="people" size={26}/></span>
-          <h3>Meet someone new</h3>
-          <p>
-            A familiar game. A few unfamiliar faces.<br/>
-            Let us help you find your next table.
-          </p>
-          <Button appearance="secondary" className="button light" onClick={() => setModal('match')}>
-            {model.matching ? 'Update your preferences' : 'Find my people'}
-            <Icon name="arrow" size={17}/>
-          </Button>
+        <div className={styles.feature}>
+          <HeroFeaturePanel
+            icon={<Icon name="people" size={26}/>}
+            heading="Meet someone new"
+            description="A familiar game. A few unfamiliar faces. Let us help you find your next table."
+            action={(
+              <Button appearance="secondary" onClick={() => setModal('match')}>
+                {model.matching ? 'Update your preferences' : 'Find my people'}
+                <Icon name="arrow" size={17}/>
+              </Button>
+            )}
+          />
         </div>
         <Botanical/>
       </section>
@@ -84,10 +89,10 @@ export function MeetPlay({ model, open }: { model: MockModel; open: (id: string)
         </label>
       </div>
       {tab === 'My Tables' && (
-        <div className="notice">
-          <Icon name="leaf"/>
+        <Notice icon="leaf">
+
           Your hosted tables, reservations, requests, and waitlist spots — all in one place.
-        </div>
+        </Notice>
       )}
       <div className="card-grid">
         {items.map(item => (
@@ -99,12 +104,10 @@ export function MeetPlay({ model, open }: { model: MockModel; open: (id: string)
           Try another filter, or create the table you’d love to join.
         </Empty>
       )}
-      <div className="community-note">
-        <Icon name="heart"/>
-        <span>
-          A good table starts with kindness. Welcome new players, respect each other’s time, and
-          leave room for one more.
-        </span>
+      <div className={styles.guidance}>
+        <GuidanceNote icon={<Icon name="heart"/>}>
+          A good table starts with kindness. Welcome new players, respect each other’s time, and leave room for one more.
+        </GuidanceNote>
       </div>
       {modal === 'create' && (
         <Modal title="Make room at your table" onClose={() => setModal(null)}>

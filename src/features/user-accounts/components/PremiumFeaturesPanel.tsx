@@ -1,3 +1,4 @@
+import { Notice } from '../../../components/primitives/Notice'
 import styles from './AccountPanel.module.css'
 import { ActionLink } from '../../../components/primitives/Controls'
 import { Icon } from '../../../components/ui'
@@ -20,10 +21,10 @@ export function PremiumFeaturesPanel() {
       <p className="muted">
         Your subscriptions will appear here, each with a Manage link to its feature settings.
       </p>
-      <div className="notice">
+      <Notice icon={false}>
         Subscription data is not connected yet. Community ownership and future pro hosting and
         organizer features will be listed here.
-      </div>
+      </Notice>
       <ul
         className={`premium-feature-list ${styles.premiumList}`}
         aria-label="Premium feature placeholders"

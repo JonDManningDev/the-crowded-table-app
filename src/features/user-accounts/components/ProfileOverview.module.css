@@ -1,0 +1,2 @@
+.sections { display: grid; gap: var(--account-stack-gap); min-width: 0; }
+.sections > :global(.panel) { margin: 0; }

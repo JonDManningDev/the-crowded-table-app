@@ -1,3 +1,4 @@
+import { Notice } from './primitives/Notice'
 import { Button } from './primitives/Controls'
 import { formatDate, formatTime } from '../mock/format'
 import { useState } from 'react'
@@ -240,17 +241,17 @@ export function ActivityDialog({
             <span style={{ width: `${item.filled / item.capacity * 100}%` }}/>
           </div>
           {hosting ? (
-            <div className="notice"><Icon name="check"/> You’re hosting this table</div>
+            <Notice variant="positive"> You’re hosting this table</Notice>
           ) : status ? (
             <>
-              <div className="notice">
-                <Icon name={status === 'confirmed' ? 'check' : 'clock'}/>
+              <Notice variant={status === 'confirmed' ? 'positive' : 'pending'}>
+
                 {status === 'confirmed'
                   ? 'Your seat is confirmed'
                   : status === 'requested'
                     ? 'Waiting for host approval'
                     : 'You’re on the waitlist'}
-              </div>
+              </Notice>
               <p className="meta">
                 {status === 'requested'
                   ? 'We’ll let you know when your host responds.'
