@@ -7,7 +7,7 @@ function App() { return <BrowserRouter><ApplicationRoutes/></BrowserRouter> }
 import { AccountContext } from '../features/auth/accountContext'
 
 async function waitForContent() {
-  await waitFor(() => expect(document.querySelector('.content h1')).toBeTruthy())
+  await waitFor(() => expect(document.querySelector('#main-content h1')).toBeTruthy())
   await waitFor(() => expect(screen.queryByText(/^Loading content/)).toBeNull())
 }
 

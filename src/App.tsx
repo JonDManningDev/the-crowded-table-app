@@ -9,6 +9,7 @@ import { Sidebar, MobilePersonalNavigation } from './app/layout/Sidebar'
 import { pageAt, navigation } from './app/navigation'
 import { Topbar } from './app/layout/Topbar'
 import { Footer } from './app/layout/Footer'
+import styles from './App.module.css'
 import './App.css'
 
 const ActivityDialog = lazy(() => import('./components/Activity').then(module => ({
@@ -53,9 +54,9 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={styles['app-shell']}>
       <a
-        className="skip-link"
+        className={styles['skip-link']}
         href="#main-content"
         onClick={event => {
           event.preventDefault()
@@ -65,7 +66,7 @@ export default function App() {
         Skip to content
       </a>
       <Sidebar member={model.member} community={previewCommunity}/>
-      <div className="main-wrap">
+      <div className={styles['main-wrap']}>
         <Topbar
           personal={personal}
           pageLabel={pageLabel}
@@ -78,7 +79,7 @@ export default function App() {
         />
         <MobilePersonalNavigation/>
         <main id="main-content" tabIndex={-1}>
-          <div className="content">
+          <div className={styles['content']}>
             <LazyContent resetKey={location.pathname}>
               <Outlet context={{ model, open: setActivity, membership: () => setMembership(true) }}/>
             </LazyContent>

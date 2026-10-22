@@ -209,3 +209,7 @@ src/features/user-accounts/
 ```
 
 The tab modules replace the old MyHomePage/MyCommunitiesPage files and no longer need standalone-page/embedded variants. Shared primitives/visuals remain in src/components by explicit user clarification. ProfileOverview is reused by the community Profile page with its separate mock profile. The community preferences presenter now lives at features/communities/components/AccountPreferencesPanel.tsx; personal Settings uses only its own persisted discovery AccountPreferencesPanel and PremiumFeaturesPanel. UserAccountPage does not import the community Profile page. OwnedCommunities retains its existing Supabase read and stylesheet dependency; moving that data access and shared legacy CSS is a later concern, not part of this structural change. PremiumFeaturesPage has its own lazy route module. All URLs are unchanged.
+
+### App and shared presenter style ownership (2026-10-21)
+
+`App.module.css` owns shell/content/skip-link styles. `components/ui.module.css` is colocated with the existing `ui.tsx` shared presenters (Avatar, Tag, Heading, Tabs, Empty, Modal), and `GameArt.module.css` owns artwork base styles. Account navigation reuses the tab-container module class. Temporary global component hooks support unmigrated feature overrides; they no longer own these components' base styles. Future component-file extraction should move each presenter's module rules with it. Shared tokens and typography utilities remain global; feature and remaining shared-pattern migration is incremental.

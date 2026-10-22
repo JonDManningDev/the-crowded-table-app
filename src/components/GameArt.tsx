@@ -1,3 +1,4 @@
+import styles from './GameArt.module.css'
 import type { Art } from '../mock/data'
 
 const palettes: Record<Art, string[]> = {
@@ -13,7 +14,7 @@ const palettes: Record<Art, string[]> = {
 export function GameArt({ type, className = '' }: { type: Art; className?: string }) {
   const [bg, one, two] = palettes[type]
   return (
-    <div className={`game-art art-${type} ${className}`}>
+    <div className={`game-art ${styles['game-art']} art-${type} ${className}`}>
       <svg viewBox="0 0 480 280" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
         <rect width="480" height="280" fill={bg}/>
         <circle cx="420" cy="30" r="160" fill={one} opacity=".12"/>

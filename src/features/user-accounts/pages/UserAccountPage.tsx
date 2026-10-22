@@ -1,3 +1,4 @@
+import uiStyles from '../../../components/ui.module.css'
 import { AccountOverviewTab } from '../components/AccountOverviewTab'
 import { AccountSettingsTab } from '../components/AccountSettingsTab'
 import { MyHomeTab } from '../components/MyHomeTab'
@@ -65,7 +66,7 @@ export function UserAccountPage({ page }: { page: Page }) {
       >
         Your profile, your communities, and a place to bring it all together.
       </Heading>
-      <nav className="tabs" aria-label="Account navigation">
+      <nav className={`tabs ${uiStyles.tabs}`} aria-label="Account navigation">
         {routes.map((route, index) => (
           <NavItem key={route} to={pagePaths[route]} end variant="tab">
             {tabs[index]}

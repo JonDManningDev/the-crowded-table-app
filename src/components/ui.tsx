@@ -1,3 +1,4 @@
+import styles from './ui.module.css'
 import { Button } from './primitives/Controls'
 import { useEffect, useId, useRef } from 'react'
 import type { ReactNode } from 'react'
@@ -80,11 +81,11 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
 export function Avatar({ name, large = false, tone = '' }: { name: string; large?: boolean; tone?: string }) {
   const initials = name === 'You' ? 'AM' : name.split(' ').map(word => word[0]).join('').slice(0, 2)
   const color = tone || ['sage', 'peach', 'gold', 'lavender'][name.length % 4]
-  return <span aria-hidden="true" className={`avatar ${large ? 'large' : ''} ${color}`}>{initials}</span>
+  return <span aria-hidden="true" className={`avatar ${styles.avatar} ${styles[color] || ''} ${large ? styles.large : ''} ${color}`}>{initials}</span>
 }
 
 export function Tag({ children, tone = '' }: { children: ReactNode; tone?: string }) {
-  return <span className={`tag ${tone}`}>{children}</span>
+  return <span className={`tag ${styles.tag} ${styles[tone] || ''} ${tone}`}>{children}</span>
 }
 
 export function Heading({
@@ -99,7 +100,7 @@ export function Heading({
   action?: ReactNode
 }) {
   return (
-    <div className="page-heading">
+    <div className={`page-heading ${styles['page-heading']}`}>
       <div>
         <div className="eyebrow">{eyebrow}</div>
         <h1 data-heading="page">{title}</h1>
@@ -120,7 +121,7 @@ export function Tabs({
   onChange: (value: string) => void
 }) {
   return (
-    <div className="tabs" aria-label="View options">
+    <div className={`tabs ${styles['tabs']}`} aria-label="View options">
       {items.map(item => (
         <Button
           appearance="unstyled"
@@ -138,7 +139,7 @@ export function Tabs({
 
 export function Empty({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="empty">
+    <div className={`empty ${styles['empty']}`}>
       <Icon name="leaf" size={32}/>
       <h3 data-heading="subsection">{title}</h3>
       <p>{children}</p>
@@ -172,19 +173,19 @@ export function Modal({
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      className={wide ? 'wide' : ''}
+      className={`${styles.dialog} ${wide ? styles.wide : ''}`}
       onCancel={onClose}
       onClick={event => {
         if (event.target === event.currentTarget) onClose()
       }}
     >
-      <div className="modal-header">
+      <div className={`modal-header ${styles['modal-header']}`}>
         <h2 data-heading="card" id={titleId}>{title}</h2>
         <Button appearance="unstyled" className="icon-button" aria-label="Close dialog" onClick={onClose}>
           <Icon name="close"/>
         </Button>
       </div>
-      <div className="modal-content">{children}</div>
+      <div className={`modal-content ${styles['modal-content']}`}>{children}</div>
     </dialog>
   )
 }

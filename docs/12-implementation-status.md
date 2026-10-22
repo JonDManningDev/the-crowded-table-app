@@ -208,3 +208,11 @@ Verification: all 26 existing navigation tests, production build and lint pass; 
 Extracted the existing footer into app/layout/Footer.tsx with Footer.module.css. Preserved its position within App content, shared leaf icon, wording, decorative colors, spacing and mobile stacking. Removed the corresponding global footer rules from App.css; post-card footers are unaffected.
 
 Verification: all 26 existing navigation tests, production build, lint and whitespace checks pass. The existing shared-bundle size warning remains. Source comparison only; no new live visual verification. No route, authentication, data, deployment or database changes.
+
+## App layout and shared UI CSS Modules — 2026-10-21
+
+App.module.css now owns shell sizing, content offsets/padding, skip-link presentation and their responsive rules. The existing components/ui.tsx presenters use colocated ui.module.css for Avatar, Tag, Heading, Tabs, Empty and Modal; GameArt owns GameArt.module.css. Account route navigation consumes the same tab-container styles. Base styles were removed from App.css; existing feature-specific descendant overrides retain temporary global class hooks until those features migrate. Avatar and Tag map their tones to module classes; generic tone utilities remain for other consumers. Icon and Botanical have no independent base rules to extract in this slice.
+
+Tokens, text-role utilities, reduced-motion defaults and unmigrated feature/shared patterns remain global. Page-specific overrides, forms, panels, settings rows and icon-button styling remain follow-up work. This is style ownership cleanup, not a redesign or an extraction of every presenter from ui.tsx into a separate file.
+
+Verification: production build and lint pass. The full suite passed 39 tests but initially failed 26 navigation tests because their shared helper queried the removed global content class. Updated that helper to the stable main-content landmark; all 26 navigation tests pass on rerun. Initial sandbox execution failed to read generated temporary files; tests were rerun outside that sandbox. The existing shared-bundle size warning remains. Source and responsive-rule comparison performed; no new live visual/zoom verification. No deployment, database, authentication or route behavior changes.
