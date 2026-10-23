@@ -52,7 +52,7 @@ The current build combines real Auth, global profiles, discovery preferences, co
 2. Draw mobile account-holder/guest registration, automatic confirmation, manager approve/reject/issue, and group-edit flows; keep championship design separate.
 3. Use the canonical client boundaries to refactor the prototype incrementally, preserving working Auth and community persistence; resolve the review questions needed for each slice.
 4. Agree on permission/state-transition rules for subsequent domain migrations; build the private-table flow with synthetic tenants and address-leak tests, then the remaining MVP flows.
-5. The CSS-native infrastructure/InsightCard, shared-controls/filter-chip and Notice batches are accepted. Review the completed GuidanceNote token migration before authorizing further component migrations. Scoped themes and their browser fixture remain deferred. Select form/validation and PWA tools and adopt the planned TanStack Query layer as relevant slices need them.
+5. The CSS-native token batches through GuidanceNote are accepted. Review the completed HeroFeaturePanel token migration before authorizing further component migrations. Scoped themes and their browser fixture remain deferred. Select form/validation and PWA tools and adopt the planned TanStack Query layer as relevant slices need them.
 
 Recommended additional artifacts: mobile wireframes with the warm club aesthetic, a concise visual system, and a state-transition/acceptance specification as the open rules are resolved. Operational setup instructions belong in a runbook before pilot deployment.
 

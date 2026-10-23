@@ -391,6 +391,8 @@ A shortcut/invitation to an app feature within a hero. Optional icon, required h
 
 Implementation (2026-10-22): `components/shared/HeroFeaturePanel.tsx` and its CSS Module own the content presentation. Use a 24px/1.2 subsection heading, body-role description, optional decorative 38px circular icon treatment and 24px action-footer gap. Heading level is configurable independently of visual size. Supply a shared Button for a local action or ActionLink for navigation. Text wraps naturally without forced line breaks. The parent owns placement, width and any divider within the hero; Meet & Play stacks the panel beneath the hero introduction at 950px and below. Feature state and modal behavior stay with the caller.
 
+Token migration (2026-10-23): the module consumes --ct- heading/body roles and --ct-action-footer-gap directly. Private --_ct-hero-feature-icon-size coordinates the 38px dimensions; decorative paint and 10px spacing stay local. See the [mapping and impact](14-design-tokens.md#herofeaturepanel-mapping-and-batch-five-impact). Existing h4 inherited family/weight differs from h2/h3 and remains unchanged pending the token guide's separate discrepancy review.
+
 ### Insight card
 
 Informational only, concerning something concrete such as a metric, activity or calendar date. Scope can be personal, community-wide, app-wide or authorized information about another user's activity. Required category icon, required mood/idea eyebrow, required one- or two-line heading, and required one- or two-line description. Supports standalone or grid placement; full-width layout is not mandatory. This does not authorize new data visibility or access rules.

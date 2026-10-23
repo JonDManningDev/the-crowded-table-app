@@ -28,6 +28,7 @@
   --ct-card-padding: 27px;
   --ct-card-border-radius: 9px;
   --ct-section-gap: var(--ct-ref-space-24);
+  --ct-action-footer-gap: var(--ct-ref-space-24);
   --ct-card-grid-gap: 18px;
   --ct-list-row-padding-block: 20px;
   --ct-label-meta-gap: 5px;
