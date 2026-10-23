@@ -1,6 +1,6 @@
 # CSS-native design tokens
 
-Status: architecture approved by the user on 2026-10-23 (D-123). Infrastructure/InsightCard, shared controls/filter chips, Notice and GuidanceNote are accepted. HeroFeaturePanel batch five is implemented and verified, awaiting review. The [UI style guide](13-ui-style-guide.md) owns visual requirements; this document owns their CSS representation. See [implementation status](12-implementation-status.md) for verification. Other component-family migrations remain gated.
+Status: architecture approved by the user on 2026-10-23 (D-123). Token batches through HeroFeaturePanel are accepted. FeaturedActivityCard batch six is implemented and verified, awaiting review. The [UI style guide](13-ui-style-guide.md) owns visual requirements; this document owns their CSS representation. See [implementation status](12-implementation-status.md) for verification. Other component-family migrations remain gated.
 
 ## Ownership and files
 
@@ -82,7 +82,7 @@ All new names in this table carry the `--ct-` prefix. All color/background/borde
 | `card-background`, `card-border-color`, `card-border-radius` | ref color-ivory-50 / ref color-stone-200 / 9px | `--card-bg`, card use of `--line`, `--card-radius` |
 | `card-padding` | 27px; 22px at <=1200px | `--card-padding`; responsive definition stays in semantic.css |
 | `section-gap`, `card-grid-gap` | ref space-24 / 18px | `--account-stack-gap`, `--account-grid-gap` |
-| `action-footer-gap` | ref space-24 | Approved content-to-action separation; first consumer HeroFeaturePanel, replacing its use of `--account-stack-gap` |
+| `action-footer-gap` | ref space-24 | Approved content-to-action separation; HeroFeaturePanel and FeaturedActivityCard replace their uses of `--account-stack-gap` |
 | `list-row-padding-block`, `label-meta-gap` | 20px / 5px | `--settings-row-padding-block`, `--label-metadata-gap` |
 | `control-border-radius`, `control-min-height`, `control-transition-duration`, `focus-outline-color` | 6px / 43px / .18s / #ad704c | `--control-radius/height/transition/focus` |
 | `filter-background`, `filter-color`, `filter-border-color` | ref color-ivory-50 / ref color-moss-600 / ref color-stone-200 | `--filter-bg/fg/border` |
@@ -172,11 +172,19 @@ Both consumers are affected: Meet & Play etiquette and Discussion member-dialog 
 
 Map the heading to --ct-heading-subsection-font-size (24px), --ct-heading-content-line-height (1.2) and --ct-heading-color (#173f32); description to --ct-body-font-size (13px), --ct-body-line-height (1.8) and --ct-body-color (#53644f); icon color to the existing body role. Preserve inherited font families and heading-level behavior. No React markup, API or copy changes.
 
-Introduce --ct-action-footer-gap: var(--ct-ref-space-24) in semantic.css for the approved separation between content and its action footer. HeroFeaturePanel is its first direct consumer, replacing this use of --account-stack-gap. The style guide independently approves the same footer role for FeaturedActivityCard, which stays untouched until its own batch. This role is distinct from section stacks even though both currently use 24px. It is invariant under the planned color-theme contract; no existing shared value or consumer changes. Keep legacy aliases needed elsewhere. Do not introduce the separate action-group role until it has an authorized consumer.
+Introduce --ct-action-footer-gap: var(--ct-ref-space-24) in semantic.css for the approved separation between content and its action footer. HeroFeaturePanel was its first direct consumer, replacing this use of --account-stack-gap. FeaturedActivityCard now shares this independently approved footer role after its own migration batch. This role is distinct from section stacks even though both currently use 24px. It is invariant under the planned color-theme contract; no existing shared value changes. Keep legacy aliases needed elsewhere. Do not introduce the separate action-group role until it has an authorized consumer.
 
 Coordinate width/height with private --_ct-hero-feature-icon-size: 38px on the icon element. Keep the existing local #d8e0cd decorative circle, 50% geometry and 10px icon/description spacing. They belong to this composition; do not borrow card, navigation or Notice roles. Decorative theme treatment remains a later review item. Parent MeetPlay.module.css retains placement, 300px flex basis, 30px divider offset and its 950px transition; none are migrated in this batch.
 
 Consumer impact: the live Meet & Play invitation and its caller-owned Find my people/Update your preferences action. Preserve the shared Button, existing matching dialog, state and conditional label. Verify baseline/post styles and rectangles across mobile/tablet/desktop and both sides of 700/950/1200px, including parent placement. A temporary default-light sample may cover optional icon/description, heading levels, long text and supplied Button/ActionLink semantics; remove it before completion. Exercise keyboard activation, focus and dialog dismissal without submitting preferences. Run build/lint/relevant tests and token reference/cycle/unused checks, then stop for review.
+
+## FeaturedActivityCard mapping and batch-six impact
+
+Use existing --ct-card-background/border-color/border-radius/padding roles for the shared foundation (off-white, #e3e5da border, 9px corners, 27px padding / 22px at <=1200px). Heading uses --ct-heading-card-font-size (30px), --ct-heading-content-line-height (1.2) and --ct-heading-color. Replace the ordinary 12px heading margin with --ct-ref-space-12. Description uses the body combination; date retains the approved exception of body size/line-height with heading color and local weight 600. Special-callout copy uses the complete metadata combination. Replace this action margin's --account-stack-gap with --ct-action-footer-gap (24px).
+
+Keep local 5px date/callout row margins: these are the card's content rhythm, not the label/metadata-row gap contract. Preserve the 35% image width, 130px mobile media height, 700px stacking query, flex behavior, overflow clipping and mask gradient. The gradient's black stop is opacity-mask geometry, not a brand color to tokenize. No new public/private tokens, shared definition changes or compatibility removal; all legacy aliases still have other consumers. Supplied Tag/GameArt/Button styling and the parent Home.module.css stack margin stay unchanged.
+
+Consumer impact: Community Home's featured Halloween invitation. The same presenter also supports events/tables supplied by other callers; this batch changes no data, headings, copy, date formatting, callback, modal or reservation behavior. Compare baseline/post computed styles and rectangles for the real card and optional description/callout/image combinations, long text and heading levels at mobile/tablet/desktop and both sides of 700/1200px. Check keyboard focus and activation, correct details dialog and focus restoration without reserving. Remove any temporary default-light sample before build/lint; run relevant tests and token reference/cycle/unused checks, then stop for review. Alternate themes remain deferred.
 
 ## Theme correctness — contract only, implementation deferred
 
@@ -201,7 +209,7 @@ Approved standards are the shared roles cataloged above and the style guide's va
 | Focus | Search #82956f versus shared #ad704c | Retain separate role or unify after review? |
 | Disabled opacity | Global .5 versus filter .55 | Intentional control treatment or drift? |
 | Calendar metadata | 1.4 leading versus metadata 1.8 | Density exception or inconsistency? |
-| Configurable heading levels | HeroFeaturePanel h4 inherits DM Sans/700 while h2/h3 use Libre Caslon Display/400; all retain 24px/1.2 | Decide whether family/weight should be normalized across semantic levels. Existing rendering is preserved; no new typography role is introduced. |
+| Configurable heading levels | HeroFeaturePanel and FeaturedActivityCard h4 inherit DM Sans/700 while h2/h3 use Libre Caslon Display/400; their sizes remain 24px and 30px respectively, both at 1.2 line-height | Decide whether family/weight should be normalized across semantic levels. Existing rendering is preserved; no new typography role is introduced. |
 | Responsive sidebar | Existing max-1200 rules versus shell 1200/950/700 transitions | Separate layout review; do not repair during tokens |
 | Decorative paint/type | Component illustrations, quotes, broad palette names | Deferred variant review; no invented brand identity |
 
@@ -213,9 +221,10 @@ Separate accessibility-review backlog: existing text/icon/placeholder/focus cont
 2. **Shared controls/filters (completed and accepted):** follow the contract/impact section above; verification is recorded in implementation status.
 3. **Notice (completed and accepted):** follow its contract/impact section above; verification is recorded in implementation status.
 4. **GuidanceNote (completed and accepted):** follow its mapping/impact section above; verification is recorded in implementation status.
-5. **HeroFeaturePanel (batch five, implemented and verified; awaiting review):** follow its mapping/impact section above. Related content presenters and page families still require separate authorization. For each batch inventory direct/transitive consumers, classify each mapping, capture before/after styles/screenshots, exercise relevant hover/focus/pressed/disabled and dialog states, verify breakpoints, build/lint/relevant tests, and update status. Do not combine design corrections with extraction.
-6. **Compatibility removal:** after a full source consumer search, remove zero-consumer aliases. Final checks cover CSS and inline custom-property references, undefined values/fallbacks, cycles, valid property types, remaining raw design values, unresolved register entries and unintended visual changes. The six approved spacing primitives may remain without consumers as a deliberately bounded foundation; semantic aliases need actual consumers or an explicit approved contract.
-7. **Scoped themes, separately scheduled:** expand the complete contract, resolve/cover theme-sensitive local paints, then implement and test the boundary/overlay cases above. Keep all theme implementation deferred until authorized.
+5. **HeroFeaturePanel (completed and accepted):** follow its mapping/impact section above; verification is recorded in implementation status.
+6. **FeaturedActivityCard (batch six, implemented and verified; awaiting review):** follow its mapping/impact section above. Related content presenters and page families still require separate authorization. For each batch inventory direct/transitive consumers, classify each mapping, capture before/after styles/screenshots, exercise relevant hover/focus/pressed/disabled and dialog states, verify breakpoints, build/lint/relevant tests, and update status. Do not combine design corrections with extraction.
+7. **Compatibility removal:** after a full source consumer search, remove zero-consumer aliases. Final checks cover CSS and inline custom-property references, undefined values/fallbacks, cycles, valid property types, remaining raw design values, unresolved register entries and unintended visual changes. The six approved spacing primitives may remain without consumers as a deliberately bounded foundation; semantic aliases need actual consumers or an explicit approved contract.
+8. **Scoped themes, separately scheduled:** expand the complete contract, resolve/cover theme-sensitive local paints, then implement and test the boundary/overlay cases above. Keep all theme implementation deferred until authorized.
 
 Breakpoints remain literal media queries (700/950/1200/1600px, and existing local 1100px). Native var() does not supply media-query thresholds. Do not change breakpoint behavior or introduce preprocessing.
 

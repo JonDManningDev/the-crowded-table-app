@@ -385,6 +385,8 @@ Supports an event or table. Required prominent category tag (interest, game type
 
 Implementation (2026-10-22): `components/shared/FeaturedActivityCard.tsx` and its CSS Module supply the shared presentation. The caller supplies the shared Tag, display date, action label and details-modal callback, plus optional description, special-callout text and image. A 30px/1.2 card heading is independent of semantic heading level. Use shared card background/border/padding/radius, a 24px action-footer gap and parent-owned 24px separation from surrounding stacked content. Artwork occupies the right 35% on larger screens; at 700px and below it moves beneath the copy into a 130px-high area. Preserve wrapping rather than enforcing line counts. Domain data, permissions and dialog state remain outside the presenter.
 
+Token migration (2026-10-23): the module directly consumes --ct- card, heading/body/metadata and action-footer roles, with ref-space-12 for the heading margin. The approved emphasized date combination, 5px row margins and media treatment remain unchanged; no new token definitions. See the [mapping and impact](14-design-tokens.md#featuredactivitycard-mapping-and-batch-six-impact). The existing h4 family/weight discrepancy remains in the separate review register.
+
 ### Hero feature panel
 
 A shortcut/invitation to an app feature within a hero. Optional icon, required heading, optional multiline description, followed by an action button related to the feature. Use destination/action semantics according to the existing navigation rules.
