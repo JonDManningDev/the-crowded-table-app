@@ -316,3 +316,16 @@ Verification:
 - PostCSS/source scan of all 86 CSS/TS/TSX files found 133 custom-property definitions, no undefined var() references, cycles or unused aliases. Only the approved 16px/32px spacing primitives lack current consumers. Whitespace checks passed. Source review confirms Notice has no legacy-token references and its React implementation is unchanged.
 
 Default viewport restored and temporary verification tab closed; the original application tab was retained. No deployment, schema changes, backend writes, alternate theme or further family migration. Actual 200% zoom, user text-spacing overrides, screen-reader review and exhaustive route/state testing remain outside this batch; the separate accessibility backlog stays open. **Stopped for review before any further component migration.**
+
+## GuidanceNote token migration — 2026-10-23
+
+The user accepted Notice and authorized GuidanceNote only as batch four. Replaced its three legacy body references with --ct-body-color, --ct-body-font-size and --ct-body-line-height. The approved local dashed #cdd6bf border, 8px corners, 25px/35px padding (20px at <=700px), 18px icon gap and 2px alignment padding are unchanged and documented in the module. No public/private token additions or shared definition changes; other consumers still need the legacy aliases. React markup/API, copy, optional decorative icon, parent-owned 24px spacing and absence of actions/live regions are unchanged.
+
+Verification:
+
+- Baseline/post-migration computed styles and element rectangles matched at measured CSS widths 390, 700, 701, 834, 1200, 1201 and 1440px for the live Meet & Play etiquette note and Discussion member-dialog advice. Captured the note subtree and parent wrapper, including typography, paint, borders, spacing, layout, wrapping and SVG markup. Padding remained 20px at 700px and below, and 25px/35px above. No document or note-container horizontal overflow.
+- Three temporary default-light samples covered short iconless copy, long/unbroken text with an icon, and long/unbroken iconless text. All styles/geometry matched at the same widths. Iconless notes retained no icon slot; the icon wrapper remained aria-hidden=true and no note acquired a role/live-region attribute. Inspected desktop dialog, tablet live-page and mobile long-text screenshots. Escape dismissed the live member dialog and returned focus to its member-card trigger. No domain actions were submitted.
+- Build, lint and all 65 tests across eight files passed, including navigation coverage. Existing 521.31 kB shared JavaScript chunk warning remains. No dependencies, build settings or unrelated component changes.
+- PostCSS/source scan covered all 86 CSS/TS/TSX files and 133 definitions: no undefined var() references, cycles or unused aliases. Only approved spacing primitives 16px/32px remain unused. Whitespace checks passed. Both temporary verification files were removed before build/lint; default viewport restored, verification tab closed and original application tab retained.
+
+Limits: default-light extraction only. The local border's future theme treatment, actual 200% zoom/user text spacing and screen-reader review remain deferred in the token/accessibility backlog. No deployment, backend writes, alternate theme or remaining-family migration. **Stopped for review.**

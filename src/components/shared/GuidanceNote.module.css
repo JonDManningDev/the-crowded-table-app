@@ -1,13 +1,15 @@
 .note {
+  /* Approved editorial-guidance treatment stays local: its dashed border,
+     padding, corners and icon spacing are independent of card/control roles. */
   padding: 25px 35px;
   border: 1px dashed #cdd6bf;
   border-radius: 8px;
   display: flex;
   align-items: flex-start;
   gap: 18px;
-  color: var(--text-body-color);
-  font-size: var(--text-body-size);
-  line-height: var(--text-body-leading);
+  color: var(--ct-body-color);
+  font-size: var(--ct-body-font-size);
+  line-height: var(--ct-body-line-height);
   text-align: left;
   min-width: 0;
 }
