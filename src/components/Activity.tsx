@@ -6,6 +6,7 @@ import type { Activity } from '../mock/data'
 import type { MockModel } from '../mock/useMockState'
 import { Avatar, Icon, Modal, Tag } from './ui'
 import { GameArt } from './GameArt'
+import styles from './ActivityCard.module.css'
 
 export function ActivityCard({
   item,
@@ -28,32 +29,32 @@ export function ActivityCard({
       ? `${left} seats open`
       : 'This table is crowded'
   return (
-    <Button appearance="unstyled" className="activity-card" onClick={onOpen}>
-      <div className="card-art">
+    <Button appearance="unstyled" className={styles.card} onClick={onOpen}>
+      <div className={styles.art}>
         <GameArt type={item.art}/>
-        <span className={`art-label ${item.special ? 'special' : ''}`}>{item.category}</span>
-        <span className="date-stamp">
+        <span className={`${styles.artLabel} ${item.special ? styles.special : ''}`}>{item.category}</span>
+        <span className={styles.dateStamp}>
           <b>{stamp.getDate()}</b>
           <span>{stamp.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}</span>
         </span>
       </div>
-      <div className="activity-body">
-        <div className="meta">
+      <div className={styles.body}>
+        <div className={styles.meta}>
           {formatDate(item.date, true)} <span>·</span> {formatTime(item.time)}
         </div>
         <h3>{item.title}</h3>
-        <p className="location">
+        <p className={styles.location}>
           <Icon name={item.private ? 'lock' : 'pin'} size={14}/>
           {item.location}
         </p>
         {item.kind === 'table' && (
-          <div className="host">
+          <div className={styles.host}>
             <Avatar name={item.host}/>
             <span>Hosted by <strong>{item.host}</strong></span>
           </div>
         )}
-        <div className="card-bottom">
-          <span className={left === 0 ? 'muted' : 'availability'}>
+        <div className={styles.bottom}>
+          <span className={left === 0 ? styles.full : styles.availability}>
             <span className={`dot ${left === 0 ? 'rust' : ''}`}/>
             {seatLabel}
           </span>

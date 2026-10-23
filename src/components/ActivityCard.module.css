@@ -1,0 +1,176 @@
+/* Preserve the activity-specific border discrepancy, lift and shadows locally.
+   These are not the shared card border or ordinary action elevation contract. */
+.card {
+  padding: 0;
+  text-align: left;
+  background: var(--ct-card-background);
+  border: 1px solid #e2e5d9;
+  border-radius: var(--ct-card-border-radius);
+  overflow: hidden;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 2px #2a432505;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px #3d482710;
+}
+
+/* Artwork badges/date stamp retain local decorative paint, type and geometry;
+   their 9px labels and 24px numeral are not eyebrow/subsection heading roles. */
+.art {
+  position: relative;
+  width: 100%;
+  height: 168px;
+  padding: 6px 6px 0;
+}
+
+.art :global(.game-art) {
+  height: 100%;
+  border-radius: 6px 6px 0 0;
+}
+
+.artLabel {
+  position: absolute;
+  top: 17px;
+  left: 17px;
+  background: #fffbedee;
+  padding: var(--ct-ref-space-4) var(--ct-ref-space-8);
+  border-radius: 3px;
+  color: #34523b;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.artLabel.special {
+  background: #eee4ee;
+  color: #694d72;
+}
+
+.dateStamp {
+  position: absolute;
+  bottom: -18px;
+  right: 18px;
+  background: #fffef5;
+  box-shadow: 0 2px 4px #273b1912;
+  border: 1px solid #e8e4d4;
+  border-radius: 5px;
+  width: 43px;
+  text-align: center;
+  padding: 5px;
+  line-height: 1.1;
+}
+
+.dateStamp b {
+  font-family: var(--ct-ref-font-family-serif);
+  font-size: 24px;
+  font-weight: 400;
+}
+
+.dateStamp span {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 1px;
+  margin-top: 3px;
+}
+
+.body {
+  padding: var(--ct-card-padding);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Local content rhythm and divider inset preserve this interactive summary;
+   the bottom row is seat status, not a separate action-footer component. */
+.body .meta {
+  font-size: var(--ct-meta-font-size);
+  margin-bottom: 9px;
+  display: flex;
+  gap: var(--ct-ref-space-8);
+  color: var(--ct-meta-color);
+  line-height: var(--ct-meta-line-height);
+}
+
+.body h3 {
+  font-size: var(--ct-heading-card-font-size);
+  line-height: var(--ct-heading-content-line-height);
+  margin-bottom: 11px;
+  color: var(--ct-heading-color);
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--ct-meta-font-size);
+  color: var(--ct-meta-color);
+  margin-bottom: var(--ct-ref-space-16);
+  line-height: var(--ct-meta-line-height);
+}
+
+.host {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 15px;
+  font-size: var(--ct-body-font-size);
+  line-height: var(--ct-body-line-height);
+  color: var(--ct-body-color);
+}
+
+.host :global(.avatar) {
+  width: 28px;
+  height: 28px;
+  font-size: 9px;
+}
+
+.bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #eceee5;
+  padding-top: 13px;
+  margin-top: auto;
+  font-size: var(--ct-meta-font-size);
+  color: var(--ct-meta-color);
+  line-height: var(--ct-meta-line-height);
+}
+
+/* Existing seat emphasis stays local, separate from Notice/action meanings. */
+.availability {
+  color: #648150;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.full { color: var(--ct-meta-color); }
+
+@media (min-width: 1600px) {
+  .art { height: 205px; }
+}
+
+@media (max-width: 1200px) {
+  .art { height: 145px; }
+}
+
+@media (max-width: 950px) {
+  .art { height: 175px; }
+}
+
+@media (max-width: 700px) {
+  .art { height: 200px; }
+
+  .body .location,
+  .body .bottom {
+    font-size: var(--ct-meta-font-size);
+    line-height: var(--ct-meta-line-height);
+    color: var(--ct-meta-color);
+  }
+}

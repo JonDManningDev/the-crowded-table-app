@@ -185,6 +185,8 @@ Route-loading refinement (2026-10-20): the central router now dynamically import
 
 Shared-bundle follow-up (2026-10-20): GameArt now lives in components/GameArt.tsx so deferred pages can import artwork without putting it in the shell UI helper module. AuthShell retains eager session initialization and lazily imports CreateCommunity after its verified-session gate. No URLs or feature ownership changed.
 
+ActivityCard styling (2026-10-23, token batch eight awaiting review): components/Activity.tsx imports colocated ActivityCard.module.css for the card presenter. Exclusive card/artwork/date/footer rules and their responsive rules moved out of App.css. Shared grid, host/location/availability utilities, dots, Avatar and GameArt remain available to other consumers; the card now owns its local host/location/status composition. ActivityDialog remains in Activity.tsx with its existing global styles and behavior. No component API, domain ownership or routing refactor is included.
+
 ## Implemented user-account structure — 2026-10-20
 
 UserAccountPage replaces the flat AccountPage. It owns the shared heading/navigation, auth gate, account mock-state lifetime and global editor state, and imports the four tabs. Current source layout:

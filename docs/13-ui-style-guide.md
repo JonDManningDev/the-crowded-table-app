@@ -373,6 +373,12 @@ Filter-chip palette and verification (2026-10-22): default #fffef9/#53644f; hove
 
 These definitions replace the proposed generic Callout abstraction. Implementation is incremental; see the implementation-status document for completed components. Shared text, card and control tokens still apply. Line counts are normal-layout targets, not truncation limits. Allow wrapping at narrow widths, with enlarged text and for long dynamic content; do not clip essential titles or descriptions. Detailed visual variants remain to be settled where noted.
 
+### Existing ActivityCard token extraction — 2026-10-23
+
+ActivityCard remains a whole-card native Button that opens the caller's details dialog. Batch eight moves its exclusive styles to ActivityCard.module.css, using card background/padding/radius, card-heading typography, schedule/location/footer metadata, host body typography and ordinary spacing primitives. Preserve official/table content, public/private location icons, host attribution, full/open availability and confirmed/requested/waitlisted labels. Parent grids and filtering remain external.
+
+The existing #e2e5d9 border, base/hover shadows and -4px lift, decorated category/date stamp, status paints and local content rhythm are preserved treatments, not newly approved global roles. Artwork height remains 168px by default, 205px at >=1600px, 145px at <=1200px, 175px at <=950px and 200px at <=700px. The global focus and reduced-motion rules remain in force. This extraction does not resolve the border discrepancy, redesign state colors or implement reservation rules. Verification and the review gate are recorded in implementation status.
+
 ### Promotional banner
 
 Concisely advertises a currently locked in-app product that the user can unlock, usually but not always through payment. Optional leading icon; required one-row heading; optional one-row description; required unlocking action. No eyebrow. Implement only the current compact variant when authorized; small/large variants remain future possibilities. This presentation definition does not authorize billing implementation or reinstate legacy paid community access gates.
