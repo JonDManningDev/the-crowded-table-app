@@ -70,6 +70,18 @@
   --ct-nav-background-current: var(--ct-ref-color-sage-100);
   --ct-nav-color-current: var(--ct-ref-color-forest-900);
   --ct-nav-indicator-color: var(--ct-ref-color-forest-800);
+
+  /* Notice owns these variant paints; future theme scopes must map every pair
+     and the shared border explicitly, alongside the body text role. */
+  --ct-cmp-notice-informational-background: #eef0eb;
+  --ct-cmp-notice-informational-icon-color: var(--ct-ref-color-warm-gray-600);
+  --ct-cmp-notice-positive-background: var(--ct-ref-color-sage-100);
+  --ct-cmp-notice-positive-icon-color: var(--ct-ref-color-forest-800);
+  --ct-cmp-notice-pending-background: #eeeaf2;
+  --ct-cmp-notice-pending-icon-color: #665578;
+  --ct-cmp-notice-caution-background: #f6ecd9;
+  --ct-cmp-notice-caution-icon-color: #805b24;
+  --ct-cmp-notice-container-border-color: var(--ct-ref-color-stone-200);
 }
 
 /* Preserve the approved responsive card measurement, outside the general scale. */

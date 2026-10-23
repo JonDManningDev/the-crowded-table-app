@@ -1,25 +1,41 @@
 .notice {
   display: flex;
   align-items: flex-start;
+  /* Existing Notice composition: preserve these local measurements rather than
+     borrow control/card roles or round them to the general spacing scale. */
   gap: 10px;
   padding: 14px;
   margin: 17px 0;
   min-width: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--ct-cmp-notice-container-border-color);
   border-radius: 6px;
-  background: var(--notice-bg);
-  color: var(--text-body-color);
-  font-size: var(--text-body-size);
-  line-height: var(--text-body-leading);
+  background: var(--_ct-notice-variant-background);
+  color: var(--ct-body-color);
+  font-size: var(--ct-body-font-size);
+  line-height: var(--ct-body-line-height);
 }
-.informational { --notice-bg: #eef0eb; --notice-icon: #6b665e; }
-.positive { --notice-bg: #e8ede3; --notice-icon: #224c3a; }
-.pending { --notice-bg: #eeeaf2; --notice-icon: #665578; }
-.caution { --notice-bg: #f6ecd9; --notice-icon: #805b24; }
+/* Resolve variant aliases on the Notice element, inside any future theme scope. */
+.informational {
+  --_ct-notice-variant-background: var(--ct-cmp-notice-informational-background);
+  --_ct-notice-variant-icon-color: var(--ct-cmp-notice-informational-icon-color);
+}
+.positive {
+  --_ct-notice-variant-background: var(--ct-cmp-notice-positive-background);
+  --_ct-notice-variant-icon-color: var(--ct-cmp-notice-positive-icon-color);
+}
+.pending {
+  --_ct-notice-variant-background: var(--ct-cmp-notice-pending-background);
+  --_ct-notice-variant-icon-color: var(--ct-cmp-notice-pending-icon-color);
+}
+.caution {
+  --_ct-notice-variant-background: var(--ct-cmp-notice-caution-background);
+  --_ct-notice-variant-icon-color: var(--ct-cmp-notice-caution-icon-color);
+}
 .icon {
   display: flex;
+  /* The approved 20px icon stays aligned to the first body-text line. */
   flex: 0 0 20px;
-  margin-top: calc((var(--text-body-size) * var(--text-body-leading) - 20px) / 2);
-  color: var(--notice-icon);
+  margin-top: calc((var(--ct-body-font-size) * var(--ct-body-line-height) - 20px) / 2);
+  color: var(--_ct-notice-variant-icon-color);
 }
 .body { min-width: 0; overflow-wrap: anywhere; }

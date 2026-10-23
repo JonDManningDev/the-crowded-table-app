@@ -1,6 +1,6 @@
 # CSS-native design tokens
 
-Status: architecture and first implementation batch approved by the user on 2026-10-23 (D-123). The user subsequently accepted that batch and authorized shared controls and filter chips as batch two, followed by another review. The [UI style guide](13-ui-style-guide.md) owns visual requirements; this document owns their CSS representation. See [implementation status](12-implementation-status.md) for verification. Other component-family migrations remain gated.
+Status: architecture approved by the user on 2026-10-23 (D-123). Infrastructure/InsightCard and shared controls/filter chips are accepted. Notice batch three is implemented and verified, awaiting review. The [UI style guide](13-ui-style-guide.md) owns visual requirements; this document owns their CSS representation. See [implementation status](12-implementation-status.md) for verification. Other component-family migrations remain gated.
 
 ## Ownership and files
 
@@ -18,7 +18,7 @@ CSS custom properties are the sole token source. No JSON token source, generatio
 | --- | --- | --- |
 | Primitive | `--ct-ref-<category>-<value-key>` | `--ct-ref-space-12`, `--ct-ref-color-forest-900` |
 | Semantic | `--ct-<role>-<property>[-<state>]` | `--ct-body-color`, `--ct-card-padding`, `--ct-action-primary-background-hover` |
-| Public component contract, when justified | `--ct-cmp-<family>-<part-or-variant>-<property>[-<state>]` | Future `--ct-cmp-notice-pending-icon-color` |
+| Public component contract, when justified | `--ct-cmp-<family>-<part-or-variant>-<property>[-<state>]` | `--ct-cmp-notice-pending-icon-color` |
 | Private component variable | `--_ct-<family>-<part>-<property>` | `--_ct-insight-icon-size` |
 
 Use lowercase kebab case and full CSS property terms: background, color, font-size, line-height, border-radius, box-shadow. `size` can coordinate width/height. Put states last; use hover, pressed, selected, selected-hover, disabled, and current for the current route. Do not add unimplemented states. Role-first naming is shorter than a mandatory `sys/category/role/property` layer while preserving searchable `--ct-ref-`, `--ct-cmp-` and role prefixes. Avoid ambiguous fg/bg/leading abbreviations in new names.
@@ -113,7 +113,7 @@ Filter labels (12px/1.6/500), control labels, mobile inputs (16px), decorative t
 
 InsightCard maps padding/background/radius/border to the card roles; body copy/icon color to body; eyebrow to eyebrow (rather than borrowing heading color); heading to heading-card size/content line height/heading color. Its 12px heading margin uses ref-space-12. The icon's 63px flex basis and height share private `--_ct-insight-icon-size`. Keep 21px gap, 220px wrapping basis, 50% circular corners, decorative #d6e0c9 and 2px tracking local: these govern this composition, not a shared family contract. Preserve values and natural wrapping.
 
-Later batches should directly reuse card/action-footer roles instead of creating aliases per card family. The approved 24px action-footer separation and 12px action-group gap should become independent purpose-based roles when those consumers migrate, even though they reference spacing primitives. FeaturedActivityCard media geometry, GuidanceNote treatment and ActivityCard shadows remain local; HeroFeaturePanel icon dimensions can use a private variable. Notice variant paints are eligible public component contracts because the four approved states are independently governed. No public component token is needed for the initial InsightCard batch.
+Later batches should directly reuse card/action-footer roles instead of creating aliases per card family. The approved 24px action-footer separation and 12px action-group gap should become independent purpose-based roles when those consumers migrate, even though they reference spacing primitives. FeaturedActivityCard media geometry, GuidanceNote treatment and ActivityCard shadows remain local; HeroFeaturePanel icon dimensions can use a private variable. Notice variant paints are public component contracts because the four approved states are independently governed. No public component token is needed for the initial InsightCard batch.
 
 ## Shared controls/filter batch contract and impact
 
@@ -136,6 +136,28 @@ New semantic suffixes below carry --ct-. These extract current declarations with
 Retain control typography and local composition values (12px/500 ordinary actions, 11px/600 ghost, 11px small, menu/tab labels; 19px horizontal action padding, 5px/9px ghost spacing, 34px small height, 13px nav gap and existing menu/tab padding). They are existing independently scoped component measurements, not body/meta typography or a new global scale. Use ref-space-12 for existing 12px action gap/padding and ref-space-8 for filter-group gap. Filter icon gap 6px, 36px minimum height, 7px vertical padding, 999px corners, 22px unselected padding and .55 opacity stay local with their existing rationale. Global button opacity .5 is not normalized. Focus geometry, text-link underline metrics and nav indicator geometry retain their exact values.
 
 Verification must compare all five action appearances for Button/ActionLink, ordinary links, current/inactive menu/tab states, small/full/unstyled actions, disabled/loading behavior, filter default/selected/hover/selected-hover, keyboard focus and actual pressed shadows. Compare live Home wrapping/navigation at mobile/tablet/desktop and adjacent 700/950/1200px breakpoints; run relevant tests/build/lint and reference/cycle/unused-alias checks. A temporary local default-light verification page may exercise non-destructive state samples and must be removed before completion; it is not the deferred alternate-theme fixture. Stop for review after this batch.
+
+## Notice contract and batch-three impact
+
+Notice's informational, positive, pending and caution variants are independently governed contextual-message designs, so their paints are public component contracts. Define the following --ct-cmp-notice-* tokens in semantic.css and include all nine in every future theme's complete paint contract. Defaults belong at the token scope, never redeclared as public defaults on a Notice element. Unique paints use direct values; existing reusable primitives supply the others. Do not borrow action, metadata or card semantic roles merely because colors match.
+
+| Suffix after --ct-cmp-notice- | Value/reference | Purpose and existing source |
+| --- | --- | --- |
+| informational-background | #eef0eb | Informational variant background |
+| informational-icon-color | var(--ct-ref-color-warm-gray-600) | Existing #6b665e informational icon |
+| positive-background | var(--ct-ref-color-sage-100) | Existing #e8ede3 favorable-state surface |
+| positive-icon-color | var(--ct-ref-color-forest-800) | Existing #224c3a check-circle icon |
+| pending-background | #eeeaf2 | Pending-state surface |
+| pending-icon-color | #665578 | Static clock icon |
+| caution-background | #f6ecd9 | Caution-state surface |
+| caution-icon-color | #805b24 | Warning-triangle icon |
+| container-border-color | var(--ct-ref-color-stone-200) | Existing subtle #e3e5da border across all variants |
+
+Notice.module.css resolves private --_ct-notice-variant-background/icon-color aliases on each variant element, consumes body-font-size/body-line-height/body-color directly and consumes the Notice border contract. No external consumers of the old private --notice-bg/--notice-icon names exist; remove those names without compatibility aliases. The remaining legacy body/line aliases still have other consumers and stay intact. No existing shared token value changes, no new primitive scale, and no further component migration are authorized.
+
+Keep the existing 14px padding, 17px block margin, 6px radius, 10px icon gap and 20px icon geometry local. These are Notice composition/first-line-alignment decisions, not card padding, control corners, generic spacing-scale additions or a new global icon-size contract. Preserve the calc using body metrics and 20px icon height; do not change the TSX icon sizing or API. Preserve custom className/HTML attributes, children, contextual or iconless informational cases, required positive/pending/caution icons, and caller-owned live-region semantics. Numeric equality with another family is not a reason to couple them.
+
+Consumer impact: activity-hosting/reservation notices, Championship static/feedback/dialog notices, Meet & Play advice, community Profile visibility, sample-venue caution and premium placeholders all inherit this CSS Module. Their parent placement overrides, variant selection, data, modal lifecycle and announcement behavior stay unchanged. Verify all four variants plus contextual/iconless, long wrapping content, explicit role/status attributes and real page/dialog contexts using baseline/post computed styles and screenshots; run build/lint/relevant tests and token reference/cycle/unused checks. Any temporary default-light verification page must be removed. Stop for review; alternate themes and their fixture remain deferred.
 
 ## Theme correctness — contract only, implementation deferred
 
@@ -168,9 +190,10 @@ Separate accessibility-review backlog: existing text/icon/placeholder/focus cont
 ## Migration and verification gates
 
 1. **Infrastructure + InsightCard (completed and accepted):** baseline computed styles and screenshots for account Overview and community Profile; extract definitions with compatibility aliases; migrate this module only. Check mobile/tablet/desktop, 700px, and both sides of 1200px card padding. Keep existing layout/interaction behavior. Run build, lint, relevant navigation tests, undefined-reference/cycle and unused-alias checks.
-2. **Shared controls/filters (batch two, authorized), then review:** follow the contract/impact section above. Later batches such as Notice, related content presenters and page families require separate authorization. For each batch inventory direct/transitive consumers, classify each mapping, capture before/after styles/screenshots, exercise relevant hover/focus/pressed/disabled and dialog states, verify breakpoints, build/lint/relevant tests, and update status. Do not combine design corrections with extraction.
-3. **Compatibility removal:** after a full source consumer search, remove zero-consumer aliases. Final checks cover CSS and inline custom-property references, undefined values/fallbacks, cycles, valid property types, remaining raw design values, unresolved register entries and unintended visual changes. The six approved spacing primitives may remain without consumers as a deliberately bounded foundation; semantic aliases need actual consumers or an explicit approved contract.
-4. **Scoped themes, separately scheduled:** expand the complete contract, resolve/cover theme-sensitive local paints, then implement and test the boundary/overlay cases above. Keep all theme implementation deferred until authorized.
+2. **Shared controls/filters (completed and accepted):** follow the contract/impact section above; verification is recorded in implementation status.
+3. **Notice (batch three, implemented and verified; awaiting review):** follow its contract/impact section above. Related content presenters and page families still require separate authorization. For each batch inventory direct/transitive consumers, classify each mapping, capture before/after styles/screenshots, exercise relevant hover/focus/pressed/disabled and dialog states, verify breakpoints, build/lint/relevant tests, and update status. Do not combine design corrections with extraction.
+4. **Compatibility removal:** after a full source consumer search, remove zero-consumer aliases. Final checks cover CSS and inline custom-property references, undefined values/fallbacks, cycles, valid property types, remaining raw design values, unresolved register entries and unintended visual changes. The six approved spacing primitives may remain without consumers as a deliberately bounded foundation; semantic aliases need actual consumers or an explicit approved contract.
+5. **Scoped themes, separately scheduled:** expand the complete contract, resolve/cover theme-sensitive local paints, then implement and test the boundary/overlay cases above. Keep all theme implementation deferred until authorized.
 
 Breakpoints remain literal media queries (700/950/1200/1600px, and existing local 1100px). Native var() does not supply media-query thresholds. Do not change breakpoint behavior or introduce preprocessing.
 
