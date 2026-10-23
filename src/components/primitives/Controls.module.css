@@ -1,20 +1,24 @@
-.action { display: inline-flex; align-items: center; justify-content: center; gap: 12px; border: 1px solid var(--action-border, var(--green)); border-radius: var(--control-radius); background: var(--action-bg); color: var(--action-fg); font: inherit; font-weight: 500; font-size: 12px; padding: 12px 19px; min-height: var(--control-height); white-space: normal; text-decoration: none; transition: background var(--control-transition), box-shadow var(--control-transition); }
-.action:hover:not(:disabled) { background: var(--action-hover); box-shadow: 0 3px 10px #224c3a1a; }
-.action:active:not(:disabled) { box-shadow: inset 0 1px 3px #173f3230; }
-.primary { --action-bg: var(--action-primary-bg); --action-fg: var(--action-primary-fg); --action-hover: var(--action-primary-hover); }
-.secondary { --action-bg: var(--cream); --action-fg: var(--ink); --action-hover: var(--sage); --action-border: var(--line); }
-.outline { --action-bg: transparent; --action-fg: var(--green); --action-hover: var(--sage); --action-border: var(--action-outline-border); }
-.ghost { --action-bg: transparent; --action-fg: var(--ink); --action-hover: var(--sage); --action-border: transparent; padding: 5px 0; gap: 9px; font-size: 11px; font-weight: 600; text-align: left; }
-.destructive { --action-bg: var(--action-destructive-bg); --action-fg: white; --action-hover: var(--action-destructive-hover); --action-border: var(--action-destructive-bg); }
-.small { padding: 7px 12px; min-height: 34px; font-size: 11px; }
+/* Preserve control-specific type/spacing and small/ghost dimensions; these are
+   local control composition, not body/meta roles or a general sizing scale. */
+.action { display: inline-flex; align-items: center; justify-content: center; gap: var(--ct-ref-space-12); border: 1px solid var(--_ct-action-variant-border-color, var(--ct-action-primary-border-color)); border-radius: var(--ct-control-border-radius); background: var(--_ct-action-variant-background); color: var(--_ct-action-variant-color); font: inherit; font-weight: 500; font-size: 12px; padding: var(--ct-ref-space-12) 19px; min-height: var(--ct-control-min-height); white-space: normal; text-decoration: none; transition: background var(--ct-control-transition-duration), box-shadow var(--ct-control-transition-duration); }
+.action:hover:not(:disabled) { background: var(--_ct-action-variant-background-hover); box-shadow: var(--ct-action-box-shadow-hover); }
+.action:active:not(:disabled) { box-shadow: var(--ct-action-box-shadow-pressed); }
+/* Resolve private variant aliases on the control, where future inherited public
+   theme contracts apply. Public defaults remain in semantic.css. */
+.primary { --_ct-action-variant-background: var(--ct-action-primary-background); --_ct-action-variant-color: var(--ct-action-primary-color); --_ct-action-variant-background-hover: var(--ct-action-primary-background-hover); }
+.secondary { --_ct-action-variant-background: var(--ct-action-secondary-background); --_ct-action-variant-color: var(--ct-action-secondary-color); --_ct-action-variant-background-hover: var(--ct-action-secondary-background-hover); --_ct-action-variant-border-color: var(--ct-action-secondary-border-color); }
+.outline { --_ct-action-variant-background: transparent; --_ct-action-variant-color: var(--ct-action-outline-color); --_ct-action-variant-background-hover: var(--ct-action-outline-background-hover); --_ct-action-variant-border-color: var(--ct-action-outline-border-color); }
+.ghost { --_ct-action-variant-background: transparent; --_ct-action-variant-color: var(--ct-action-ghost-color); --_ct-action-variant-background-hover: var(--ct-action-ghost-background-hover); --_ct-action-variant-border-color: transparent; padding: 5px 0; gap: 9px; font-size: 11px; font-weight: 600; text-align: left; }
+.destructive { --_ct-action-variant-background: var(--ct-action-destructive-background); --_ct-action-variant-color: var(--ct-action-destructive-color); --_ct-action-variant-background-hover: var(--ct-action-destructive-background-hover); --_ct-action-variant-border-color: var(--ct-action-destructive-border-color); }
+.small { padding: 7px var(--ct-ref-space-12); min-height: 34px; font-size: 11px; }
 .full { width: 100%; }
-.link { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+.link { color: var(--ct-link-color); text-decoration: underline; text-underline-offset: 4px; }
 .link:hover { text-decoration-thickness: 2px; }
-.navItem { display: flex; align-items: center; gap: 13px; min-height: var(--control-height); color: var(--ink); border-radius: var(--control-radius); text-decoration: none; }
-.menu { padding: 10px 12px; font-size: 13px; }
-.navItem:hover { background: var(--nav-item-hover-bg); }
-.navItem.active { background: var(--nav-item-active-bg); color: var(--nav-item-active-fg); font-weight: 600; box-shadow: inset 3px 0 var(--nav-item-indicator); }
+.navItem { display: flex; align-items: center; gap: 13px; min-height: var(--ct-control-min-height); color: var(--ct-nav-color); border-radius: var(--ct-control-border-radius); text-decoration: none; }
+.menu { padding: 10px var(--ct-ref-space-12); font-size: 13px; }
+.navItem:hover { background: var(--ct-nav-background-hover); }
+.navItem.active { background: var(--ct-nav-background-current); color: var(--ct-nav-color-current); font-weight: 600; box-shadow: inset 3px 0 var(--ct-nav-indicator-color); }
 .tab { padding: 15px 0 13px; font-size: 12px; white-space: nowrap; border-radius: 0; border-bottom: 2px solid transparent; }
-.tab.active { background: transparent; color: var(--ink); border-bottom-color: var(--nav-item-indicator); box-shadow: none; }
-.action:focus-visible, .link:focus-visible, .navItem:focus-visible { outline: 2px solid var(--control-focus); outline-offset: 4px; }
+.tab.active { background: transparent; color: var(--ct-nav-color-current); border-bottom-color: var(--ct-nav-indicator-color); box-shadow: none; }
+.action:focus-visible, .link:focus-visible, .navItem:focus-visible { outline: var(--ct-focus-outline-width) solid var(--ct-focus-outline-color); outline-offset: var(--ct-focus-outline-offset); }
 @media (prefers-reduced-motion: reduce) { .action { transition: none; } }

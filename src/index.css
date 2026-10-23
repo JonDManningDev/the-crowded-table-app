@@ -1,69 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Libre+Caslon+Display&display=swap');
+@import './styles/tokens/index.css';
+
 :root {
-  font-family:'DM Sans',sans-serif;
-  color:var(--text-body-color);
-  background:#f8f7f2;
+  font-family:var(--ct-body-font-family);
+  color:var(--ct-body-color);
+  background:var(--ct-page-background);
   font-synthesis:none;
   text-rendering:optimizeLegibility;
   -webkit-font-smoothing:antialiased;
   font-weight:400;
-  font-size:var(--text-body-size);
-  line-height:var(--text-body-leading);
-  --text-body-size:13px;
-  --text-body-leading:1.8;
-  --text-meta-size:11px;
-  --text-meta-leading:1.8;
-  --text-eyebrow-size:9px;
-  --text-eyebrow-leading:1.6;
-  --heading-page-size:48px;
-  --heading-page-small-size:36px;
-  --heading-hero-size:clamp(36px, 4vw, 54px);
-  --heading-card-size:30px;
-  --heading-subsection-size:24px;
-  --heading-item-size:20px;
-  --heading-title-leading:1.1;
-  --heading-content-leading:1.2;
-  --text-heading-color:#173f32;
-  --text-body-color:#53644f;
-  --text-meta-color:#6b665e;
-  --text-eyebrow-color:var(--text-heading-color);
-  --card-bg:#fffef9;
-  --card-padding:27px;
-  --card-radius:9px;
-  --account-stack-gap:24px;
-  --account-grid-gap:18px;
-  --settings-row-padding-block:20px;
-  --label-metadata-gap:5px;
-  --control-radius:6px;
-  --control-height:43px;
-  --control-transition:.18s;
-  --control-focus:#ad704c;
-  --filter-bg:var(--card-bg);
-  --filter-fg:var(--text-body-color);
-  --filter-border:var(--line);
-  --filter-hover-bg:#ecefe5;
-  --filter-selected-bg:#e6ebdc;
-  --filter-selected-fg:var(--text-heading-color);
-  --filter-selected-hover-bg:#dbe3cf;
-  --action-primary-bg:var(--green);
-  --action-primary-fg:#fffdf2;
-  --action-primary-hover:#153d2b;
-  --action-outline-border:#cbd3c0;
-  --action-destructive-bg:#963e32;
-  --action-destructive-hover:#7b3026;
-  --nav-item-hover-bg:#e7eadf;
-  --nav-item-active-bg:var(--sage);
-  --nav-item-active-fg:var(--ink);
-  --nav-item-indicator:var(--green);
-  --ink:#173f32;
-  --muted:#747c70;
-  --line:#e3e5da;
-  --cream:#f8f7f2;
-  --green:#224c3a;
-  --sage:#e8ede3;
-  --peach:#f5e4d6;
-  --rust:#a15d40;
-  --serif:'Libre Caslon Display',Georgia,serif
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height)
 }
 
 * {
@@ -188,5 +135,3 @@ input::placeholder,textarea::placeholder {
 ::selection {
   background:#d7e0cd
 }
-
-@media (max-width: 1200px) { :root { --card-padding:22px; } }

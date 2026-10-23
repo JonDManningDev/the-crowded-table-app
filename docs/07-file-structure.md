@@ -58,9 +58,11 @@ src/
 ├── mocks/                          # Fixtures/adapters as useful during migration
 ├── assets/
 ├── styles/
-│   ├── globals.css
-│   ├── tokens.css
-│   └── themes.css
+│   └── tokens/
+│       ├── primitives.css
+│       ├── semantic.css
+│       └── index.css               # themes.css deferred until scoped themes
+├── index.css                       # Existing global entry imports tokens
 └── main.tsx
 ```
 
@@ -142,7 +144,7 @@ This inventory was first checked on 2026-10-02 and updated for the 2026-10-03 na
 | `src/mock/data.ts` owns domain types/fixtures and the navigation `Page` type; `src/mock/useMockState.ts` owns behavior across features; UI accepts the whole `MockModel` | Move domain contracts to features and navigation types to the app. Narrow component props/hooks so fixtures no longer define production contracts. Keep a `mocks` area only as useful; moving/renaming it alone does not establish the data boundary. |
 | `src/mock/format.ts` contains reusable date/time formatting | Move generic formatting to technical utilities when its contract is clear; review locale/timezone assumptions as real data arrives. |
 | `OwnedCommunities.tsx` manages request/loading/error state with effects; `package.json` has no TanStack Query | Introduce query infrastructure for real server-state slices, preserving identity/tenant isolation and invalidation. Do not mechanically convert UI state or Auth subscriptions into resource queries. |
-| Global `src/App.css`, `src/index.css`, `src/features/Auth.css`, and `CreateCommunity.css`; existing palette variables in `index.css` | Migrate component rules to CSS Modules and split base styles, semantic tokens, and controlled presets. Current palette variables are a starting point, not a tenant theme system. |
+| Global `src/App.css`, `src/index.css`, `src/features/Auth.css`, and `CreateCommunity.css`; CSS-native token definitions in `styles/tokens/` | Migrate remaining component rules and compatibility consumers in approved batches. Base styles remain in index.css; controlled presets and their fixture are deferred. See the token guide. |
 | `vite.config.ts`, `tsconfig.app.json`, and `vitest.config.ts` have no `@` alias; imports are relative | Configure alias resolution consistently during the refactor; this documentation task does not configure it. |
 | Earlier plan used `features/home`, `official-events`, `meet-play`, singular `championship`, `components/ui`, `app/layouts`, and `types/database.ts` | This document supersedes those illustrative paths with app-owned My Home and Community Home, `events`, `meet-and-play`, `championships`, `components/primitives`, `app/layout`, and colocated Supabase types. Folder spelling is a convention; ownership is the decision. |
 | Earlier docs said query/styling tools were unselected and no backend or real Auth existed | Reconciled here and in the architecture/prototype guides. CSS Modules and the planned TanStack Query direction are now recorded; form/PWA tool selection remains open; React Router is implemented. |
@@ -177,7 +179,7 @@ Automated verification covers direct routes, root redirect and absence of legacy
 
 ## Shared UI controls — 2026-10-16
 
-`src/components/primitives/Controls.tsx` and its CSS Module implement Link, ActionLink, Button and NavItem, with behavioral tests alongside. Existing `components/ui.tsx` retains unrelated primitives and uses Button for local view selectors and modal dismissal. Root semantic tokens remain in `src/index.css`. Shared action presentation has moved out of `App.css`; specialized legacy layout hooks and page styles remain until their feature slices migrate. Route callbacks have been removed from AccountContext: consumers use declarative destinations from the central path map. See the [UI style guide](13-ui-style-guide.md) and D-122.
+`src/components/primitives/Controls.tsx` and its CSS Module implement Link, ActionLink, Button and NavItem, with behavioral tests alongside. Existing `components/ui.tsx` retains unrelated primitives and uses Button for local view selectors and modal dismissal. Token definitions belong in `src/styles/tokens/`, imported by `src/index.css`; Controls now consumes purpose-based --ct- roles with private variant variables. Shared action presentation has moved out of `App.css`; specialized legacy layout hooks and page styles remain until their feature slices migrate. Route callbacks have been removed from AccountContext: consumers use declarative destinations from the central path map. See the [UI style guide](13-ui-style-guide.md), [token guide](14-design-tokens.md), D-122 and D-123.
 
 Route-loading refinement (2026-10-20): the central router now dynamically imports account and community feature pages; App retains the shell and wraps its Outlet with app/LazyContent loading/error recovery. The activity dialog is also loaded on demand. Account tabs share a module and shared profile presentation may be fetched with account content. AuthShell/session initialization stays eager. This changes loading boundaries only; the URL contract above remains unchanged. See implementation status for bundle measurements and verification limits.
 
@@ -220,7 +222,7 @@ The tab modules replace the old MyHomePage/MyCommunitiesPage files and no longer
 
 ### Shared filter chips (2026-10-22)
 
-`components/primitives/FilterChip.tsx` exports controlled FilterChip and labeled FilterChipGroup with colocated FilterChip.module.css. Home supplies its single category state and filtering callbacks. Dedicated filter appearance tokens live in index.css; Home.module.css retains parent layout/results separation. This supersedes Home ownership of chip base styling from the previous migration milestone. Callouts remain unchanged.
+`components/primitives/FilterChip.tsx` exports controlled FilterChip and labeled FilterChipGroup with colocated FilterChip.module.css. Home supplies its single category state and filtering callbacks. FilterChip now consumes dedicated --ct-filter-* roles and shared focus tokens from styles/tokens/semantic.css directly; its obsolete aliases are removed. Home.module.css retains parent layout/results separation. This supersedes Home ownership of chip base styling from the previous migration milestone. Callouts remain unchanged.
 
 ### Shared Notice (2026-10-22)
 

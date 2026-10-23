@@ -139,14 +139,14 @@ Shared tokens may include:
 
 Use separate semantic tokens for action emphasis and navigation selection, such as:
 
-- `--action-primary-bg`
-- `--action-primary-fg`
-- `--action-outline-border`
-- `--nav-item-hover-bg`
-- `--nav-item-active-bg`
-- `--nav-item-active-fg`
+- `--ct-action-primary-background`
+- `--ct-action-primary-color`
+- `--ct-action-outline-border-color`
+- `--ct-nav-background-hover`
+- `--ct-nav-background-current`
+- `--ct-nav-color-current`
 
-Adapt names to the repository's existing token conventions. Do not introduce competing token systems.
+Follow the [approved token grammar](14-design-tokens.md). The prior names remain deprecated compatibility aliases for existing consumers, not choices for new code.
 
 ### 5. React Router integration
 
@@ -240,7 +240,7 @@ When applying these guidelines:
 
 Status: canonical, accepted from the user's supplied guidelines on 2026-10-16. This guide owns navigation/control semantics and presentation; frontend patterns retain architecture ownership. Existing warm colors, typography, responsive layout and mock business behavior remain unchanged.
 
-Use the shared control families in `src/components/primitives/Controls.tsx` with colocated CSS Modules. Extend the existing `:root` tokens in `src/index.css`; do not create a second theme system. Button and ActionLink share action appearance classes/tokens. Navigation selection has independent tokens and an indicator/weight change. Specialized interactive cards, filter chips and icon controls may use the Button's unstyled appearance with their existing component styles. Keep legacy layout hooks during incremental stylesheet migration.
+Use the shared control families in `src/components/primitives/Controls.tsx` with colocated CSS Modules. CSS-native definitions in `src/styles/tokens/` are authoritative and imported by `src/index.css`; follow [token ownership and migration rules](14-design-tokens.md). Button and ActionLink share action appearance classes/tokens. Navigation selection has independent tokens and an indicator/weight change. Specialized interactive cards, filter chips and icon controls may use the Button's unstyled appearance with their existing component styles. Keep legacy layout hooks and token aliases during incremental migration. Default light remains the only implemented theme.
 
 Account tabs are page navigation: use a labeled nav with exact NavItems, not button tabs or ARIA tab roles. Existing in-page view selectors remain pressed-state buttons. Sidebar/mobile community destinations use exact matching. The personal navigation area contains only the account link, with comfortable interior padding; it opens Overview and stays active throughout /account and its descendant routes. My Home and My Communities remain available in the account tabs. The community avatar is a labeled link. Sign in is a text Link; Create Account is an outline ActionLink; Start New Community and premium Manage/Explore are destinations. Modal editing, sign-out, retries, filters and save/send commands remain buttons. Every form submission declares `type="submit"`; Button defaults to `type="button"`.
 
@@ -278,10 +278,10 @@ Accepted 2026-10-20; apply these canonical roles across the account tabs. Preser
 
 | Role | Color | Token |
 | --- | --- | --- |
-| Heading | #173f32 | --text-heading-color |
-| Body copy | #53644f | --text-body-color |
-| Secondary metadata | #6b665e | --text-meta-color |
-| Eyebrow | #173f32 | --text-eyebrow-color |
+| Heading | #173f32 | --ct-heading-color |
+| Body copy | #53644f | --ct-body-color |
+| Secondary metadata | #6b665e | --ct-meta-color |
+| Eyebrow | #173f32 | --ct-eyebrow-color |
 
 Eyebrows complement headings; size, capitalization and tracking distinguish them. Keep separate semantic tokens even where colors match. Preserve interactive control and feedback styles. Decorative quotes, mottos and illustration lettering remain unchanged: review them once more content is available to compare, with a possible small set of distinct variants. No decorative palette has been approved yet.
 
@@ -333,7 +333,7 @@ Account card-ending actions, including Settings panel footers and the My Home he
 
 ### Settings and comparable list rows
 
-Accepted 2026-10-21: use 20px vertical padding for comparable settings/list rows and a 5px gap between the label and its secondary metadata. Metadata is displayed as a block below the label. Consume shared tokens --settings-row-padding-block and --label-metadata-gap instead of component-specific values.
+Accepted 2026-10-21: use 20px vertical padding for comparable settings/list rows and a 5px gap between the label and its secondary metadata. Metadata is displayed as a block below the label. Consume --ct-list-row-padding-block and --ct-label-meta-gap by purpose; prior --settings-row-padding-block and --label-metadata-gap names remain compatibility aliases until their consumer batches migrate.
 
 Apply this pattern to personal discovery settings, community preferences, and premium-feature rows. Preserve existing horizontal layout, control sizing, typography, colors and divider treatment. Standalone community cards retain the separate card-padding rule; these are not internal settings rows. Preserve intentional differences such as a placeholder notice or a Manage link versus a switch.
 

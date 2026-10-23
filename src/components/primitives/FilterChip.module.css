@@ -1,22 +1,24 @@
 .group {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--ct-ref-space-8);
   min-width: 0;
 }
 
 .chip {
+  /* Approved filter-label metrics and pill geometry stay local: not body copy
+     or action-button sizing. Keep the 6px icon gap and 36px minimum height. */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   min-height: 36px;
   max-width: 100%;
-  padding: 7px 12px;
-  border: 1px solid var(--filter-border);
+  padding: 7px var(--ct-ref-space-12);
+  border: 1px solid var(--ct-filter-border-color);
   border-radius: 999px;
-  background: var(--filter-bg);
-  color: var(--filter-fg);
+  background: var(--ct-filter-background);
+  color: var(--ct-filter-color);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.6;
@@ -29,11 +31,12 @@
 .chip[aria-pressed="false"] { padding-inline: 22px; }
 .check { flex-shrink: 0; display: none; }
 .chip[aria-pressed="true"] .check { display: block; }
-.chip:hover:not(:disabled) { background: var(--filter-hover-bg); }
+.chip:hover:not(:disabled) { background: var(--ct-filter-background-hover); }
 .chip[aria-pressed="true"] {
-  background: var(--filter-selected-bg);
-  color: var(--filter-selected-fg);
+  background: var(--ct-filter-background-selected);
+  color: var(--ct-filter-color-selected);
 }
-.chip[aria-pressed="true"]:hover:not(:disabled) { background: var(--filter-selected-hover-bg); }
-.chip:focus-visible { outline: 2px solid var(--control-focus); outline-offset: 4px; }
+.chip[aria-pressed="true"]:hover:not(:disabled) { background: var(--ct-filter-background-selected-hover); }
+.chip:focus-visible { outline: var(--ct-focus-outline-width) solid var(--ct-focus-outline-color); outline-offset: var(--ct-focus-outline-offset); }
+/* Preserve the existing .55 versus global .5 discrepancy pending design review. */
 .chip:disabled { opacity: .55; cursor: not-allowed; }

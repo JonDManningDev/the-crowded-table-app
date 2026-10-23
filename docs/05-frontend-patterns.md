@@ -159,42 +159,9 @@ TanStack Query is the intended server-state choice; form/validation libraries re
 
 Use colocated `Component.tsx` and `Component.module.css` for primitives, feature components, and pages. For example, `components/primitives/Button/Button.module.css` and `features/events/components/EventCard/EventCard.module.css` scope styles to their owners. Keep global CSS primarily for resets/base rules, typography foundations, shared design tokens, theme definitions, and truly application-wide styles; do not let `App.css` remain the entire application's component stylesheet.
 
-The suggested global split is `styles/globals.css`, `styles/tokens.css`, and `styles/themes.css`. Tokens describe semantic roles rather than tenant names. Preset theme classes override tokens; component modules consume the tokens without tenant-specific branches. These example names and values illustrate the mechanism, not approved palettes:
+The approved split is `styles/tokens/primitives.css`, `semantic.css`, and `index.css`, imported from the existing `src/index.css` global entry. CSS custom properties are authoritative; use the --ct- naming grammar and admission rules in [CSS-native design tokens](14-design-tokens.md). Keep deprecated aliases only for unmigrated consumers. Infrastructure/InsightCard is accepted; the next authorized batch is shared controls and filter chips, followed by review. No broad component rewrite is authorized.
 
-```css
-/* tokens.css */
-:root {
-  --color-primary: #224c3a;
-  --color-accent: #a15d40;
-  --color-surface: #f8f7f2;
-  --radius-card: 1rem;
-  --shadow-card: 0 2px 10px rgb(0 0 0 / 8%);
-}
-
-/* themes.css: apply an approved preset at the app/community boundary */
-.theme-classic {
-  --color-primary: #224c3a;
-  --color-accent: #a15d40;
-  --color-surface: #f8f7f2;
-  --radius-card: 1rem;
-}
-
-.theme-warm {
-  --color-primary: #754b37;
-  --color-accent: #995038;
-  --color-surface: #fff8f0;
-  --radius-card: 1.25rem;
-}
-
-/* EventCard.module.css */
-.card {
-  background: var(--color-surface);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-}
-```
-
-Future tenant configuration can select controlled options such as `{ theme: 'warm', density: 'comfortable', cornerStyle: 'rounded' }`, never raw CSS. Presets may eventually influence primary/accent colors, surfaces, typography choices, radius, shadows, spacing/density, and decoration. The preset vocabulary, persistence, defaults, and application scope remain to be designed; this does not add settings columns or branding tables now.
+Default light remains the only implemented theme. Reserve `styles/tokens/themes.css` for a later scheduled theme batch; do not create an empty theme file or alternate-theme fixture now. Future curated application/community themes must assign the full theme-dependent semantic/component contract at each scope, including nested default resets, without relying on inherited aliases to recompute. Out-of-tree overlays carry their origin's theme on their own wrapper. The token guide defines these rules; palette/preset vocabulary, persistence, density/corner options and actual alternate themes remain deferred. No arbitrary tenant CSS or new settings schema is introduced.
 
 ## Introduce only when needed
 
@@ -204,7 +171,7 @@ Do not automatically add `repositories`, `services`, `controllers`, `useCases`, 
 
 ## Navigation and control semantics
 
-The [UI style guide](13-ui-style-guide.md) is canonical for links, buttons, route navigation and shared control styling. Use the existing primitives in `components/primitives/Controls.tsx`: Link for text destinations, ActionLink for prominent destinations, NavItem for persistent navigation, and Button for actions. Their colocated CSS Module consumes the existing root token system; navigation selection has separate tokens from primary action emphasis. Account route tabs use exact NavItems; local view/filter selectors remain buttons. Never substitute a click-handler button for an ordinary route destination.
+The [UI style guide](13-ui-style-guide.md) is canonical for links, buttons, route navigation and shared control styling. Use the existing primitives in `components/primitives/Controls.tsx`: Link for text destinations, ActionLink for prominent destinations, NavItem for persistent navigation, and Button for actions. Their colocated CSS Module now consumes purpose-based --ct- semantic tokens with private variant aliases; navigation selection has separate tokens from primary action emphasis. Account route tabs use exact NavItems; local view/filter selectors remain buttons. Never substitute a click-handler button for an ordinary route destination.
 
 ## Forms and seat actions
 

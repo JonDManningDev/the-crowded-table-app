@@ -2,40 +2,44 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  /* Approved Insight composition: preserve its icon/copy separation. */
   gap: 21px;
   min-width: 0;
-  padding: var(--card-padding);
-  border: 1px solid var(--line);
-  border-radius: var(--card-radius);
-  background: var(--card-bg);
+  padding: var(--ct-card-padding);
+  border: 1px solid var(--ct-card-border-color);
+  border-radius: var(--ct-card-border-radius);
+  background: var(--ct-card-background);
 }
 .icon {
+  /* Local coordinated dimensions, not a shared icon-size contract. */
+  --_ct-insight-icon-size: 63px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 63px;
-  height: 63px;
+  flex: 0 0 var(--_ct-insight-icon-size);
+  height: var(--_ct-insight-icon-size);
   border-radius: 50%;
+  /* Preserve this decorative circle paint; no global decorative palette exists. */
   background: #d6e0c9;
-  color: var(--text-body-color);
+  color: var(--ct-body-color);
 }
 .content { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
 .eyebrow {
-  font-size: var(--text-eyebrow-size);
-  line-height: var(--text-eyebrow-leading);
-  color: var(--text-heading-color);
+  font-size: var(--ct-eyebrow-font-size);
+  line-height: var(--ct-eyebrow-line-height);
+  color: var(--ct-eyebrow-color);
   letter-spacing: 2px;
   text-transform: uppercase;
 }
 .heading {
-  margin: 12px 0;
-  font-size: var(--heading-card-size);
-  line-height: var(--heading-content-leading);
-  color: var(--text-heading-color);
+  margin: var(--ct-ref-space-12) 0;
+  font-size: var(--ct-heading-card-font-size);
+  line-height: var(--ct-heading-content-line-height);
+  color: var(--ct-heading-color);
 }
 .description {
   margin: 0;
-  font-size: var(--text-body-size);
-  line-height: var(--text-body-leading);
-  color: var(--text-body-color);
+  font-size: var(--ct-body-font-size);
+  line-height: var(--ct-body-line-height);
+  color: var(--ct-body-color);
 }
