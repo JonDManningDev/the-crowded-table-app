@@ -1,3 +1,5 @@
+/* Shell offsets/breakpoints and skip-link geometry stay local; see batch twenty-two.
+   Preserve existing sidebar coordination discrepancies during token extraction. */
 .app-shell {
   min-height: 100vh;
 }
@@ -17,9 +19,9 @@
   top: -60px;
   left: 260px;
   z-index: 100;
-  background: var(--green);
+  background: var(--ct-ref-color-forest-800);
   color: white;
-  padding: 12px;
+  padding: var(--ct-ref-space-12);
 }
 
 .skip-link:focus {

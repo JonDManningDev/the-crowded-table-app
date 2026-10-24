@@ -1,3 +1,5 @@
+/* Identity artwork owns its tone pairs, sizes and ring; see batch fifteen.
+   Decorative initials use the serif primitive, not heading/metadata roles. */
 .avatar {
   width: 35px;
   height: 35px;
@@ -17,12 +19,14 @@
 .avatar.large {
   width: 90px;
   height: 90px;
-  font-family: var(--serif);
+  font-family: var(--ct-ref-font-family-serif);
   font-size: 33px;
   border-width: 4px;
   box-shadow: 0 0 0 1px #e4e2d5;
 }
 
+/* Preserve page-introduction geometry and mobile action sizing locally.
+   Global typography/account overrides retain ownership; see batch twelve. */
 .page-heading {
   display: flex;
   justify-content: space-between;
@@ -32,44 +36,48 @@
 }
 
 .page-heading p {
-  color: var(--text-body-color);
-  font-size: var(--text-body-size);
+  color: var(--ct-body-color);
+  font-size: var(--ct-body-font-size);
   margin-bottom: 0;
-  line-height: var(--text-body-leading);
+  line-height: var(--ct-body-line-height);
 }
 
 .tabs {
   display: flex;
-  border-bottom: 1px solid var(--line);
-  gap: 24px;
-  margin-bottom: var(--account-stack-gap);
+  border-bottom: 1px solid var(--ct-ref-color-stone-200);
+  gap: var(--ct-ref-space-24);
+  margin-bottom: var(--ct-section-gap);
   flex-wrap: wrap;
   scrollbar-width: thin;
 }
 
+/* Control typography and responsive spacing stay local; compact/Profile
+   overrides retain their existing ownership. See the batch-eleven mapping. */
 .tabs button {
   padding: 15px 0 13px;
   white-space: nowrap;
   font-size: 12px;
-  color: var(--text-meta-color);
+  color: var(--ct-cmp-tabs-item-color);
   border-bottom: 2px solid transparent;
   font-weight: 500;
 }
 
 .tabs button:global(.active) {
-  border-color: var(--green);
-  color: var(--green);
+  border-color: var(--ct-cmp-tabs-indicator-color-selected);
+  color: var(--ct-cmp-tabs-item-color-selected);
 }
 
+/* Categorical paints and label geometry stay local; see batch fourteen.
+   Metadata describes the label; Tag is not a filtering/action control. */
 .tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   background: #e9eee3;
-  color: var(--text-meta-color);
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-leading);
-  padding: 4px 9px;
+  color: var(--ct-meta-color);
+  font-size: var(--ct-meta-font-size);
+  line-height: var(--ct-meta-line-height);
+  padding: var(--ct-ref-space-4) 9px;
   border-radius: 4px;
   letter-spacing: .1px;
   max-width: 100%;
@@ -77,19 +85,19 @@
 
 .tag.peach {
   background: #f5e7d9;
-  color: var(--text-meta-color);
+  color: var(--ct-meta-color);
 }
 
 .tag.gold {
   background: #f2e8c9;
-  color: var(--text-meta-color);
+  color: var(--ct-meta-color);
 }
 
 .empty {
   text-align: center;
   padding: 45px 25px;
-  background: var(--card-bg);
-  border-radius: var(--card-radius);
+  background: var(--ct-card-background);
+  border-radius: var(--ct-card-border-radius);
   color: #829070;
   margin: 20px 0;
 }
@@ -102,12 +110,14 @@
   margin: 0;
 }
 
+/* Modal shell geometry/paint exceptions stay local; see the batch-ten mapping
+   in docs/14-design-tokens.md. Foreground/divider retain legacy palette use. */
 .dialog {
   border: 1px solid #e4e7d9;
   border-radius: 12px;
   padding: 0;
-  background: var(--card-bg);
-  color: var(--ink);
+  background: var(--ct-card-background);
+  color: var(--ct-ref-color-forest-900);
   width: min(560px,calc(100% - 30px));
   max-height: 90dvh;
   box-shadow: 0 20px 100px #142d3240;
@@ -131,20 +141,20 @@
   align-items: center;
   justify-content: space-between;
   padding: 18px 25px;
-  border-bottom: 1px solid var(--line);
-  background: var(--card-bg);
+  border-bottom: 1px solid var(--ct-ref-color-stone-200);
+  background: var(--ct-card-background);
   gap: 15px;
 }
 
 .modal-header h2 {
-  font-size: var(--heading-card-size);
+  font-size: var(--ct-heading-card-font-size);
   margin: 0;
-  line-height: var(--heading-content-leading);
-  color: var(--text-heading-color);
+  line-height: var(--ct-heading-content-line-height);
+  color: var(--ct-heading-color);
 }
 
 .modal-content {
-  padding: var(--card-padding);
+  padding: var(--ct-card-padding);
 }
 
 .modal-content>p {
@@ -166,19 +176,19 @@
 
 @media (max-width:700px) {
   .page-heading {
-    margin-bottom: var(--account-stack-gap);
+    margin-bottom: var(--ct-section-gap);
     align-items: flex-start;
   }
   .page-heading h1 {
-    font-size: var(--heading-page-size);
-    line-height: var(--heading-title-leading);
-    color: var(--text-heading-color);
+    font-size: var(--ct-heading-page-font-size);
+    line-height: var(--ct-heading-title-line-height);
+    color: var(--ct-heading-color);
   }
   .page-heading :global(.eyebrow) {
-    font-size: var(--text-eyebrow-size);
+    font-size: var(--ct-eyebrow-font-size);
     letter-spacing: 1.5px;
-    line-height: var(--text-eyebrow-leading);
-    color: var(--text-eyebrow-color);
+    line-height: var(--ct-eyebrow-line-height);
+    color: var(--ct-eyebrow-color);
   }
   .page-heading>:global(.button) {
     font-size: 10px;
@@ -190,7 +200,7 @@
   }
   .tabs button {
     font-size: 11px;
-    padding-top: 12px;
+    padding-top: var(--ct-ref-space-12);
   }
   .modal-header {
     padding: 15px 18px;
@@ -203,7 +213,7 @@
 
 @media (max-width:700px) {
   .page-heading h1 {
-    font-size: var(--heading-page-small-size);
+    font-size: var(--ct-heading-page-compact-font-size);
   }
   .page-heading {
     flex-direction: column;
@@ -220,7 +230,7 @@
 }
 
 .avatar.peach {
-  background: var(--peach);
+  background: #f5e4d6;
   color: #935c3f;
 }
 

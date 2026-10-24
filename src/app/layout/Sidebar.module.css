@@ -1,9 +1,11 @@
+/* Preserve local shell/brand/decorative and mobile-selected treatments.
+   Existing responsive cascade is intentional to preserve here; see batch nineteen. */
 .sidebar {
   width:238px;
   position:fixed;
   inset:0 auto 0 0;
   background:#f1f2e9;
-  border-right:1px solid var(--line);
+  border-right:1px solid var(--ct-ref-color-stone-200);
   padding:35px 23px 18px;
   display:flex;
   flex-direction:column;
@@ -12,7 +14,7 @@
 
 .brand {
   display:block;
-  font-family:var(--serif);
+  font-family:var(--ct-ref-font-family-serif);
   font-size:43px;
   line-height:.89;
   letter-spacing:-1.5px;
@@ -20,7 +22,7 @@
 }
 
 .brand small {
-  font-family:'DM Sans',sans-serif;
+  font-family:var(--ct-ref-font-family-sans);
   font-size:7.5px;
   letter-spacing:2.1px;
   display:block;
@@ -30,13 +32,13 @@
 }
 
 .location {
-  font-size:var(--text-meta-size);
+  font-size:var(--ct-meta-font-size);
   display:flex;
   gap:5px;
   align-items:center;
   padding:25px 12px 33px;
-  color:var(--text-meta-color);
-  line-height:var(--text-meta-leading);
+  color:var(--ct-meta-color);
+  line-height:var(--ct-meta-line-height);
 }
 
 .sidebar nav {
@@ -62,7 +64,7 @@
 }
 
 .quote p {
-  font-family:var(--serif);
+  font-family:var(--ct-ref-font-family-serif);
   font-size:22px;
   line-height:1.3;
 }
@@ -173,21 +175,21 @@
 .sidebar .brand > span { display: block; max-width: 170px; text-wrap: balance; }
 .sidebar .quote { min-height: clamp(110px, 17vh, 165px); }
 .quote p { white-space: pre-line; position: relative; }
-.userArea { border-top: 1px solid var(--line); padding-top: 17px; }
+.userArea { border-top: 1px solid var(--ct-ref-color-stone-200); padding-top: 17px; }
 .account { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
 .account > div { min-width: 0; }
 .account strong { display: block; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.account small { display: block; color: var(--muted); font-size: 10px; margin-top: 3px; }
+.account small { display: block; color: #747c70; font-size: 10px; margin-top: 3px; }
 .mobileNavigation { display: none; }
 
 @media (max-width: 700px) {
   .sidebar { overflow: visible; }
-  .mobileNavigation { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
-  .mobileNavigation a { display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: var(--ink); }
-  .mobileNavigation a[aria-current="page"] { background: var(--nav-item-active-bg); font-weight: 600; }
+  .mobileNavigation { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--ct-ref-color-stone-200); }
+  .mobileNavigation a { display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: var(--ct-nav-color); }
+  .mobileNavigation a[aria-current="page"] { background: var(--ct-nav-background-current); font-weight: 600; }
 }
 
-.account { color: var(--ink); border-radius: 6px; padding: 12px 14px; }
+.account { color: var(--ct-nav-color); border-radius: 6px; padding: 12px 14px; }
 .account > :first-child { flex-shrink: 0; }
 .account > div { flex: 1; overflow: hidden; }
-.account[aria-current="page"] { background: var(--nav-item-active-bg); }
+.account[aria-current="page"] { background: var(--ct-nav-background-current); }

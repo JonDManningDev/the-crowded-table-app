@@ -4,6 +4,8 @@ import { useEffect, useId, useRef } from 'react'
 import type { ReactNode } from 'react'
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
+  // Glyph strokes/paths are artwork; callers own size, semantic currentColor
+  // and accessible control labels. No token substitution needed (batch seventeen).
   const paths: Record<string, ReactNode> = {
     info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10h.01"/></>,
     'check-circle': <><circle cx="12" cy="12" r="9"/><path d="m7 12 3 3 7-7"/></>,
@@ -194,6 +196,8 @@ export function Modal({
 }
 
 export function Botanical() {
+  // SVG geometry/leaf opacity are artwork; currentColor and the botanical hook
+  // let each caller own decorative paint and placement. See token batch sixteen.
   return (
     <svg className="botanical" viewBox="0 0 120 200" fill="none" aria-hidden="true">
       <path d="M24 190C65 124 65 59 90 8" stroke="currentColor" strokeWidth="2"/>

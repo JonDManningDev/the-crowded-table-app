@@ -379,6 +379,24 @@ ActivityCard remains a whole-card native Button that opens the caller's details 
 
 The existing #e2e5d9 border, base/hover shadows and -4px lift, decorated category/date stamp, status paints and local content rhythm are preserved treatments, not newly approved global roles. Artwork height remains 168px by default, 205px at >=1600px, 145px at <=1200px, 175px at <=950px and 200px at <=700px. The global focus and reduced-motion rules remain in force. This extraction does not resolve the border discrepancy, redesign state colors or implement reservation rules. Verification and the review gate are recorded in implementation status.
 
+### Existing shared Heading token extraction — 2026-10-23
+
+The page Heading retains its h1/data-heading="page", eyebrow, optional description and caller-owned action. Its CSS Module consumes existing body, page-title, eyebrow and section-spacing roles directly. Preserve 48px/1.1 titles and 36px/1.1 at <=700px, body/eyebrow combinations, global family/weight/margins and account-page overrides. Keep the 20px internal gap, 31px desktop separation, 24px mobile separation, mobile tracking and compact action sizing unchanged; the 31px/general-section distinction remains in the token guide's visual review register. Mobile actions remain below the copy. This extraction adds no new type/spacing values or component API. Verification is recorded in implementation status.
+
+### Existing shared Tabs token extraction — 2026-10-23
+
+Local-view Tabs remain native Buttons with aria-pressed and the same controlled value/onChange API; account tabs remain NavItem destinations. Keep inactive labels #6b665e, selected labels and underline #224c3a through independently governed Tabs paint contracts, rather than metadata or route-navigation roles. Reuse section-gap for content separation, spacing primitives for existing 24px gap/12px mobile top padding, and stone for the container divider. Preserve local typography, responsive 19px/22px gaps, compact Home/Meet & Play treatment, Profile overrides, wrapping and account-link presentation. The token guide records exact mapping and future theme ownership; implementation status records verification. Existing control-size/contrast/type accessibility review remains separate.
+
+### Existing shared Modal token extraction — 2026-10-23
+
+Modal retains its native dialog, existing ui.module.css and close button. Reuse the existing card-surface/content-padding contract and card-heading size/content-leading/color roles. The shell's broad inherited foreground and header divider retain palette primitives; they are not heading or card-outline semantics. Preserve 560px/950px caps, 30px/35px viewport allowances, 90dvh scrolling, sticky header, 12px corners, local header spacing, shadow and blurred backdrop. Keep the distinct #e4e7d9 outline and #7c8a6c direct-paragraph color in the unresolved visual register. No theme or accessibility refinement is included. Mapping, consumer impact and verification are recorded in the token guide and implementation status.
+
+### Existing ActivityDialog token extraction — 2026-10-23
+
+ActivityDialog uses ActivityDialog.module.css for its content, reservation summary, host requests, chat and legacy preview checkout. Reuse card, heading/body/metadata/eyebrow, list-row and label/meta roles by purpose. Preserve 1.3fr/1fr columns with a 30px gap, local artwork/meter/icon/chat treatment and price typography. At <=700px, content becomes one column, reservation comes first and artwork becomes 180px high. The shared native Modal still owns its shell, scrolling, backdrop and lifecycle; controls and Notice retain their own contracts.
+
+This is an appearance-preserving extraction, not new reservation or commercial policy. Computed baseline evidence showed the old cancellation .danger paint was overridden by the ghost action; keep the rendered ghost color and remove the ineffective hook. Preserve seat-state labels, mock address/chat conditions and request behavior. Status and verification are recorded in implementation status; alternate themes and existing accessibility review remain separate.
+
 ### Promotional banner
 
 Concisely advertises a currently locked in-app product that the user can unlock, usually but not always through payment. Optional leading icon; required one-row heading; optional one-row description; required unlocking action. No eyebrow. Implement only the current compact variant when authorized; small/large variants remain future possibilities. This presentation definition does not authorize billing implementation or reinstate legacy paid community access gates.
@@ -435,3 +453,97 @@ Icons are 20px outlines, nonshrinking, aligned to the first text line, with 10px
 Calculated body/icon contrast respectively: informational 5.54/4.96, positive 5.34/8.16, pending 5.35/5.64, caution 5.42/5.21 (ratios to 1). Verify rendered text and wrapping as well as palette contrast.
 
 Token extraction (2026-10-23): semantic.css owns the nine --ct-cmp-notice-* variant/background/icon/border contracts; Notice.module.css consumes these and the shared body roles. See the [Notice token mapping](14-design-tokens.md#notice-contract-and-batch-three-impact). Preserve the existing local 14px padding, 17px block margin, 6px corners, 10px gap and first-line icon alignment, including parent placement overrides. This migration changes neither the approved palette nor variant/announcement behavior.
+
+### Existing shared Empty extraction — 2026-10-23
+
+Reuse card background and radius roles. Preserve local 45px 25px padding, 20px outer margin, title margins and #829070 decorative leaf paint; retain global subsection/body typography and the 32px icon. These local measurements do not create a new scale. No behavior or visual refinement.
+
+### Existing shared Tag extraction - 2026-10-23
+
+Tag keeps the approved metadata role (11px/1.8, #6b665e) through direct --ct-meta-* references. Vertical padding uses ref-space-4. The existing default/peach/gold categorical paints, 9px horizontal padding, 5px icon gap, 4px corners and .1px tracking remain local label composition, not general scales or feedback severity roles. No visual redesign or interaction change. See the [mapping and impact](14-design-tokens.md#shared-tag-mapping-and-batch-fourteen-impact).
+
+### Existing shared Avatar extraction - 2026-10-23
+
+Large decorative initials consume --ct-ref-font-family-serif, independently of heading semantics. The existing peach #f5e4d6 is locally owned alongside the other identity tone pairs. Keep normal/large dimensions, initials type, circular geometry, border/ring and caller-specific sizing unchanged. These are identity artwork, not metadata typography or a general size/radius scale. See the [mapping and impact](14-design-tokens.md#shared-avatar-mapping-and-batch-fifteen-impact); future theme classification remains deferred.
+
+### Existing shared Botanical assessment - 2026-10-23
+
+Botanical is decorative currentColor SVG artwork, aria-hidden, with invariant path geometry, stem stroke and leaf opacities. It has no legacy token references to replace. Preserve caller-specific paint, placement, clipping and responsive geometry; no universal decorative color or size is approved here. The [assessment](14-design-tokens.md#shared-botanical-assessment-and-batch-sixteen-impact) records why no new token/module/API is warranted. Caller paint classification for themes remains deferred.
+
+### Existing shared Icon assessment - 2026-10-23
+
+Icon inherits currentColor and preserves its 24 glyphs, dice fallback, default 20px/numeric size API and aria-hidden SVG semantics. Glyph geometry and stroke widths are artwork rather than spacing/border tokens. Actual-purpose color, dimensions and accessible control labels belong to callers. No universal icon-color or size scale is introduced. See the [assessment](14-design-tokens.md#shared-icon-assessment-and-batch-seventeen-impact).
+
+### Existing shared GameArt extraction - 2026-10-23
+
+The seven existing illustration palettes are authoritative in GameArt.module.css, using private background/primary/secondary palette variables. Preserve all original colors, artwork details, Georgia symbols, geometry and slice cropping. These are illustration palettes, not UI surface or feedback roles; existing caller dimensions/masks/transforms remain external. See the [mapping and impact](14-design-tokens.md#shared-gameart-mapping-and-batch-eighteen-impact). No visual redesign or alternate palette is included.
+
+### Existing Sidebar extraction - 2026-10-23
+
+Sidebar uses metadata roles for location, navigation roles for account/personal links and current backgrounds, serif/sans primitives for brand/quote/subtitle, and the stone divider primitive. Local brand metrics, shell paint and mobile selected colors remain unchanged; no new role is inferred from their values. Preserve the existing 1200px bottom-navigation transition and 700px personal navigation, including the unresolved intermediate-width behavior. See the [mapping and impact](14-design-tokens.md#sidebar-mapping-and-batch-nineteen-impact).
+
+### Existing Topbar extraction - 2026-10-23
+
+Topbar uses metadata roles for its breadcrumb/preview caption and existing palette primitives for the divider and notification-dot outline. Preserve local translucent header, emphasized breadcrumb, preview-control typography/paint, indicator colors, notification hover and responsive hiding/wrapping. No new universal shell/action role is introduced. See the [mapping and impact](14-design-tokens.md#topbar-mapping-and-batch-twenty-impact).
+
+### Existing Footer extraction - 2026-10-23
+
+Application Footer uses stone divider and serif-family primitives, with ref-space-8 for icon/copy separation and ref-space-32 for mobile top margin. Preserve its existing #929886 paint, 17px motto, 8px/7px tagline, tracking and other spacing. It is brand copy, not metadata, a content heading or an action footer. See the [mapping and impact](14-design-tokens.md#footer-mapping-and-batch-twenty-one-impact). Existing small-text/contrast review remains deferred.
+
+### Existing app-shell extraction - 2026-10-23
+
+App.module.css uses the forest-800 palette primitive and ref-space-12 for the existing skip-link background/padding. White foreground and shell geometry remain local. Preserve skip-link reveal/focus transfer, content widths/padding and all 700/950/1200/1600px rules. Existing Sidebar/shell breakpoint coordination remains a separate design-review question. See the [mapping and impact](14-design-tokens.md#app-shell-mapping-and-batch-twenty-two-impact).
+
+### Existing global styles extraction - 2026-10-23
+
+index.css directly consumes approved heading/body/metadata, focus-outline and control-duration roles. Paragraph margin uses ref-space-16; native-checkbox accent preserves forest-800 palette use. Keep h1-h3 selector scope, heading metrics, resets and overrides unchanged. Native-field surface/border/radius/padding, placeholder, selection and disabled opacity remain preserved exceptions pending design review, not new standards. See the [mapping and impact](14-design-tokens.md#global-indexcss-mapping-and-batch-twenty-three-impact).
+
+### Remaining App.css extraction - 2026-10-23
+
+Global legacy feature composition consumes approved typography/card/layout roles directly. Decorative serif and divider palette uses remain distinct; peach decoration stays local. Preserve all irregular geometry, compact tabs, search/toggle/error/hover treatments and responsive overrides without promoting them to new standards. See the [mapping and impact](14-design-tokens.md#remaining-appcss-mapping-and-batch-twenty-four-impact). Existing accessibility and theme-classification questions remain deferred.
+
+### Existing Auth extraction - 2026-10-24
+
+Auth uses page/title/compact heading roles, body font size for supplementary links and 12/24px spacing primitives. Its shared error/status banner retains sage-100 palette use rather than positive feedback semantics. Preserve local error color, padding, card/page geometry and shell offsets. See the [mapping and impact](14-design-tokens.md#authcss-mapping-and-batch-twenty-five-impact); contrast and shell coordination remain separate review questions.
+
+### Existing community creation extraction - 2026-10-24
+
+CreateCommunity uses heading/body/meta roles and card roles for its participation panel, plus 4/8/12/24px ordinary spacing primitives. Preserve local fieldset gap, helper offset, summary column gap, width and inherited form cascade; do not reinterpret the fieldset as a card grid. Summary terms stack at 700px unchanged. See the [mapping and impact](14-design-tokens.md#createcommunitycss-mapping-and-batch-twenty-six-impact).
+
+### Existing My Home extraction - 2026-10-24
+
+MyHomeTab uses card, body, eyebrow, metadata metrics and section/grid roles directly. Preserve illustration caption color, icon palette, arch geometry and local offsets; placeholder dividers use the stone primitive. Existing 1100px stacking and 700px illustration hiding remain unchanged. See the [mapping and impact](14-design-tokens.md#myhometab-mapping-and-batch-twenty-seven-impact). No feed behavior is added.
+
+### Existing AccountPanel extraction - 2026-10-24
+
+AccountPanel action rows directly use the established 24px action-footer separation and 12px spacing primitive. Preserve flex wrapping/alignment and the module-scoped premium list zero-bottom-margin override so the footer owns separation. See the [mapping and impact](14-design-tokens.md#accountpanel-mapping-and-batch-twenty-eight-impact).
+
+### Existing UserAccountPage extraction - 2026-10-24
+
+Account-only overrides consume existing body/meta/eyebrow/heading and section-gap roles. Preserve selector specificity, decorative quote and feedback exclusions, visual-heading attributes, wrapping and mobile sizing; community profile styling retains its separate scope. See the [mapping and impact](14-design-tokens.md#useraccountpage-mapping-and-batch-twenty-nine-impact).
+
+### Existing ProfileOverview extraction - 2026-10-24
+
+Shared profile sections use the established 24px section-gap role directly, retaining grid layout, min-width and direct-child panel margin reset. Account and community typography/artwork remain owned by their existing rules. See the [mapping and impact](14-design-tokens.md#profileoverview-mapping-and-batch-thirty-impact).
+
+### Existing My Communities extraction - 2026-10-24
+
+MyCommunitiesTab uses existing body/meta/card roles and section separation, with ordinary 24px card gap and 8px heading margin primitives. Preserve local icon/toolbar gaps, sample-card mobile stacking and account overrides. See the [mapping and impact](14-design-tokens.md#mycommunitiestab-mapping-and-batch-thirty-one-impact).
+
+### Existing owned communities extraction - 2026-10-24
+
+Owned-community heading/paragraph bottom margins use the ordinary 4px spacing primitive. Preserve overflow wrapping and inherited card/account layout; this is not the separate 5px label-to-metadata role. See the [mapping and impact](14-design-tokens.md#ownedcommunities-mapping-and-batch-thirty-two-impact).
+
+### Existing Home extraction - 2026-10-24
+
+Home uses existing typography/card/section/action-footer roles, ordinary spacing primitives and stone dividers. Hero artwork/avatars, local border/shadow/gradient treatments, calendar-event leading and categorical tones retain their values and ownership. Calendar stays horizontally scrollable at a 630px grid minimum; all media overrides remain ordered unchanged. See the [mapping and impact](14-design-tokens.md#home-mapping-and-batch-thirty-three-impact).
+
+MeetPlay extraction (2026-10-24, accepted): section margins and 24px mobile divider inset now use existing tokens. Retain #cfd8c1 divider, 30px desktop inset, 300px feature basis and 950px stacking. This preserves legacy composition, without approving new shared visual standards.
+
+Community extraction (2026-10-24, accepted): member-preview guidance retains its 24px outer section separation via section-gap. No new visual decision, typography, modal or privacy behavior change.
+
+Final token audit (2026-10-24, awaiting review) confirms removal of compatibility aliases, not universal tokenization or visual refinement. Preserve documented local treatments. Residual ordinary spacing candidates, native-field/feedback paints and the existing accessibility review backlog are recorded in docs/14-design-tokens.md; no new visual standards were approved by the audit.
+
+Premium list rhythm (approved 2026-10-24): without the temporary subscription Notice, use list margin:0. The preceding paragraph owns its standard 16px separation; list rows retain 20px vertical padding and the action footer owns 24px separation. No dedicated list-margin token or compensating bottom override is needed.
+
+Premium feature rows (approved 2026-10-24): use the same setting-row presentation as discovery settings: layout, 20px internal gap, row padding/divider, block label and metadata spacing/type, and responsive wrapping. The control is a Manage action instead of a toggle; retain list semantics and the existing outline action styling. Content/control dimensions can naturally affect height and wrapping. List margin remains zero.

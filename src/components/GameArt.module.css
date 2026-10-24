@@ -9,3 +9,47 @@
   height: 100%;
   display: block;
 }
+
+/* Private illustration palettes coordinate repeated shape paints, not UI roles.
+   Each variant assigns the complete palette; fixed detail colors stay artwork. */
+.art-azul {
+  --_ct-game-art-palette-background: #e8bc80;
+  --_ct-game-art-palette-primary-color: #19636b;
+  --_ct-game-art-palette-secondary-color: #ce6c49;
+}
+
+.art-birds {
+  --_ct-game-art-palette-background: #d7dfd0;
+  --_ct-game-art-palette-primary-color: #f8f0de;
+  --_ct-game-art-palette-secondary-color: #b6744e;
+}
+
+.art-rpg {
+  --_ct-game-art-palette-background: #253c35;
+  --_ct-game-art-palette-primary-color: #b18050;
+  --_ct-game-art-palette-secondary-color: #e3c28b;
+}
+
+.art-social {
+  --_ct-game-art-palette-background: #c17956;
+  --_ct-game-art-palette-primary-color: #efe0b9;
+  --_ct-game-art-palette-secondary-color: #374d41;
+}
+
+.art-rail {
+  --_ct-game-art-palette-background: #e2c294;
+  --_ct-game-art-palette-primary-color: #3f6058;
+  --_ct-game-art-palette-secondary-color: #a8513a;
+}
+
+.art-forest {
+  --_ct-game-art-palette-background: #8b9e81;
+  --_ct-game-art-palette-primary-color: #355747;
+  --_ct-game-art-palette-secondary-color: #eadcb9;
+}
+
+.art-mystery {
+  --_ct-game-art-palette-background: #463c48;
+  --_ct-game-art-palette-primary-color: #a88466;
+  --_ct-game-art-palette-secondary-color: #e7c699;
+}

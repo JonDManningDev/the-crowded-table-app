@@ -72,6 +72,12 @@
   --ct-nav-color-current: var(--ct-ref-color-forest-900);
   --ct-nav-indicator-color: var(--ct-ref-color-forest-800);
 
+  /* Local-view selection is independent of metadata and route navigation.
+     Future theme scopes must explicitly map all three Tabs paint roles. */
+  --ct-cmp-tabs-item-color: var(--ct-ref-color-warm-gray-600);
+  --ct-cmp-tabs-item-color-selected: var(--ct-ref-color-forest-800);
+  --ct-cmp-tabs-indicator-color-selected: var(--ct-ref-color-forest-800);
+
   /* Notice owns these variant paints; future theme scopes must map every pair
      and the shared border explicitly, alongside the body text role. */
   --ct-cmp-notice-informational-background: #eef0eb;
@@ -90,48 +96,4 @@
   :root {
     --ct-card-padding: 22px;
   }
-}
-
-/* Deprecated compatibility aliases: existing consumers only.
-   Remove each after its consumer batch; never select these for new component CSS.
-   Inherited aliases do NOT recompute in child theme scopes. Before adding scoped
-   themes, remove legacy consumers or explicitly rebind aliases at every boundary. */
-:root {
-  --serif: var(--ct-heading-font-family);
-  --text-body-size: var(--ct-body-font-size);
-  --text-body-leading: var(--ct-body-line-height);
-  --text-meta-size: var(--ct-meta-font-size);
-  --text-meta-leading: var(--ct-meta-line-height);
-  --text-eyebrow-size: var(--ct-eyebrow-font-size);
-  --text-eyebrow-leading: var(--ct-eyebrow-line-height);
-  --heading-page-size: var(--ct-heading-page-font-size);
-  --heading-page-small-size: var(--ct-heading-page-compact-font-size);
-  --heading-hero-size: var(--ct-heading-hero-font-size);
-  --heading-card-size: var(--ct-heading-card-font-size);
-  --heading-subsection-size: var(--ct-heading-subsection-font-size);
-  --heading-item-size: var(--ct-heading-item-font-size);
-  --heading-title-leading: var(--ct-heading-title-line-height);
-  --heading-content-leading: var(--ct-heading-content-line-height);
-  --text-heading-color: var(--ct-heading-color);
-  --text-body-color: var(--ct-body-color);
-  --text-meta-color: var(--ct-meta-color);
-  --text-eyebrow-color: var(--ct-eyebrow-color);
-  --card-bg: var(--ct-card-background);
-  --card-padding: var(--ct-card-padding);
-  --card-radius: var(--ct-card-border-radius);
-  --account-stack-gap: var(--ct-section-gap);
-  --account-grid-gap: var(--ct-card-grid-gap);
-  --settings-row-padding-block: var(--ct-list-row-padding-block);
-  --label-metadata-gap: var(--ct-label-meta-gap);
-  --nav-item-active-bg: var(--ct-nav-background-current);
-
-  /* Mixed-purpose legacy palette names are not universal semantic roles. */
-  --ink: var(--ct-ref-color-forest-900);
-  --line: var(--ct-ref-color-stone-200);
-  --cream: var(--ct-ref-color-ivory-100);
-  --green: var(--ct-ref-color-forest-800);
-  --sage: var(--ct-ref-color-sage-100);
-  /* Retained raw legacy/decorative paints pending consumer classification. */
-  --muted: #747c70;
-  --peach: #f5e4d6;
 }

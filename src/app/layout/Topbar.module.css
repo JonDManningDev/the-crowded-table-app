@@ -1,6 +1,8 @@
+/* Shell/control geometry and indicator paints stay local; see batch twenty.
+   Metadata styles the breadcrumb/caption; preview action type remains distinct. */
 .topbar {
   height: 79px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--ct-ref-color-stone-200);
   padding: 0 45px;
   display: flex;
   align-items: center;
@@ -10,11 +12,11 @@
 }
 
 .breadcrumb {
-  font-size: var(--text-meta-size);
-  color: var(--text-meta-color);
+  font-size: var(--ct-meta-font-size);
+  color: var(--ct-meta-color);
   display: flex;
   gap: 12px;
-  line-height: var(--text-meta-leading);
+  line-height: var(--ct-meta-line-height);
 }
 .breadcrumb strong { color: #586750; font-weight: 500; }
 .actions { display: flex; gap: 20px; align-items: center; }
@@ -22,9 +24,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: var(--text-meta-size);
-  color: var(--text-meta-color);
-  line-height: var(--text-meta-leading);
+  font-size: var(--ct-meta-font-size);
+  color: var(--ct-meta-color);
+  line-height: var(--ct-meta-line-height);
 }
 .previewMode button {
   border: 1px solid #dfe2d5;
@@ -54,7 +56,7 @@
   height: 5px;
   border-radius: 50%;
   background: #b77b55;
-  outline: 2px solid var(--cream);
+  outline: 2px solid var(--ct-ref-color-ivory-100);
 }
 .avatar { padding: 0; border-radius: 50%; }
 .dot {

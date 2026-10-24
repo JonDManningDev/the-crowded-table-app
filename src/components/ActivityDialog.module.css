@@ -1,0 +1,299 @@
+/* Activity details retain local artwork/grid geometry, section rhythm and
+   meter/icon/chat paint. These are not new shared design roles.
+   The 31px price, 11px input and compact avatars are local type treatments.
+   Shared Modal, controls and Notice keep their own styles and behavior. */
+.eyebrow {
+  font-size:var(--ct-eyebrow-font-size);
+  letter-spacing:2px;
+  font-weight:650;
+  line-height:var(--ct-eyebrow-line-height);
+  color:var(--ct-eyebrow-color);
+  display:block;
+  margin-bottom:10px;
+}
+
+.meta {
+  font-size:var(--ct-meta-font-size);
+  line-height:var(--ct-meta-line-height);
+  color:var(--ct-meta-color);
+}
+
+.tags {
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+}
+
+.host {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-bottom:15px;
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.host :global(.avatar) {
+  width:28px;
+  height:28px;
+  font-size:9px;
+}
+
+.detail-art {
+  height:225px;
+  border-radius:7px;
+  margin-bottom:28px;
+}
+
+.detail-grid {
+  display:grid;
+  grid-template-columns:1.3fr 1fr;
+  gap:30px;
+}
+
+.detail-title {
+  font-size:var(--ct-heading-card-font-size);
+  line-height:var(--ct-heading-content-line-height);
+  margin:var(--ct-ref-space-12) 0 18px;
+  color:var(--ct-heading-color);
+}
+
+.description {
+  font-size:var(--ct-body-font-size);
+  color:var(--ct-body-color);
+  line-height:var(--ct-body-line-height);
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+
+.detail-grid .description {
+  margin:var(--ct-ref-space-24) 0;
+}
+
+.detail-grid .eyebrow {
+  font-size:var(--ct-eyebrow-font-size);
+  line-height:var(--ct-eyebrow-line-height);
+  color:var(--ct-eyebrow-color);
+}
+
+.section-label {
+  font-size:var(--ct-heading-subsection-font-size);
+  margin:25px 0 var(--ct-ref-space-12);
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.detail-grid .muted {
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.reservation {
+  background:var(--ct-card-background);
+  border-radius:var(--ct-card-border-radius);
+  padding:var(--ct-card-padding);
+  align-self:start;
+}
+
+.detail-fact {
+  display:flex;
+  gap:11px;
+  margin-bottom:20px;
+  align-items:flex-start;
+}
+
+.detail-fact>svg {
+  color:#7e936c;
+  margin-top:2px;
+  width:17px;
+}
+
+.detail-fact strong {
+  display:block;
+  font-size:var(--ct-body-font-size);
+  font-weight:500;
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.detail-fact span {
+  display:block;
+  color:var(--ct-meta-color);
+  font-size:var(--ct-meta-font-size);
+  margin-top:var(--ct-label-meta-gap);
+  overflow-wrap:anywhere;
+  line-height:var(--ct-meta-line-height);
+}
+
+.seat-bar {
+  height:4px;
+  border-radius:4px;
+  background:#d9e1cd;
+  overflow:hidden;
+  margin:25px 0;
+}
+
+.seat-bar>span {
+  display:block;
+  height:100%;
+  background:#6d8b56;
+}
+
+.price {
+  font-family:var(--ct-ref-font-family-serif);
+  font-size:31px;
+  margin:15px 0;
+}
+
+.price small {
+  display:block;
+  font-family:var(--ct-body-font-family);
+  font-size:var(--ct-meta-font-size);
+  color:var(--ct-meta-color);
+  margin-top:var(--ct-ref-space-4);
+  line-height:var(--ct-meta-line-height);
+}
+
+.privacy-note {
+  font-size:var(--ct-meta-font-size);
+  display:flex;
+  align-items:center;
+  gap:var(--ct-ref-space-8);
+  color:var(--ct-meta-color);
+  margin:22px 0 0;
+  line-height:var(--ct-meta-line-height);
+}
+
+.chat-box {
+  margin-top:30px;
+  border-top:1px solid var(--ct-ref-color-stone-200);
+  padding-top:25px;
+}
+
+.chat-box>h3 {
+  display:flex;
+  gap:10px;
+  align-items:center;
+  font-size:var(--ct-heading-subsection-font-size);
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.chat-message {
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  border-radius:7px;
+  background:#f0f2e8;
+  padding:var(--ct-ref-space-12);
+  margin:15px 0;
+}
+
+.chat-message strong {
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.chat-message p {
+  font-size:var(--ct-body-font-size);
+  color:var(--ct-body-color);
+  margin:5px 0 0;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  line-height:var(--ct-body-line-height);
+}
+
+.chat-message>div {
+  min-width:0;
+}
+
+.chat-message :global(.avatar) {
+  width:25px;
+  height:25px;
+  font-size:8px;
+}
+
+.chat-form {
+  display:flex;
+  gap:var(--ct-ref-space-8);
+}
+
+.chat-form input {
+  width:100%;
+  min-width:0;
+  font-size:11px;
+}
+
+.chat-form :global(.button) {
+  padding:var(--ct-ref-space-8) var(--ct-ref-space-12);
+}
+
+.request-list {
+  border-top:1px solid var(--ct-ref-color-stone-200);
+  margin-top:25px;
+  padding-top:20px;
+}
+
+.request {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:var(--ct-list-row-padding-block) 0;
+  flex-wrap:wrap;
+}
+
+.request>div {
+  flex:1;
+}
+
+.request strong {
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.request small {
+  display:block;
+  font-size:var(--ct-meta-font-size);
+  color:var(--ct-meta-color);
+  line-height:var(--ct-meta-line-height);
+  margin-top:var(--ct-label-meta-gap);
+}
+
+.demo-checkout h3 {
+  font-size:var(--ct-heading-subsection-font-size);
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.demo-checkout p {
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.demo-checkout .meta {
+  font-size:var(--ct-meta-font-size);
+  line-height:var(--ct-meta-line-height);
+  color:var(--ct-meta-color);
+}
+
+@media(max-width:700px) {
+  .detail-grid {
+    grid-template-columns:1fr;
+  }
+
+  .detail-art {
+    height:180px;
+    margin-bottom:20px;
+  }
+
+  .detail-grid .reservation {
+    grid-row:1;
+  }
+}
+
+.detail-grid > * { min-width:0; }

@@ -7,6 +7,7 @@ import type { MockModel } from '../mock/useMockState'
 import { Avatar, Icon, Modal, Tag } from './ui'
 import { GameArt } from './GameArt'
 import styles from './ActivityCard.module.css'
+import dialogStyles from './ActivityDialog.module.css'
 
 export function ActivityCard({
   item,
@@ -106,30 +107,30 @@ export function ActivityDialog({
       onClose={onClose}
       wide
     >
-      <GameArt type={item.art} className="detail-art"/>
-      <div className="detail-grid">
+      <GameArt type={item.art} className={dialogStyles['detail-art']}/>
+      <div className={dialogStyles['detail-grid']}>
         <div>
-          <div className="eyebrow">{item.category}</div>
-          <h2 className="detail-title">{item.title}</h2>
-          <div className="host">
+          <div className={dialogStyles['eyebrow']}>{item.category}</div>
+          <h2 className={dialogStyles['detail-title']}>{item.title}</h2>
+          <div className={dialogStyles['host']}>
             <Avatar name={item.host}/>
             <span>Hosted by <strong>{item.host}</strong></span>
           </div>
-          <p className="description">{item.description}</p>
-          <div className="tags">{item.tags.map(tag => <Tag key={tag}>{tag}</Tag>)}</div>
-          <h3 className="section-label">A few things to know</h3>
-          <p className="muted">
+          <p className={dialogStyles['description']}>{item.description}</p>
+          <div className={dialogStyles['tags']}>{item.tags.map(tag => <Tag key={tag}>{tag}</Tag>)}</div>
+          <h3 className={dialogStyles['section-label']}>A few things to know</h3>
+          <p className={dialogStyles['muted']}>
             Bring your curiosity and a little kindness. If your plans change, please release your
             seat so someone else can join.
           </p>
           {hosting && (
-            <div className="request-list">
+            <div className={dialogStyles['request-list']}>
               <h3>Seat requests</h3>
               {requests.length === 0 && (
-                <p className="muted">No requests yet. Your table is ready for company.</p>
+                <p className={dialogStyles['muted']}>No requests yet. Your table is ready for company.</p>
               )}
               {requests.map(request => (
-                <div className="request" key={request.id}>
+                <div className={dialogStyles['request']} key={request.id}>
                   <Avatar name={request.name}/>
                   <div>
                     <strong>{request.name}</strong>
@@ -162,10 +163,10 @@ export function ActivityDialog({
             </div>
           )}
           {canChat && (
-            <div className="chat-box">
+            <div className={dialogStyles['chat-box']}>
               <h3><Icon name="chat"/> Table conversation</h3>
-              <p className="meta">Only your confirmed table · available until 48 hours after play</p>
-              <div className="chat-message">
+              <p className={dialogStyles['meta']}>Only your confirmed table · available until 48 hours after play</p>
+              <div className={dialogStyles['chat-message']}>
                 <Avatar name={item.host}/>
                 <div>
                   <strong>{item.host}</strong>
@@ -173,7 +174,7 @@ export function ActivityDialog({
                 </div>
               </div>
               {(model.messages[id] || []).map((entry, index) => (
-                <div className="chat-message" key={index}>
+                <div className={dialogStyles['chat-message']} key={index}>
                   <Avatar name={entry.author}/>
                   <div>
                     <strong>{entry.author}</strong>
@@ -181,7 +182,7 @@ export function ActivityDialog({
                   </div>
                 </div>
               ))}
-              <form className="chat-form" onSubmit={event => {
+              <form className={dialogStyles['chat-form']} onSubmit={event => {
                 event.preventDefault()
                 if (!message.trim()) return
                 model.setMessages(previous => ({
@@ -205,29 +206,29 @@ export function ActivityDialog({
             </div>
           )}
         </div>
-        <aside className="reservation">
-          <div className="detail-fact">
+        <aside className={dialogStyles['reservation']}>
+          <div className={dialogStyles['detail-fact']}>
             <Icon name="calendar"/>
             <div>
               <strong>{formatDate(item.date)}</strong>
               <span>{new Date(item.date + 'T12:00:00').getFullYear()}</span>
             </div>
           </div>
-          <div className="detail-fact">
+          <div className={dialogStyles['detail-fact']}>
             <Icon name="clock"/>
             <div>
               <strong>{formatTime(item.time)} – {formatTime(item.end)}</strong>
               <span>Tegucigalpa time</span>
             </div>
           </div>
-          <div className="detail-fact">
+          <div className={dialogStyles['detail-fact']}>
             <Icon name={item.private ? 'lock' : 'pin'}/>
             <div>
               <strong>{item.location}</strong>
               <span>{placeDetail}</span>
             </div>
           </div>
-          <div className="detail-fact">
+          <div className={dialogStyles['detail-fact']}>
             <Icon name="people"/>
             <div>
               <strong>{item.filled} of {item.capacity} seats filled</strong>
@@ -238,7 +239,7 @@ export function ActivityDialog({
               </span>
             </div>
           </div>
-          <div className="seat-bar">
+          <div className={dialogStyles['seat-bar']}>
             <span style={{ width: `${item.filled / item.capacity * 100}%` }}/>
           </div>
           {hosting ? (
@@ -253,22 +254,22 @@ export function ActivityDialog({
                     ? 'Waiting for host approval'
                     : 'You’re on the waitlist'}
               </Notice>
-              <p className="meta">
+              <p className={dialogStyles['meta']}>
                 {status === 'requested'
                   ? 'We’ll let you know when your host responds.'
                   : status === 'waitlisted'
                     ? 'We’ll notify you when a seat opens.'
                     : 'We can’t wait to see you.'}
               </p>
-              <Button appearance="ghost" className="text-button danger" onClick={() => model.cancel(id)}>
+              <Button appearance="ghost" className="text-button" onClick={() => model.cancel(id)}>
                 Cancel {status === 'requested' ? 'request' : status === 'waitlisted' ? 'waitlist spot' : 'reservation'}
               </Button>
             </>
           ) : pay ? (
-            <div className="demo-checkout">
+            <div className={dialogStyles['demo-checkout']}>
               <h3>Your evening awaits</h3>
               <p>One seat · <strong>L{cost}</strong></p>
-              <p className="meta">Preview checkout. No payment details are collected or charged.</p>
+              <p className={dialogStyles['meta']}>Preview checkout. No payment details are collected or charged.</p>
               <Button
                 appearance="primary"
                 full
@@ -286,7 +287,7 @@ export function ActivityDialog({
             </div>
           ) : (
             <>
-              <div className="price">
+              <div className={dialogStyles['price']}>
                 {cost ? `L${cost}` : 'Included'}
                 <small>{cost ? 'per person' : 'with your membership'}</small>
               </div>
@@ -296,7 +297,7 @@ export function ActivityDialog({
               </Button>
             </>
           )}
-          <div className="privacy-note">
+          <div className={dialogStyles['privacy-note']}>
             <Icon name="lock" size={15}/>
             <span>Private by design.<br/>Good company by choice.</span>
           </div>

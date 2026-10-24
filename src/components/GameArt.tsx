@@ -1,20 +1,13 @@
 import styles from './GameArt.module.css'
 import type { Art } from '../mock/data'
 
-const palettes: Record<Art, string[]> = {
-  azul: ['#e8bc80', '#19636b', '#ce6c49'],
-  birds: ['#d7dfd0', '#f8f0de', '#b6744e'],
-  rpg: ['#253c35', '#b18050', '#e3c28b'],
-  social: ['#c17956', '#efe0b9', '#374d41'],
-  rail: ['#e2c294', '#3f6058', '#a8513a'],
-  forest: ['#8b9e81', '#355747', '#eadcb9'],
-  mystery: ['#463c48', '#a88466', '#e7c699'],
-}
-
 export function GameArt({ type, className = '' }: { type: Art; className?: string }) {
-  const [bg, one, two] = palettes[type]
+  // CSS owns the variant palette; fixed detail colors and geometry stay artwork.
+  const bg = 'var(--_ct-game-art-palette-background)'
+  const one = 'var(--_ct-game-art-palette-primary-color)'
+  const two = 'var(--_ct-game-art-palette-secondary-color)'
   return (
-    <div className={`game-art ${styles['game-art']} art-${type} ${className}`}>
+    <div className={`game-art ${styles['game-art']} ${styles[`art-${type}`]} art-${type} ${className}`}>
       <svg viewBox="0 0 480 280" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
         <rect width="480" height="280" fill={bg}/>
         <circle cx="420" cy="30" r="160" fill={one} opacity=".12"/>

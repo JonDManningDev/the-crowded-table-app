@@ -1,18 +1,18 @@
-.page { color: var(--ink); }
-.welcome { display: grid; grid-template-columns: 1.5fr 1fr; gap: 32px; padding: var(--card-padding); border: 1px solid var(--line); border-radius: var(--card-radius); background: var(--card-bg); }
-.label { font-size: var(--text-eyebrow-size); line-height: var(--text-eyebrow-leading); letter-spacing: 2px; font-weight: 600; color: var(--text-eyebrow-color); }
+.page { color: var(--ct-ref-color-forest-900); }
+.welcome { display: grid; grid-template-columns: 1.5fr 1fr; gap: var(--ct-ref-space-32); padding: var(--ct-card-padding); border: 1px solid var(--ct-card-border-color); border-radius: var(--ct-card-border-radius); background: var(--ct-card-background); }
+.label { font-size: var(--ct-eyebrow-font-size); line-height: var(--ct-eyebrow-line-height); letter-spacing: 2px; font-weight: 600; color: var(--ct-eyebrow-color); }
 .welcome h2 { margin: 17px 0; }
 .welcome h2 em { font-weight: 400; }
-.welcome p { max-width: 460px; font-size: var(--text-body-size); color: var(--text-body-color); line-height: var(--text-body-leading); margin-bottom: 0; }
+.welcome p { max-width: 460px; font-size: var(--ct-body-font-size); color: var(--ct-body-color); line-height: var(--ct-body-line-height); margin-bottom: 0; }
 .illustration { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; border: 1px solid #bccbb3; border-radius: 50% 50% 8px 8px; color: #53694b; background: #f8f7f24d; padding: 28px; }
-.illustration span { font-size: var(--text-meta-size); line-height: var(--text-meta-leading); letter-spacing: 1px; text-align: center; }
-.sections { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--account-grid-gap); margin-top: var(--account-stack-gap); }
-.section { padding: var(--card-padding); border: 1px solid var(--line); border-radius: var(--card-radius); background: var(--card-bg); }
-.sectionTitle { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.icon { display: inline-flex; padding: 10px; border-radius: 50%; background: var(--sage); }
-.soon { font-size: var(--text-eyebrow-size); line-height: var(--text-eyebrow-leading); text-transform: uppercase; letter-spacing: 1px; color: var(--text-eyebrow-color); }
-.section h2 { margin: 22px 0 12px; }
-.section p { color: var(--text-body-color); font-size: var(--text-body-size); line-height: var(--text-body-leading); }
-.placeholder { border-top: 1px solid var(--line); margin-top: 25px; padding-top: 22px; }
-@media (max-width: 1100px) { .sections { grid-template-columns: 1fr; gap: var(--account-stack-gap); } .placeholder { margin-top: 18px; padding-top: 14px; } }
+.illustration span { font-size: var(--ct-meta-font-size); line-height: var(--ct-meta-line-height); letter-spacing: 1px; text-align: center; }
+.sections { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ct-card-grid-gap); margin-top: var(--ct-section-gap); }
+.section { padding: var(--ct-card-padding); border: 1px solid var(--ct-card-border-color); border-radius: var(--ct-card-border-radius); background: var(--ct-card-background); }
+.sectionTitle { display: flex; align-items: center; justify-content: space-between; gap: var(--ct-ref-space-8); }
+.icon { display: inline-flex; padding: 10px; border-radius: 50%; background: var(--ct-ref-color-sage-100); }
+.soon { font-size: var(--ct-eyebrow-font-size); line-height: var(--ct-eyebrow-line-height); text-transform: uppercase; letter-spacing: 1px; color: var(--ct-eyebrow-color); }
+.section h2 { margin: 22px 0 var(--ct-ref-space-12); }
+.section p { color: var(--ct-body-color); font-size: var(--ct-body-font-size); line-height: var(--ct-body-line-height); }
+.placeholder { border-top: 1px solid var(--ct-ref-color-stone-200); margin-top: 25px; padding-top: 22px; }
+@media (max-width: 1100px) { .sections { grid-template-columns: 1fr; gap: var(--ct-section-gap); } .placeholder { margin-top: 18px; padding-top: 14px; } }
 @media (max-width: 700px) { .welcome { grid-template-columns: 1fr; } .illustration { display: none; } }

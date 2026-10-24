@@ -3,40 +3,37 @@
 .page[data-account-page] > :global(.tabs) { flex-wrap: wrap; }
 .page[data-account-page] :global(.community-list) > li > div { min-width: 0; }
 .page[data-account-page] :global(.section-heading),
-.page[data-account-page] :global(.setting-row),
-.page[data-account-page] :global(.premium-feature-list) > li { flex-wrap: wrap; }
+.page[data-account-page] :global(.setting-row) { flex-wrap: wrap; }
 .page[data-account-page] :global(.favorites) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 90px), 1fr)); }
 .page[data-account-page] p:not(:where(:global(.profile-quote), :global(.profile-side-note) > p)),
 .page[data-account-page] :global(.panel) p:not(:where(:global(.profile-quote))),
-.page[data-account-page] :global(.setting-row) strong,
-.page[data-account-page] :global(.premium-feature-list) strong {
-  font-size: var(--text-body-size);
-  line-height: var(--text-body-leading);
+.page[data-account-page] :global(.setting-row) strong {
+  font-size: var(--ct-body-font-size);
+  line-height: var(--ct-body-line-height);
 }
 
 /* Keep decorative copy and feedback outside the ordinary paragraph palette. */
 .page[data-account-page] p:not(:where(:global(.profile-quote), :global(.profile-side-note) > p, [role="alert"], [role="status"], :global(.auth-error))),
-.page[data-account-page] :global(.setting-row) strong,
-.page[data-account-page] :global(.premium-feature-list) strong {
-  color: var(--text-body-color);
+.page[data-account-page] :global(.setting-row) strong {
+  color: var(--ct-body-color);
 }
 
 .page[data-account-page] :is(h1, h2, h3) {
-  color: var(--text-heading-color);
+  color: var(--ct-heading-color);
 }
 
 .page[data-account-page] :is(small, :global(.meta), :global(.location), :global(.tag), :global(.account-metadata)),
 .page[data-account-page] :global(.profile-stats) span,
 .page[data-account-page] :global(.panel) p:global(.account-metadata) {
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-leading);
-  color: var(--text-meta-color);
+  font-size: var(--ct-meta-font-size);
+  line-height: var(--ct-meta-line-height);
+  color: var(--ct-meta-color);
 }
 
 .page[data-account-page] :global(.eyebrow) {
-  font-size: var(--text-eyebrow-size);
-  line-height: var(--text-eyebrow-leading);
-  color: var(--text-eyebrow-color);
+  font-size: var(--ct-eyebrow-font-size);
+  line-height: var(--ct-eyebrow-line-height);
+  color: var(--ct-eyebrow-color);
 }
 
 /* Containers own stack spacing, including both fetched and sample cards. */
@@ -45,7 +42,7 @@
 .page[data-account-page] :global(.community-list) {
   display: flex;
   flex-direction: column;
-  gap: var(--account-stack-gap);
+  gap: var(--ct-section-gap);
 }
 
 .page[data-account-page] :global(.profile-layout) > div > :global(.panel),
@@ -57,29 +54,29 @@
 
 /* Visual roles are independent of the semantic heading level. */
 .page[data-account-page] :global(.page-heading) h1 {
-  font-size: var(--heading-page-size);
-  line-height: var(--heading-title-leading);
+  font-size: var(--ct-heading-page-font-size);
+  line-height: var(--ct-heading-title-line-height);
 }
 .page[data-account-page] [data-heading="hero"] {
-  font-size: var(--heading-hero-size);
-  line-height: var(--heading-title-leading);
+  font-size: var(--ct-heading-hero-font-size);
+  line-height: var(--ct-heading-title-line-height);
 }
 .page[data-account-page] [data-heading="card"] {
-  font-size: var(--heading-card-size);
-  line-height: var(--heading-content-leading);
+  font-size: var(--ct-heading-card-font-size);
+  line-height: var(--ct-heading-content-line-height);
 }
 .page[data-account-page] [data-heading="subsection"] {
-  font-size: var(--heading-subsection-size);
-  line-height: var(--heading-content-leading);
+  font-size: var(--ct-heading-subsection-font-size);
+  line-height: var(--ct-heading-content-line-height);
 }
 .page[data-account-page] [data-heading="item"] {
-  font-size: var(--heading-item-size);
-  line-height: var(--heading-content-leading);
+  font-size: var(--ct-heading-item-font-size);
+  line-height: var(--ct-heading-content-line-height);
 }
 @media (max-width: 700px) {
   .page[data-account-page] :global(.page-heading) { flex-direction: column; }
   .page[data-account-page] :global(.page-heading) > button { flex-shrink: 0; }
   .page[data-account-page] :global(.page-heading) h1 {
-    font-size: var(--heading-page-small-size);
+    font-size: var(--ct-heading-page-compact-font-size);
   }
 }

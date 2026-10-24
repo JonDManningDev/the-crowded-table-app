@@ -1,5 +1,7 @@
+/* Brand copy and local composition retain their existing treatment;
+   this is not an action footer or metadata role. See batch twenty-one. */
 .footer {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--ct-ref-color-stone-200);
   margin-top: 44px;
   padding: 23px 0 28px;
   display: flex;
@@ -9,11 +11,11 @@
 }
 
 .footer span:first-child {
-  font-family: var(--serif);
+  font-family: var(--ct-ref-font-family-serif);
   font-size: 17px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ct-ref-space-8);
 }
 
 .footer span:last-child {
@@ -25,7 +27,7 @@
   .footer {
     flex-direction: column;
     gap: 15px;
-    margin-top: 32px;
+    margin-top: var(--ct-ref-space-32);
     align-items: center;
     text-align: center;
   }

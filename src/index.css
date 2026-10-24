@@ -38,7 +38,7 @@ button {
   color:inherit;
   background:none;
   border:0;
-  transition:background .18s,transform .18s,box-shadow .18s
+  transition:background var(--ct-control-transition-duration),transform var(--ct-control-transition-duration),box-shadow var(--ct-control-transition-duration)
 }
 
 button:disabled {
@@ -52,11 +52,11 @@ a {
 }
 
 button,input,select,textarea,a {
-  outline-offset:4px
+  outline-offset:var(--ct-focus-outline-offset)
 }
 
 *:focus-visible {
-  outline:2px solid #ad704c
+  outline:var(--ct-focus-outline-width) solid var(--ct-focus-outline-color)
 }
 
 h1,h2,h3,p {
@@ -64,41 +64,41 @@ h1,h2,h3,p {
 }
 
 h1,h2,h3 {
-  font-family:var(--serif);
+  font-family:var(--ct-heading-font-family);
   font-weight:400;
-  color:var(--ink);
-  line-height:var(--heading-content-leading)
+  color:var(--ct-heading-color);
+  line-height:var(--ct-heading-content-line-height)
 }
 
 h1 {
-  font-size:var(--heading-page-size);
-  line-height:var(--heading-title-leading);
+  font-size:var(--ct-heading-page-font-size);
+  line-height:var(--ct-heading-title-line-height);
   letter-spacing:-1px;
   margin-bottom:14px
 }
 
 h2 {
-  font-size:var(--heading-card-size);
+  font-size:var(--ct-heading-card-font-size);
   margin-bottom:15px;
   letter-spacing:-.5px
 }
 
 h3 {
-  font-size:var(--heading-subsection-size);
+  font-size:var(--ct-heading-subsection-font-size);
   margin-bottom:10px
 }
 
 p {
-  font-size:var(--text-body-size);
-  line-height:var(--text-body-leading);
-  color:var(--text-body-color);
-  margin-bottom:16px
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+  margin-bottom:var(--ct-ref-space-16)
 }
 
 small {
-  font-size:var(--text-meta-size);
-  line-height:var(--text-meta-leading);
-  color:var(--text-meta-color)
+  font-size:var(--ct-meta-font-size);
+  line-height:var(--ct-meta-line-height);
+  color:var(--ct-meta-color)
 }
 
 strong {
@@ -110,17 +110,18 @@ svg {
   vertical-align:middle
 }
 
+/* Preserve native-field exceptions until their design review; see batch twenty-three. */
 input,select,textarea {
   border:1px solid #d7dccf;
   border-radius:7px;
   padding:11px 13px;
   background:#fffefa;
-  color:var(--text-body-color);
+  color:var(--ct-body-color);
   min-width:0
 }
 
 input[type=checkbox] {
-  accent-color:var(--green)
+  accent-color:var(--ct-ref-color-forest-800)
 }
 
 textarea {

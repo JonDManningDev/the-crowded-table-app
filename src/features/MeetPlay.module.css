@@ -1,4 +1,4 @@
-.guidance { margin-top: var(--account-stack-gap); }
+.guidance { margin-top: var(--ct-section-gap); }
 .feature {
   position: relative;
   z-index: 1;
@@ -11,7 +11,7 @@
   .feature {
     border-left: 0;
     border-top: 1px solid #cfd8c1;
-    padding: var(--account-stack-gap) 0 0;
-    margin-top: var(--account-stack-gap);
+    padding: var(--ct-ref-space-24) 0 0;
+    margin-top: var(--ct-section-gap);
   }
 }

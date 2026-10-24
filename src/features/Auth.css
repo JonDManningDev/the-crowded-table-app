@@ -1,12 +1,12 @@
 .auth-page { min-height:80vh; padding:48px 20px; display:grid; place-items:start center; }
 .auth-card { width:100%; max-width:520px; }
-.auth-card h1 { font-size:var(--heading-page-size); line-height:var(--heading-title-leading); margin:12px 0 24px; }
-.auth-links { margin-top:24px; font-size:var(--text-body-size); }
-.auth-links { display:flex; flex-wrap:wrap; gap:12px; }
+.auth-card h1 { font-size:var(--ct-heading-page-font-size); line-height:var(--ct-heading-title-line-height); margin:var(--ct-ref-space-12) 0 var(--ct-ref-space-24); }
+.auth-links { margin-top:var(--ct-ref-space-24); font-size:var(--ct-body-font-size); }
+.auth-links { display:flex; flex-wrap:wrap; gap:var(--ct-ref-space-12); }
 .auth-error { color:#913d27; }
-.auth-feedback { margin:0; padding:14px 28px; background:var(--sage); }
+.auth-feedback { margin:0; padding:14px 28px; background:var(--ct-ref-color-sage-100); }
 .auth-feedback { margin-left:238px; }
 @media(max-width:1200px) { .auth-feedback { margin-left:210px; } }
 @media(max-width:950px) { .auth-feedback { margin-left:175px; } }
 @media(max-width:700px) { .auth-feedback { margin-left:0; } }
-@media(max-width:700px) { .auth-card h1 { font-size:var(--heading-page-small-size); } }
+@media(max-width:700px) { .auth-card h1 { font-size:var(--ct-heading-page-compact-font-size); } }

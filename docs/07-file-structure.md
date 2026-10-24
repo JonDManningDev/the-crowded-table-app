@@ -187,6 +187,14 @@ Shared-bundle follow-up (2026-10-20): GameArt now lives in components/GameArt.ts
 
 ActivityCard styling (2026-10-23, token batch eight awaiting review): components/Activity.tsx imports colocated ActivityCard.module.css for the card presenter. Exclusive card/artwork/date/footer rules and their responsive rules moved out of App.css. Shared grid, host/location/availability utilities, dots, Avatar and GameArt remain available to other consumers; the card now owns its local host/location/status composition. ActivityDialog remains in Activity.tsx with its existing global styles and behavior. No component API, domain ownership or routing refactor is included.
 
+ActivityDialog styling (2026-10-23, token batch nine accepted): Activity.tsx now also imports ActivityDialog.module.css. Exclusive detail/reservation/request/chat-container/form rules moved from App.css; local copies of required host/description/title/chat-message helpers consume tokens directly. Global versions still used by Discussion/profile/account views remain unchanged. Modal shell/lifecycle, Notice, controls, artwork and ActivityCard retain their owners; no file split, API, domain or lazy-loading boundary change is included.
+
+Shared Modal styling (2026-10-23, token batch ten accepted): ui.module.css replaces eight Modal aliases with existing role/primitive references. Modal stays in ui.tsx with the same API, native lifecycle and legacy class hooks. No new stylesheet, token definitions, component split or ownership change; unrelated presenters in the module retain their rules.
+
+Shared Tabs styling (2026-10-23, token batch eleven accepted): ui.module.css consumes three new Tabs paint contracts from semantic.css and existing section/composition/palette tokens. Tabs remains in ui.tsx as local-view Buttons; account navigation still shares only the container class and uses NavItem links. Compact section-heading/Profile overrides stay in App.css. No file split, React API or other style ownership change.
+
+Shared Heading styling (2026-10-23, token batch twelve accepted): eleven ui.module.css aliases now reference the existing body, page-title, eyebrow and section-spacing roles directly. Heading stays in ui.tsx with its h1 and optional paragraph/action; global typography and account-page overrides are unchanged. No new token, stylesheet, component API or ownership change; specialized cards' local Heading tag variables are unrelated.
+
 ## Implemented user-account structure — 2026-10-20
 
 UserAccountPage replaces the flat AccountPage. It owns the shared heading/navigation, auth gate, account mock-state lifetime and global editor state, and imports the four tabs. Current source layout:
@@ -249,3 +257,51 @@ The tab modules replace the old MyHomePage/MyCommunitiesPage files and no longer
 ### Shared GuidanceNote (2026-10-22)
 
 `components/shared/GuidanceNote.tsx` and GuidanceNote.module.css own static guidance presentation. MeetPlay.module.css and Community.module.css own external spacing for the etiquette reminder and member-dialog advice. Removed obsolete community-note rules from App.css. Other community styles remain for later migration.
+
+Shared Empty styling (2026-10-23, batch thirteen accepted): two surface/radius aliases migrated in ui.module.css. ui.tsx, global typography, consumers and local composition remain unchanged.
+
+Shared Tag styling (2026-10-23, batch fourteen accepted): six ui.module.css substitutions consume metadata roles and the 4px spacing primitive. No new token definitions, files or React API changes. Local label paints/geometry and caller overrides retain ownership.
+
+Shared Avatar styling (2026-10-23, batch fifteen accepted): ui.module.css replaces the serif compatibility alias with the serif primitive and classifies peach as local decorative paint. No new token definitions, files, React API or ownership changes.
+
+Shared Botanical assessment (2026-10-23, batch sixteen accepted): no token substitutions or new files. Botanical stays in ui.tsx as currentColor SVG artwork with a documented ownership comment. Caller-specific placement/paint remains in its existing App.css or CSS Module owner; these callers are not claimed as migrated by this assessment.
+
+Shared Icon assessment (2026-10-23, batch seventeen accepted): only an ownership comment in ui.tsx; no token substitutions, new files, SVG changes or API changes. Caller styles and global SVG alignment/shrink behavior retain ownership.
+
+Shared GameArt styling (2026-10-23, batch eighteen accepted): GameArt.module.css owns seven complete private palette mappings. GameArt.tsx consumes those variables and appends its variant module class; the TypeScript palette table is removed. Existing APIs, legacy hooks, fixed SVG details and caller sizing/cropping retain ownership. No new file or dependency.
+
+Sidebar styling (2026-10-23, batch nineteen accepted): Sidebar.module.css consumes existing metadata/navigation roles and font/divider primitives. Local shell/brand/mobile-selected styling remains in place. Two obsolete aliases removed from semantic.css after their last consumers migrated; Sidebar.tsx and navigation APIs are unchanged.
+
+Topbar styling (2026-10-23, batch twenty accepted): Topbar.module.css directly consumes metadata and divider/outline tokens. Removed the last-consumer --cream alias from semantic.css. Topbar.tsx, AccountActions, controls, local indicator/hover paints and responsive geometry remain unchanged.
+
+Footer styling (2026-10-23, batch twenty-one accepted): Footer.module.css uses existing divider/serif primitives and 8px/32px spacing primitives. Footer.tsx, local branding and responsive composition remain unchanged; no new definitions, files or APIs.
+
+App shell styling (2026-10-23, batch twenty-two accepted): App.module.css replaces skip-link color/padding references with existing primitives. Shell/content dimensions, breakpoints, skip-link positions, App.tsx and all layout-component ownership remain unchanged. No new token definitions, files or APIs.
+
+Global styling (2026-10-23, batch twenty-three accepted): index.css consumes existing type/focus/transition tokens and paragraph-spacing/checkbox palette primitives. Native-field and selection exceptions stay global pending design review. Removed obsolete --green alias after its last consumer migrated; imports, selector order and component overrides remain intact.
+
+Remaining global styling (2026-10-23, batch twenty-four accepted): App.css retains its feature composition, responsive rules and interaction overrides while consuming existing purpose-based tokens directly. Removed three zero-consumer aliases; no files, APIs or ownership boundaries moved.
+
+Auth styling (2026-10-24, batch twenty-five accepted): src/features/Auth.css retains global auth layout and selectors while consuming existing tokens directly. No file/API moves or dependencies; the temporary browser sample was removed.
+
+Community creation styling (2026-10-24, batch twenty-six accepted): CreateCommunity.css consumes existing role/spacing tokens and remains global with unchanged imports and selectors. Temporary verification sample removed; no file moves or component refactor.
+
+MyHomeTab.module.css (2026-10-24, batch twenty-seven accepted) consumes existing tokens directly. CSS Module, AccountPanel action ownership, placeholder feed and navigation remain intact. No files or APIs moved.
+
+AccountPanel.module.css (2026-10-24, batch twenty-eight accepted) keeps shared action-footer ownership for MyHomeTab, AccountPreferencesPanel and PremiumFeaturesPanel. Two token substitutions only; no component/API/file moves.
+
+UserAccountPage.module.css (2026-10-24, batch twenty-nine accepted) retains account-scoped overrides and CSS Module ownership, now using existing role tokens directly. No React, route or file moves.
+
+ProfileOverview.module.css (2026-10-24, batch thirty accepted) retains shared account/community presenter ownership and directly consumes section-gap. One substitution; no API/file moves.
+
+MyCommunitiesTab.module.css (2026-10-24, batch thirty-one accepted) directly consumes existing tokens; OwnedCommunities retains separate styling/query ownership. No files, APIs or route changes.
+
+OwnedCommunities.module.css (2026-10-24, batch thirty-two accepted) uses ref-space-4 for local card text spacing. One declaration change; no file/API/query changes.
+
+Home.module.css (2026-10-24, batch thirty-three accepted) directly consumes tokens and retains hero/rhythm/calendar composition, media queries and illustration ownership. No files or APIs moved; 20 obsolete compatibility aliases removed.
+
+MeetPlay.module.css (2026-10-24, batch thirty-four accepted) directly consumes existing spacing tokens; no file, API or ownership changes.
+
+Community.module.css (2026-10-24, batch thirty-five accepted) directly consumes section-gap for member-preview guidance. Removed the obsolete compatibility block from semantic.css; no files or APIs moved.
+
+Final token audit (2026-10-24): all 32 source CSS files and 88 CSS/JS/TS-family files inspected for token references. No compatibility definitions remain. Audit findings live in docs/14-design-tokens.md; no new tooling, dependencies or application files.
