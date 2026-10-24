@@ -384,3 +384,11 @@ D-123 premium margin refinement (2026-10-24): user approved list margin:0 and re
 
 
 D-123 premium row standard (2026-10-24): user requires premium feature items to render like setting rows, with Manage instead of a toggle. Implemented shared setting-row presentation, superseding the former premium 16px gap extraction candidate. Verified and awaiting review; no billing implementation.
+
+
+CommunitiesList implementation authorization (2026-10-24): replace owner-only list with parent-fetched All/Managed/Owned summaries and shared CommunityCard. All includes active owners or pending/approved/suspended membership; Managed includes active staff including owners; Owned includes active owners. Removed membership excludes summaries; revoked staff does not exclude qualifying membership. Include archived communities, keep tenant audit identities owner-only, permit archived self relationship reads. Use authenticated security-barrier definer view with explicit caller predicates, not list RPC. Real Explore disabled, sample last in All with enabled preview link. Local migration/testing only; stop before hosted deployment.
+
+Implementation evidence: CommunitiesList replacement and restricted summary view are complete locally; 149 SQL assertions, 70 frontend tests, build/lint and responsive fixture checks pass. Hosted deployment remains pending review. See docs/12-implementation-status.md for verification boundaries and docs/14-design-tokens.md for resolved community-row ownership.
+
+
+2026-10-24 hosted approval and completion: user explicitly authorized community-summary deployment and hosted verification. Applied only 20261024000100 to the selected testing project; six-version history and empty dry run confirmed. Existing-data caller/access assertions and real All/Managed/Owned flows pass. Prior local-only restriction is superseded for this migration; no authorization for further deployment or token cleanup is inferred. See implementation status for hosted dataset limits.

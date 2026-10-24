@@ -3,9 +3,6 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { CreateCommunity } from './CreateCommunity'
-import { OwnedCommunities } from './user-accounts/components/OwnedCommunities'
-import { MyCommunitiesTab } from './user-accounts/components/MyCommunitiesTab'
-import { AccountContext } from './auth/accountContext'
 import { countryCodes, validateTenant } from '../lib/tenantCreation'
 import sql from '../../supabase/migrations/20261001000100_identity_tenant_schema.sql?raw'
 
@@ -97,31 +94,6 @@ it('shows actionable timezone and verified-account errors', async () => {
   submit()
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('verified account'))
 })
-it('reads saved owned communities without requesting audit or staff fields', async () => {
-  api.order.mockResolvedValue({
-    data: [{
-      id: 'a',
-      name: 'Saved community',
-      slug: 'saved-community',
-      country_code: 'HN',
-      city: null,
-      state_province: null,
-      timezone: 'America/Tegucigalpa',
-      operational_status: 'active',
-    }],
-    error: null,
-  })
-  render(<OwnedCommunities userId="owner"/>)
-  await screen.findByText('Saved community')
-  expect(api.select).toHaveBeenCalledWith('id,name,slug,country_code,state_province,city,timezone,operational_status')
-  expect(screen.getByText('saved-community · Owner · Active')).toBeTruthy()
-})
-it('does not present a failed owner-list read as an empty account', async () => {
-  api.order.mockResolvedValue({ data: null, error: { message: 'connection failed' } })
-  render(<OwnedCommunities userId="owner"/>)
-  await screen.findByRole('alert')
-  expect(screen.queryByText('You haven’t created a community yet.')).toBeNull()
-})
 it('keeps frontend country and reserved-handle hints aligned with the database constraints', () => {
   const dbCodes = sql.match(/'(AD AE [A-Z ]+)',' '/)![1].split(' ')
   expect(countryCodes).toEqual(dbCodes)
@@ -137,39 +109,4 @@ it('keeps frontend country and reserved-handle hints aligned with the database c
       join: false,
     })).not.toBeNull()
   }
-})
-
-it('combines fetched communities and the sample row in the account tab and clears private rows on sign-out', async () => {
-  api.order.mockResolvedValue({
-    data: [{
-      id: 'a',
-      name: 'Saved community',
-      slug: 'saved-community',
-      country_code: 'HN',
-      timezone: 'UTC',
-      operational_status: 'active',
-    }],
-    error: null,
-  })
-  const view = render(
-    <MemoryRouter>
-      <AccountContext.Provider value={{ status: 'signed-in', email: 'owner@example.test', userId: 'owner' }}>
-        <MyCommunitiesTab previewName="Sample community" previewLocation="Sample location"/>
-      </AccountContext.Provider>
-    </MemoryRouter>,
-  )
-  await screen.findByText('Saved community')
-  expect(screen.getAllByRole('listitem')).toHaveLength(2)
-  expect(screen.getByRole('heading', { name: 'Sample community' })).toBeTruthy()
-  expect(screen.getByRole('link', { name: 'Start New Community' }).getAttribute('href')).toBe('/account/communities/new')
-  view.rerender(
-    <MemoryRouter>
-      <AccountContext.Provider value={{ status: 'signed-out', email: null }}>
-        <MyCommunitiesTab previewName="Sample community" previewLocation="Sample location"/>
-      </AccountContext.Provider>
-    </MemoryRouter>,
-  )
-  expect(screen.queryByText('Saved community')).toBeNull()
-  expect(screen.queryAllByRole('listitem')).toHaveLength(0)
-  expect(screen.queryByRole('link', { name: 'Start New Community' })).toBeNull()
 })

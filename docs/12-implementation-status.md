@@ -717,3 +717,40 @@ Approved refinement implemented, awaiting review: App.css premium list margin is
 
 
 Premium setting-row alignment (2026-10-24): implemented user-directed shared presentation via setting-row class on premium li. Removed duplicate global row/small rules and redundant account selectors. Gap changes from 16px to existing settings 20px; strong now uses shared block presentation. All compared row/label/meta computed styles match discovery rows at 13 widths (360–1440px including 700/950/1200 boundaries); no horizontal overflow. Manage keyboard focus/navigation verified. Build/lint/65 tests pass; existing bundle warning remains. List margin/footer and billing behavior unchanged. Awaiting review.
+
+
+### CommunitiesList and relationship-based reads — 2026-10-24
+
+Implemented, verified locally, awaiting review. Replaced OwnedCommunities with presentation-only CommunitiesList and CommunityCard; MyCommunitiesTab owns filters/request lifecycle and the typed feature API queries my_community_summaries. Real and sample rows share normalized presentation; real Explore buttons are disabled, sample preview and creation routes remain available. Removed superseded global community-row/sample styles and account resets after consumer inspection. No new dependencies, token definitions, lifecycle fields or list RPC.
+
+Applied migration 20261024000100_my_community_summaries.sql to the local Supabase database only. Restricted caller-specific summary projection and archived self-relationship reads are covered by 29 new SQL assertions; the full local suite passes 149 tests in 3 files. Tests cover verified/anonymous boundaries, audit-column exclusion and owner-only base access, membership/staff combinations including removed/revoked, archived reads, deduplication and unchanged write/private-resource access. Broader historical-resource features remain unimplemented and were not introduced by this slice.
+
+All 70 frontend tests in 10 files pass, including filter query predicates/order/paging, normalization/precedence/deduplication, empty/loading/error/retry/configuration feedback, late responses, account transitions, disabled real actions and preview/creation navigation. Build and lint pass. Existing 521.51kB main-chunk warning remains. CSS token scan: no undefined references, cycles or unreferenced definitions.
+
+Browser checks used a temporary local fixture with the actual parent, API wrapper and cards backed by synthetic summaries; no hosted records were created or changed. Checked mobile/tablet/desktop wrapping, no horizontal overflow, breakpoint-adjacent stacking, All/Managed/Owned interactions, removed stale filter content, and loading/error/retry/empty sample availability. Browser console had no errors. Sample/creation link destinations were inspected; route navigation and delayed account-response races are covered by automated tests rather than end-to-end browser checks. Screenshot saved for review; all four fixture files and its Vite processes were removed/stopped.
+
+Hosted migration is NOT applied. A client pointed at the existing hosted schema will show the load-error/retry state (and sample in All) until the reviewed migration is deployed. End-to-end hosted PostgREST/browser integration is therefore unverified. Stop for review before deployment or unrelated token cleanup.
+
+
+### Approved hosted deployment blocked at preflight — 2026-10-24
+
+User approved deployment of 20261024000100 and hosted verification. The linked target is fsnipgsrlclbnfepcbvz. CLI 2.122.0's linked dry run failed with HTTP 403 / DbConfigLoginRoleStatusError before returning migration state. No hosted changes were made. User reauthentication requested; after access is restored, review dry-run/history, deploy only the approved migration, then verify actual filters and access restrictions. Hosted browser/API verification is still pending; this attempt does not supersede the local-only verification limits above. See Auth operations for sanitized diagnostics.
+
+
+Reauthentication retry (2026-10-24): after the user reported logging in again, the linked dry run still returned HTTP 403 at Initialising login role. A read-only `supabase projects list` succeeded but returned only Staylio-Test and Staylio-Production; the linked Crowded Table project fsnipgsrlclbnfepcbvz was absent. The current CLI identity/token can access the project-list endpoint but does not expose the intended project. Account, organization membership or token scope must be corrected before deployment; do not relink to another visible project. No hosted migration was applied and hosted flow/access verification remains pending.
+
+
+## Community-summary hosted deployment — completed 2026-10-24
+
+The refreshed CLI login correctly exposed the linked Crowded Table testing project fsnipgsrlclbnfepcbvz. Preflight listed only 20261024000100_my_community_summaries.sql, with no seeds or roles. Applied that migration once through the CLI. All six local/remote migration versions now match; the subsequent linked dry run is empty. This supersedes the blocked attempts and pending-deployment status recorded above. No frontend hosting deployment, Auth configuration change, data reset, or unrelated migration occurred.
+
+Hosted catalog checks confirm the PostgreSQL-owned security-barrier definer view, all ten explicit safe columns, authenticated SELECT-only access and no anonymous grant. Supabase's existing trusted service_role default privileges remain; no service credentials are exposed to the client. The owner_tenant policy is still is_owner(id); only the approved self-relationship policy branches changed.
+
+Read-only SQL assertions used each existing Auth identity plus a nonexistent identity under the authenticated role, comparing view IDs/filter counts against independently calculated relationships. Caller isolation, All/Managed/Owned predicates, owner-only base tenant access, membership/staff isolation, missing-identity denial, missing audit columns, anonymous read denial and absent authenticated write grants all passed. The verification transaction rolled back and changed no records.
+
+Hosted data has one community, one active owner assignment and one approved membership. The signed-in localhost app fetched The Meeple Meetup from hosted Supabase in All, Managed and Owned. All adds the sample last; Managed/Owned omit it. Filter transitions clear the real row while loading; the sample remains during All loading. Real Explore is disabled, location and Active · Owner render correctly, and sample preview remains a link. No sample transport or fixture was used for these checks. Archived, pending/suspended/removed, revoked/non-owner staff and cross-user relationship combinations are covered by the prior 149-test local suite, not by newly created hosted fixtures. No claim of exhaustive hosted lifecycle coverage or frontend production deployment is made.
+
+Documentation-only follow-up to the approved implementation; prior 70 frontend tests, build/lint and token checks remain the latest application verification. Stop for review before further deployment or token cleanup.
+
+
+Community toolbar action alignment (2026-10-24): implemented user-requested right alignment with Explore actions above 700px, using existing card-padding plus border geometry and auto start margin so wrapped toolbar rows remain end-aligned. Mobile stacking unchanged. Hosted-data browser checks at CSS widths 390/699/701/950/1200/1502 show no overflow; horizontal action right edges agree within 0.5 CSS px at browser zoom. Build/lint pass and 32 relevant community/navigation tests pass (rerun outside sandbox after a sandbox temporary-file error). Existing bundle warning remains. No shared token, behavior, or database change. Stopped for review.

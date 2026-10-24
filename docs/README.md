@@ -10,7 +10,7 @@ The user's explicit Vite + TypeScript + React Compiler, Supabase, multi-tenancy/
 
 The later client architecture decisions supersede overlapping tentative frontend/layout proposals. Read [frontend patterns](05-frontend-patterns.md) for accepted boundaries, data/state, and styling; [file structure](07-file-structure.md) for illustrative paths, current conflicts, and refactor progression; and [client review questions](08-decisions-and-open-questions.md#client-architecture-review-questions) for unresolved choices. The direction is reviewable, not immutable, and does not require empty folders or immediate implementation of every example.
 
-The platform supports user-created communities and multi-community accounts. **My Home** is the personal landing/feed; **My Communities** is the user's community hub. My Home remains a feed placeholder; My Communities now combines fetched owned communities with the sample-community row under My Account. **Community Home**, Meet & Play, Championship, **Discussion**, and Profile belong to the community being browsed. The Tegucigalpa sample community is not the whole platform; see D-043 through D-045.
+The platform supports user-created communities and multi-community accounts. **My Home** is the personal landing/feed; **My Communities** is the user's community hub. My Home remains a feed placeholder; My Communities now uses All/Managed/Owned relationship filters and shared community cards under My Account; the summary-view migration is deployed to the selected hosted testing project and verified against existing hosted data. **Community Home**, Meet & Play, Championship, **Discussion**, and Profile belong to the community being browsed. The Tegucigalpa sample community is not the whole platform; see D-043 through D-045.
 
 The 2026-10-12 decisions also settle per-person event/table records, atomic groups, pending-group edit priority, and `tables.manually_confirm_seats` (default false). Automatic tables confirm eligible whole groups as seats allow; manual tables use manager decisions with no second acceptance or deadline. Rejections leave the queue and notify the booker with timestamp, rejecting user, and optional reason. Payments and paid memberships are deferred until a late stage; current feature design must ignore them. Legacy prototype payment/member UI is a refactor discrepancy, not an accepted requirement.
 
@@ -44,7 +44,7 @@ The 2026-10-12 decisions also settle per-person event/table records, atomic grou
 - **Open:** a rule that needs resolution before its dependent implementation.
 - **Later:** explicitly deferred or eventual functionality.
 
-The current build combines real Auth, global profiles, discovery preferences, community creation and owner-list reads with mock community screens. The target excludes paid gates; legacy community simulations remain pending refactor, and D-120 explicitly retains account premium placeholders without billing. See [implementation status](12-implementation-status.md) for verified boundaries.
+The current build combines real Auth, global profiles, discovery preferences, community creation and relationship-summary reads with mock community screens. The target excludes paid gates; legacy community simulations remain pending refactor, and D-120 explicitly retains account premium placeholders without billing. See [implementation status](12-implementation-status.md) for verified boundaries.
 
 ## Best next steps
 

@@ -214,3 +214,24 @@ Reviewed 2026-10-02; provider features, prices, and quotas may change.
 - [Supabase Auth audit logs](https://supabase.com/docs/guides/auth/audit-logs)
 - [Supabase HTTP/API troubleshooting](https://supabase.com/docs/guides/troubleshooting/http-api-issues); performance-control values and percentage-allocation recommendation above were observed in the supplied dashboard screenshot
 - [Resend domains](https://resend.com/docs/dashboard/domains/introduction), [Cloudflare DNS](https://resend.com/docs/knowledge-base/cloudflare), [API keys](https://resend.com/docs/dashboard/api-keys/introduction), [SMTP](https://resend.com/docs/send-with-smtp), and [quotas](https://resend.com/docs/knowledge-base/account-quotas-and-limits)
+
+
+## Community-summary deployment attempt — 2026-10-24
+
+The user approved hosted deployment and real filter/access verification. Confirmed the repository remains linked to selected testing project fsnipgsrlclbnfepcbvz. Supabase CLI 2.122.0 `db push --linked --dry-run`, run with network access outside the sandbox, failed at Initialising login role with DbConfigLoginRoleStatusError / HTTP 403 (insufficient endpoint privileges). No migration push was attempted after that failure; remote history and pending migrations could not be verified. No process/user/machine SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD or SUPABASE_PROFILE overrides were present; no credential values were displayed. Requested user CLI reauthentication before retrying preflight. This is an authorization failure, not evidence of a migration defect. Hosted deployment and real All/Managed/Owned verification remain pending; prior local evidence remains valid.
+
+
+Reauthentication retry (2026-10-24): after the user reported logging in again, the linked dry run still returned HTTP 403 at Initialising login role. A read-only `supabase projects list` succeeded but returned only Staylio-Test and Staylio-Production; the linked Crowded Table project fsnipgsrlclbnfepcbvz was absent. The current CLI identity/token can access the project-list endpoint but does not expose the intended project. Account, organization membership or token scope must be corrected before deployment; do not relink to another visible project. No hosted migration was applied and hosted flow/access verification remains pending.
+
+
+## Community-summary hosted deployment — completed 2026-10-24
+
+The refreshed CLI login correctly exposed the linked Crowded Table testing project fsnipgsrlclbnfepcbvz. Preflight listed only 20261024000100_my_community_summaries.sql, with no seeds or roles. Applied that migration once through the CLI. All six local/remote migration versions now match; the subsequent linked dry run is empty. This supersedes the blocked attempts and pending-deployment status recorded above. No frontend hosting deployment, Auth configuration change, data reset, or unrelated migration occurred.
+
+Hosted catalog checks confirm the PostgreSQL-owned security-barrier definer view, all ten explicit safe columns, authenticated SELECT-only access and no anonymous grant. Supabase's existing trusted service_role default privileges remain; no service credentials are exposed to the client. The owner_tenant policy is still is_owner(id); only the approved self-relationship policy branches changed.
+
+Read-only SQL assertions used each existing Auth identity plus a nonexistent identity under the authenticated role, comparing view IDs/filter counts against independently calculated relationships. Caller isolation, All/Managed/Owned predicates, owner-only base tenant access, membership/staff isolation, missing-identity denial, missing audit columns, anonymous read denial and absent authenticated write grants all passed. The verification transaction rolled back and changed no records.
+
+Hosted data has one community, one active owner assignment and one approved membership. The signed-in localhost app fetched The Meeple Meetup from hosted Supabase in All, Managed and Owned. All adds the sample last; Managed/Owned omit it. Filter transitions clear the real row while loading; the sample remains during All loading. Real Explore is disabled, location and Active · Owner render correctly, and sample preview remains a link. No sample transport or fixture was used for these checks. Archived, pending/suspended/removed, revoked/non-owner staff and cross-user relationship combinations are covered by the prior 149-test local suite, not by newly created hosted fixtures. No claim of exhaustive hosted lifecycle coverage or frontend production deployment is made.
+
+Documentation-only follow-up to the approved implementation; prior 70 frontend tests, build/lint and token checks remain the latest application verification. Stop for review before further deployment or token cleanup.

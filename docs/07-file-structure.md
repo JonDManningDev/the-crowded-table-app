@@ -305,3 +305,8 @@ MeetPlay.module.css (2026-10-24, batch thirty-four accepted) directly consumes e
 Community.module.css (2026-10-24, batch thirty-five accepted) directly consumes section-gap for member-preview guidance. Removed the obsolete compatibility block from semantic.css; no files or APIs moved.
 
 Final token audit (2026-10-24): all 32 source CSS files and 88 CSS/JS/TS-family files inspected for token references. No compatibility definitions remain. Audit findings live in docs/14-design-tokens.md; no new tooling, dependencies or application files.
+
+
+## CommunitiesList replacement — current 2026-10-24
+
+Removed user-accounts/components/OwnedCommunities.tsx and its module. MyCommunitiesTab now owns request/filter/state orchestration; user-accounts/communities.ts owns typed view reads and normalization. CommunitiesList.tsx/module own the semantic list and vertical spacing; CommunityCard.tsx/module own shared real/sample content and responsive layout. Previous OwnedCommunities references above describe historical migration stages, not current files or query ownership. Auth/CreateCommunity API extraction remains separate work; this slice adds no dependencies.

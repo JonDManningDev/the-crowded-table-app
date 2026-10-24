@@ -296,7 +296,14 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            my_community_summaries: {
+              Row: {
+                id: string; name: string; city: string | null; state_province: string | null;
+                country_code: string; operational_status: string; created_at: string;
+                is_owned: boolean; is_managed: boolean; is_member: boolean;
+              }
+              Relationships: []
+            }
           }
           Functions: {
             "approve_community_account":

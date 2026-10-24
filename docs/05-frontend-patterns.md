@@ -289,3 +289,10 @@ Premium list refinement (2026-10-24, awaiting review): global list margin is zer
 
 
 Premium rows (2026-10-24) compose the existing setting-row presentation on semantic li elements; duplicate premium styles removed. Manage remains an ActionLink. This shares row styling without a configuration-heavy component API.
+
+
+## My Communities relationship list — current 2026-10-24
+
+MyCommunitiesTab owns All (default), Managed and Owned filters, requests, loading, errors, retry and filter-specific empty feedback. The typed feature API in user-accounts/communities.ts directly queries the restricted summary view with server-side filter predicates, created_at descending/id ascending ordering and 1,000-row paging. Parent request keys and cleanup ignore stale responses and clear visible results on filter/account changes; signing out clears private rows. No new query dependency is introduced in this slice.
+
+CommunitiesList receives normalized data only and renders CommunityCard semantic list items; neither fetches nor reads auth. Normalization deduplicates IDs and applies Owner → active Staff → Member precedence independent of filter. The sample is last in All, including loading/error/empty, and is not a real result. Real Explore buttons are disabled without handlers; sample preview and Start New Community navigation remain enabled. See style guide for card fields. This supersedes OwnedCommunities fetch/presentation ownership; remaining lifecycle and historical-resource features are unchanged.

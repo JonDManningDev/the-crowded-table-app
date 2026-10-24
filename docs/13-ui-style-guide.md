@@ -547,3 +547,8 @@ Final token audit (2026-10-24, awaiting review) confirms removal of compatibilit
 Premium list rhythm (approved 2026-10-24): without the temporary subscription Notice, use list margin:0. The preceding paragraph owns its standard 16px separation; list rows retain 20px vertical padding and the action footer owns 24px separation. No dedicated list-margin token or compensating bottom override is needed.
 
 Premium feature rows (approved 2026-10-24): use the same setting-row presentation as discovery settings: layout, 20px internal gap, row padding/divider, block label and metadata spacing/type, and responsive wrapping. The control is a Manage action instead of a toggle; retain list semantics and the existing outline action styling. Content/control dimensions can naturally affect height and wrapping. List margin remains zero.
+
+
+## Community cards — approved refinement 2026-10-24
+
+Real and sample communities share CommunityCard presentation: relationship eyebrow (Owned/Managed/Joined Community; Sample Community), community-name card heading, pin plus nonempty city/state/country joined with commas, Active/Archived · Owner/Staff/Member, and Explore community action. Owner precedes active staff, which precedes member. Do not show slug/timezone or preview-description copy. Real actions are disabled buttons; sample is an enabled preview link with Active · Member. Cards stack internally at max-width:700px and lists own vertical separation. This is an authorized presentation refinement, not a pixel-identical extraction of unfinished legacy rows.

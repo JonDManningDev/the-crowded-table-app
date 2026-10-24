@@ -36,7 +36,7 @@ async function navigate(page: Page) {
 }
 
 it('lands on the personal home without presenting the community preview as personal activity', async () => {
-  await act(async () => { render(<AccountContext.Provider value={{ status: 'signed-in', email: 'person@example.test' }}><App/></AccountContext.Provider>) })
+  await act(async () => { render(<AccountContext.Provider value={{ status: 'signed-in', email: 'person@example.test', userId: '00000000-0000-0000-0000-000000000001' }}><App/></AccountContext.Provider>) })
   await waitForContent()
   expect(screen.getByRole('heading', { name: 'My Account' })).toBeTruthy()
   expect(screen.getByRole('heading', { name: /All your tables/  })).toBeTruthy()

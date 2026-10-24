@@ -1,7 +1,6 @@
 /* Scope legacy shared components to account pages without changing community profiles. */
 .page { min-width: 0; overflow-wrap: anywhere; }
 .page[data-account-page] > :global(.tabs) { flex-wrap: wrap; }
-.page[data-account-page] :global(.community-list) > li > div { min-width: 0; }
 .page[data-account-page] :global(.section-heading),
 .page[data-account-page] :global(.setting-row) { flex-wrap: wrap; }
 .page[data-account-page] :global(.favorites) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 90px), 1fr)); }
@@ -38,17 +37,14 @@
 
 /* Containers own stack spacing, including both fetched and sample cards. */
 .page[data-account-page] :global(.profile-layout) > div,
-.page[data-account-page] :global(.account-settings),
-.page[data-account-page] :global(.community-list) {
+.page[data-account-page] :global(.account-settings) {
   display: flex;
   flex-direction: column;
   gap: var(--ct-section-gap);
 }
 
 .page[data-account-page] :global(.profile-layout) > div > :global(.panel),
-.page[data-account-page] :global(.account-settings) > :global(.panel),
-.page[data-account-page] :global(.community-list),
-.page[data-account-page] :global(.community-list) > li {
+.page[data-account-page] :global(.account-settings) > :global(.panel) {
   margin: 0;
 }
 

@@ -1,0 +1,19 @@
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ct-ref-space-24);
+  padding: var(--ct-card-padding);
+  border: 1px solid var(--ct-card-border-color);
+  border-radius: var(--ct-card-border-radius);
+  background: var(--ct-card-background);
+  overflow-wrap: anywhere;
+}
+.content { min-width: 0; }
+.card h2 { margin: var(--ct-ref-space-8) 0; }
+.card p { margin: 0 0 var(--ct-ref-space-4); }
+.card .location { display: flex; align-items: center; gap: var(--ct-ref-space-8); }
+.location svg { flex-shrink: 0; }
+@media (max-width: 700px) {
+  .card { align-items: flex-start; flex-direction: column; }
+}

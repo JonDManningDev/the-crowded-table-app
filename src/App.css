@@ -1888,10 +1888,6 @@
 
 .premium-feature-list { list-style: none; padding: 0; margin: 0; }
 .account-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
-.community-list { list-style: none; padding: 0; margin: 0; }
-.community-list > li { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: var(--ct-card-padding); border: 1px solid var(--ct-card-border-color); border-radius: var(--ct-card-border-radius); background: var(--ct-card-background); }
-@media (max-width: 700px) { .community-list > li { align-items: flex-start; flex-direction: column; } }
-
 .account-content .panel { background: var(--ct-card-background); }
 
 /* Shared visual roles, independent of semantic heading level. */
