@@ -1,6 +1,6 @@
 # Incremental page presentation refactor
 
-Recorded 2026-10-25. Workflow and Settings implementation plan **approved by the user**. Settings is implemented, verified locally and accepted for commit; the user authorized moving to Home planning. No deployment occurred. See docs/12 for evidence and verification limits.
+Recorded 2026-10-25. Workflow and Settings implementation plan **approved by the user**. Settings was committed as 5b3f5a4. The AccountHomeTab slice is implemented, verified locally and accepted for commit; the user authorized moving to Profile planning. No deployment occurred. See docs/12 for evidence and verification limits.
 
 ## Accepted working agreement
 
@@ -61,3 +61,38 @@ Accepted toast behavior in docs/13 remains unimplemented, with placement/style/e
 - Capture before/after computed styles and screenshots for relevant states at mobile/tablet/desktop widths and affected breakpoint boundaries. Check narrow wrapping, no horizontal overflow, 200% zoom, text spacing, keyboard focus/Space/Tab and announcements. Recheck community switch presentation because source rules are shared.
 - Run build, lint, relevant tests and token checks. Update docs/05, docs/07, docs/12, docs/13 and docs/14 as their ownership/status changes warrant. Report unverified behavior explicitly.
 - Stop after Settings verification for review. Home is the next proposed tab; its implementation requires its own reviewed plan.
+
+## Home plan — approved, implemented locally
+
+Settings was committed as 5b3f5a4 on 2026-10-25. The user authorized moving to the next target, selected AccountHomeTab, and explicitly approved implementation. The following Home plan is approved and implemented/verified locally; the user accepted completion for commit and authorized Profile planning. See docs/12 for evidence and limitations.
+
+### Scope and names
+
+| File/name | Intended responsibility |
+| --- | --- |
+| `components/AccountHomeTab.tsx` (rename from MyHomeTab.tsx) | Parent composition, Communities destination, static `feedPlaceholders` definitions and the responsive card grid. No request lifecycle or local state is needed. |
+| `components/HomeWelcomePanel.tsx` (new) | Personal welcome copy, hero heading, Communities action and decorative illustration. Receive `communitiesTo`; keep fixed interface copy inside this presenter. |
+| `components/HomeFeedPlaceholderCard.tsx` (new) | Repeated coming-soon card, receiving `iconName`, `title`, `description`, `placeholderHeading` and `placeholderDescription`. Own its decorative icon and static Coming soon label. |
+| `components/HomeWelcomePanel.module.css` (new) | Welcome layout/type/illustration styles and existing 700px responsive behavior. Reuse AccountPanel.module.css for the action footer. |
+| `components/HomeFeedPlaceholderCard.module.css` (new) | Card structure, internal title/icon/placeholder spacing and existing 1100px internal-spacing behavior. |
+| `components/AccountHomeTab.module.css` (rename and narrow) | Parent inherited decorative color, grid columns/gaps, external card-group separation and 1100px grid-to-stack behavior. |
+
+Rename the static `sections` constant to `feedPlaceholders`, `empty` to `placeholderHeading`, and `detail` to `placeholderDescription`. Use stable IDs `community-updates`, `upcoming-games` and `suggested-games` instead of titles as keys. The user explicitly selected AccountHomeTab on 2026-10-25. Rename MyHomeTab.tsx, its exported component and its CSS Module to AccountHomeTab, and update UserAccountPage imports/rendering and affected current documentation. The other component/prop names are now approved for this slice. Keep the existing my-home route ID, Home label and /account/home URL; this naming correction does not expand into account-wide naming changes.
+
+### Data/state boundary and reuse
+
+Home currently has no mutable feature state, fixture records, domain operations or API calls. Its three cards are static interface copy, not a simulated feed. Keep that copy in presentation code; add no artificial loading/error state, hook or API wrapper. Existing UserAccountPage auth/loading gates and routes remain authoritative. Future feed reads/mutations must use feature APIs and hooks when their approved scope is implemented; no schema or aggregate feed contract is designed in this slice.
+
+Reuse ActionLink, Icon, existing heading roles and shared account action-footer styling. Reviewed InsightCard, HeroFeaturePanel and Notice: their accepted structures/roles differ from the welcome panel and current composite placeholder cards. Preserve these feature-local structures rather than changing shared components or forcing a visual redesign. No new generic Card primitive, shared component, dependency or public token is proposed.
+
+### Presentation and styling
+
+Preserve all wording (including the My Communities action), icon choices, forced hero line break, decorative accessibility treatment, section/heading hierarchy and navigation. Preserve the three-column layout switching to a 24px-gap stack at 1100px, the hidden illustration at 700px, card padding at 1200px and current internal spacing. Keep the same structural DOM so extracting component boundaries does not change the cascade.
+
+Select existing heading/eyebrow/body/metadata/card/section/action-footer tokens by purpose, and existing spacing/palette primitives for their approved roles. Moving rules is an appearance-preserving extraction. Retain and document existing specialized hero/illustration/placeholder geometry, paints and irregular spacing as local exceptions when no approved role/scale represents that composition; do not standardize by numerical coincidence or add permanent tokens for those values. Any visible refinement is a separate proposal. Other pages and shared token definitions remain outside this slice.
+
+### Verification and completion
+
+Capture before/after computed styles and screenshots of Home at mobile/tablet/desktop and both sides of the relevant 700/950/1100/1200px boundaries. Check actual-font wrapping, no horizontal overflow, hidden illustration, grid/stack gaps, keyboard focus and Communities action/Back navigation. Exercise increased text spacing; report actual zoom verification separately if the browser still does not support it. Recheck shared footer consumers if that shared module changes (none is planned).
+
+Run build, lint, token-reference/cycle/unused-alias checks and applicable existing navigation tests, including Home placeholder/auth behavior and Settings regressions. Add a new automated test only for a meaningful uncovered behavior, not to duplicate static markup. Update affected architecture/file/style/status documentation with actual results and limitations. No backend writes or deployment. Stop after Home verification for result review; Profile is the following target and needs its own plan.

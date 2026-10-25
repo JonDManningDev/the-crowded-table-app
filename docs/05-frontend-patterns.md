@@ -303,3 +303,9 @@ CommunitiesList receives normalized data only and renders CommunityCard semantic
 
 
 Account navigation refinement (2026-10-24): one ordered accountTabs definition in app/navigation.ts owns Home, Profile, Communities and Settings IDs/labels/paths and derives the narrow AccountTab type. Router registration, tab links and shell labels use that definition; UserAccountPage renders by stable ID without parallel arrays or a label-based fallback. Profile is /account/profile (account-profile ID); /account is a separate navigation root that replace-redirects to /account/home, as does /. Sidebar/mobile account links retain subtree matching. Personal breadcrumbs read My Account / destination. Premium Features remains separate. This supersedes earlier Overview-at-root and My Home/My Communities tab-label references; domain scope and auth return paths are unchanged.
+
+### Account Home presentation ownership — accepted implementation 2026-10-25
+
+The approved Home slice renames MyHomeTab to AccountHomeTab and extracts HomeWelcomePanel and HomeFeedPlaceholderCard as feature-local presentation components. AccountHomeTab owns static feedPlaceholders definitions, stable keys, the Communities destination and external grid/stack composition. HomeWelcomePanel receives communitiesTo; HomeFeedPlaceholderCard receives iconName, title, description, placeholderHeading and placeholderDescription. Each owns colocated CSS; shared ActionLink/Icon/AccountPanel action-footer styling remain unchanged.
+
+Home has no mutable feature state, domain mock operations or feed records. Its placeholders remain honest static interface copy, with no artificial API/hook/loading layer. Existing account auth/loading gates and the my-home route ID, Home label and /account/home URL are unchanged. Earlier MyHomeTab references in historical extraction/token records identify the former name. See docs/12 for verification and limits; Profile remains a separately reviewed slice.

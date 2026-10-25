@@ -1,0 +1,17 @@
+/* Preserve the existing decorative inherited color; text roles are explicit
+   in the child presenters and account typography rules. */
+.page { color: var(--ct-ref-color-forest-900); }
+
+.sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ct-card-grid-gap);
+  margin-top: var(--ct-section-gap);
+}
+
+@media (max-width: 1100px) {
+  .sections {
+    grid-template-columns: 1fr;
+    gap: var(--ct-section-gap);
+  }
+}

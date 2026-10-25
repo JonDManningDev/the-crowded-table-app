@@ -105,7 +105,7 @@ Pages that expose one capability belong to that feature; cross-feature orchestra
 
 | Example route | Illustrative page owner |
 | --- | --- |
-| `/account/home` | `features/user-accounts/pages/UserAccountPage.tsx` with `components/MyHomeTab.tsx` |
+| `/account/home` | `features/user-accounts/pages/UserAccountPage.tsx` with `components/AccountHomeTab.tsx` |
 | `/account/communities` | `features/user-accounts/pages/UserAccountPage.tsx` with `components/MyCommunitiesTab.tsx` |
 | `/communities/:slug` | `app/pages/CommunityHomePage/` |
 | `/events` | `features/events/pages/EventsPage.tsx` |
@@ -209,8 +209,8 @@ src/features/user-accounts/
     PremiumFeaturesPage.tsx
   components/
     AccountProfileTab.tsx
-    MyHomeTab.tsx
-    MyHomeTab.module.css
+    AccountHomeTab.tsx
+    AccountHomeTab.module.css
     MyCommunitiesTab.tsx
     MyCommunitiesTab.module.css
     AccountSettingsTab.tsx
@@ -222,7 +222,7 @@ src/features/user-accounts/
   api.ts
 ```
 
-The tab modules replace the old MyHomePage/MyCommunitiesPage files and no longer need standalone-page/embedded variants. Shared primitives/visuals remain in src/components by explicit user clarification. ProfileOverview is reused by the community Profile page with its separate mock profile. The community preferences presenter now lives at features/communities/components/AccountPreferencesPanel.tsx; personal Settings uses only its own persisted discovery AccountPreferencesPanel and PremiumFeaturesPanel. UserAccountPage does not import the community Profile page. OwnedCommunities retains its existing Supabase read and stylesheet dependency; moving that data access and shared legacy CSS is a later concern, not part of this structural change. PremiumFeaturesPage has its own lazy route module. All URLs are unchanged.
+Current Home children are HomeWelcomePanel.tsx/HomeWelcomePanel.module.css and HomeFeedPlaceholderCard.tsx/HomeFeedPlaceholderCard.module.css, extracted on 2026-10-25; see the current Account Home ownership section below. The tab modules replace the old MyHomePage/MyCommunitiesPage files and no longer need standalone-page/embedded variants. Shared primitives/visuals remain in src/components by explicit user clarification. ProfileOverview is reused by the community Profile page with its separate mock profile. The community preferences presenter now lives at features/communities/components/AccountPreferencesPanel.tsx; personal Settings uses only its own persisted discovery AccountPreferencesPanel and PremiumFeaturesPanel. UserAccountPage does not import the community Profile page. OwnedCommunities retains its existing Supabase read and stylesheet dependency; moving that data access and shared legacy CSS is a later concern, not part of this structural change. PremiumFeaturesPage has its own lazy route module. All URLs are unchanged.
 
 ### App and shared presenter style ownership (2026-10-21)
 
@@ -323,3 +323,9 @@ Implemented locally under the approved page-by-page refactor plan. AccountSettin
 Each presenter/tab owns its new colocated CSS Module. AccountPanel.module.css still owns shared action footers, while the communication-heading rule belongs to AccountPreferencesPanel.module.css. Settings stack and premium-list ownership no longer live in UserAccountPage.module.css/App.css. Shared setting-row rules remain for account/premium/community consumers; the account switch owns a scoped control implementation with documented preserved local values. No new universal Card/switch primitive, shared token or dependency.
 
 A pre-existing router mismatch passed tab to UserAccountPage, whose contract expects page. Corrected the prop at the route composition call so account contents render again. Profile/editor/mock-model ownership outside Settings remains for later reviewed slices. See docs/12 for verification and docs/15 for the workflow.
+
+## Account Home presentation ownership — 2026-10-25
+
+Current /account/home composition is UserAccountPage -> AccountHomeTab -> HomeWelcomePanel and three HomeFeedPlaceholderCard instances. MyHomeTab.tsx/MyHomeTab.module.css were renamed to AccountHomeTab.tsx/AccountHomeTab.module.css; UserAccountPage imports/renders the new name. Both children live under user-accounts/components beside their own CSS Modules. AccountHomeTab.module.css owns the inherited decorative color, external separation and grid/stack behavior. Child modules own welcome/illustration and placeholder-card internals respectively. AccountPanel.module.css remains shared and unchanged.
+
+Static feedPlaceholders copy stays in AccountHomeTab; no feature API, hook, schema, dependency or shared primitive was added. Older dated MyHomeTab migration/consumer notes remain historical. Routes/auth gates are unchanged; see docs/12 for evidence.

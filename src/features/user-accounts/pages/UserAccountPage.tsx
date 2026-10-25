@@ -1,7 +1,7 @@
 import uiStyles from '../../../components/ui.module.css'
 import { AccountProfileTab } from '../components/AccountProfileTab'
 import { AccountSettingsTab } from '../components/AccountSettingsTab'
-import { MyHomeTab } from '../components/MyHomeTab'
+import { AccountHomeTab } from '../components/AccountHomeTab'
 import { MyCommunitiesTab } from '../components/MyCommunitiesTab'
 import styles from './UserAccountPage.module.css'
 import { Button } from '../../../components/primitives/Controls'
@@ -83,7 +83,7 @@ export function UserAccountPage({ page }: { page: AccountTab }) {
               onEdit={editUnavailable ? undefined : openEditor}
             />
           )}
-          {page === 'my-home' && <MyHomeTab/>}
+          {page === 'my-home' && <AccountHomeTab/>}
           {page === 'my-communities' && (
             <MyCommunitiesTab
               previewName={previewCommunity.name}
