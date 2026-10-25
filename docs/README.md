@@ -72,3 +72,5 @@ Recommended additional artifacts: mobile wireframes with the warm club aesthetic
 | The Final Table | Official in-person championship final |
 
 Keep product intent in the vision, permissions in the auth plan, structure in the schema, and unresolved choices in the decision register. Revise related documents together when a choice changes.
+
+Global communication preferences (2026-10-24): account settings now save discovery and global allow_direct_messages together with one button. Migration 20261024000300 is applied locally and to hosted testing; frontend hosting deployment remains separate. Messaging and global visibility enforcement remain deferred. See implementation status.

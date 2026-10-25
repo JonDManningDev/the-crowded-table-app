@@ -1,7 +1,7 @@
 import styles from './AccountPanel.module.css'
 import { Button } from '../../../components/primitives/Controls'
 import { useEffect, useState } from 'react'
-import { readDiscoveryPreferences, saveDiscoveryPreferences, type DiscoveryPreferences } from '../api'
+import { readAccountPreferences, saveAccountPreferences, type AccountPreferences } from '../api'
 
 const choices = [
   {
@@ -17,7 +17,7 @@ const choices = [
 ] as const
 
 export function AccountPreferencesPanel({ userId }: { userId: string }) {
-  const [preferences, setPreferences] = useState<DiscoveryPreferences | null>(null)
+  const [preferences, setPreferences] = useState<AccountPreferences | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -25,10 +25,10 @@ export function AccountPreferencesPanel({ userId }: { userId: string }) {
     let active = true
     void (async () => {
       try {
-        const result = await readDiscoveryPreferences(userId)
+        const result = await readAccountPreferences(userId)
         if (active) setPreferences(result)
       } catch {
-        if (active) setError('Your discovery preferences could not be loaded. Reload to try again.')
+        if (active) setError('Your account preferences could not be loaded. Reload to try again.')
       }
     })()
     return () => { active = false }
@@ -39,7 +39,7 @@ export function AccountPreferencesPanel({ userId }: { userId: string }) {
     setError('')
     setSaved(false)
     try {
-      await saveDiscoveryPreferences(userId, preferences)
+      await saveAccountPreferences(userId, preferences)
       setSaved(true)
     } catch {
       setError('Your preferences could not be saved. Please try again.')
@@ -50,12 +50,7 @@ export function AccountPreferencesPanel({ userId }: { userId: string }) {
   return (
     <section className="panel">
       <h2 data-heading="card">Discovery preferences</h2>
-      <p className="muted">
-        Save your preferences for global search and matchmaking as these features take shape.
-        Sharing your profile through a community is a separate community setting. These choices
-        do not grant permission to contact you.
-      </p>
-      {!preferences && !error && <p role="status">Loading discovery preferences…</p>}
+      {!preferences && !error && <p role="status">Loading account preferences…</p>}
       {preferences && (
         <>
           {choices.map(item => (
@@ -76,15 +71,32 @@ export function AccountPreferencesPanel({ userId }: { userId: string }) {
               />
             </label>
           ))}
+          <h2 data-heading="card" className={styles.communicationHeading}>Communication preferences</h2>
+          <label className="setting-row">
+            <span>
+              <strong>Allow direct messages</strong>
+              <small>Let other users contact you through your global Crowded Table user account. They must first be able to see your global account to do this.</small>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              disabled={busy}
+              checked={preferences.allow_direct_messages}
+              onChange={event => {
+                setPreferences({ ...preferences, allow_direct_messages: event.target.checked })
+                setSaved(false)
+              }}
+            />
+          </label>
           <div className={styles.actions}>
             <Button appearance="primary" className="button" loading={busy} onClick={() => void save()}>
-              {busy ? 'Saving…' : 'Save discovery preferences'}
+              {busy ? 'Saving…' : 'Save account preferences'}
             </Button>
           </div>
         </>
       )}
       {error && <p role="alert">{error}</p>}
-      {saved && <p role="status">Discovery preferences saved.</p>}
+      {saved && <p role="status">Account preferences saved.</p>}
     </section>
   )
 }

@@ -402,3 +402,11 @@ The content flag defaults/backfills false for non-owners and always true for own
 Replace global/community profile and preference saves, tenant detail updates, website override saves and two administrative list RPCs with PostgREST DML/restricted views. Retain the eight transaction/coordination/slug-lookup RPCs enumerated in the schema/backend documents. Only `show_global_profile` is currently a persisted community preference; notification/history mocks remain unchanged. Separate profile saving from preferences. Keep deferred staff-lifecycle/permission-renaming work separate.
 
 Implementation was initially authorized locally, including forward migrations, actual PostgREST and concurrency verification, generated types, and documentation reconciliation. The user subsequently explicitly authorized deployment to the selected hosted testing project and verification of profiles, preferences, and content permissions. That deployment and isolated API verification are complete; frontend hosting deployment remains separate. See implementation status for completion evidence and remaining verification limits.
+
+## Global communication preferences — accepted and deployed to hosted testing, 2026-10-24
+
+Add `user_accounts.allow_direct_messages`, non-null default true, independently of the separately planned community-account DM receive control (D-085). This is global account preference storage/UI only: global messaging and enforcement of the recipient's global-account visibility remain deferred. Community DM scope and rules are not replaced.
+
+`CommunicationPreferences` contains the new flag; `AccountPreferences` combines it with `DiscoveryPreferences`. `readAccountPreferences` and `saveAccountPreferences` read/save the complete flat set through verified-self direct Data API access. AccountPreferencesPanel has Discovery preferences followed by Communication preferences, no discovery explanatory paragraph, and exactly one Save account preferences button below both sections. The new row uses “Allow direct messages” and “Let other users contact you through your global Crowded Table user account. They must first be able to see your global account to do this.”
+
+Migration 20261024000300 is applied locally and to hosted testing. Frontend hosting deployment remains separate. See implementation status for verification.

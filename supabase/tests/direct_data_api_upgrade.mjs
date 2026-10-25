@@ -10,7 +10,7 @@ const database = `crowded_table_api_test_${randomUUID().replaceAll('-', '')}`;
 assert.match(database, /^crowded_table_api_test_[0-9a-f]{32}$/);
 const migrations = new URL('../migrations/', import.meta.url);
 const files = readdirSync(migrations).filter(name => name.endsWith('.sql')).sort();
-assert.equal(files.at(-1), '20261024000200_direct_data_api.sql', 'update this test when the migration set changes');
+assert.equal(files.at(-1), '20261024000300_account_communication_preferences.sql', 'update this test when the migration set changes');
 const owner = '30000000-0000-0000-0000-000000000001';
 const admin = '30000000-0000-0000-0000-000000000002';
 function sql(statement) {
@@ -35,12 +35,14 @@ try {
   assert.equal(sql(`select count(*) from pg_policies where schemaname='public' and cmd<>'SELECT';`), '10');
   cleanup();
   init();
-  for (const file of files.slice(0, -1)) apply(file);
+  for (const file of files.filter(file => file < '20261024000200_direct_data_api.sql')) apply(file);
   sql(`insert into auth.users(id,email,email_confirmed_at) values ('${owner}','owner@example.test',now()),('${admin}','admin@example.test',now());`);
   const tenant = sql(asUser(owner, `select public.create_tenant('upgrade-fixture','Original tenant','HN','UTC');`));
   sql(asUser(admin, `select public.join_community('${tenant}'); select public.save_user_account_profile('Original name','Original bio'); select public.save_community_profile('${tenant}','Community name','Community bio'); select public.set_user_account_preferences(false,true);`));
   sql(asUser(owner, `select public.create_tenant_admin('${tenant}','${admin}'); select public.set_admin_permissions('${tenant}','${admin}',true,false); select public.set_website_content_override('${tenant}','community.hero.heading','Original copy'); select public.set_tenant_archived('${tenant}',true);`));
-  apply(files.at(-1));
+  apply('20261024000200_direct_data_api.sql');
+  apply('20261024000300_account_communication_preferences.sql');
+  assert.equal(sql(`select bool_and(allow_direct_messages) from public.user_accounts;`), 't');
   assert.equal(sql(`select can_modify_content from public.tenant_staff_assignments where role='owner';`), 't');
   assert.equal(sql(`select can_approve_users and not can_create_admin and not can_modify_content from public.tenant_staff_assignments where role='admin';`), 't');
   assert.equal(sql(`select display_name || '/' || bio from public.user_account_profiles where user_id='${admin}';`), 'Original name/Original bio');

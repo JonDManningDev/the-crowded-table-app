@@ -56,7 +56,7 @@ async function actor() {
 
 try {
   const versions = sql('select version from supabase_migrations.schema_migrations order by version');
-  assert.ok(versions.some(row => row.version === '20261024000200'));
+  assert.ok(versions.some(row => row.version === '20261024000300'));
   // Confirm cleanup is possible before any persistent fixture creation.
   sql('begin; set local session_replication_role=replica; rollback; select true as cleanup_supported');
   const owner = await actor(), member = await actor(), other = await actor(), unverified = await actor();
@@ -72,6 +72,25 @@ try {
     const row = await success(b.from('user_account_profiles').upsert({ display_name, bio: ' ' }, { onConflict: 'user_id' }).select('user_id,display_name,bio,created_by,updated_by').single());
     assert.deepEqual(row, { user_id: member.id, display_name: display_name.trim(), bio: null, created_by: member.id, updated_by: member.id });
   }
+  const preferenceFields = 'user_is_discoverable,enable_matchmaking,allow_direct_messages';
+  assert.deepEqual(await success(b.from('user_accounts').select(preferenceFields).eq('user_id', member.id).single()), {
+    user_is_discoverable: true, enable_matchmaking: true, allow_direct_messages: true,
+  });
+  // Use the frontend's complete save payload for all independent combinations.
+  for (const user_is_discoverable of [false, true]) {
+    for (const enable_matchmaking of [false, true]) {
+      for (const allow_direct_messages of [false, true]) {
+        const preferences = { user_is_discoverable, enable_matchmaking, allow_direct_messages };
+        await success(b.from('user_accounts').update(preferences).eq('user_id', member.id).select('user_id').single());
+        assert.deepEqual(await success(b.from('user_accounts').select(preferenceFields).eq('user_id', member.id).single()), preferences);
+      }
+    }
+  }
+  assert.equal(sql(`select updated_by from public.user_accounts where user_id='${member.id}'`)[0].updated_by, member.id);
+  await denied(b.from('user_accounts').update({ allow_direct_messages: null }).eq('user_id', member.id), '23502');
+  await denied(b.from('user_accounts').update({ allow_direct_messages: false }).eq('user_id', owner.id).select('user_id').single(), 'PGRST116');
+  await denied(u.from('user_accounts').update({ allow_direct_messages: false }).eq('user_id', unverified.id).select('user_id').single(), 'PGRST116');
+  await denied(b.from('user_accounts').update({ updated_by: owner.id }).eq('user_id', member.id), '42501');
   await success(b.from('user_accounts').update({ user_is_discoverable: false, enable_matchmaking: false }).eq('user_id', member.id).select('user_id').single());
   await success(b.from('user_accounts').update({ enable_matchmaking: true }).eq('user_id', member.id).select('user_id').single());
   assert.deepEqual(await success(b.from('user_accounts').select('user_is_discoverable,enable_matchmaking').eq('user_id', member.id).single()), { user_is_discoverable: false, enable_matchmaking: true });

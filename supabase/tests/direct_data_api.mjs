@@ -80,6 +80,14 @@ try {
   sql(asUser(other, `select public.join_community('${tenant}');`));
   const a = client(owner), b = client(member), c = client(other), u = client(unverified);
 
+  assert.equal((await success(b.from('user_accounts').select('allow_direct_messages').single())).allow_direct_messages, true);
+  await success(b.from('user_accounts').update({ allow_direct_messages: false }).eq('user_id', member).select('user_id').single());
+  assert.equal((await success(b.from('user_accounts').select('allow_direct_messages').single())).allow_direct_messages, false);
+  assert.equal(sql(`select updated_by from public.user_accounts where user_id='${member}';`), member);
+  await denied(b.from('user_accounts').update({ allow_direct_messages: null }).eq('user_id', member), '23502');
+  await denied(b.from('user_accounts').update({ allow_direct_messages: false }).eq('user_id', owner).select('user_id').single(), 'PGRST116');
+  await denied(u.from('user_accounts').update({ allow_direct_messages: false }).eq('user_id', unverified).select('user_id').single(), 'PGRST116');
+  await denied(b.from('user_accounts').update({ updated_by: owner }).eq('user_id', member), '42501');
   for (const display_name of ['First name', 'Changed name']) {
     const row = await success(b.from('user_account_profiles').upsert({ display_name, bio: ' ' }, { onConflict: 'user_id' }).select('user_id,display_name,bio,created_by,updated_by').single());
     assert.deepEqual(row, { user_id: member, display_name, bio: null, created_by: member, updated_by: member });
@@ -87,6 +95,9 @@ try {
   await success(b.from('user_accounts').update({ user_is_discoverable: false, enable_matchmaking: false }).eq('user_id', member).select('user_id').single());
   await success(b.from('user_accounts').update({ enable_matchmaking: true }).eq('user_id', member).select('user_id').single());
   assert.deepEqual(await success(b.from('user_accounts').select('user_is_discoverable,enable_matchmaking').single()), { user_is_discoverable: false, enable_matchmaking: true });
+  assert.equal((await success(b.from('user_accounts').select('allow_direct_messages').single())).allow_direct_messages, false);
+  await success(b.from('user_accounts').update({ user_is_discoverable: false, enable_matchmaking: true, allow_direct_messages: true }).eq('user_id', member).select('user_id').single());
+  assert.deepEqual(await success(b.from('user_accounts').select('user_is_discoverable,enable_matchmaking,allow_direct_messages').single()), { user_is_discoverable: false, enable_matchmaking: true, allow_direct_messages: true });
   await denied(b.from('user_accounts').update({ user_is_discoverable: true }).eq('user_id', owner).select('user_id').single(), 'PGRST116');
   await denied(b.from('user_account_profiles').update({ updated_by: owner }).eq('user_id', member), '42501');
   await denied(b.from('user_account_profiles').upsert({ user_id: owner, display_name: 'Spoofed' }), '42501');

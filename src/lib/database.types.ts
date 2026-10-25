@@ -311,14 +311,14 @@ isOneToOne: true
                   ]
                 },"user_accounts": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"enable_matchmaking": boolean,"updated_at": string,"updated_by": string | null,"user_id": string,"user_is_discoverable": boolean
+                    "allow_direct_messages": boolean,"created_at": string,"created_by": string | null,"enable_matchmaking": boolean,"updated_at": string,"updated_by": string | null,"user_id": string,"user_is_discoverable": boolean
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"enable_matchmaking"?: boolean,"updated_at"?: string,"updated_by"?: string | null,"user_id": string,"user_is_discoverable"?: boolean
+                    "allow_direct_messages"?: boolean,"created_at"?: string,"created_by"?: string | null,"enable_matchmaking"?: boolean,"updated_at"?: string,"updated_by"?: string | null,"user_id": string,"user_is_discoverable"?: boolean
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"enable_matchmaking"?: boolean,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string,"user_is_discoverable"?: boolean
+                    "allow_direct_messages"?: boolean,"created_at"?: string,"created_by"?: string | null,"enable_matchmaking"?: boolean,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string,"user_is_discoverable"?: boolean
                   }
                   Relationships: [
                     {
