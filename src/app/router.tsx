@@ -1,3 +1,4 @@
+import { confirmMockMatchResult, disputeMockMatchResult, readChampionshipContent, readChampionshipMatches, readChampionshipStandings, registerMockChampionship, submitMockMatchResult } from '../features/championships/api'
 import { Button } from '../components/primitives/Controls'
 import { ActionLink } from '../components/primitives/Controls'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
@@ -19,9 +20,7 @@ const PremiumFeaturesPage = lazy(() => import('../features/user-accounts/pages/P
 })))
 const CommunityHomePage = lazy(() => import('./pages/CommunityHomePage').then(module => ({ default: module.CommunityHomePage })))
 const MeetPlayPage = lazy(() => import('../features/meet-and-play/pages/MeetPlayPage').then(module => ({ default: module.MeetPlayPage })))
-const Championship = lazy(() => import('../features/Championship').then(module => ({
-  default: module.Championship,
-})))
+const ChampionshipPage = lazy(() => import('../features/championships/pages/ChampionshipPage').then(module => ({ default: module.ChampionshipPage })))
 const Community = lazy(() => import('../features/Community').then(module => ({ default: module.Community })))
 const ProfilePage = lazy(() => import('../features/Profile').then(module => ({ default: module.ProfilePage })))
 
@@ -74,7 +73,31 @@ function CommunityPage({ page }: { page: Page }) {
         }}
       />
     )
-    case 'championship': return <Championship model={model}/>
+    case 'championship': return (
+      <ChampionshipPage content={readChampionshipContent()}
+        standings={readChampionshipStandings(model.results, model.profile.name)}
+        matches={readChampionshipMatches(model.results, model.profile.name)}
+        isRegistered={model.registered} isMemberPreview={model.member}
+        onRegister={() => {
+          const result = registerMockChampionship()
+          model.setRegistered(result.registered); model.notify(result.notice)
+        }}
+        onSubmitResult={draft => {
+          const result = submitMockMatchResult(draft)
+          model.setResults(previous => [...previous, result.item])
+          return result.feedback
+        }}
+        onConfirmResult={id => {
+          const result = confirmMockMatchResult(id)
+          model.setResults(result.updateResults)
+          return result.feedback
+        }}
+        onDisputeResult={id => {
+          const result = disputeMockMatchResult(id)
+          model.setResults(result.updateResults)
+          return result.feedback
+        }}/>
+    )
     case 'discussion': return <Community model={model}/>
     default: return <ProfilePage model={model} open={open} membership={membership}/>
   }

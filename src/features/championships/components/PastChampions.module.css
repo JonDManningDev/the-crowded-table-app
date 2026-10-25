@@ -1,0 +1,17 @@
+/* Local 160px artwork, 6px corners and 20/15/5px artwork/title/label spacing preserve the historical-card composition; shared panel and text roles remain reused. */
+.card>:global(.game-art) {
+  height:160px;
+  border-radius:6px;
+  margin-bottom:20px;
+}
+
+.card h2 {
+  margin-top:15px;
+}
+
+.card p {
+  margin-bottom:5px;
+}
+
+/* Profile-name length must not force the historical card wider than its grid. */
+.card h2 { overflow-wrap: anywhere; }

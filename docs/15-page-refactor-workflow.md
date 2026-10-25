@@ -1,6 +1,6 @@
 # Incremental page presentation refactor
 
-Recorded 2026-10-25. Workflow and all four account-tab slices are approved and completed: Settings 5b3f5a4, AccountHomeTab 31dea35, independent InsightsCarousel f4e86ab, Profile b918fea, and Communities/account-auth simplification 3a68cb9. Community Home was accepted and committed as 6defc2b; Meet & Play is implemented and accepted by the user for commit; the next target requires its own reviewed plan. No deployment occurred. See docs/12 for evidence and verification limits.
+Recorded 2026-10-25. Workflow and all four account-tab slices are approved and completed: Settings 5b3f5a4, AccountHomeTab 31dea35, independent InsightsCarousel f4e86ab, Profile b918fea, and Communities/account-auth simplification 3a68cb9. Community Home was accepted and committed as 6defc2b; Meet & Play was accepted and committed as 5e2fee8; Championship is implemented, verified and accepted by the user for commit; Discussion is the next planning target. No deployment occurred. See docs/12 for evidence and verification limits.
 
 ## Accepted working agreement
 
@@ -336,3 +336,63 @@ Verify baseline/post rendering and interactions at mobile/tablet/desktop and adj
 The component/type/variable/API names and scope were approved by the user. Execute the plan, then stop for completion review.
 
 Meet & Play completion checkpoint (2026-10-25): implemented all five approved component names, parent-owned state and one API/types boundary over the unchanged App simulation. New UI has no mock record/store imports; route bridge applies API command results. Preserved guest gate, matching/creation/booking behavior, defaults/constraints and appearance. Moved only the unshared hero rules out of App.css; retained shared native form/search/filter conventions. Build/lint, 150 tests across 20 files and token checks pass; 91 responsive baseline comparisons and 39 long-content/text-spacing checks pass. Browser verified native constraints/time errors, draft resets, matching persistence/cancel, creation and shared table/booking continuity. Temporary fixture removed; evidence/limits in docs/12. No backend, new storage, hooks, dependencies, public tokens or deployment. Stop for completion review before the next page plan.
+
+
+## Championship plan — approved and implemented locally 2026-10-25
+
+Meet & Play was committed as 5e2fee8. Next target: the existing Championship page, including all five in-page views and its entry/result/rules dialogs. This is structural presentation/data/CSS cleanup, not the separately deferred Championship domain redesign. Preserve the current mock functionality, copy, commercial previews and appearance, following the user's preservation direction. The user approved this plan and instructed implementation.
+
+### Proposed components and names
+
+All new files live under features/championships, using the canonical capability name. Each presenter/page has a colocated CSS Module.
+
+| File/name | Responsibility |
+| --- | --- |
+| pages/ChampionshipPage.tsx (replace flat features/Championship.tsx) | Parent coordinator, heading, view selector, presentation composition and modal orchestration. Own selectedView, activeModal, feedback and matchResultDraft. Receive narrow snapshot/action props through the existing route bridge; no MockModel contract. |
+| components/ChampionshipHero.tsx | Existing featured-game introduction, artwork, registration-dependent action and member/guest preview copy. Receive supplied content/state/onOpenResult; reuse Tag, Button, GameArt and Botanical. |
+| components/ChampionshipStats.tsx | Existing four supplied statistics and responsive strip. Keep the statistics together; no generic statistics library or one-number components. |
+| components/ChampionshipOverview.tsx | Existing numbered introduction and spirit-of-play aside as one coherent two-panel view. Receive steps and onOpenRules; reuse Notice/Icon/Botanical/Button. |
+| components/ChampionshipLeaderboard.tsx | Supplied sorted rankings, semantic table, current-player presentation, podium decoration and existing scoring note. No scoring/sorting or generic data-table abstraction. |
+| components/ChampionshipMatches.tsx | Supplied registration/empty/results state, current confirm/dispute/waiting presentation, action callbacks and feedback Notice. No record updates or child feedback state; no one-row wrapper without a concrete need. |
+| components/ChampionshipFinalTable.tsx | Existing final-event panel and provisional ranking list as one coherent view. Reuse Avatar/Tag/Notice/artwork; no new qualification logic or shared leaderboard abstraction. |
+| components/PastChampions.tsx | Supplied historical champion cards/grid. Keep the simple collection together; no new generic ChampionCard. |
+| components/ChampionshipEntryModal.tsx | Existing registration/payment-preview dialog, member/guest copy and onRegister/onClose. Reuse Modal, GameArt, Notice and Button. |
+| components/MatchResultModal.tsx | Existing controlled opponent/date/score form with supplied options/defaults, onDraftChange/onSubmit/onClose and native constraints. No FormData-driven domain construction, UUIDs, status/scoring logic or local draft state. |
+| components/ChampionshipRulesModal.tsx | Supplied illustrative rule list/disclaimer inside the existing Modal. No policy implementation. |
+
+Proposed state names: selectedView, activeModal, feedback, matchResultDraft. MatchResultDraft contains opponent, date, score and opponentScore; numeric-field drafts remain strings so empty/in-progress native edits work. Proposed contracts: ChampionshipContent, ChampionshipStanding and ChampionshipMatchSummary. Proposed external callback names: onRegister, onSubmitResult, onConfirmResult and onDisputeResult. Presentation children receive onOpenResult/onOpenRules/onClose plus action callbacks as needed.
+
+These view/dialog components have distinct content, interactions or styling responsibilities. Keep layout and simple repeated rows in their owning view; do not add a universal tab-panel component, result-card abstraction, entry controller, shared profile component or generic form/table framework. Reuse existing primitives/shared visuals before considering new ones.
+
+### Feature API and state ownership
+
+Create one championships/api.ts and types.ts. Proposed API exports:
+
+- readChampionshipContent: frozen October/game/event/statistics/steps/rules/history/form-options/defaults configuration. Keep ordinary interface copy in presenters where it is not fixture/domain content.
+- readChampionshipStandings: existing seeded-player baseline plus confirmed-result contributions, profile-name display substitution and descending points order. Preserve point-tie ordering and current-player display/highlight behavior; no new tie-breaker or identity model.
+- readChampionshipMatches: project the current shared result records into display labels/status and existing confirm/dispute/self-waiting eligibility, keeping raw fixture contracts out of presentation files.
+- registerMockChampionship: existing registration flag update and in-memory welcome notice.
+- submitMockMatchResult: UUID/record construction, numeric conversion, appended result and existing feedback; ties become disputed and other submitted results pending.
+- confirmMockMatchResult / disputeMockMatchResult: existing result-status updates and feedback, retaining existing action eligibility and self-confirmation restriction. No new quorum/deadline/dispute workflow.
+
+The route bridge applies API command results to App's existing registered/results/notices with functional updates so the latest shared state is retained. Do not create a second result collection, reset seed data on navigation, or compute rankings/mutation records in UI. Legacy Result types remain at the compatibility boundary; new page/children consume feature-owned contracts. Mock profileName remains the community preview name, independent from global Auth/account data. No hook is needed for this synchronous mock boundary.
+
+The page decides whether a result action opens entry or result submission from the supplied registration flag. Successful entry closes the entry modal without automatically opening the result form, matching today. Result drafts initialize afresh on each opening (first existing opponent, 2026-10-04, empty score fields) and cancel discards edits. Successful submission closes the modal, selects My Matches and shows the returned feedback. Confirm/dispute changes shared results and page-local feedback; feedback remains across view switches as it currently does. Navigating away resets view/modal/draft/feedback state while shared registration/results remain until refresh. Switching member/guest preview on this accessible route preserves page state and existing registration rather than adopting Meet & Play's gate/remount behavior. Preserve native date bounds 2026-10-01 through 2026-10-24 and required integer scores 0–300.
+
+### Preserved discrepancies and limits
+
+Q-007 leaves real scoring/counting limits, repeat opponents, confirmation policy, disputes/ties and finalist selection unresolved; Q-008 leaves competition identity visibility/guest discovery unresolved. D-064 defers commercial features. Preserve this approved prototype slice without resolving any of those policies: illustrative 5/3 points; submitted ties sent to review; pending/disputed excluded from standings; seeded base standings; static 32 players/48 games counters; six provisional finalists; frozen October dates; mock You identity; three opponent options; profile-name substitution; current entry/payment copy/action and member-only-network wording. Entry remains independent from preview membership and never unlocks Meet & Play/Discussion. No real payment, notification delivery or championship permissions are introduced.
+
+Do not add real registration eligibility, live dates, new sorting/tie rules, season selection, match editing, actual finalists/address access, event/table linking, participant directories, global matchmaking integration or persisted competition data. Shared booking dialogs and other pages remain outside the implementation scope, apart from compatibility verification. Existing mock name-based identity/highlight behavior is not promoted as a production identity design.
+
+### Styling and verification
+
+Current Championship presentation is in App.css, including hero/artwork, statistic strip, numbered steps/spirit panel, leaderboard/rank/current-player treatments, result rows, final panel/list, champion cards and responsive overrides. Move rules to their owning modules and parent-owned external placement. Reuse existing card/heading/eyebrow/body/meta/action/footer/list-row/focus roles and the approved 4/8/12/16/24/32px spacing primitives by purpose. Keep decorative podium/trophy/illustration paints and statistics/game-label typography as local treatments instead of borrowing feedback/heading tokens solely because values match. Document preserved editorial/geometry exceptions nearby. No shared token definition/value changes, new public tokens, themes or dependencies.
+
+Audit shared panel/two-column/host/member-row/actions/rules/small-art/form/table-scroll/Tag/Notice selectors and late action-footer/:has()/wrapping overrides before removal or replacement. Keep required shared rules for Discussion, other dialogs and shared primitives; remove only zero-consumer Championship rules. Preserve table semantics/internal narrow-screen scrolling, modal scrolling, keyboard focus and 16px mobile fields; do not introduce a design refinement in the extraction.
+
+Verify all five views and all three dialogs in member/guest, unregistered/registered, pending/confirmed/disputed and self-submitted states. Cover entry/cancel, default/native-invalid form fields, result append/feedback, tie review, confirm/dispute scoring changes, exclusion of pending/disputed results, inability to confirm one's own submission, standings/final-view consistency, profile-name changes, provisional/history/rules copy and view/modal/draft/feedback reset boundaries. Test shared state across navigation and preservation across preview-mode changes; championship entry must not change membership. Compare baseline/post styles/geometry at mobile/tablet/desktop and adjacent 700/950/1200px breakpoints. Use synthetic empty/long names/results and increased text spacing with no hosted writes or real payment. Run build/lint/relevant tests and token reference/cycle/unused checks, reconcile architecture/style/status documentation and report unsupported zoom/screen-reader/theme checks accurately. Stop after Championship completion for review before planning another page.
+
+The component/type/variable/API names and scope were approved by the user. Implementation is complete locally and accepted by the user for commit.
+
+Championship completion checkpoint (2026-10-25): implemented the approved page plus ten controlled presenters and colocated modules, single API/types boundary and parent-owned UI state over the unchanged App simulation. Removed the flat Championship file and only its unshared global rules. Preserved existing scoring/registration/result/modal/navigation/commercial behavior and appearance, with local wrapping fixes for long match/finalist/history names. Build/lint, 167 tests across 22 files and token checks pass; 169 baseline comparisons and 104 long-content/text-spacing checks pass across 13 widths. Browser verified entry independence from membership, native constraints, pending/tied submissions, confirm/dispute and reset/continuity boundaries. Temporary fixtures removed; screenshots/evidence saved outside the repo. No backend, new store/hook, shared tokens, dependencies or deployment. See docs/12 for remaining verification limits. The user accepted completion and requested commit plus planning for the next target. Discussion implementation still requires its own reviewed plan.
