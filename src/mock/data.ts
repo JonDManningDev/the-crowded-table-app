@@ -1,3 +1,5 @@
+import type { GameArtVariant } from '../components/GameArt'
+
 export const previewCommunity = {
   name: 'The Crowded Table',
   subtitle: 'GAMES · PEOPLE · BELONGING',
@@ -5,7 +7,7 @@ export const previewCommunity = {
   motto: 'Different games.\nSame table.',
 }
 
-export type Art = 'azul' | 'birds' | 'rpg' | 'social' | 'rail' | 'forest' | 'mystery'
+export type Art = GameArtVariant
 export type SeatStatus = 'confirmed' | 'requested' | 'waitlisted'
 
 export type Activity = {

@@ -335,3 +335,15 @@ Static feedPlaceholders copy stays in AccountHomeTab; no feature API, hook, sche
 components/shared/InsightsCarousel.tsx and its CSS Module provide controlled collection presentation using the existing InsightCard and Button. UserAccountPage owns activeInsightIndex and maps the synchronous readAccountProfileInsights API data into visual card props. The feature AccountProfileInsight type contains text/icon-name data, not React elements.
 
 AccountProfileTab passes the carousel through the current ProfileOverview's optional insights presentation slot. This is a temporary account-only integration seam while the broader Profile plan is under review; community Profile continues to use its existing InsightCard fallback. No profile-state/model sharing, community data/API changes or other Profile component extraction occurred. See docs/15 for the authorized scope and docs/12 for verification.
+
+
+### Account Profile extraction — current 2026-10-25
+
+- user-accounts/pages/UserAccountPage.tsx: account identity, editor/selection coordination and feature placeholder reads; no useMockState. Its page module retains general account typography; former profile-specific cascade/layout overrides have moved to the children.
+- user-accounts/components/AccountProfileTab(.module.css): account columns/main stack and direct composition of ProfileSidebar, ProfileAboutPanel, InsightsCarousel and FavoriteGamesPanel.
+- ProfileSidebar, ProfileAboutPanel, FavoriteGamesPanel and ProfileEditModal: feature-local controlled presenters with matching modules. Parent supplies mock details, real fields, editable drafts, feedback and callbacks.
+- user-accounts/types.ts and api.ts: AccountProfilePlaceholders/ProfileFieldErrors and readAccountProfilePlaceholders; existing insights fixture and real profile read/save functions remain separate.
+- communities/components/CommunityProfileOverview(.module.css): relocated legacy community-only overview, imported by features/Profile.tsx. Replaces the former user-accounts/components/ProfileOverview location and removes its temporary insights slot. Its legacy MockModel contract remains local to the unrefactored community composition.
+- components/GameArt.tsx: owns GameArtVariant; mock/data.ts Art is a compatibility alias. Artwork and CSS unchanged.
+
+These current paths supersede the earlier proposed/shared ProfileOverview descriptions. No account/community profile unification. Communities is the next account tab requiring its own plan review after Profile completion review.

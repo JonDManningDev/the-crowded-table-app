@@ -1,67 +1,33 @@
-import { Avatar, Botanical, Icon, Tag } from '../../../components/ui'
-import type { MockModel } from '../../../mock/useMockState'
-import { ProfileOverview } from './ProfileOverview'
 import { InsightsCarousel, type InsightsCarouselItem } from '../../../components/shared/InsightsCarousel'
+import { ProfileSidebar } from './ProfileSidebar'
+import { ProfileAboutPanel } from './ProfileAboutPanel'
+import { FavoriteGamesPanel } from './FavoriteGamesPanel'
+import type { AccountProfilePlaceholders } from '../types'
+import styles from './AccountProfileTab.module.css'
 
-export function AccountProfileTab({
-  profile,
-  onEdit,
-  insights,
-  activeInsightIndex,
-  onActiveInsightIndexChange,
-}: {
-  profile: MockModel['profile']
+type AccountProfileTabProps = {
+  name: string
+  bio: string
+  placeholders: AccountProfilePlaceholders
   onEdit?: () => void
   insights: readonly InsightsCarouselItem[]
   activeInsightIndex: number
   onActiveInsightIndexChange: (index: number) => void
-}) {
+}
+
+export function AccountProfileTab({ name, bio, placeholders, onEdit, insights,
+  activeInsightIndex, onActiveInsightIndexChange }: AccountProfileTabProps) {
   return (
-    <div className="profile-layout">
-      <aside>
-        <section className="panel profile-summary">
-          <Botanical/>
-          <Avatar name={profile.name.slice(0, 1)} large tone="peach"/>
-          <h2 data-heading="card">{profile.name}</h2>
-          <span className="location">
-            <Icon name="pin" size={15}/>
-            {profile.location}
-          </span>
-          <p className="profile-quote">“Good games. Good people.”</p>
-          <div className="tags">
-            {profile.interests.map(interest => (
-              <Tag key={interest}>{interest}</Tag>
-            ))}
-          </div>
-          <div className="profile-stats">
-            <div>
-              <strong>12</strong>
-              <span>events</span>
-            </div>
-            <div>
-              <strong>3</strong>
-              <span>tables hosted</span>
-            </div>
-            <div>
-              <strong>18</strong>
-              <span>co-players</span>
-            </div>
-          </div>
-        </section>
-        <div className="profile-side-note">
-          <Icon name="heart"/>
-          <p>
-            Different people.
-            <br/>
-            <em>Same table.</em>
-          </p>
-        </div>
-      </aside>
-      <div>
-        <ProfileOverview profile={profile} onEdit={onEdit} insights={
-          <InsightsCarousel insights={insights} activeIndex={activeInsightIndex}
-            onActiveIndexChange={onActiveInsightIndexChange}/>
-        }/>
+    <div className={styles.layout}>
+      <ProfileSidebar name={name} location={placeholders.location} interests={placeholders.interests}
+        eventCount={placeholders.eventCount} hostedTableCount={placeholders.hostedTableCount}
+        coPlayerCount={placeholders.coPlayerCount}/>
+      <div className={styles.sections}>
+        <ProfileAboutPanel bio={bio} playStyle={placeholders.playStyle}
+          isHappyToTeach={placeholders.isHappyToTeach} onEdit={onEdit}/>
+        <InsightsCarousel insights={insights} activeIndex={activeInsightIndex}
+          onActiveIndexChange={onActiveInsightIndexChange}/>
+        <FavoriteGamesPanel games={placeholders.favoriteGames}/>
       </div>
     </div>
   )

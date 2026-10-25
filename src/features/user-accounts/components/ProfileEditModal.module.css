@@ -1,0 +1,14 @@
+/* Preserve the existing form's 19px row gap, 20px top inset and 7px
+   label/field separation. These form-specific legacy measurements await a
+   separate form design review; general-scale substitution changes rendering. */
+.form { display: flex; flex-direction: column; gap: 19px; margin-top: 20px; }
+.form > p { margin: 0; }
+.form label { display: flex; flex-direction: column; gap: 7px; min-width: 0;
+  font-size: var(--ct-body-font-size); line-height: var(--ct-body-line-height); font-weight: 500; color: var(--ct-body-color); }
+/* Preserve the existing native field's 12px desktop and 16px mobile type;
+   its border, padding, surface and resize behavior remain global field defaults. */
+.form input, .form textarea { width: 100%; font-weight: 400; font-size: 12px; }
+/* Existing inline error paint, local until the feedback role is reviewed.
+   Errors are not body/meta text; no token with the right purpose exists yet. */
+.form .error { color: #913d27; }
+@media (max-width: 700px) { .form input, .form textarea { font-size: 16px; } }

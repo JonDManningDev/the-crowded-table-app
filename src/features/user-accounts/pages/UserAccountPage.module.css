@@ -3,16 +3,15 @@
 .page[data-account-page] > :global(.tabs) { flex-wrap: wrap; }
 .page[data-account-page] :global(.section-heading),
 .page[data-account-page] :global(.setting-row) { flex-wrap: wrap; }
-.page[data-account-page] :global(.favorites) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 90px), 1fr)); }
-.page[data-account-page] p:not(:where(:global(.profile-quote), :global(.profile-side-note) > p)),
-.page[data-account-page] :global(.panel) p:not(:where(:global(.profile-quote))),
+.page[data-account-page] p:not(:where([data-decorative])),
+.page[data-account-page] :global(.panel) p:not(:where([data-decorative])),
 .page[data-account-page] :global(.setting-row) strong {
   font-size: var(--ct-body-font-size);
   line-height: var(--ct-body-line-height);
 }
 
 /* Keep decorative copy and feedback outside the ordinary paragraph palette. */
-.page[data-account-page] p:not(:where(:global(.profile-quote), :global(.profile-side-note) > p, [role="alert"], [role="status"], :global(.auth-error))),
+.page[data-account-page] p:not(:where([data-decorative], [role="alert"], [role="status"], :global(.auth-error))),
 .page[data-account-page] :global(.setting-row) strong {
   color: var(--ct-body-color);
 }
@@ -22,7 +21,6 @@
 }
 
 .page[data-account-page] :is(small, :global(.meta), :global(.location), :global(.tag), :global(.account-metadata)),
-.page[data-account-page] :global(.profile-stats) span,
 .page[data-account-page] :global(.panel) p:global(.account-metadata) {
   font-size: var(--ct-meta-font-size);
   line-height: var(--ct-meta-line-height);
@@ -33,17 +31,6 @@
   font-size: var(--ct-eyebrow-font-size);
   line-height: var(--ct-eyebrow-line-height);
   color: var(--ct-eyebrow-color);
-}
-
-/* Containers own stack spacing, including both fetched and sample cards. */
-.page[data-account-page] :global(.profile-layout) > div {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ct-section-gap);
-}
-
-.page[data-account-page] :global(.profile-layout) > div > :global(.panel) {
-  margin: 0;
 }
 
 /* Visual roles are independent of the semantic heading level. */

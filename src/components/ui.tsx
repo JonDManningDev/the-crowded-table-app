@@ -179,7 +179,11 @@ export function Modal({
       ref={ref}
       aria-labelledby={titleId}
       className={`${styles.dialog} ${wide ? styles.wide : ''}`}
-      onCancel={onClose}
+      onCancel={event => {
+        // The controlling parent may veto dismissal while an action is pending.
+        event.preventDefault()
+        onClose()
+      }}
       onClick={event => {
         if (event.target === event.currentTarget) onClose()
       }}

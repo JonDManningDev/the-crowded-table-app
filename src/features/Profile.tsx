@@ -1,5 +1,5 @@
 import { Notice } from '../components/primitives/Notice'
-import { ProfileOverview } from './user-accounts/components/ProfileOverview'
+import { CommunityProfileOverview } from './communities/components/CommunityProfileOverview'
 import { AccountPreferencesPanel } from './communities/components/AccountPreferencesPanel'
 import { Button } from '../components/primitives/Controls'
 import { formatDate } from '../mock/format'
@@ -105,7 +105,7 @@ export function ProfilePage({
             onChange={setTab}
           />
           {tab === 'Overview' && (
-            <ProfileOverview profile={model.profile} onEdit={() => setModal('edit')}/>
+            <CommunityProfileOverview profile={model.profile} onEdit={() => setModal('edit')}/>
           )}
           {tab === 'My Activity' && (
             <section className="panel">

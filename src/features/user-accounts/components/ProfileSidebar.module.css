@@ -1,0 +1,25 @@
+/* Summary-specific 30/22/20px insets, 10/20/22/27/18px internal rhythm,
+   decorative quote/stat typography and paints preserve the existing profile.
+   These are local composition/artwork exceptions; card padding and heading/meta
+   roles do not represent their distinct treatments. No shared role is added. */
+.summary { text-align: center; position: relative; overflow: hidden; padding: 30px 22px 20px; }
+.summary :global(.botanical) { position: absolute; right: -14px; top: 0; width: 93px; opacity: .45; color: #a0ac8d; }
+.summary :global(.avatar) { position: relative; margin-bottom: 20px; }
+.summary h2 { margin: 0 0 10px; overflow-wrap: anywhere; }
+/* Preserve the 5px pin-to-location separation; label/meta spacing has a different purpose. */
+.location { display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 22px;
+  font-size: var(--ct-meta-font-size); line-height: var(--ct-meta-line-height); color: var(--ct-meta-color); }
+.summary .quote { font-family: var(--ct-ref-font-family-serif); font-size: 20px; font-style: italic; color: #7c856e; }
+.interests { justify-content: center; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); margin: 27px 0; padding: 18px 0;
+  border-top: 1px solid #e5e8db; border-bottom: 1px solid #e5e8db; }
+.stats strong { display: block; font-family: var(--ct-ref-font-family-serif); font-size: 30px; font-weight: 400; }
+.stats span { font-size: var(--ct-meta-font-size); line-height: var(--ct-meta-line-height); color: var(--ct-meta-color); }
+/* Side-note artwork owns its 40/20px frame, 28px serif copy, 15px margins and
+   muted paint. It is decorative copy rather than a heading or body role. */
+.sideNote { padding: 40px 20px; text-align: center; color: #9b967a; }
+.sideNote > p { font-family: var(--ct-ref-font-family-serif); font-size: 28px; margin: 15px 0; line-height: 1.2; }
+@media (max-width: 950px) {
+  .sideNote { display: none; }
+  .stats { max-width: 400px; margin: 20px auto; }
+}

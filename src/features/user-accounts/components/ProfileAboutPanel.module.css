@@ -1,0 +1,8 @@
+.panel { margin: 0; }
+/* Approved Edit relocation uses the established section-heading arrangement.
+   Preserve its legacy 15px action separation locally during extraction. */
+.heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; }
+.heading h2 { margin: var(--ct-ref-space-12) 0; }
+.description { font-size: var(--ct-body-font-size); line-height: var(--ct-body-line-height); color: var(--ct-body-color); }
+.playStyleHeading { margin: var(--ct-section-gap) 0; }
+.playStyleHeading h3 { margin: 0; }

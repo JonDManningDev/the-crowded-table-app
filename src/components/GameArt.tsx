@@ -1,7 +1,7 @@
 import styles from './GameArt.module.css'
-import type { Art } from '../mock/data'
+export type GameArtVariant = 'azul' | 'birds' | 'rpg' | 'social' | 'rail' | 'forest' | 'mystery'
 
-export function GameArt({ type, className = '' }: { type: Art; className?: string }) {
+export function GameArt({ type, className = '' }: { type: GameArtVariant; className?: string }) {
   // CSS owns the variant palette; fixed detail colors and geometry stay artwork.
   const bg = 'var(--_ct-game-art-palette-background)'
   const one = 'var(--_ct-game-art-palette-primary-color)'

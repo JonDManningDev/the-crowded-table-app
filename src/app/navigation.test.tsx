@@ -91,7 +91,7 @@ it('places account tabs above the contents and keeps the summary only on Profile
   })
   await waitForContent()
   expect(screen.getByRole('link', { name: 'Alex' }).getAttribute('href')).toBe('/account')
-  expect(document.querySelector('.profile-summary')).toBeTruthy()
+  expect(screen.queryByRole('region', { name: 'Profile summary' })).toBeTruthy()
   expect(screen.getByRole('region', { name: 'Insights' })).toBeTruthy()
   expect(
     within(screen.getByRole('navigation', { name: 'Account navigation' }))
@@ -99,12 +99,12 @@ it('places account tabs above the contents and keeps the summary only on Profile
       .getAttribute('aria-current'),
   ).toBe('page')
   await navigate('account-settings')
-  expect(document.querySelector('.profile-summary')).toBeNull()
+  expect(screen.queryByRole('region', { name: 'Profile summary' })).toBeNull()
   expect(screen.getByRole('heading', { name: 'My Premium Features' })).toBeTruthy()
   expect(screen.queryByRole('heading', { name: 'Make yourself comfortable' })).toBeNull()
   expect(screen.getByRole('link', { name: 'Explore Premium Features' }).getAttribute('href')).toBe('/account/premium-features')
   await navigate('my-home')
-  expect(document.querySelector('.profile-summary')).toBeNull()
+  expect(screen.queryByRole('region', { name: 'Profile summary' })).toBeNull()
   expect(
     within(screen.getByRole('navigation', { name: 'Account navigation' }))
       .getByRole('link', { name: 'Home' })

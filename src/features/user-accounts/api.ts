@@ -1,7 +1,25 @@
 import { supabase } from '../../lib/supabase'
-import type { AccountPreferences, AccountProfileInsight, PremiumFeaturePlaceholder } from './types'
+import type { AccountPreferences, AccountProfilePlaceholders, AccountProfileInsight, PremiumFeaturePlaceholder } from './types'
 
 export type { AccountPreferences, CommunicationPreferences, DiscoveryPreferences } from './types'
+
+// Sample-only profile details: no activity, preferences or favorites persistence.
+export function readAccountProfilePlaceholders(): AccountProfilePlaceholders {
+  return {
+    location: 'Location coming soon',
+    interests: ['Board Games', 'Cooperative', 'Strategy', 'Coffee', 'New Friends'],
+    playStyle: 'Casual',
+    isHappyToTeach: true,
+    eventCount: 12,
+    hostedTableCount: 3,
+    coPlayerCount: 18,
+    favoriteGames: [
+      { name: 'Wingspan', art: 'birds' },
+      { name: 'Codenames', art: 'social' },
+      { name: 'Azul', art: 'azul' },
+    ],
+  }
+}
 
 // Profile insights are still sample data; no account activity query is connected.
 export function readAccountProfileInsights(): AccountProfileInsight[] {

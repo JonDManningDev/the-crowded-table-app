@@ -7,32 +7,43 @@ import styles from './UserAccountPage.module.css'
 import { Button } from '../../../components/primitives/Controls'
 import { NavItem } from '../../../components/primitives/Controls'
 import { accountTabs, type AccountTab } from '../../../app/navigation'
-import { useState } from 'react'
-import { Heading, Icon, Modal } from '../../../components/ui'
+import { useEffect, useRef, useState } from 'react'
+import { Heading, Icon } from '../../../components/ui'
 import { useAccount } from '../../auth/accountContext'
-import { useMockState } from '../../../mock/useMockState'
 import { previewCommunity } from '../../../mock/data'
-import { readAccountProfileInsights } from '../api'
+import { readAccountProfileInsights, readAccountProfilePlaceholders } from '../api'
+import { ProfileEditModal } from '../components/ProfileEditModal'
+import type { ProfileFieldErrors } from '../types'
+
+function initialEditor(identity: string) {
+  return { identity, isEditing: false, isSaving: false, isSaved: false,
+    displayNameDraft: '', bioDraft: '', fieldErrors: {} as ProfileFieldErrors, saveError: '' }
+}
+function displayNameError(value: string) {
+  return !value.trim() ? 'Enter a display name.' : value.trim().length > 80 ? 'Use 80 characters or fewer.' : undefined
+}
+function bioError(value: string) {
+  return value.length > 2000 ? 'Use 2,000 characters or fewer.' : undefined
+}
 
 export function UserAccountPage({ page }: { page: AccountTab }) {
   const account = useAccount()
-  // Placeholder interests, statistics, and preferences stay separate from community state.
-  const model = useMockState()
-  const [editing, setEditing] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [saved, setSaved] = useState(false)
+  const identity = account.status === 'signed-in' ? `account:${account.userId || 'current'}` : account.status
+  const [editor, setEditor] = useState(() => initialEditor(identity))
+  const { isEditing, isSaving, isSaved, displayNameDraft, bioDraft, fieldErrors, saveError } = editor
+  const lifecycle = useRef<{ active: boolean; saving: boolean } | null>(null)
+  // Reset before another identity renders; provider refreshes keep the same draft.
+  if (editor.identity !== identity) setEditor(initialEditor(identity))
+  useEffect(() => {
+    const request = { active: true, saving: false }
+    lifecycle.current = request
+    return () => { request.active = false }
+  }, [identity])
   const [activeInsightIndex, setActiveInsightIndex] = useState(0)
+  const placeholders = readAccountProfilePlaceholders()
   const insights = readAccountProfileInsights().map(({ iconName, ...insight }) => ({
-    ...insight,
-    icon: <Icon name={iconName} size={28}/>,
+    ...insight, icon: <Icon name={iconName} size={28}/>,
   }))
-  const profile = {
-    ...model.profile,
-    name: account.displayName || 'Your account',
-    bio: account.bio || 'Add a little about yourself.',
-    location: 'Location coming soon',
-  }
   const signedOutMessage = {
     'account-profile': 'Sign in to see your account.',
     'my-home': 'Sign in to review your activity feed.',
@@ -44,9 +55,46 @@ export function UserAccountPage({ page }: { page: AccountTab }) {
     : account.profileLoading
       ? 'Your account profile is still loading.'
       : account.profileError || (!account.saveProfile ? 'Profile editing is unavailable.' : '')
-  const openEditor = () => {
-    setError('')
-    setEditing(true)
+  function openEditor() {
+    if (editUnavailable || lifecycle.current?.saving) return
+    setEditor({ ...initialEditor(identity), isEditing: true,
+      displayNameDraft: account.displayName || '', bioDraft: account.bio || '' })
+  }
+  function closeEditor() {
+    if (!lifecycle.current?.saving) setEditor(previous => ({ ...previous, isEditing: false }))
+  }
+  function changeDisplayName(value: string) {
+    setEditor(previous => ({ ...previous, displayNameDraft: value, isSaved: false,
+      fieldErrors: { ...previous.fieldErrors,
+        displayName: previous.fieldErrors.displayName ? displayNameError(value) : undefined } }))
+  }
+  function changeBio(value: string) {
+    setEditor(previous => ({ ...previous, bioDraft: value, isSaved: false,
+      fieldErrors: { ...previous.fieldErrors, bio: previous.fieldErrors.bio ? bioError(value) : undefined } }))
+  }
+  function submitProfile(): keyof ProfileFieldErrors | void {
+    const request = lifecycle.current
+    const saveProfile = account.saveProfile
+    if (!isEditing || editor.identity !== identity || !request?.active || request.saving || editUnavailable || !saveProfile) return
+    const errors = { displayName: displayNameError(displayNameDraft), bio: bioError(bioDraft) }
+    setEditor(previous => ({ ...previous, fieldErrors: errors }))
+    if (errors.displayName) return 'displayName'
+    if (errors.bio) return 'bio'
+    // Synchronous guard covers repeated submissions before disabled state renders.
+    request.saving = true
+    setEditor(previous => ({ ...previous, isSaving: true, saveError: '', isSaved: false }))
+    void (async () => {
+      try {
+        await saveProfile(displayNameDraft.trim(), bioDraft)
+        if (request.active) setEditor(previous => ({ ...previous, isEditing: false, isSaved: true }))
+      } catch (failure) {
+        if (request.active) setEditor(previous => ({ ...previous,
+          saveError: failure instanceof Error ? failure.message : 'Unable to save your profile.' }))
+      } finally {
+        request.saving = false
+        if (request.active) setEditor(previous => ({ ...previous, isSaving: false }))
+      }
+    })()
   }
 
   return (
@@ -82,10 +130,12 @@ export function UserAccountPage({ page }: { page: AccountTab }) {
         <div className="account-content">
           {account.profileLoading && <p role="status">Loading your account profile…</p>}
           {account.profileError && <p role="alert">{account.profileError}</p>}
-          {saved && <p role="status">Your account profile has been saved.</p>}
+          {isSaved && <p role="status">Your account profile has been saved.</p>}
           {page === 'account-profile' && (
             <AccountProfileTab
-              profile={profile}
+              name={account.displayName || 'Your account'}
+              bio={account.bio || 'Add a little about yourself.'}
+              placeholders={placeholders}
               onEdit={editUnavailable ? undefined : openEditor}
               insights={insights}
               activeInsightIndex={activeInsightIndex}
@@ -100,63 +150,15 @@ export function UserAccountPage({ page }: { page: AccountTab }) {
             />
           )}
           {page === 'account-settings' && <AccountSettingsTab/>}
-          {editing && (
-            <Modal
-              title="Edit your account profile"
-              onClose={() => {
-                if (!busy) setEditing(false)
-              }}
-            >
-              <form className="form" onSubmit={async event => {
-                event.preventDefault()
-                if (busy || editUnavailable) return
-                const values = new FormData(event.currentTarget)
-                const name = String(values.get('name')).trim()
-                if (!name) {
-                  setError('Enter a display name.')
-                  return
-                }
-                setBusy(true)
-                setError('')
-                try {
-                  if (!account.saveProfile) throw new Error('Sign in to save your account profile.')
-                  await account.saveProfile(name, String(values.get('bio')))
-                  setEditing(false)
-                  setSaved(true)
-                } catch (failure) {
-                  setError(
-                    failure instanceof Error ? failure.message : 'Unable to save your profile.',
-                  )
-                } finally {
-                  setBusy(false)
-                }
-              }}>
-                <label>
-                  Display name
-                  <input
-                    name="name"
-                    required
-                    maxLength={80}
-                    defaultValue={account.displayName}
-                    disabled={busy}
-                  />
-                </label>
-                <label>
-                  About me
-                  <textarea name="bio" maxLength={2000} defaultValue={account.bio} disabled={busy}/>
-                </label>
-                {(error || editUnavailable) && <p role="alert">{error || editUnavailable}</p>}
-                <Button
-                  appearance="primary"
-                  type="submit"
-                  loading={busy}
-                  className="button"
-                  disabled={busy || Boolean(editUnavailable)}
-                >
-                  {busy ? 'Saving…' : 'Save my profile'}
-                </Button>
-              </form>
-            </Modal>
+          {isEditing && (
+            <ProfileEditModal displayNameDraft={displayNameDraft} bioDraft={bioDraft}
+              fieldErrors={fieldErrors} saveError={saveError} editUnavailable={editUnavailable} isSaving={isSaving}
+              onDisplayNameChange={changeDisplayName} onBioChange={changeBio}
+              onDisplayNameBlur={() => setEditor(previous => ({ ...previous,
+                fieldErrors: { ...previous.fieldErrors, displayName: displayNameError(previous.displayNameDraft) } }))}
+              onBioBlur={() => setEditor(previous => ({ ...previous,
+                fieldErrors: { ...previous.fieldErrors, bio: bioError(previous.bioDraft) } }))}
+              onSubmit={submitProfile} onClose={closeEditor}/>
           )}
         </div>
       )}
