@@ -80,8 +80,8 @@ it('retains community guest access boundaries on clean routes', async () => {
   expect(screen.queryByRole('button', { name: 'Become a Member' })).toBeNull()
 })
 
-it('places account tabs above the contents and keeps the summary only on Overview', async () => {
-  window.history.replaceState(null, '', '/account')
+it('places account tabs above the contents and keeps the summary only on Profile', async () => {
+  window.history.replaceState(null, '', '/account/profile')
   await act(async () => {
     render(
       <AccountContext.Provider value={{ status: 'signed-in', email: 'private@example.com', displayName: 'Alex' }}>
@@ -94,7 +94,7 @@ it('places account tabs above the contents and keeps the summary only on Overvie
   expect(document.querySelector('.profile-summary')).toBeTruthy()
   expect(
     within(screen.getByRole('navigation', { name: 'Account navigation' }))
-      .getByRole('link', { name: 'Overview' })
+      .getByRole('link', { name: 'Profile' })
       .getAttribute('aria-current'),
   ).toBe('page')
   await navigate('account-settings')
@@ -106,7 +106,7 @@ it('places account tabs above the contents and keeps the summary only on Overvie
   expect(document.querySelector('.profile-summary')).toBeNull()
   expect(
     within(screen.getByRole('navigation', { name: 'Account navigation' }))
-      .getByRole('link', { name: 'My Home' })
+      .getByRole('link', { name: 'Home' })
       .getAttribute('aria-current'),
   ).toBe('page')
   await navigate('profile')
@@ -135,7 +135,7 @@ it('places sign out in the breadcrumb header', async () => {
 })
 
 it('blocks every account edit entry point when the profile failed to load', async () => {
-  window.history.replaceState(null, '', '/account')
+  window.history.replaceState(null, '', '/account/profile')
   await act(async () => {
     render(
       <AccountContext.Provider value={{
@@ -155,7 +155,7 @@ it('blocks every account edit entry point when the profile failed to load', asyn
 })
 
 it('shows a newly unavailable profile inside the open editor and preserves the draft', async () => {
-  window.history.replaceState(null, '', '/account')
+  window.history.replaceState(null, '', '/account/profile')
   const account = { status: 'signed-in' as const, email: 'owner@example.test', displayName: 'Original', saveProfile: vi.fn() }
   const view = await renderReady(<AccountContext.Provider value={account}><App/></AccountContext.Provider>)
   fireEvent.click(screen.getByRole('button', { name: 'Edit Profile' }))
@@ -169,7 +169,7 @@ it('shows a newly unavailable profile inside the open editor and preserves the d
 })
 
 it('retains the profile draft and reports a failed save without claiming success', async () => {
-  window.history.replaceState(null, '', '/account')
+  window.history.replaceState(null, '', '/account/profile')
   const saveProfile = vi.fn().mockRejectedValue(new Error('Could not save'))
   await act(async () => {
     render(
@@ -201,7 +201,7 @@ it('shows not found for unknown paths instead of sample tenant data', async () =
   expect(screen.getByRole('heading', { name: 'Page not found' })).toBeTruthy()
 })
 it('uses browser history for tabs and sidebar links', async () => {
-  window.history.replaceState(null, '', '/account')
+  window.history.replaceState(null, '', '/account/profile')
   await act(async () => { render(<App/>) })
   await waitForContent()
   fireEvent.click(within(screen.getByRole('navigation', { name: 'Account navigation' })).getByRole('link', { name: 'Settings' }))
@@ -209,7 +209,7 @@ it('uses browser history for tabs and sidebar links', async () => {
   window.history.back()
   await waitFor(() => expect(
     within(screen.getByRole('navigation', { name: 'Account navigation' }))
-      .getByRole('link', { name: 'Overview' })
+      .getByRole('link', { name: 'Profile' })
       .getAttribute('aria-current'),
   ).toBe('page'))
   window.history.forward()
@@ -235,14 +235,14 @@ it.each(Object.entries(pagePaths))('loads %s directly with consistent navigation
   expect(window.location.pathname).toBe(path + '/')
   const accountLink = within(screen.getByRole('region', { name: 'Your space' })).getByRole('link')
   expect(accountLink.getAttribute('aria-current')).toBe(path.startsWith('/account') ? 'page' : null)
-  expect(within(screen.getByRole('region', { name: 'Your space' })).queryByRole('link', { name: 'My Communities' })).toBeNull()
-  expect(within(screen.getByRole('region', { name: 'Your space' })).queryByRole('link', { name: 'My Home' })).toBeNull()
+  expect(within(screen.getByRole('region', { name: 'Your space' })).queryByRole('link', { name: 'Communities' })).toBeNull()
+  expect(within(screen.getByRole('region', { name: 'Your space' })).queryByRole('link', { name: 'Home' })).toBeNull()
   if (page === 'profile') expect(screen.getByRole('heading', { name: 'Ana M.' })).toBeTruthy()
 })
 
 
 it.each([
-  ['/account', 'Sign in to see your account.'],
+  ['/account/profile', 'Sign in to see your account.'],
   ['/account/home', 'Sign in to review your activity feed.'],
   ['/account/communities', 'Sign in to see your communities.'],
   ['/account/settings', 'Sign in to manage your account settings.'],
@@ -262,3 +262,46 @@ it('does not flash mock account content while the session is loading', async () 
   expect(screen.getByText('Loading your account…')).toBeTruthy()
   expect(document.querySelector('.account-content')).toBeNull()
 })
+
+
+it.each(['/', '/account', '/account/'])('redirects %s to Home without adding a history entry', async path => {
+  window.history.replaceState(null, '', '/community/preview');
+  window.history.pushState(null, '', path);
+  const historyLength = window.history.length;
+  await renderReady(<App/>);
+  expect(window.location.pathname).toBe('/account/home');
+  expect(window.history.length).toBe(historyLength);
+  window.history.back();
+  await waitFor(() => expect(window.location.pathname).toBe('/community/preview'));
+  window.history.forward();
+  await waitFor(() => expect(window.location.pathname).toBe('/account/home'));
+});
+
+it.each([
+  ['/account/home', 'Home'],
+  ['/account/profile', 'Profile'],
+  ['/account/communities', 'Communities'],
+  ['/account/settings', 'Settings'],
+])('shows ordered tabs and consistent account metadata at %s', async (path, label) => {
+  window.history.replaceState(null, '', path);
+  await renderReady(<App/>);
+  const nav = screen.getByRole('navigation', { name: 'Account navigation' });
+  const links = within(nav).getAllByRole('link');
+  expect(links.map(link => [link.textContent, link.getAttribute('href')])).toEqual([
+    ['Home', '/account/home'], ['Profile', '/account/profile'],
+    ['Communities', '/account/communities'], ['Settings', '/account/settings'],
+  ]);
+  expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+  expect(within(nav).getByRole('link', { name: label }).getAttribute('aria-current')).toBe('page');
+  expect(screen.getByRole('banner').textContent).toContain('My Account/' + label);
+  expect(document.title).toBe(label + ' · The Crowded Table');
+  const mobile = within(screen.getByRole('navigation', { name: 'Personal navigation' })).getByRole('link');
+  expect(mobile.getAttribute('href')).toBe('/account');
+  expect(mobile.getAttribute('aria-current')).toBe('page');
+});
+
+it('keeps Premium Features outside the tabs with an account breadcrumb', async () => {
+  window.history.replaceState(null, '', '/account/premium-features');
+  await renderReady(<App/>);
+  expect(screen.getByRole('banner').textContent).toContain('My Account/Premium Features');
+});

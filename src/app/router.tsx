@@ -5,7 +5,7 @@ import App from '../App'
 import { AuthShell } from '../features/Auth'
 import { lazy } from 'react'
 import { Botanical, Icon } from '../components/ui'
-import { pagePaths, type Page } from './navigation'
+import { accountRootPath, accountTabs, pagePaths, type Page } from './navigation'
 import { useAppRouteContext } from './routeContext'
 
 const UserAccountPage = lazy(() => import('../features/user-accounts/pages/UserAccountPage').then(module => ({
@@ -53,7 +53,6 @@ function CommunityPage({ page }: { page: Page }) {
   }
 }
 
-const accountPages = ['account', 'my-home', 'my-communities', 'account-settings'] as const
 const communityPages = ['community-home', 'meet-play', 'championship', 'discussion', 'profile'] as const
 
 export function ApplicationRoutes() {
@@ -61,12 +60,13 @@ export function ApplicationRoutes() {
     <Routes>
       <Route element={<App/>}>
         <Route index element={<Navigate to={pagePaths['my-home']} replace/>}/>
-        {accountPages.map(page => (
+        <Route caseSensitive path={accountRootPath} element={<Navigate to={pagePaths['my-home']} replace/>}/>
+        {accountTabs.map(({ id, path }) => (
           <Route
-            key={page}
+            key={id}
             caseSensitive
-            path={pagePaths[page]}
-            element={<UserAccountPage page={page}/>}
+            path={path}
+            element={<UserAccountPage tab={id}/>}
           />
         ))}
         <Route caseSensitive path={pagePaths['premium-features']} element={<PremiumFeaturesPage/>}/>

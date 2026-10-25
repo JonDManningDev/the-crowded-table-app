@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { NavItem } from '../../components/primitives/Controls'
-import { pagePaths } from '../navigation'
+import { accountRootPath, pagePaths } from '../navigation'
 import { Avatar, Botanical, Icon } from '../../components/ui'
 import { useAccount } from '../../features/auth/accountContext'
 import { communityNavigation } from '../navigation'
@@ -38,7 +38,7 @@ export function Sidebar({ member, community }: { member: boolean; community: Com
           <p>{community.motto}</p>
         </div>
         <section className={styles.userArea} aria-label="Your space">
-          <NavItem to={pagePaths['account']} className={styles.account}>
+          <NavItem to={accountRootPath} className={styles.account}>
             <Avatar name={accountName.slice(0, 1)}/>
             <div>
               <strong title={accountName}>
@@ -55,7 +55,7 @@ export function Sidebar({ member, community }: { member: boolean; community: Com
 export function MobilePersonalNavigation() {
   return (
     <nav className={styles.mobileNavigation} aria-label="Personal navigation">
-      <NavItem to={pagePaths['account']}>
+      <NavItem to={accountRootPath}>
         <Icon name="user" size={17}/>
         My Account
       </NavItem>

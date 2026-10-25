@@ -6,24 +6,24 @@ export const communityNavigation = [
   { id: 'profile', label: 'Profile', icon: 'user' },
 ] as const
 
-export const personalNavigation = [
-  { id: 'my-communities', label: 'My Communities', icon: 'people' },
-  { id: 'my-home', label: 'My Home', icon: 'home' },
+export const accountRootPath = '/account'
+export const accountTabs = [
+  { id: 'my-home', label: 'Home', path: '/account/home' },
+  { id: 'account-profile', label: 'Profile', path: '/account/profile' },
+  { id: 'my-communities', label: 'Communities', path: '/account/communities' },
+  { id: 'account-settings', label: 'Settings', path: '/account/settings' },
 ] as const
+export type AccountTab = typeof accountTabs[number]['id']
 
-export const accountNavigation = [
-  { id: 'account', label: 'My Account', icon: 'user' },
-  { id: 'account-settings', label: 'Settings', icon: 'user' },
+export const navigation = [
+  ...communityNavigation,
+  ...accountTabs,
   { id: 'premium-features', label: 'Premium Features', icon: 'leaf' },
 ] as const
-export const navigation = [...communityNavigation, ...personalNavigation, ...accountNavigation]
 export type Page = typeof navigation[number]['id']
 
 export const pagePaths: Record<Page, string> = {
-  'account': '/account',
-  'my-home': '/account/home',
-  'my-communities': '/account/communities',
-  'account-settings': '/account/settings',
+  ...Object.fromEntries(accountTabs.map(tab => [tab.id, tab.path])) as Record<AccountTab, string>,
   'premium-features': '/account/premium-features',
   'community-home': '/community/preview',
   'meet-play': '/community/preview/meet-play',

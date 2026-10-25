@@ -23,7 +23,7 @@ export function Topbar({
   return (
     <header className={styles.topbar}>
       <span className={styles.breadcrumb}>
-        {personal ? 'Your space' : communityName}
+        {personal ? 'My Account' : communityName}
         <span>/</span>
         <strong>{pageLabel}</strong>
       </span>

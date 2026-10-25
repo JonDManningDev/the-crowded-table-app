@@ -117,7 +117,7 @@ Pages that expose one capability belong to that feature; cross-feature orchestra
 | `/my-profile` | `features/user-accounts/pages/MyProfilePage.tsx` |
 | `/communities/:slug/profile` | `features/communities/pages/CommunityProfilePage.tsx` |
 
-The five community destinations are Community Home, Meet & Play, Championship, Discussion, and Profile. Each must resolve the browsed community; the example URLs above do not finalize how all tenant routes will be scoped. The account area currently contains My Communities and My Home; access to global profile editing belongs in this personal area, with editing on My Account → Overview (`/account`). My Home is the personal landing/feed across the user's related communities; Community Home retains the official-event feed. Global user profiles and curated community profiles are distinct. CA-001 is resolved by this split; D-111/D-112 extend it without replacing the community Profile destination.
+The five community destinations are Community Home, Meet & Play, Championship, Discussion, and Profile. Each must resolve the browsed community; the example URLs above do not finalize how all tenant routes will be scoped. The account area currently contains My Communities and My Home; access to global profile editing belongs in this personal area, with editing on My Account → Profile (`/account/profile`). My Home is the personal landing/feed across the user's related communities; Community Home retains the official-event feed. Global user profiles and curated community profiles are distinct. CA-001 is resolved by this split; D-111/D-112 extend it without replacing the community Profile destination.
 
 The community join page consumes the caller's global name/bio through the user-account feature's explicit contract, initializes an editable local draft, and submits community account/profile together through one communities command. Share form controls only where useful; shared fields do not imply shared persistence, audiences, or cache entries. `communities` owns `show_global_profile` (default false); `user-accounts` owns global `user_is_discoverable` and `enable_matchmaking` (both default true), plus private account labels. Global account search and global matchmaking consume separate eligibility contracts. Account-level blocking and private labels are selected; Q-016 retains detailed routes/audiences and label UX, not a choice of public identification codes.
 
@@ -170,11 +170,11 @@ Do not create speculative folders, universal repositories/services, mapper layer
 
 ## Implemented router contract — 2026-10-16
 
-Implement React Router in declarative BrowserRouter mode with nested routes and a shared app layout, centrally composed in `app/router.tsx`. This is a routing-only slice; persistence and community audiences are unchanged. Use `/account` (Overview), `/account/home` (default landing), `/account/communities`, `/account/settings`, and `/account/premium-features`. Use `/community/preview` and its `meet-play`, `championship`, `discussion`, and `profile` children for the explicitly mocked community. Do not resolve arbitrary tenant slugs to sample data. Future real community routes can use the reserved `/communities` namespace without a root `/:slug` collision.
+Implement React Router in declarative BrowserRouter mode with nested routes and a shared app layout, centrally composed in `app/router.tsx`. This is a routing-only slice; persistence and community audiences are unchanged. Use `/account/profile` (Profile), `/account/home` (default landing), `/account/communities`, `/account/settings`, and `/account/premium-features`. Use `/community/preview` and its `meet-play`, `championship`, `discussion`, and `profile` children for the explicitly mocked community. Do not resolve arbitrary tenant slugs to sample data. Future real community routes can use the reserved `/communities` namespace without a root `/:slug` collision.
 
 Auth pages use `/auth/sign-in`, `/auth/sign-up`, `/auth/forgot-password`, `/auth/check-email`, and the existing `/auth/callback` and `/auth/reset-password`. Community creation uses `/account/communities/new`, waits for session restoration and requires verified authentication. URLs, not separate hidden screen state, select all these screens. Preserve initialization metadata capture before Supabase consumes callback fragments; strip credentials through replacement navigation after initialization. Successful sign-in/confirmation/recovery returns to `/account/home`.
 
-Redirect `/` to personal home. Per explicit user direction, do not preserve or redirect old hash routes: the application has no existing users. Auth token fragments remain solely the SDK's responsibility. Use router links, nested outlets, active-route matching, browser Back/Forward support, and a not-found destination. Existing auth callback URLs/allowlists stay unchanged. Production static hosting must rewrite non-asset application paths to `index.html`; Vite handles development fallback. No hosting deployment or schema migration is required by this slice.
+Redirect `/` and `/account` to personal home with replacement navigation. Per explicit user direction, do not preserve or redirect old hash routes: the application has no existing users. Auth token fragments remain solely the SDK's responsibility. Use router links, nested outlets, active-route matching, browser Back/Forward support, and a not-found destination. Existing auth callback URLs/allowlists stay unchanged. Production static hosting must rewrite non-asset application paths to `index.html`; Vite handles development fallback. No hosting deployment or schema migration is required by this slice.
 
 Automated verification covers direct routes, root redirect and absence of legacy hash routing, unknown paths, sidebar/tab links, history traversal, community-creation session gates, and real-SDK callback-before-mount/recovery regression tests. See implementation status for results and deployment limits.
 
@@ -208,7 +208,7 @@ src/features/user-accounts/
     UserAccountPage.module.css
     PremiumFeaturesPage.tsx
   components/
-    AccountOverviewTab.tsx
+    AccountProfileTab.tsx
     MyHomeTab.tsx
     MyHomeTab.module.css
     MyCommunitiesTab.tsx
@@ -312,3 +312,6 @@ Final token audit (2026-10-24): all 32 source CSS files and 88 CSS/JS/TS-family 
 ## CommunitiesList replacement — current 2026-10-24
 
 Removed user-accounts/components/OwnedCommunities.tsx and its module. MyCommunitiesTab now owns request/filter/state orchestration; user-accounts/communities.ts owns typed view reads and normalization. CommunitiesList.tsx/module own the semantic list and vertical spacing; CommunityCard.tsx/module own shared real/sample content and responsive layout. Previous OwnedCommunities references above describe historical migration stages, not current files or query ownership. Auth/CreateCommunity API extraction remains separate work; this slice adds no dependencies.
+
+
+Account navigation refinement (2026-10-24): one ordered accountTabs definition in app/navigation.ts owns Home, Profile, Communities and Settings IDs/labels/paths and derives the narrow AccountTab type. Router registration, tab links and shell labels use that definition; UserAccountPage renders by stable ID without parallel arrays or a label-based fallback. Profile is /account/profile (account-profile ID); /account is a separate navigation root that replace-redirects to /account/home, as does /. Sidebar/mobile account links retain subtree matching. Personal breadcrumbs read My Account / destination. Premium Features remains separate. This supersedes earlier Overview-at-root and My Home/My Communities tab-label references; domain scope and auth return paths are unchanged.

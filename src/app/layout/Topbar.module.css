@@ -79,8 +79,15 @@
   .previewMode > span { display: none; }
 }
 @media (max-width: 700px) {
-  .topbar { height: 62px; padding: 0 20px; flex-wrap: wrap; gap: 12px; }
-  .breadcrumb > span, .breadcrumb strong { display: none; }
+  .topbar {
+    height: auto;
+    min-height: 62px;
+    padding: var(--ct-ref-space-12) 20px;
+    flex-wrap: wrap;
+    gap: var(--ct-ref-space-12);
+  }
+  .breadcrumb { min-width: 0; flex-wrap: wrap; overflow-wrap: anywhere; }
+  .topbar > .actions { flex-wrap: wrap; margin-inline-start: auto; }
   .actions { gap: 10px; }
   .previewMode button { font-size: 10px; }
   .avatar { display: none; }

@@ -1,23 +1,19 @@
 import uiStyles from '../../../components/ui.module.css'
-import { AccountOverviewTab } from '../components/AccountOverviewTab'
+import { AccountProfileTab } from '../components/AccountProfileTab'
 import { AccountSettingsTab } from '../components/AccountSettingsTab'
 import { MyHomeTab } from '../components/MyHomeTab'
 import { MyCommunitiesTab } from '../components/MyCommunitiesTab'
 import styles from './UserAccountPage.module.css'
 import { Button } from '../../../components/primitives/Controls'
 import { NavItem } from '../../../components/primitives/Controls'
-import { pagePaths } from '../../../app/navigation'
+import { accountTabs, type AccountTab } from '../../../app/navigation'
 import { useState } from 'react'
 import { Heading, Icon, Modal } from '../../../components/ui'
 import { useAccount } from '../../auth/accountContext'
 import { useMockState } from '../../../mock/useMockState'
 import { previewCommunity } from '../../../mock/data'
-import type { Page } from '../../../app/navigation'
 
-const tabs = ['Overview', 'My Home', 'My Communities', 'Settings']
-const routes: Page[] = ['account', 'my-home', 'my-communities', 'account-settings']
-
-export function UserAccountPage({ page }: { page: Page }) {
+export function UserAccountPage({ tab }: { tab: AccountTab }) {
   const account = useAccount()
   // Placeholder interests, statistics, and preferences stay separate from community state.
   const model = useMockState()
@@ -31,12 +27,11 @@ export function UserAccountPage({ page }: { page: Page }) {
     bio: account.bio || 'Add a little about yourself.',
     location: 'Location coming soon',
   }
-  const tab = tabs[routes.indexOf(page)] || 'Overview'
   const signedOutMessage = {
-    Overview: 'Sign in to see your account.',
-    'My Home': 'Sign in to review your activity feed.',
-    'My Communities': 'Sign in to see your communities.',
-    Settings: 'Sign in to manage your account settings.',
+    'account-profile': 'Sign in to see your account.',
+    'my-home': 'Sign in to review your activity feed.',
+    'my-communities': 'Sign in to see your communities.',
+    'account-settings': 'Sign in to manage your account settings.',
   }[tab]
   const editUnavailable = account.status !== 'signed-in'
     ? 'Sign in to edit your account profile.'
@@ -50,10 +45,11 @@ export function UserAccountPage({ page }: { page: Page }) {
 
   return (
     <div className={styles.page} data-account-page>
+
       <Heading
         eyebrow="YOUR SPACE AT THE CROWDED TABLE"
         title="My Account"
-        action={tab === 'Overview' && account.status === 'signed-in' ? (
+        action={tab === 'account-profile' && account.status === 'signed-in' ? (
           <Button
             appearance="outline"
             className="button secondary"
@@ -66,13 +62,17 @@ export function UserAccountPage({ page }: { page: Page }) {
       >
         Your profile, your communities, and a place to bring it all together.
       </Heading>
+
+      {/* Navigation tabs */}
       <nav className={`tabs ${uiStyles.tabs}`} aria-label="Account navigation">
-        {routes.map((route, index) => (
-          <NavItem key={route} to={pagePaths[route]} end variant="tab">
-            {tabs[index]}
+        {accountTabs.map(({ id, label, path }) => (
+          <NavItem key={id} to={path} end variant="tab">
+            {label}
           </NavItem>
         ))}
       </nav>
+
+      {/* Page content */}
       {account.status === 'loading' ? (
         <p role="status">Loading your account…</p>
       ) : account.status !== 'signed-in' ? (
@@ -82,20 +82,20 @@ export function UserAccountPage({ page }: { page: Page }) {
           {account.profileLoading && <p role="status">Loading your account profile…</p>}
           {account.profileError && <p role="alert">{account.profileError}</p>}
           {saved && <p role="status">Your account profile has been saved.</p>}
-          {tab === 'Overview' && (
-            <AccountOverviewTab
+          {tab === 'account-profile' && (
+            <AccountProfileTab
               profile={profile}
               onEdit={editUnavailable ? undefined : openEditor}
             />
           )}
-          {tab === 'My Home' && <MyHomeTab/>}
-          {tab === 'My Communities' && (
+          {tab === 'my-home' && <MyHomeTab/>}
+          {tab === 'my-communities' && (
             <MyCommunitiesTab
               previewName={previewCommunity.name}
               previewLocation={previewCommunity.location}
             />
           )}
-          {tab === 'Settings' && <AccountSettingsTab/>}
+          {tab === 'account-settings' && <AccountSettingsTab/>}
           {editing && (
             <Modal
               title="Edit your account profile"

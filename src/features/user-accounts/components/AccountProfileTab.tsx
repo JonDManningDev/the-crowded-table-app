@@ -2,7 +2,7 @@ import { Avatar, Botanical, Icon, Tag } from '../../../components/ui'
 import type { MockModel } from '../../../mock/useMockState'
 import { ProfileOverview } from './ProfileOverview'
 
-export function AccountOverviewTab({
+export function AccountProfileTab({
   profile,
   onEdit,
 }: {
