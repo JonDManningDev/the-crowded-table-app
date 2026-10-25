@@ -13,7 +13,7 @@ import { useAccount } from '../../auth/accountContext'
 import { useMockState } from '../../../mock/useMockState'
 import { previewCommunity } from '../../../mock/data'
 
-export function UserAccountPage({ tab }: { tab: AccountTab }) {
+export function UserAccountPage({ page }: { page: AccountTab }) {
   const account = useAccount()
   // Placeholder interests, statistics, and preferences stay separate from community state.
   const model = useMockState()
@@ -32,7 +32,7 @@ export function UserAccountPage({ tab }: { tab: AccountTab }) {
     'my-home': 'Sign in to review your activity feed.',
     'my-communities': 'Sign in to see your communities.',
     'account-settings': 'Sign in to manage your account settings.',
-  }[tab]
+  }[page]
   const editUnavailable = account.status !== 'signed-in'
     ? 'Sign in to edit your account profile.'
     : account.profileLoading
@@ -45,11 +45,10 @@ export function UserAccountPage({ tab }: { tab: AccountTab }) {
 
   return (
     <div className={styles.page} data-account-page>
-
       <Heading
         eyebrow="YOUR SPACE AT THE CROWDED TABLE"
         title="My Account"
-        action={tab === 'account-profile' && account.status === 'signed-in' ? (
+        action={page === 'account-profile' && account.status === 'signed-in' ? (
           <Button
             appearance="outline"
             className="button secondary"
@@ -62,8 +61,6 @@ export function UserAccountPage({ tab }: { tab: AccountTab }) {
       >
         Your profile, your communities, and a place to bring it all together.
       </Heading>
-
-      {/* Navigation tabs */}
       <nav className={`tabs ${uiStyles.tabs}`} aria-label="Account navigation">
         {accountTabs.map(({ id, label, path }) => (
           <NavItem key={id} to={path} end variant="tab">
@@ -71,8 +68,6 @@ export function UserAccountPage({ tab }: { tab: AccountTab }) {
           </NavItem>
         ))}
       </nav>
-
-      {/* Page content */}
       {account.status === 'loading' ? (
         <p role="status">Loading your account…</p>
       ) : account.status !== 'signed-in' ? (
@@ -82,20 +77,20 @@ export function UserAccountPage({ tab }: { tab: AccountTab }) {
           {account.profileLoading && <p role="status">Loading your account profile…</p>}
           {account.profileError && <p role="alert">{account.profileError}</p>}
           {saved && <p role="status">Your account profile has been saved.</p>}
-          {tab === 'account-profile' && (
+          {page === 'account-profile' && (
             <AccountProfileTab
               profile={profile}
               onEdit={editUnavailable ? undefined : openEditor}
             />
           )}
-          {tab === 'my-home' && <MyHomeTab/>}
-          {tab === 'my-communities' && (
+          {page === 'my-home' && <MyHomeTab/>}
+          {page === 'my-communities' && (
             <MyCommunitiesTab
               previewName={previewCommunity.name}
               previewLocation={previewCommunity.location}
             />
           )}
-          {tab === 'account-settings' && <AccountSettingsTab/>}
+          {page === 'account-settings' && <AccountSettingsTab/>}
           {editing && (
             <Modal
               title="Edit your account profile"
