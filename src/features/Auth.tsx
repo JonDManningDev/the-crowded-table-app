@@ -8,8 +8,8 @@ import type { Session } from '@supabase/supabase-js'
 import { authInitialization, initialAuthRedirect, supabase } from '../lib/supabase'
 import './Auth.css'
 import { LazyContent } from '../app/LazyContent'
-import { AccountProfileProvider } from './auth/AccountProfileProvider'
-import { AccountContext } from './auth/accountContext'
+import { useUserAccount } from './user-accounts/hooks'
+import { AccountContext } from './user-accounts/accountContext'
 
 const CreateCommunity = lazy(() => import('./CreateCommunity').then(module => ({
   default: module.CreateCommunity,
@@ -172,6 +172,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
     })
   }
   const verified = Boolean(session?.user.email_confirmed_at)
+  const verifiedUserId = verified ? session?.user.id : undefined
+  const profile = useUserAccount(verifiedUserId)
   const submitLabel = busy
     ? 'Please wait…'
     : view === 'signup'
@@ -184,7 +186,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
             ? `Try again in ${cooldown}s`
             : 'Send reset link'
   return (
-    <AccountContext.Provider value={{
+    <AccountContext.Provider key={verifiedUserId || 'guest'} value={{
+      ...profile,
       status: !ready ? 'loading' : verified ? 'signed-in' : 'signed-out',
       email: verified ? session?.user.email ?? null : null,
       userId: verified ? session?.user.id : undefined,
@@ -196,150 +199,148 @@ export function AuthShell({ children }: { children: ReactNode }) {
         navigate(null)
       }),
     }}>
-      <AccountProfileProvider userId={session?.user.email_confirmed_at ? session.user.id : null}>
-        {!view && (notice || error) && (
-          <p className="auth-feedback" role={error ? 'alert' : 'status'}>{error || notice}</p>
-        )}
-        {view === 'create-community' ? (
-          !ready ? (
-            <main className="auth-page"><p role="status">Checking your session…</p></main>
-          ) : verified && session ? (
-            <LazyContent key={session.user.id}><CreateCommunity onBusyChange={setBusy}/></LazyContent>
-          ) : (
-            <main className="auth-page">
-              <p>Please sign in with a verified account to continue.</p>
-              <Link to={authPaths.signin}>Sign in</Link>
-            </main>
-          )
-        ) : view ? (
+      {!view && (notice || error) && (
+        <p className="auth-feedback" role={error ? 'alert' : 'status'}>{error || notice}</p>
+      )}
+      {view === 'create-community' ? (
+        !ready ? (
+          <main className="auth-page"><p role="status">Checking your session…</p></main>
+        ) : verified && session ? (
+          <LazyContent key={session.user.id}><CreateCommunity onBusyChange={setBusy}/></LazyContent>
+        ) : (
           <main className="auth-page">
-            <section className="panel auth-card">
-              <span className="eyebrow">THE CROWDED TABLE</span>
-              <h1>{titles[view]}</h1>
-              {!supabase && (
-                <p role="alert">Account services are not configured yet. Please try again later.</p>
-              )}
-              {error && <p className="auth-error" role="alert">{error}</p>}
-              {notice && <p role="status">{notice}</p>}
-              {!ready ? <p role="status">Checking your link…</p> : (
-                <>
-                  {view === 'check' ? (
-                    <>
-                      <p>
-                        If signup can proceed, we’ll send a confirmation link to your email. Open it
-                        to finish creating your account.
-                      </p>
-                      <p>Already have an account? Sign in or reset your password.</p>
-                      <form className="form" onSubmit={event => {
-                        event.preventDefault()
-                        void run(async () => {
-                          const { error } = await supabase!.auth.resend({
-                            type: 'signup',
-                            email: email.trim(),
-                            options: { emailRedirectTo: redirect('/auth/callback') },
-                          })
-                          if (error) throw error
-                          setCooldown(60)
-                          setNotice('If your account needs confirmation, a new link is on its way.')
+            <p>Please sign in with a verified account to continue.</p>
+            <Link to={authPaths.signin}>Sign in</Link>
+          </main>
+        )
+      ) : view ? (
+        <main className="auth-page">
+          <section className="panel auth-card">
+            <span className="eyebrow">THE CROWDED TABLE</span>
+            <h1>{titles[view]}</h1>
+            {!supabase && (
+              <p role="alert">Account services are not configured yet. Please try again later.</p>
+            )}
+            {error && <p className="auth-error" role="alert">{error}</p>}
+            {notice && <p role="status">{notice}</p>}
+            {!ready ? <p role="status">Checking your link…</p> : (
+              <>
+                {view === 'check' ? (
+                  <>
+                    <p>
+                      If signup can proceed, we’ll send a confirmation link to your email. Open it
+                      to finish creating your account.
+                    </p>
+                    <p>Already have an account? Sign in or reset your password.</p>
+                    <form className="form" onSubmit={event => {
+                      event.preventDefault()
+                      void run(async () => {
+                        const { error } = await supabase!.auth.resend({
+                          type: 'signup',
+                          email: email.trim(),
+                          options: { emailRedirectTo: redirect('/auth/callback') },
                         })
-                      }}>
-                        <label>
-                          Email address
-                          <input
-                            type="email"
-                            required
-                            autoComplete="email"
-                            value={email}
-                            onChange={event => setEmail(event.target.value)}
-                            disabled={busy}
-                          />
-                        </label>
-                        <Button
-                          appearance="primary"
-                          type="submit"
-                          loading={busy}
-                          className="button"
-                          disabled={busy || cooldown > 0 || !supabase}
-                        >
-                          {cooldown ? `Resend in ${cooldown}s` : 'Resend confirmation email'}
-                        </Button>
-                      </form>
-                    </>
-                  ) : view === 'callback' ? (
-                    <p>Request another confirmation email or sign in to continue.</p>
-                  ) : view === 'reset' && (!session || linkFailed) ? (
-                    <ActionLink to={authPaths.forgot}>Request a new reset link</ActionLink>
-                  ) : (
-                    <form className="form" onSubmit={submit}>
-                      {view !== 'reset' && (
-                        <label>
-                          Email address
-                          <input
-                            type="email"
-                            name="email"
-                            autoComplete="email"
-                            required
-                            value={email}
-                            onChange={event => setEmail(event.target.value)}
-                            disabled={busy}
-                          />
-                        </label>
-                      )}
-                      {view !== 'forgot' && (
-                        <label>
-                          {view === 'reset' ? 'New password' : 'Password'}
-                          <input
-                            type="password"
-                            name="password"
-                            required
-                            minLength={view === 'signin' ? undefined : 12}
-                            autoComplete={view === 'signin' ? 'current-password' : 'new-password'}
-                            disabled={busy}
-                          />
-                          {view !== 'signin' && <small>Use at least 12 characters.</small>}
-                        </label>
-                      )}
-                      {view === 'reset' && (
-                        <label>
-                          Confirm new password
-                          <input
-                            type="password"
-                            name="confirm"
-                            required
-                            minLength={12}
-                            autoComplete="new-password"
-                            disabled={busy}
-                          />
-                        </label>
-                      )}
+                        if (error) throw error
+                        setCooldown(60)
+                        setNotice('If your account needs confirmation, a new link is on its way.')
+                      })
+                    }}>
+                      <label>
+                        Email address
+                        <input
+                          type="email"
+                          required
+                          autoComplete="email"
+                          value={email}
+                          onChange={event => setEmail(event.target.value)}
+                          disabled={busy}
+                        />
+                      </label>
                       <Button
                         appearance="primary"
-                        full
                         type="submit"
                         loading={busy}
-                        className="button full"
-                        disabled={busy || !supabase || (view === 'forgot' && cooldown > 0)}
+                        className="button"
+                        disabled={busy || cooldown > 0 || !supabase}
                       >
-                        {submitLabel}
+                        {cooldown ? `Resend in ${cooldown}s` : 'Resend confirmation email'}
                       </Button>
                     </form>
-                  )}
-                  <div className="auth-links">
-                    {busy ? <span>Please wait…</span> : (
-                      <>
-                        <Link to={authPaths.signin}>Sign in</Link>
-                        <Link to={authPaths.forgot}>Forgot password?</Link>
-                        <Link to={authPaths.check}>Resend confirmation</Link>
-                        <Link to={pagePaths['my-home']}>Back to My Home</Link>
-                      </>
+                  </>
+                ) : view === 'callback' ? (
+                  <p>Request another confirmation email or sign in to continue.</p>
+                ) : view === 'reset' && (!session || linkFailed) ? (
+                  <ActionLink to={authPaths.forgot}>Request a new reset link</ActionLink>
+                ) : (
+                  <form className="form" onSubmit={submit}>
+                    {view !== 'reset' && (
+                      <label>
+                        Email address
+                        <input
+                          type="email"
+                          name="email"
+                          autoComplete="email"
+                          required
+                          value={email}
+                          onChange={event => setEmail(event.target.value)}
+                          disabled={busy}
+                        />
+                      </label>
                     )}
-                  </div>
-                </>
-              )}
-            </section>
-          </main>
-        ) : children}
-      </AccountProfileProvider>
+                    {view !== 'forgot' && (
+                      <label>
+                        {view === 'reset' ? 'New password' : 'Password'}
+                        <input
+                          type="password"
+                          name="password"
+                          required
+                          minLength={view === 'signin' ? undefined : 12}
+                          autoComplete={view === 'signin' ? 'current-password' : 'new-password'}
+                          disabled={busy}
+                        />
+                        {view !== 'signin' && <small>Use at least 12 characters.</small>}
+                      </label>
+                    )}
+                    {view === 'reset' && (
+                      <label>
+                        Confirm new password
+                        <input
+                          type="password"
+                          name="confirm"
+                          required
+                          minLength={12}
+                          autoComplete="new-password"
+                          disabled={busy}
+                        />
+                      </label>
+                    )}
+                    <Button
+                      appearance="primary"
+                      full
+                      type="submit"
+                      loading={busy}
+                      className="button full"
+                      disabled={busy || !supabase || (view === 'forgot' && cooldown > 0)}
+                    >
+                      {submitLabel}
+                    </Button>
+                  </form>
+                )}
+                <div className="auth-links">
+                  {busy ? <span>Please wait…</span> : (
+                    <>
+                      <Link to={authPaths.signin}>Sign in</Link>
+                      <Link to={authPaths.forgot}>Forgot password?</Link>
+                      <Link to={authPaths.check}>Resend confirmation</Link>
+                      <Link to={pagePaths['my-home']}>Back to My Home</Link>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </section>
+        </main>
+      ) : children}
     </AccountContext.Provider>
   )
 }

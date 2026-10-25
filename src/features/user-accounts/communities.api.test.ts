@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-import { readMyCommunities } from './communities'
+import { readMyCommunities, readAccountSampleCommunity } from './api'
 const q = vi.hoisted(() => ({ from: vi.fn(), select: vi.fn(), or: vi.fn(), eq: vi.fn(), order: vi.fn(), range: vi.fn() }))
 vi.mock('../../lib/supabase', () => ({ supabase: q }))
 beforeEach(() => { vi.resetAllMocks(); for (const f of [q.from, q.select, q.or, q.eq, q.order]) f.mockReturnValue(q); q.range.mockResolvedValue({ data: [], error: null }) })
@@ -19,4 +19,12 @@ it('loads beyond the API row cap and propagates failed pages', async () => {
   expect(q.range.mock.calls).toEqual([[0, 999], [1000, 1999]])
   q.range.mockResolvedValueOnce({ data: null, error: { message: 'private diagnostic' } })
   await expect(readMyCommunities('all')).rejects.toThrow('We couldn’t load your communities.')
+})
+
+it('returns the existing sample through the feature API without querying and isolates fixture edits', () => {
+  const first = readAccountSampleCommunity()
+  expect(first).toEqual({ id: 'sample', name: 'The Crowded Table', place: 'Tegucigalpa, Honduras', status: 'Active', participation: 'Member', sample: true })
+  first.name = 'Changed'
+  expect(readAccountSampleCommunity().name).toBe('The Crowded Table')
+  expect(q.from).not.toHaveBeenCalled()
 })

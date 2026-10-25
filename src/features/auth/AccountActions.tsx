@@ -1,4 +1,4 @@
-import { useAccount } from './accountContext'
+import { useAccount } from '../user-accounts/hooks'
 import { Link, ActionLink, Button } from '../../components/primitives/Controls'
 import { authPaths } from '../../app/navigation'
 export function AccountActions() {

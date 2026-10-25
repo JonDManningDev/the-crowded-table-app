@@ -1,7 +1,7 @@
 import { ActionLink, Button } from '../../../components/primitives/Controls'
 import { Icon } from '../../../components/ui'
 import { pagePaths } from '../../../app/navigation'
-import type { CommunityCardData } from '../communities'
+import type { CommunityCardData } from '../types'
 import styles from './CommunityCard.module.css'
 
 export function CommunityCard({ community }: { community: CommunityCardData }) {

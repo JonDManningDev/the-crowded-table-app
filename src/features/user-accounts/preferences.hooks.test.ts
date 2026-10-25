@@ -1,9 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
-import { useAccountPreferences } from './useAccountPreferences'
+import { useAccountPreferences } from './hooks'
 
 const api = vi.hoisted(() => ({ readAccountPreferences: vi.fn(), saveAccountPreferences: vi.fn() }))
-vi.mock('../api', () => api)
+vi.mock('./api', () => api)
 afterEach(() => { cleanup(); vi.resetAllMocks() })
 
 it('blocks duplicate synchronous saves and draft edits during a pending save', async () => {

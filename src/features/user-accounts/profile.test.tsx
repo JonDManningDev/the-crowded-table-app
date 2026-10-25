@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import type { ComponentProps } from 'react'
-import { AccountContext } from '../auth/accountContext'
+import { AccountContext } from './accountContext'
 import { UserAccountPage } from './pages/UserAccountPage'
 import { readAccountProfilePlaceholders } from './api'
 

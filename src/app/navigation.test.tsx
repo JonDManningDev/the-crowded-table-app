@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router'
 import { ApplicationRoutes } from './router'
 import { navigation, pagePaths, type Page } from './navigation'
 function App() { return <BrowserRouter><ApplicationRoutes/></BrowserRouter> }
-import { AccountContext } from '../features/auth/accountContext'
+import { AccountContext } from '../features/user-accounts/accountContext'
 
 async function waitForContent() {
   await waitFor(() => expect(document.querySelector('#main-content h1')).toBeTruthy())

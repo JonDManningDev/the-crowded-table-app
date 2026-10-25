@@ -1,3 +1,4 @@
+import type { Database } from '../../lib/database.types'
 import type { GameArtVariant } from '../../components/GameArt'
 
 export type DiscoveryPreferences = {
@@ -37,3 +38,27 @@ export type AccountProfilePlaceholders = {
 }
 
 export type ProfileFieldErrors = { displayName?: string; bio?: string }
+
+export type AccountSummary = {
+  status: 'loading' | 'signed-in' | 'signed-out'
+  email: string | null
+  userId?: string
+  busy?: boolean
+  signOut?: () => void
+  displayName?: string
+  bio?: string
+  profileLoading?: boolean
+  profileError?: string
+  saveProfile?: (name: string, bio: string) => Promise<void>
+}
+
+export type CommunityFilter = 'all' | 'managed' | 'owned'
+export type CommunitySummary = Database['public']['Views']['my_community_summaries']['Row']
+export type CommunityCardData = {
+  id: string
+  name: string
+  place: string
+  status: 'Active' | 'Archived'
+  participation: 'Owner' | 'Staff' | 'Member'
+  sample?: boolean
+}

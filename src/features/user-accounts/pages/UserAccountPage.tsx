@@ -2,15 +2,14 @@ import uiStyles from '../../../components/ui.module.css'
 import { AccountProfileTab } from '../components/AccountProfileTab'
 import { AccountSettingsTab } from '../components/AccountSettingsTab'
 import { AccountHomeTab } from '../components/AccountHomeTab'
-import { MyCommunitiesTab } from '../components/MyCommunitiesTab'
+import { AccountCommunitiesTab } from '../components/AccountCommunitiesTab'
 import styles from './UserAccountPage.module.css'
 import { Button } from '../../../components/primitives/Controls'
 import { NavItem } from '../../../components/primitives/Controls'
 import { accountTabs, type AccountTab } from '../../../app/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Heading, Icon } from '../../../components/ui'
-import { useAccount } from '../../auth/accountContext'
-import { previewCommunity } from '../../../mock/data'
+import { useAccount } from '../hooks'
 import { readAccountProfileInsights, readAccountProfilePlaceholders } from '../api'
 import { ProfileEditModal } from '../components/ProfileEditModal'
 import type { ProfileFieldErrors } from '../types'
@@ -144,10 +143,7 @@ export function UserAccountPage({ page }: { page: AccountTab }) {
           )}
           {page === 'my-home' && <AccountHomeTab/>}
           {page === 'my-communities' && (
-            <MyCommunitiesTab
-              previewName={previewCommunity.name}
-              previewLocation={previewCommunity.location}
-            />
+            <AccountCommunitiesTab/>
           )}
           {page === 'account-settings' && <AccountSettingsTab/>}
           {isEditing && (

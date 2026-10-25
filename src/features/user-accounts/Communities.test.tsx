@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import { AccountContext } from '../auth/accountContext'
-import { MyCommunitiesTab } from './components/MyCommunitiesTab'
-import { toCommunityCards, type CommunitySummary } from './communities'
+import { AccountContext } from './accountContext'
+import { AccountCommunitiesTab } from './components/AccountCommunitiesTab'
+import { toCommunityCards } from './api'
+import type { CommunitySummary } from './types'
 
 const api = vi.hoisted(() => ({ readMyCommunities: vi.fn() }))
-vi.mock('./communities', async original => ({ ...await original<typeof import('./communities')>(), readMyCommunities: api.readMyCommunities }))
+vi.mock('./api', async original => ({ ...await original<typeof import('./api')>(), readMyCommunities: api.readMyCommunities }))
 afterEach(cleanup)
 beforeEach(() => { vi.resetAllMocks(); api.readMyCommunities.mockResolvedValue([]) })
 const row = (id: string, extra: Partial<CommunitySummary> = {}): CommunitySummary => ({
@@ -16,7 +17,7 @@ const row = (id: string, extra: Partial<CommunitySummary> = {}): CommunitySummar
 })
 const tree = (userId: string | null = 'alice') => <MemoryRouter>
   <AccountContext.Provider value={userId ? { status: 'signed-in', email: 'a@example.test', userId } : { status: 'signed-out', email: null }}>
-    <MyCommunitiesTab previewName="Sample" previewLocation="Sample location"/>
+    <AccountCommunitiesTab/>
   </AccountContext.Provider>
 </MemoryRouter>
 it('normalizes relationships, location, status and duplicate IDs', () => {
@@ -40,7 +41,7 @@ it('handles empty filters, sample visibility and retry without stale rows', asyn
   render(tree())
   await screen.findByText('You haven’t joined or created a community yet.')
   fireEvent.click(screen.getByRole('button', { name: 'Managed' }))
-  expect(screen.queryByRole('heading', { name: 'Sample' })).toBeNull()
+  expect(screen.queryByRole('heading', { name: 'The Crowded Table' })).toBeNull()
   await screen.findByText('You don’t manage any communities yet.')
   api.readMyCommunities.mockRejectedValueOnce(new Error('We couldn’t load your communities. Please try again.'))
   fireEvent.click(screen.getByRole('button', { name: 'Owned' }))
@@ -55,7 +56,7 @@ it('ignores late responses after filter changes', async () => {
   api.readMyCommunities.mockReturnValueOnce(new Promise<CommunitySummary[]>(done => { resolve = done }))
   render(tree())
   expect(screen.getByRole('status').textContent).toContain('Loading')
-  expect(screen.getByRole('heading', { name: 'Sample' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'The Crowded Table' })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Owned' }))
   await screen.findByText('You haven’t created a community yet.')
   resolve([row('Late result')])
@@ -81,4 +82,44 @@ it('keeps the sample accessible when services are unavailable', async () => {
   render(tree())
   await screen.findByText('Community services are not configured.')
   expect(screen.getByRole('link', { name: 'Explore community' })).toBeTruthy()
+})
+
+
+it('ignores late failures from obsolete filters while the latest results remain usable', async () => {
+  let reject!: (error: Error) => void
+  api.readMyCommunities.mockReturnValueOnce(new Promise<CommunitySummary[]>((_, fail) => { reject = fail }))
+  render(tree())
+  fireEvent.click(screen.getByRole('button', { name: 'Owned' }))
+  await screen.findByText('You haven’t created a community yet.')
+  await act(async () => reject(new Error('Old failure')))
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.getByText('You haven’t created a community yet.')).toBeTruthy()
+})
+
+it('refreshes when reselecting a filter and ignores an older request after retry', async () => {
+  let reject!: (error: Error) => void
+  api.readMyCommunities.mockReturnValueOnce(new Promise<CommunitySummary[]>((_, fail) => { reject = fail }))
+  api.readMyCommunities.mockResolvedValueOnce([row('Fresh row')])
+  render(tree())
+  fireEvent.click(screen.getByRole('button', { name: 'All' }))
+  await screen.findByRole('heading', { name: 'Fresh row' })
+  await act(async () => reject(new Error('Outdated request')))
+  expect(screen.queryByRole('alert')).toBeNull()
+  api.readMyCommunities.mockRejectedValueOnce(new Error('Current failure'))
+  fireEvent.click(screen.getByRole('button', { name: 'All' }))
+  await screen.findByRole('alert')
+  expect(screen.getByRole('heading', { name: 'The Crowded Table' })).toBeTruthy()
+  api.readMyCommunities.mockResolvedValueOnce([row('Retried row')])
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+  await screen.findByRole('heading', { name: 'Retried row' })
+  expect(screen.queryByRole('heading', { name: 'Fresh row' })).toBeNull()
+  expect(api.readMyCommunities).toHaveBeenCalledTimes(4)
+})
+
+it('does not query or show sample cards without a usable identity', () => {
+  const view = render(tree(null))
+  expect(api.readMyCommunities).not.toHaveBeenCalled()
+  view.rerender(<MemoryRouter><AccountContext.Provider value={{ status: 'signed-in', email: null }}><AccountCommunitiesTab/></AccountContext.Provider></MemoryRouter>)
+  expect(api.readMyCommunities).not.toHaveBeenCalled()
+  expect(screen.queryAllByRole('listitem')).toHaveLength(0)
 })

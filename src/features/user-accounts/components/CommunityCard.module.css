@@ -17,3 +17,6 @@
 @media (max-width: 700px) {
   .card { align-items: flex-start; flex-direction: column; }
 }
+
+/* Card metadata owns its role, including when rendered without the account tab. */
+.card p:global(.account-metadata) { color: var(--ct-meta-color); font-size: var(--ct-meta-font-size); line-height: var(--ct-meta-line-height); }

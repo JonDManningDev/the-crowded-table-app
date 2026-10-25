@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { AccountSettingsTab } from './AccountSettingsTab'
-import { AccountContext } from '../../auth/accountContext'
+import { AccountContext } from '../accountContext'
 import { MemoryRouter } from 'react-router'
 
 function Settings({ userId = 'viewer', status = 'signed-in' }: { userId?: string; status?: 'signed-in' | 'signed-out' | 'loading' }) {

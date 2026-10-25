@@ -20,6 +20,8 @@ The five preview sections still use fixtures and in-memory actions. Real Supabas
 
 ## Illustrative future structure
 
+Accepted API organization (2026-10-25): one `api.ts` per feature is the standard, with any exception justified by a concrete need in feature documentation. `user-accounts/api.ts` owns global account behavior; `communities/api.ts` owns community-scoped behavior. The proposed Communities tab slice will consolidate the existing account-list `user-accounts/communities.ts` into `user-accounts/api.ts`, move its shared contracts to `user-accounts/types.ts`, update consumers/tests and remove the superseded file. No `user-accounts/communities.api.ts` will be introduced. This is a plan update; runtime consolidation is not yet implemented.
+
 This tree makes ownership visible. It does not require every feature, page, hook, schema, provider, or stylesheet to be created immediately. `user-accounts` owns global account/profile behavior; `communities` owns curated community profiles and joining. This replaces the earlier single `profile` feature suggestion. `championships` is the suggested directory name while the navigation label remains “Championship.”
 
 ```text
@@ -347,3 +349,20 @@ AccountProfileTab passes the carousel through the current ProfileOverview's opti
 - components/GameArt.tsx: owns GameArtVariant; mock/data.ts Art is a compatibility alias. Artwork and CSS unchanged.
 
 These current paths supersede the earlier proposed/shared ProfileOverview descriptions. No account/community profile unification. Communities is the next account tab requiring its own plan review after Profile completion review.
+
+User-account hooks plan clarification (2026-10-25): consolidate hooks/useAccountPreferences.ts into user-accounts/hooks.ts and add useAccountCommunities as another independent named export. Update consumer/test imports; do not add hooks/useAccountCommunities.ts. Existing hook tests may remain grouped by behavior. Current profile provider/context remain under auth and are not moved as part of this Communities plan; profile API/placeholder functions already live in user-accounts/api.ts. No runtime changes yet.
+
+Agreed auth/account ownership target (2026-10-25, not yet implemented): user-accounts/hooks.ts owns useUserAccount data lifecycle and the useAccount context accessor; user-accounts/accountContext.ts declares AccountContext and types.ts owns AccountSummary. AuthShell calls the data hook once with verified identity and supplies one shared context, replacing the nested auth/AccountProfileProvider.tsx. auth/AccountActions.tsx remains sign-in/out UI. Auth.tsx/Auth.css retain current session/auth-form handling until their own page review. Earlier statements excluding shared-profile relocation from this account slice are superseded by the user's agreed hook-ownership simplification; see docs/15.
+
+
+## Communities and account data ownership — current 2026-10-25
+
+Implemented after the user's final plan approval; this inventory supersedes the preceding proposed hooks/provider locations and earlier MyCommunitiesTab/communities.ts runtime paths:
+
+- user-accounts/api.ts now contains readMyCommunities, toCommunityCards and readAccountSampleCommunity alongside existing profile/preferences/mock functions. user-accounts/communities.ts is removed. API tests remain separated by behavior.
+- user-accounts/types.ts owns AccountSummary, CommunityFilter, CommunitySummary and CommunityCardData alongside existing account contracts.
+- user-accounts/hooks.ts exports useUserAccount, useAccount, useAccountPreferences and useAccountCommunities. Former hooks/useAccountPreferences.ts is consolidated here; preferences.hooks.test.ts preserves its coverage and profile.hooks.test.tsx replaces/extends the former provider tests.
+- user-accounts/accountContext.ts declares the one shared AccountContext. AuthShell composes the profile hook result and session summary into it; the auth/AccountProfileProvider and auth/accountContext sources are removed. AccountActions stays under auth; all consumers use the relocated account hook/context imports.
+- user-accounts/components/AccountCommunitiesTab(.module.css) replaces MyCommunitiesTab and coordinates the feature hooks/API fixture with controlled CommunitiesToolbar(.module.css), existing CommunitiesList and CommunityCard. Toolbar CSS owns responsive alignment/spacing; CommunityCard CSS now owns metadata typography. UserAccountPage no longer imports mock/data or forwards previewName/previewLocation.
+
+No route changes, new API/schema behavior, query dependencies or auth-page redesign. Auth.tsx/Auth.css keep current session/forms/redirects; its single provider preserves identity-keyed child reset behavior. Earlier dated sections remain historical implementation/review records. See docs/12 for current verification.

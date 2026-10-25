@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { NavItem } from '../../components/primitives/Controls'
 import { accountRootPath, pagePaths } from '../navigation'
 import { Avatar, Botanical, Icon } from '../../components/ui'
-import { useAccount } from '../../features/auth/accountContext'
+import { useAccount } from '../../features/user-accounts/hooks'
 import { communityNavigation } from '../navigation'
 import styles from './Sidebar.module.css'
 

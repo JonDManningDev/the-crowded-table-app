@@ -1,4 +1,4 @@
-import type { CommunityCardData } from '../communities'
+import type { CommunityCardData } from '../types'
 import { CommunityCard } from './CommunityCard'
 import styles from './CommunitiesList.module.css'
 

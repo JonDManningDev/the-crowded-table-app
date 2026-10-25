@@ -1,10 +1,12 @@
+import { useState } from 'react'
+import { useAccount } from './user-accounts/hooks'
 import { BrowserRouter } from 'react-router'
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AuthShell } from './Auth'
 import { AccountActions } from './auth/AccountActions'
-import { MyCommunitiesTab } from './user-accounts/components/MyCommunitiesTab'
+import { AccountCommunitiesTab } from './user-accounts/components/AccountCommunitiesTab'
 
 const auth = vi.hoisted(() => ({
   getSession: vi.fn(), onAuthStateChange: vi.fn(), signUp: vi.fn(), signInWithPassword: vi.fn(),
@@ -45,7 +47,7 @@ async function start() {
     <BrowserRouter>
       <AuthShell>
         <AccountActions/>
-        <MyCommunitiesTab previewName="Sample" previewLocation="Sample location"/>
+        <AccountCommunitiesTab/>
         <div>Community preview</div>
       </AuthShell>
     </BrowserRouter>,
@@ -190,4 +192,33 @@ it('loads creation after verified session restoration and retains its draft on t
   await act(async () => { listener('SIGNED_OUT', null) })
   await waitFor(() => expect(screen.queryByLabelText('Community name')).toBeNull())
   expect(window.location.pathname).toBe('/account/home')
+})
+
+
+it('preserves child state on session refresh and remounts it on identity changes and sign-out', async () => {
+  auth.getSession.mockResolvedValue({ data: { session }, error: null })
+  function StatefulChild() {
+    const account = useAccount()
+    const [count, setCount] = useState(0)
+    return <button onClick={() => setCount(previous => previous + 1)}>{account.userId || 'guest'}:{count}</button>
+  }
+  render(<BrowserRouter><AuthShell><StatefulChild/></AuthShell></BrowserRouter>)
+  fireEvent.click(await screen.findByRole('button', { name: 'test-user:0' }))
+  await act(async () => listener('TOKEN_REFRESHED', { ...session }))
+  expect(screen.getByRole('button', { name: 'test-user:1' })).toBeTruthy()
+  await act(async () => listener('SIGNED_IN', { user: { ...session.user, id: 'second-user' } }))
+  expect(screen.getByRole('button', { name: 'second-user:0' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'second-user:0' }))
+  await act(async () => listener('SIGNED_OUT', null))
+  expect(screen.getByRole('button', { name: 'guest:0' })).toBeTruthy()
+})
+
+it('does not load profile data for an unverified restored session', async () => {
+  auth.getSession.mockResolvedValue({ data: { session: { user: { ...session.user, email_confirmed_at: null } } }, error: null })
+  function Consumer() {
+    const account = useAccount()
+    return <p>{JSON.stringify({ status: account.status, name: account.displayName, loading: account.profileLoading, error: account.profileError })}</p>
+  }
+  render(<BrowserRouter><AuthShell><Consumer/></AuthShell></BrowserRouter>)
+  await screen.findByText(JSON.stringify({ status: 'signed-out', name: '', loading: false, error: '' }))
 })

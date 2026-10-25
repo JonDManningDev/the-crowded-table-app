@@ -1,7 +1,6 @@
-import { useAccount } from '../../auth/accountContext'
+import { useAccount, useAccountPreferences } from '../hooks'
 import { AccountPreferencesPanel } from './AccountPreferencesPanel'
 import { PremiumFeaturesPanel } from './PremiumFeaturesPanel'
-import { useAccountPreferences } from '../hooks/useAccountPreferences'
 import { readPremiumFeaturePlaceholders } from '../api'
 import { pagePaths } from '../../../app/navigation'
 import styles from './AccountSettingsTab.module.css'
