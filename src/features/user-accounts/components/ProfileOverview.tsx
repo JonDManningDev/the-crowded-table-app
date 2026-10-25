@@ -4,6 +4,7 @@ import { Button } from '../../../components/primitives/Controls'
 import { Icon, Tag } from '../../../components/ui'
 import type { MockModel } from '../../../mock/useMockState'
 import { GameArt } from '../../../components/GameArt'
+import type { ReactNode } from 'react'
 
 const favorites = [
   { name: 'Wingspan', art: 'birds' as const },
@@ -14,9 +15,11 @@ const favorites = [
 export function ProfileOverview({
   profile,
   onEdit,
+  insights,
 }: {
   profile: MockModel['profile']
   onEdit?: () => void
+  insights?: ReactNode
 }) {
   return (
     <div className={styles.sections}>
@@ -42,12 +45,12 @@ export function ProfileOverview({
           <Tag>Always up for a new game</Tag>
         </div>
       </section>
-      <InsightCard
+      {insights ?? <InsightCard
         icon={<Icon name="people" size={28}/>}
         eyebrow="YOUR CIRCLE IS GROWING"
         heading="18 different people. So many shared stories."
         description="That’s how many community members you’ve played with. Here’s to the people you haven’t met yet."
-      />
+      />}
       <section className="panel">
         <div className="section-heading">
           <h2 data-heading="card">A few favorite games</h2>

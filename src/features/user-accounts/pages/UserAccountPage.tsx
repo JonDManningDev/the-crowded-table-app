@@ -12,6 +12,7 @@ import { Heading, Icon, Modal } from '../../../components/ui'
 import { useAccount } from '../../auth/accountContext'
 import { useMockState } from '../../../mock/useMockState'
 import { previewCommunity } from '../../../mock/data'
+import { readAccountProfileInsights } from '../api'
 
 export function UserAccountPage({ page }: { page: AccountTab }) {
   const account = useAccount()
@@ -21,6 +22,11 @@ export function UserAccountPage({ page }: { page: AccountTab }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [activeInsightIndex, setActiveInsightIndex] = useState(0)
+  const insights = readAccountProfileInsights().map(({ iconName, ...insight }) => ({
+    ...insight,
+    icon: <Icon name={iconName} size={28}/>,
+  }))
   const profile = {
     ...model.profile,
     name: account.displayName || 'Your account',
@@ -81,6 +87,9 @@ export function UserAccountPage({ page }: { page: AccountTab }) {
             <AccountProfileTab
               profile={profile}
               onEdit={editUnavailable ? undefined : openEditor}
+              insights={insights}
+              activeInsightIndex={activeInsightIndex}
+              onActiveInsightIndexChange={setActiveInsightIndex}
             />
           )}
           {page === 'my-home' && <AccountHomeTab/>}

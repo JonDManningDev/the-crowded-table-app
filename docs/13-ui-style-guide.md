@@ -562,3 +562,9 @@ The approved Settings refactor preserves the existing appearance and native chec
 ## Account Home presenters — 2026-10-25
 
 The approved Home extraction preserves the existing welcome panel and three coming-soon cards. AccountHomeTab composes feature-local HomeWelcomePanel and HomeFeedPlaceholderCard, reusing shared ActionLink/Icon and AccountPanel footer styling. Existing shared InsightCard/HeroFeaturePanel/Notice contracts are unchanged: this slice does not restyle the placeholder structures to fit those different patterns. Colocated modules own internal composition; the parent owns external grid/stack gaps. Existing heading roles, illustration aria-hidden state, keyboard action and responsive behaviors are preserved. Local irregular measurements are documented in their modules. See docs/12 for verification and actual-zoom limits.
+
+## InsightsCarousel — user-directed addition 2026-10-25
+
+Use the existing InsightCard appearance for one supplied insight at a time. Selection belongs to the parent. Single-card collections have no Previous/Next controls; multi-card collections have bounded shared Buttons and an announced position, without automatic rotation. Empty collections produce no carousel. Use a named carousel region and slide group; preserve each card's heading role/content.
+
+The account Profile starts with its existing single mock insight. A disabled outline See all insights Button sits to its right when the carousel has at least 720px available inline width. A component container query governs fit, with a 24px primitive gap; below it the action appears on the next row underneath and the card fills the row. This follows the user's responsive-placement clarification; the action remains visible and disabled. Existing card, focus, metadata and control roles remain unchanged. No all-insights navigation, shared profile contract or community carousel is implemented.

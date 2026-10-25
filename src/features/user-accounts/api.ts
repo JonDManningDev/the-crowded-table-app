@@ -1,7 +1,18 @@
 import { supabase } from '../../lib/supabase'
-import type { AccountPreferences, PremiumFeaturePlaceholder } from './types'
+import type { AccountPreferences, AccountProfileInsight, PremiumFeaturePlaceholder } from './types'
 
 export type { AccountPreferences, CommunicationPreferences, DiscoveryPreferences } from './types'
+
+// Profile insights are still sample data; no account activity query is connected.
+export function readAccountProfileInsights(): AccountProfileInsight[] {
+  return [{
+    id: 'co-player-circle',
+    iconName: 'people',
+    eyebrow: 'YOUR CIRCLE IS GROWING',
+    heading: '18 different people. So many shared stories.',
+    description: 'That’s how many community members you’ve played with. Here’s to the people you haven’t met yet.',
+  }]
+}
 
 // D-120 fixture only: no subscription lookup, billing, or entitlement behavior.
 export function readPremiumFeaturePlaceholders(): PremiumFeaturePlaceholder[] {

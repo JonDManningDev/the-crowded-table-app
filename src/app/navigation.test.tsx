@@ -92,6 +92,7 @@ it('places account tabs above the contents and keeps the summary only on Profile
   await waitForContent()
   expect(screen.getByRole('link', { name: 'Alex' }).getAttribute('href')).toBe('/account')
   expect(document.querySelector('.profile-summary')).toBeTruthy()
+  expect(screen.getByRole('region', { name: 'Insights' })).toBeTruthy()
   expect(
     within(screen.getByRole('navigation', { name: 'Account navigation' }))
       .getByRole('link', { name: 'Profile' })
@@ -111,6 +112,7 @@ it('places account tabs above the contents and keeps the summary only on Profile
   ).toBe('page')
   await navigate('profile')
   expect(screen.getByRole('button', { name: 'Membership & Settings' })).toBeTruthy()
+  expect(screen.queryByRole('region', { name: 'Insights' })).toBeNull()
   expect(screen.getByRole('heading', { name: 'Ana M.' })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Membership & Settings' }))
   expect(screen.getByRole('heading', { name: 'Make yourself comfortable' })).toBeTruthy()

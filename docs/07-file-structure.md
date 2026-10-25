@@ -329,3 +329,9 @@ A pre-existing router mismatch passed tab to UserAccountPage, whose contract exp
 Current /account/home composition is UserAccountPage -> AccountHomeTab -> HomeWelcomePanel and three HomeFeedPlaceholderCard instances. MyHomeTab.tsx/MyHomeTab.module.css were renamed to AccountHomeTab.tsx/AccountHomeTab.module.css; UserAccountPage imports/renders the new name. Both children live under user-accounts/components beside their own CSS Modules. AccountHomeTab.module.css owns the inherited decorative color, external separation and grid/stack behavior. Child modules own welcome/illustration and placeholder-card internals respectively. AccountPanel.module.css remains shared and unchanged.
 
 Static feedPlaceholders copy stays in AccountHomeTab; no feature API, hook, schema, dependency or shared primitive was added. Older dated MyHomeTab migration/consumer notes remain historical. Routes/auth gates are unchanged; see docs/12 for evidence.
+
+## Account insights carousel — 2026-10-25
+
+components/shared/InsightsCarousel.tsx and its CSS Module provide controlled collection presentation using the existing InsightCard and Button. UserAccountPage owns activeInsightIndex and maps the synchronous readAccountProfileInsights API data into visual card props. The feature AccountProfileInsight type contains text/icon-name data, not React elements.
+
+AccountProfileTab passes the carousel through the current ProfileOverview's optional insights presentation slot. This is a temporary account-only integration seam while the broader Profile plan is under review; community Profile continues to use its existing InsightCard fallback. No profile-state/model sharing, community data/API changes or other Profile component extraction occurred. See docs/15 for the authorized scope and docs/12 for verification.

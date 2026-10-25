@@ -1,0 +1,35 @@
+.carousel {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: var(--ct-ref-space-24);
+}
+
+.slides { min-width: 0; }
+.seeAll { justify-self: start; }
+
+.navigation {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ct-ref-space-12);
+  margin-top: var(--ct-ref-space-12);
+}
+
+.position {
+  font-size: var(--ct-meta-font-size);
+  line-height: var(--ct-meta-line-height);
+  color: var(--ct-meta-color);
+}
+
+/* Local fit threshold, not a viewport/theme breakpoint: reserve roughly 520px
+   for the existing card after the English action and 24px gap. Card/content
+   geometry remains owned by InsightCard; narrower containers stack the action. */
+@container (min-width: 720px) {
+  .layout { grid-template-columns: minmax(0, 1fr) max-content; }
+}

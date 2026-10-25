@@ -1,13 +1,20 @@
 import { Avatar, Botanical, Icon, Tag } from '../../../components/ui'
 import type { MockModel } from '../../../mock/useMockState'
 import { ProfileOverview } from './ProfileOverview'
+import { InsightsCarousel, type InsightsCarouselItem } from '../../../components/shared/InsightsCarousel'
 
 export function AccountProfileTab({
   profile,
   onEdit,
+  insights,
+  activeInsightIndex,
+  onActiveInsightIndexChange,
 }: {
   profile: MockModel['profile']
   onEdit?: () => void
+  insights: readonly InsightsCarouselItem[]
+  activeInsightIndex: number
+  onActiveInsightIndexChange: (index: number) => void
 }) {
   return (
     <div className="profile-layout">
@@ -51,7 +58,10 @@ export function AccountProfileTab({
         </div>
       </aside>
       <div>
-        <ProfileOverview profile={profile} onEdit={onEdit}/>
+        <ProfileOverview profile={profile} onEdit={onEdit} insights={
+          <InsightsCarousel insights={insights} activeIndex={activeInsightIndex}
+            onActiveIndexChange={onActiveInsightIndexChange}/>
+        }/>
       </div>
     </div>
   )

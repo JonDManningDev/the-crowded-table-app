@@ -14,3 +14,11 @@ export type PremiumFeaturePlaceholder = {
   name: string
   detail: string
 }
+
+export type AccountProfileInsight = {
+  id: string
+  iconName: string
+  eyebrow: string
+  heading: string
+  description: string
+}

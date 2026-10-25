@@ -96,3 +96,68 @@ Select existing heading/eyebrow/body/metadata/card/section/action-footer tokens 
 Capture before/after computed styles and screenshots of Home at mobile/tablet/desktop and both sides of the relevant 700/950/1100/1200px boundaries. Check actual-font wrapping, no horizontal overflow, hidden illustration, grid/stack gaps, keyboard focus and Communities action/Back navigation. Exercise increased text spacing; report actual zoom verification separately if the browser still does not support it. Recheck shared footer consumers if that shared module changes (none is planned).
 
 Run build, lint, token-reference/cycle/unused-alias checks and applicable existing navigation tests, including Home placeholder/auth behavior and Settings regressions. Add a new automated test only for a meaningful uncovered behavior, not to duplicate static markup. Update affected architecture/file/style/status documentation with actual results and limitations. No backend writes or deployment. Stop after Home verification for result review; Profile is the following target and needs its own plan.
+
+## Profile plan — revised proposal, awaiting review
+
+Home was committed as 31dea35 on 2026-10-25. The separately authorized InsightsCarousel addition is implemented; the rest of the Profile application refactor remains proposed. The user selected the five account component names below and requested independent account/community compositions until community requirements establish whether sharing is appropriate. The earlier shared ProfileOverview proposal is superseded. The custom editor hook is also withdrawn from this proposal in favor of parent-owned state; the user asked for its justification, and this simpler arrangement is the recommendation pending plan approval.
+
+### Selected components and proposed ownership
+
+| File/name | Intended responsibility |
+| --- | --- |
+| `user-accounts/components/AccountProfileTab.tsx` (keep) | Controlled account composition: ProfileSidebar plus a main column containing ProfileAboutPanel, the shared InsightsCarousel and FavoriteGamesPanel directly. No extra account ProfileOverview wrapper. |
+| `user-accounts/components/ProfileSidebar.tsx` (new) | Summary card, interests, supplied counts and decorative side note. Keep these related elements together. |
+| `user-accounts/components/ProfileEditModal.tsx` (new) | Controlled Modal/form presenter for display name and bio, with supplied draft, validation, availability and save state/callbacks. Reuse Modal, Button and native fields. |
+| `user-accounts/components/ProfileAboutPanel.tsx` (new) | Account bio, play-style/teaching tags and optional supplied edit callback. |
+| `user-accounts/components/FavoriteGamesPanel.tsx` (new) | Supplied account favorite-game cards using existing GameArt, heading roles and decorative Icon. |
+
+Each account component owns colocated CSS Modules. Keep the existing generic/branded primitives shared; do not share the account profile panels or impose a common account/community profile data contract in this slice.
+
+The current ProfileOverview is only the main-column group of About/play-style content, an InsightCard and favorite games. For the community consumer, retain that existing composition independently, with only an ownership/import adjustment: proposed name `communities/components/CommunityProfileOverview.tsx` and matching CSS Module. This additional name is proposed, not selected by the user yet. Preserve its current mock values, edits, callbacks and styles; no community panel/API redesign. The account-specific refactor no longer needs readCommunityProfilePlaceholders or a cross-feature mock/profile fixture.
+
+### Parent state instead of a new hook
+
+Keep editor draft, open/close, validation, submitting and feedback coordination directly in UserAccountPage, the existing common parent of the header Edit Profile action and the tab's inline edit action. Extracting the modal markup already removes the largest presentation block. A custom hook would only package this single consumer's state/actions; it would not add persistence, synchronization or authorization capabilities. It is not required for lifting state or presentation-only children.
+
+Recommended parent vocabulary: `isEditing`, `isSaving`, `displayNameDraft`, `bioDraft`, `fieldErrors`, `saveError`, `isSaved`, `openEditor`, `closeEditor`, `changeDisplayName`, `changeBio`, `submitProfile`. Modal callbacks: `onDisplayNameChange`, `onBioChange`, `onSubmit`, `onClose`. Parent handler names remain reviewable. Consider a hook later only if reuse or lifecycle complexity makes a concrete boundary useful, not as a mandatory layer.
+
+Preserve the existing AccountProfileProvider/readOwnProfile/saveOwnProfile persistence path. UserAccountPage delegates saves to account.saveProfile, which already reaches the feature API. No second provider, query, cache or direct Supabase call. Parent UI coordination is distinct from API access and business-data implementation.
+
+### Real/mock boundary and lifecycle
+
+Add synchronous `readAccountProfilePlaceholders()` to user-accounts/api.ts and feature-owned `AccountProfilePlaceholders` types. Supply sample interests, play style, teaching preference, counts and favorite games. Proposed fields: `playStyle`, `isHappyToTeach`, `eventCount`, `hostedTableCount`, `coPlayerCount`, `favoriteGames`; retain `name`, `bio`, `location` and `interests` where clear. UserAccountPage composes real name/bio with these explicit placeholders and removes its broad useMockState dependency. Its Communities-only previewCommunity import remains for that later slice. Add no editing/persistence for sample fields, and preserve fallback copy without deriving account identity from email or community identity.
+
+Keep the 80-character display-name and 2,000-character bio limits and current normalization. Initialize drafts from persisted fields on opening; preserve edits across unrelated provider refreshes and newly unavailable profile states. Retain the current editor/tab-navigation lifetime. Clear drafts/feedback on actual identity changes, sign-out or unmount; ignore obsolete submission completions and guard duplicate submissions. Backend/provider authorization remains authoritative, including already in-flight writes.
+
+Failed saves retain the open modal/draft and existing inline recovery. Success updates provider/shell identity, closes the modal and preserves success copy. Saving disables fields/submission and prevents dismissal as currently implemented. Preserve session/profile loading/error guards at both entry points. Toast infrastructure and typed API error taxonomy remain deferred.
+
+Keep the previously proposed type-only cleanup of GameArt's fixture dependency: define/export `GameArtVariant` with existing variants from GameArt.tsx and retain mock/data.ts's `Art` as a compatibility alias. No artwork/CSS/runtime changes. New account presentation contracts must not reference MockModel or fixture Profile types.
+
+### Visible corrections still proposed for review
+
+1. Move the inline Edit action from beside play-style tags to the About me heading, because the global modal edits name/bio only. Preserve label/callback/appearance and the header Edit Profile action.
+2. Apply documented field-validation behavior: put display-name feedback beside the field, associate it accessibly, validate on blur/submit, revalidate during correction after an error, and focus the first invalid field on submission. Preserve existing limits and API-failure recovery.
+
+These corrections have not been approved by the naming discussion. Preserve all other appearance/content, sample values and decorative treatments. Document any agreed variance if a correction is declined.
+
+### Styling, verification and completion
+
+Audit effective profile layout/summary/stats/note/favorites/form rules, account overrides, GameArt classes and responsive cascade before moving styles. Move account rules to their owners while retaining global rules/hooks required by the independent community composition. Do not unify profile styles merely because the prototype currently shares them. Use existing role tokens and actual-purpose primitive spacing; preserve/document local geometry/quote/artwork/form exceptions. No new shared tokens, themes, dependencies, card/form framework or further visual changes are presumed necessary.
+
+Verify account Profile and the independent community overview at relevant widths and 700/950/1200px boundaries, including modal states, long values, optional Edit absence, wrapping, focus/keyboard/dismissal behavior and no overflow. Compare preserved rendering; verify any separately approved corrections against their intended behavior. Exercise increased text spacing and report actual zoom support accurately.
+
+Run build/lint, token checks, existing navigation/provider/API tests and relevant Settings/Home regressions. Add meaningful coverage for draft retention, duplicate saves, identity/sign-out changes, stale completions, failure/retry, updated shell identity, validation and preserved community edits. Use mocks/fixtures for mutations rather than real hosted profile writes.
+
+Update affected architecture/file/style/status documents with evidence, limitations and deployment status. No schema/new real API/deployment. Stop after Profile verification for result review; Communities is the next separately planned target.
+
+## InsightsCarousel addition — authorized and implemented locally 2026-10-25
+
+The user explicitly requested implementing InsightsCarousel in place of the account Profile's existing InsightCard, starting with its single mock insight. A disabled See all insights button appears to its right when the component has enough available width, or on the next row underneath at narrower widths, as explicitly clarified by the user. This scoped addition is authorized independently of the still-proposed full Profile refactor, editor hook/state discussion and Edit/validation corrections.
+
+Use a shared controlled presentation component under components/shared with an insights collection, activeIndex and onActiveIndexChange. Render one InsightCard at a time; expose manual Previous/Next controls only for multiple insights, disabling them at the collection ends. Do not auto-rotate. Return no carousel for an empty collection. Keep selection state in UserAccountPage, with no custom hook. A synchronous readAccountProfileInsights fixture API supplies the existing exact mock insight; API models contain text/icon names rather than React elements.
+
+Keep account and community compositions independent: insert the account carousel through a temporary optional insights slot in the current ProfileOverview presenter. Its community consumer retains the existing single InsightCard. This small integration seam is replaced by direct AccountProfileTab composition when the larger reviewed refactor is implemented; no shared profile model or community carousel is introduced.
+
+Reuse InsightCard, Button and existing token roles without modifying their shared styling. Use a component container query: at 720px of available carousel width, allow the disabled outline action alongside the card with a 24px primitive gap; below that width, place that action on the next row underneath and let the card fill the row. The local 720px composition threshold leaves approximately 520px for readable card content after action/gap allocation and is not a new global breakpoint/token. Verify actual container widths and narrow text reflow. No new backend calls, schema, dependencies, public tokens, all-insights navigation or deployment.
+
+Verify controlled selection/one-visible-card behavior, empty/single/multiple collections, bounded buttons, keyboard operation and announcement, disabled all-insights action, API fixture copy/data isolation, parent wiring and unchanged community insight. Inspect account/community Profile plus container threshold boundaries, run build/lint/relevant tests and token checks, and record evidence/limits. Full Profile implementation remains at its plan-review gate.
