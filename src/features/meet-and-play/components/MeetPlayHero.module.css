@@ -1,0 +1,78 @@
+/* Preserve this hero's botanical composition and editorial 25px gap/15px
+   intro inset/30px divider inset and local border paints. These are existing
+   illustration-specific measurements, not new shared roles or spacing steps. */
+.hero {
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  justify-content:space-between;
+  gap:25px;
+  background:var(--ct-card-background);
+  border:1px solid #dfe5d5;
+  border-radius:var(--ct-card-border-radius);
+  padding:var(--ct-card-padding);
+}
+
+.hero>div:first-child {
+  padding:15px 0;
+}
+
+.hero > div:first-child h2 {
+  font-size:var(--ct-heading-hero-font-size);
+  line-height:var(--ct-heading-title-line-height);
+  color:var(--ct-heading-color);
+}
+
+.hero > div:first-child p {
+  font-size:var(--ct-body-font-size);
+  color:var(--ct-body-color);
+  margin-bottom:0;
+  line-height:var(--ct-body-line-height);
+}
+
+.hero>:global(.botanical) {
+  position:absolute;
+  height:240px;
+  right:37%;
+  top:0;
+  opacity:.25;
+  pointer-events:none;
+}
+
+@media (max-width: 950px) {
+  .hero {
+    display:block;
+  }
+}
+
+@media (max-width: 950px) {
+  .hero>:global(.botanical) {
+    right:10px;
+    opacity:.25;
+  }
+}
+
+@media (max-width: 700px) {
+  .hero :global(.eyebrow) {
+    font-size:var(--ct-eyebrow-font-size);
+    line-height:var(--ct-eyebrow-line-height);
+    color:var(--ct-eyebrow-color);
+  }
+}
+
+.feature {
+  position: relative;
+  z-index: 1;
+  flex: 0 1 300px;
+  min-width: 0;
+  border-left: 1px solid #cfd8c1;
+  padding-left: 30px;
+}
+@media (max-width: 950px) {
+  .feature {
+    border-left: 0;
+    border-top: 1px solid #cfd8c1;
+    padding: var(--ct-ref-space-24) 0 0;
+    margin-top: var(--ct-section-gap);
+  }
+}

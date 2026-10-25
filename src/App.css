@@ -161,44 +161,6 @@
   gap:7px;
 }
 
-.meet-banner {
-  position:relative;
-  overflow:hidden;
-  display:flex;
-  justify-content:space-between;
-  gap:25px;
-  background:var(--ct-card-background);
-  border:1px solid #dfe5d5;
-  border-radius:var(--ct-card-border-radius);
-  padding:var(--ct-card-padding);
-}
-
-.meet-banner>div:first-child {
-  padding:15px 0;
-}
-
-.meet-banner > div:first-child h2 {
-  font-size:var(--ct-heading-hero-font-size);
-  line-height:var(--ct-heading-title-line-height);
-  color:var(--ct-heading-color);
-}
-
-.meet-banner > div:first-child p {
-  font-size:var(--ct-body-font-size);
-  color:var(--ct-body-color);
-  margin-bottom:0;
-  line-height:var(--ct-body-line-height);
-}
-
-.meet-banner>.botanical {
-  position:absolute;
-  height:240px;
-  right:37%;
-  top:0;
-  opacity:.25;
-  pointer-events:none;
-}
-
 .filter-bar {
   display:flex;
   align-items:center;
@@ -1621,15 +1583,6 @@
     display:none;
   }
 
-  .meet-banner {
-    display:block;
-  }
-
-  .meet-banner>.botanical {
-    right:10px;
-    opacity:.25;
-  }
-
   .discussion-layout {
     grid-template-columns:1fr;
   }
@@ -1687,12 +1640,6 @@
 
   .card-grid {
     grid-template-columns:1fr;
-  }
-
-  .meet-banner .eyebrow {
-    font-size:var(--ct-eyebrow-font-size);
-    line-height:var(--ct-eyebrow-line-height);
-    color:var(--ct-eyebrow-color);
   }
 
   .filter-bar {

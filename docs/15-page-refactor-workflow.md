@@ -1,6 +1,6 @@
 # Incremental page presentation refactor
 
-Recorded 2026-10-25. Workflow and all four account-tab slices are approved and completed: Settings 5b3f5a4, AccountHomeTab 31dea35, independent InsightsCarousel f4e86ab, Profile b918fea, and Communities/account-auth simplification 3a68cb9. Community Home is implemented and the user has accepted it for commit and requested the next target plan. No deployment occurred. See docs/12 for evidence and verification limits.
+Recorded 2026-10-25. Workflow and all four account-tab slices are approved and completed: Settings 5b3f5a4, AccountHomeTab 31dea35, independent InsightsCarousel f4e86ab, Profile b918fea, and Communities/account-auth simplification 3a68cb9. Community Home was accepted and committed as 6defc2b; Meet & Play is implemented and accepted by the user for commit; the next target requires its own reviewed plan. No deployment occurred. See docs/12 for evidence and verification limits.
 
 ## Accepted working agreement
 
@@ -285,3 +285,54 @@ Run build/lint/relevant navigation/mock-state tests and token checks, adding mea
 Community Home implementation approval (2026-10-25): user approved the revised plan and instructed execution. Implement the named page/children and feature API boundaries, preserving the commercial prototype elements, existing simulation lifetime and rendering. ActivityCard receives a narrower feature-owned presentation contract; legacy callers remain structurally compatible. Shared date/time formatting may move unchanged to lib with a compatibility re-export for legacy consumers so new UI does not import mock utilities. No backend, deployment or broader community feature implementation.
 
 Community Home completion checkpoint (2026-10-25): implemented the approved page/children/API/types organization and relocated CSS ownership. Shared ActivityCard receives a narrower compatible type; date/time formatting moves unchanged to lib with a legacy re-export. Existing promotion, ticket copy, guest/member preview conditions, shared booking/checkout simulation, current snapshot counts/status, navigation reset behavior and frozen calendar remain intact. One local text-wrapping rule fixes calendar-title overflow under increased text spacing without changing normal rendering. No new API calls, tables, storage, dependencies, token definitions or deployment. Build/lint, 136 tests across 18 files, token checks and 64 responsive baseline comparisons pass; browser interactions and text-spacing fixture verified, with limits in docs/12. The temporary fixture was removed. Stop here for completion review before the next page plan.
+
+
+## Meet & Play plan — approved and implemented, completion review 2026-10-25
+
+Community Home was committed as 6defc2b. Next target: the existing Meet & Play route, including its create-table and matching-preferences dialogs. Preserve its prototype functionality and appearance; defer community product inconsistencies until domain implementation, following the user's current structural-refactor direction. The user approved this plan and instructed implementation.
+
+### Proposed components and names
+
+All files below live under features/meet-and-play, with a colocated CSS Module for each extracted component.
+
+| File/name | Responsibility |
+| --- | --- |
+| pages/MeetPlayPage.tsx (replace flat features/MeetPlay.tsx) | Page coordinator, heading/action, Find a Table/My Tables view, existing notice/card grid/empty state/guidance and modal composition. Own browsing state, modal selection, editable drafts and creation error. Receive narrow snapshot/action props through the existing route bridge; no MockModel presentation contract. |
+| components/MeetPlayHero.tsx | Existing introductory hero/artwork and matching shortcut. Reuse HeroFeaturePanel and Botanical; receive matching status and onOpenMatching. No separate wrapper for the shared shortcut. |
+| components/TableFilters.tsx | Controlled search, game/location selects and beginner checkbox. Receive option lists, TableFilterValues and onFiltersChange. No data reads or filtering logic. |
+| components/CreateTableModal.tsx | Existing shared Modal plus controlled table form, private/public location labels, current native constraints and supplied error. Receive CreateTableDraft, onDraftChange, onSubmit and onClose; no UUID generation, record construction, mutations or local draft state. |
+| components/MatchingPreferencesModal.tsx | Existing shared Modal, explanatory copy and controlled preference form. Receive MatchingPreferencesDraft, options, onDraftChange, onSubmit and onClose. No matching service or notification delivery. |
+
+Reuse Tabs, Heading, Button, Icon, Modal, Notice, Empty, ActivityCard and GuidanceNote directly. Keep the card grid in the page; no new TableCard, generic form framework, list wrapper, or shared form primitive without a concrete need. There is no established Input/Select React primitive in the current primitive inventory; use native labeled inputs/selects/textarea with the existing form styling conventions.
+
+Proposed page vocabulary: selectedView, tableFilters, activeModal, createTableDraft, createTableError and matchingPreferencesDraft. TableFilterValues contains searchQuery, gameType, locationType and beginnerFriendlyOnly. Feature contracts also include CreateTableDraft, MatchingPreferencesDraft and MeetPlayTableSummary. Proposed external callbacks: onOpenTable(id), onCreateTable(draft) and onSaveMatchingPreferences(draft). Page handlers own opening/resetting/cancelling drafts and successful-create UI transitions; children only render supplied values and forward changes/submission.
+
+### Feature API and simulation ownership
+
+Create one meet-and-play/api.ts and types.ts. Proposed API exports:
+
+- readMeetPlayContent: filter/form options, frozen create-form defaults and existing simulation configuration/copy where it represents mock data.
+- readMeetPlayTables: project the current App-owned table/seat snapshot into listing contracts; omit exact addresses and detail-only fields from listing props. Preserve current host/status/beginner classification.
+- selectMeetPlayTables: existing case-insensitive title/host/location search, category/public-private/beginner filters and Find a Table/My Tables selection, retaining source order. My Tables still includes host You or any current seat status; no new clock/lifecycle filter.
+- createMockTable: preserve the current trimmed title/location, same-day end-after-start validation, UUID construction and legacy record shape/defaults. Return success/error and the simulated update for the route adapter to apply to the existing App store.
+- saveMockMatchingPreferences: preserve the supplied preference values and return the simulated saved-preferences/matching-enabled update and existing notice for that same adapter.
+
+The route bridge applies API results to the existing App-owned items/matchingPreferences/matching/notices. Pass only narrow action outcomes back to the page (creation error or success), so it never constructs legacy Activity records or coordinates mock-store setters. Confine legacy fixture contracts to the compatibility boundary; reuse ActivityCardData rather than duplicating its rendering fields. Do not introduce a second table collection, reread pristine seeds, or reset shared seats/notices when navigating. No hook is needed for these synchronous fixture reads/actions; introduce request lifecycle hooks only with a concrete asynchronous boundary.
+
+Creation drafts initialize afresh on each opening and discard on cancellation, matching the existing unmounted form. Matching drafts initialize from the saved mock preferences on each opening; cancelling discards edits and submitting preserves them across navigation until refresh. Successful creation still prepends the table, records the existing notice, closes the modal, selects My Tables and clears all filters. Keep filters when opening/closing dialogs otherwise. Navigating away or switching into the route's guest gate still remounts/reset page-local browsing/draft state; App-owned tables, matching data, seats and notices remain. Retain existing error text/lifecycle and required/length/range constraints; no new validation policy or error redesign is bundled.
+
+### Preserved discrepancies and scope
+
+Keep the current guest membership gate/copy/action at its shared router boundary, matching shortcut/status wording, mock host You, fictional-address handling, default private-location selection, frozen 2026-10-17 / 16:00–19:00 form defaults, five total seats with one host seat filled, default request mode, instant/request choices and beginner defaults. Do not replace them with new community standing, real user identity, live dates, per-person/group rules or manually_confirm_seats semantics during extraction. D-055–D-065 remain the eventual domain requirements; Q-012's matching operations remain open. Do not connect the matching form to the global account matchmaking flag or deliver messages to hosts. Existing success notices remain in-memory simulations.
+
+Retain the shared ActivityDialog for details/requests/waitlists/booking/cancellation and host controls, including its current limitations. No shared-dialog domain refactor, group/guest management, queue processing, new address authorization guarantee, schema, real APIs, persistence or deployment. Listing projection does not make the shipped prototype fixtures secure; all current address/access simulations remain explicitly mocked.
+
+### Styling and verification
+
+Audit MeetPlay.module.css plus meet-banner, filter-bar, search and relevant form/check-label/row/global rules before moving them. Hero/internal/filter/modal layout belongs to the child module; page owns external separation and shared-card/grid placement. Reuse card/heading/eyebrow/body/meta/action/focus roles by actual purpose and the 4/8/12/16/24/32px spacing primitives where applicable. Preserve documented local illustration, divider, compact input typography and editorial measurements without promoting them to shared tokens. Keep mobile inputs at 16px. Shared search/filter/form selectors also serve Discussion and other dialogs: remove only rules with no remaining consumers, keep required shared conventions and verify cascade/specificity rather than restyling those consumers. No new public tokens, shared value changes, themes or styling dependencies.
+
+Verify baseline/post rendering and interactions at mobile/tablet/desktop and adjacent 700/950/1200px boundaries: both views, combined/no-result filters, keyboard/focus, modal scroll/dismissal, private/public location controls, preserved constraints and same-day/blank-input errors, cancel/reopen draft behavior, successful creation/filter reset, matching save/reopen/cancel and mode/navigation reset boundaries. Check that created tables and booking/count/status changes remain consistent with community Profile and the shared dialog across navigation; Community Home remains official-events-only. Use synthetic long content and increased text spacing without real addresses or hosted writes. Run build/lint/relevant tests and token reference/cycle/unused checks, update affected documentation and report unsupported zoom/screen-reader/theme checks accurately. Stop after this page for completion review.
+
+The component/type/variable/API names and scope were approved by the user. Execute the plan, then stop for completion review.
+
+Meet & Play completion checkpoint (2026-10-25): implemented all five approved component names, parent-owned state and one API/types boundary over the unchanged App simulation. New UI has no mock record/store imports; route bridge applies API command results. Preserved guest gate, matching/creation/booking behavior, defaults/constraints and appearance. Moved only the unshared hero rules out of App.css; retained shared native form/search/filter conventions. Build/lint, 150 tests across 20 files and token checks pass; 91 responsive baseline comparisons and 39 long-content/text-spacing checks pass. Browser verified native constraints/time errors, draft resets, matching persistence/cancel, creation and shared table/booking continuity. Temporary fixture removed; evidence/limits in docs/12. No backend, new storage, hooks, dependencies, public tokens or deployment. Stop for completion review before the next page plan.

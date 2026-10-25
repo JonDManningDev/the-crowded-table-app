@@ -1,0 +1,3 @@
+/* Shared .form owns label/native-field roles. Keep this dialog's existing
+   19px field rhythm and 20px separation local; no new general spacing role. */
+.form { gap: 19px; margin-top: 20px; }

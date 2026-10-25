@@ -9,6 +9,7 @@ import { accountRootPath, accountTabs, pagePaths, type Page } from './navigation
 import { useAppRouteContext } from './routeContext'
 import { readCommunityHomeContent } from '../features/communities/api'
 import { readCommunityHomeEvents } from '../features/events/api'
+import { createMockTable, readMeetPlayContent, readMeetPlayTables, saveMockMatchingPreferences } from '../features/meet-and-play/api'
 
 const UserAccountPage = lazy(() => import('../features/user-accounts/pages/UserAccountPage').then(module => ({
   default: module.UserAccountPage,
@@ -17,7 +18,7 @@ const PremiumFeaturesPage = lazy(() => import('../features/user-accounts/pages/P
   default: module.PremiumFeaturesPage,
 })))
 const CommunityHomePage = lazy(() => import('./pages/CommunityHomePage').then(module => ({ default: module.CommunityHomePage })))
-const MeetPlay = lazy(() => import('../features/MeetPlay').then(module => ({ default: module.MeetPlay })))
+const MeetPlayPage = lazy(() => import('../features/meet-and-play/pages/MeetPlayPage').then(module => ({ default: module.MeetPlayPage })))
 const Championship = lazy(() => import('../features/Championship').then(module => ({
   default: module.Championship,
 })))
@@ -54,7 +55,25 @@ function CommunityPage({ page }: { page: Page }) {
         isMemberPreview={model.member} onOpenEvent={open} onOpenMembership={membership}
       />
     )
-    case 'meet-play': return <MeetPlay model={model} open={open}/>
+    case 'meet-play': return (
+      <MeetPlayPage
+        content={readMeetPlayContent()} tables={readMeetPlayTables(model.items, model.seats)}
+        matching={model.matching} matchingPreferences={model.matchingPreferences} onOpenTable={open}
+        onCreateTable={draft => {
+          const result = createMockTable(draft)
+          if (!result.ok) return result.error
+          model.setItems(previous => [result.item, ...previous])
+          model.notify(result.notice)
+          return null
+        }}
+        onSaveMatchingPreferences={draft => {
+          const result = saveMockMatchingPreferences(draft)
+          model.setMatchingPreferences(result.preferences)
+          model.setMatching(result.matching)
+          model.notify(result.notice)
+        }}
+      />
+    )
     case 'championship': return <Championship model={model}/>
     case 'discussion': return <Community model={model}/>
     default: return <ProfilePage model={model} open={open} membership={membership}/>

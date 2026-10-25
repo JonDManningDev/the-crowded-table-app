@@ -1,0 +1,17 @@
+/* Shared .form owns native field/label/checkbox conventions; this modal owns
+   composition. Preserve its existing 19px field rhythm and 20px intro separation
+   as local form measurements instead of adding shared aliases. */
+.form { gap: 19px; margin-top: 20px; }
+.row, .threeColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ct-ref-space-16);
+}
+.threeColumns { grid-template-columns: 1.4fr 1fr 1fr; }
+.row > *, .threeColumns > * { min-width: 0; }
+@media (max-width: 700px) {
+  /* Existing compact form-row gap, independent of the general composition scale. */
+  .row, .threeColumns { gap: 10px; }
+  .threeColumns { grid-template-columns: 1fr 1fr; }
+  .threeColumns > label:first-child { grid-column: 1 / -1; }
+}
