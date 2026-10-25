@@ -1,8 +1,8 @@
 import { Notice } from './primitives/Notice'
 import { Button } from './primitives/Controls'
-import { formatDate, formatTime } from '../mock/format'
+import { formatDate, formatTime } from '../lib/dateTime'
 import { useState } from 'react'
-import type { Activity } from '../mock/data'
+import type { ActivityCardData } from '../features/events/types'
 import type { MockModel } from '../mock/useMockState'
 import { Avatar, Icon, Modal, Tag } from './ui'
 import { GameArt } from './GameArt'
@@ -14,7 +14,7 @@ export function ActivityCard({
   onOpen,
   status,
 }: {
-  item: Activity
+  item: ActivityCardData
   onOpen: () => void
   status?: string
 }) {

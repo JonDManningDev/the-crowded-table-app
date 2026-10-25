@@ -7,6 +7,8 @@ import { lazy } from 'react'
 import { Botanical, Icon } from '../components/ui'
 import { accountRootPath, accountTabs, pagePaths, type Page } from './navigation'
 import { useAppRouteContext } from './routeContext'
+import { readCommunityHomeContent } from '../features/communities/api'
+import { readCommunityHomeEvents } from '../features/events/api'
 
 const UserAccountPage = lazy(() => import('../features/user-accounts/pages/UserAccountPage').then(module => ({
   default: module.UserAccountPage,
@@ -14,7 +16,7 @@ const UserAccountPage = lazy(() => import('../features/user-accounts/pages/UserA
 const PremiumFeaturesPage = lazy(() => import('../features/user-accounts/pages/PremiumFeaturesPage').then(module => ({
   default: module.PremiumFeaturesPage,
 })))
-const Home = lazy(() => import('../features/Home').then(module => ({ default: module.Home })))
+const CommunityHomePage = lazy(() => import('./pages/CommunityHomePage').then(module => ({ default: module.CommunityHomePage })))
 const MeetPlay = lazy(() => import('../features/MeetPlay').then(module => ({ default: module.MeetPlay })))
 const Championship = lazy(() => import('../features/Championship').then(module => ({
   default: module.Championship,
@@ -45,7 +47,13 @@ function CommunityPage({ page }: { page: Page }) {
     )
   }
   switch (page) {
-    case 'community-home': return <Home model={model} open={open} membership={membership}/>
+    case 'community-home': return (
+      <CommunityHomePage
+        content={readCommunityHomeContent()}
+        events={readCommunityHomeEvents(model.items, model.seats)}
+        isMemberPreview={model.member} onOpenEvent={open} onOpenMembership={membership}
+      />
+    )
     case 'meet-play': return <MeetPlay model={model} open={open}/>
     case 'championship': return <Championship model={model}/>
     case 'discussion': return <Community model={model}/>

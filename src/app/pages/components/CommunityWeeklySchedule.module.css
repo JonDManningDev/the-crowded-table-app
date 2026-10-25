@@ -1,0 +1,88 @@
+/* Local weekly-strip rhythm: retain 18px/20px vertical padding, 13px row gap,
+   5px heading separation, eyebrow tracking and 15px mobile divider inset.
+   These existing editorial measurements are not general spacing roles. */
+.rhythm-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--ct-ref-color-stone-200);
+  border-bottom: 1px solid var(--ct-ref-color-stone-200);
+  margin: 0;
+  padding: 18px 0;
+  gap: var(--ct-ref-space-24);
+}
+
+.rhythm-row>div {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+}
+
+.rhythm-row>div+div {
+  border-left: 1px solid var(--ct-ref-color-stone-200);
+  padding-left: var(--ct-ref-space-24);
+}
+
+.rhythm-row :global(.eyebrow) {
+  font-size: var(--ct-eyebrow-font-size);
+  letter-spacing: 1.5px;
+  margin: 0 0 var(--ct-ref-space-4);
+  line-height: var(--ct-eyebrow-line-height);
+  color: var(--ct-eyebrow-color);
+}
+
+.rhythm-row h3 {
+  font-size: var(--ct-heading-subsection-font-size);
+  margin: 0 0 5px;
+  line-height: var(--ct-heading-content-line-height);
+  color: var(--ct-heading-color);
+}
+
+.rhythm-row p {
+  font-size: var(--ct-body-font-size);
+  color: var(--ct-body-color);
+  margin: 0;
+  line-height: var(--ct-body-line-height);
+}
+
+.rhythm-time {
+  margin-left: auto;
+  font-size: var(--ct-meta-font-size);
+  color: var(--ct-meta-color);
+  white-space: nowrap;
+  line-height: var(--ct-meta-line-height);
+}
+
+@media (max-width:1200px) {
+  .rhythm-time {
+    display: none;
+  }
+}
+
+@media (max-width:950px) {
+  .rhythm-row {
+    gap: var(--ct-ref-space-12);
+  }
+  .rhythm-row>div+div {
+    padding-left: var(--ct-ref-space-12);
+  }
+}
+
+@media (max-width:700px) {
+  .rhythm-row {
+    gap: var(--ct-ref-space-24);
+    padding: 20px 0;
+  }
+  .rhythm-row>div {
+    display: block;
+  }
+  .rhythm-row>div+div {
+    padding-left: 15px;
+  }
+  .rhythm-row :global(.round-icon) {
+    margin-bottom: var(--ct-ref-space-12);
+  }
+}
+
+.rhythm-row > div > div {
+  min-width: 0;
+}

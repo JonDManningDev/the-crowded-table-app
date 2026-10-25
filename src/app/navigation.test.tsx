@@ -307,3 +307,47 @@ it('keeps Premium Features outside the tabs with an account breadcrumb', async (
   await renderReady(<App/>);
   expect(screen.getByRole('banner').textContent).toContain('My Account/Premium Features');
 });
+
+
+it('retains Community Home bookings across routes while resetting only page-owned browsing state', async () => {
+  window.history.replaceState(null, '', pagePaths['community-home'])
+  await renderReady(<App/>)
+  fireEvent.click(screen.getByRole('button', { name: 'Find your next game night' }))
+  await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy())
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Take a Seat' }))
+  expect(within(screen.getByRole('dialog')).getByText('Your seat is confirmed')).toBeTruthy()
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close dialog' }))
+  expect(screen.getByRole('button', { name: /Learn & Play: Azul.*You’re going/ })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Calendar' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Next month' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Learn & Play' }))
+  await navigate('meet-play')
+  await navigate('profile')
+  await navigate('community-home')
+  expect(screen.getByRole('button', { name: 'All evenings' }).getAttribute('aria-pressed')).toBe('true')
+  expect(screen.getByRole('button', { name: 'Upcoming' }).getAttribute('aria-pressed')).toBe('true')
+  expect(screen.getByRole('button', { name: /Learn & Play: Azul.*You’re going/ })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Find your next game night' }))
+  await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy())
+  expect(within(screen.getByRole('dialog')).getByText('8 of 10 seats filled')).toBeTruthy()
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel reservation' }))
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close dialog' }))
+  expect(screen.getByRole('button', { name: /Learn & Play: Azul.*3 seats open/ })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Calendar' }))
+  expect(screen.getByRole('heading', { name: 'October 2026' })).toBeTruthy()
+})
+
+it('retains the guest promotion action and existing special-event checkout preview', async () => {
+  window.history.replaceState(null, '', pagePaths['community-home'])
+  await renderReady(<App/>)
+  fireEvent.click(screen.getByRole('button', { name: 'Switch to guest preview' }))
+  expect(screen.getByText(/for L300\/month/)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Become a Member' }))
+  expect(screen.getByRole('heading', { name: 'The Crowded Table Membership' })).toBeTruthy()
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close dialog' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Discover our Halloween gathering' }))
+  await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy())
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Reserve/ }))
+  expect(within(screen.getByRole('dialog')).getByText('Preview checkout. No payment details are collected or charged.')).toBeTruthy()
+  expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Simulate payment & reserve' })).toBeTruthy()
+})
