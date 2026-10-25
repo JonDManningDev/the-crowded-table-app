@@ -1,15 +1,16 @@
 import { supabase } from '../../lib/supabase'
+import type { AccountPreferences, PremiumFeaturePlaceholder } from './types'
 
-export type DiscoveryPreferences = {
-  user_is_discoverable: boolean
-  enable_matchmaking: boolean
+export type { AccountPreferences, CommunicationPreferences, DiscoveryPreferences } from './types'
+
+// D-120 fixture only: no subscription lookup, billing, or entitlement behavior.
+export function readPremiumFeaturePlaceholders(): PremiumFeaturePlaceholder[] {
+  return [{
+    id: 'community-ownership',
+    name: 'Community ownership',
+    detail: 'Sample subscription row · Billing is not connected',
+  }]
 }
-
-export type CommunicationPreferences = {
-  allow_direct_messages: boolean
-}
-
-export type AccountPreferences = DiscoveryPreferences & CommunicationPreferences
 
 export async function readOwnProfile(userId: string) {
   if (!supabase) throw new Error('Account services are not configured.')

@@ -315,3 +315,11 @@ Removed user-accounts/components/OwnedCommunities.tsx and its module. MyCommunit
 
 
 Account navigation refinement (2026-10-24): one ordered accountTabs definition in app/navigation.ts owns Home, Profile, Communities and Settings IDs/labels/paths and derives the narrow AccountTab type. Router registration, tab links and shell labels use that definition; UserAccountPage renders by stable ID without parallel arrays or a label-based fallback. Profile is /account/profile (account-profile ID); /account is a separate navigation root that replace-redirects to /account/home, as does /. Sidebar/mobile account links retain subtree matching. Personal breadcrumbs read My Account / destination. Premium Features remains separate. This supersedes earlier Overview-at-root and My Home/My Communities tab-label references; domain scope and auth return paths are unchanged.
+
+## Settings presentation ownership — 2026-10-25
+
+Implemented locally under the approved page-by-page refactor plan. AccountSettingsTab remains the coordinator and consumes hooks/useAccountPreferences.ts plus the synchronous readPremiumFeaturePlaceholders API. AccountPreferencesPanel, AccountPreferenceSwitch and PremiumFeaturesPanel receive controlled props/callbacks; their presentation files have no API, account-context or mock-store imports. Preference contracts and PremiumFeaturePlaceholder now live in user-accounts/types.ts; api.ts retains compatible preference type exports.
+
+Each presenter/tab owns its new colocated CSS Module. AccountPanel.module.css still owns shared action footers, while the communication-heading rule belongs to AccountPreferencesPanel.module.css. Settings stack and premium-list ownership no longer live in UserAccountPage.module.css/App.css. Shared setting-row rules remain for account/premium/community consumers; the account switch owns a scoped control implementation with documented preserved local values. No new universal Card/switch primitive, shared token or dependency.
+
+A pre-existing router mismatch passed tab to UserAccountPage, whose contract expects page. Corrected the prop at the route composition call so account contents render again. Profile/editor/mock-model ownership outside Settings remains for later reviewed slices. See docs/12 for verification and docs/15 for the workflow.

@@ -26,6 +26,7 @@ The 2026-10-12 decisions also settle per-person event/table records, atomic grou
 | [Auth and multi-tenancy](04-auth-and-multi-tenancy.md) | Identity, community standing, roles, participation, and isolation |
 | [UI style guide](13-ui-style-guide.md) | Canonical navigation, links, buttons, shared appearances, tokens and accessibility |
 | [CSS-native design tokens](14-design-tokens.md) | Approved token grammar, scales, ownership, theme contracts and gated migration |
+| [Page refactor workflow](15-page-refactor-workflow.md) | Accepted tab/page review process and approved Settings state/presentation/API cleanup |
 | [Frontend patterns](05-frontend-patterns.md) | Canonical client boundaries, data/state, CSS Modules/theming, and product UI conventions |
 | [Backend patterns](06-backend-patterns.md) | Transactional commands, privacy, waitlists, results, and audit |
 | [File structure](07-file-structure.md) | Illustrative client layout, ownership, current-code conflicts, and refactor sequence |

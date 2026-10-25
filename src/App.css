@@ -1886,7 +1886,6 @@
   overflow-wrap: anywhere;
 }
 
-.premium-feature-list { list-style: none; padding: 0; margin: 0; }
 .account-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
 .account-content .panel { background: var(--ct-card-background); }
 

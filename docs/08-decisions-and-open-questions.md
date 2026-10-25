@@ -214,6 +214,8 @@ Preserve the implemented auth/account/tenant foundation. Address Q-002 setup and
 
 ## Client architecture review questions
 
+2026-10-25 accepted refactor workflow: parents may coordinate feature hooks/UI state with presentation-only children; preserve appearance unless specific refinements are approved; explicitly propose corrections where mocks conflict with accepted rules, without adding persistence. Start with Settings, then other account tabs and pages, with user review of each plan (especially names) before implementation. The [Settings plan](15-page-refactor-workflow.md) was subsequently approved and implemented locally; verification is recorded in docs/12; existing TanStack Query/theme/form-tool questions below remain separate decisions.
+
 These refine the accepted direction; they do not block recording it or require speculative implementation. Resolve each before its dependent refactor slice.
 
 | ID | Question / review trigger | Current position |

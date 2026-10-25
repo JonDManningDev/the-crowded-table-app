@@ -66,7 +66,7 @@ export function ApplicationRoutes() {
             key={id}
             caseSensitive
             path={path}
-            element={<UserAccountPage tab={id}/>}
+            element={<UserAccountPage page={id}/>}
           />
         ))}
         <Route caseSensitive path={pagePaths['premium-features']} element={<PremiumFeaturesPage/>}/>

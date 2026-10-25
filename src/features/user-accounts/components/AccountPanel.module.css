@@ -1,7 +1,3 @@
-.communicationHeading {
-  margin-top: var(--ct-section-gap);
-}
-
 .actions {
   display: flex;
   align-items: center;

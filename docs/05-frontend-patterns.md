@@ -111,6 +111,8 @@ Keep the same guest-removal controls available in the ordinary table-management 
 
 ## Components and data flow
 
+Incremental refactor clarification (accepted 2026-10-25): page/tab parents may consume feature hooks and coordinate UI state; presentation children receive narrow props/callbacks. Feature hooks own request/action lifecycle, while feature API files own real and mocked data behavior. Preserve existing persistence and mock continuity. Appearance is preserved by default; visual refinements and legacy-rule corrections are proposed explicitly in each reviewed slice. Begin with Settings, then other account tabs, then other pages, pausing for a plan review before each implementation. The [Settings plan](15-page-refactor-workflow.md) was subsequently explicitly approved and implemented locally. AccountSettingsTab coordinates useAccountPreferences and API-provided premium fixtures; its child panels/switch receive props. Existing persistence remains unchanged. See docs/12 for verification; other tabs retain their existing ownership until their reviewed slices.
+
 Prefer this data-access flow:
 
 ```text

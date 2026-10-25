@@ -633,3 +633,11 @@ Browser fixture with actual parent/API/cards and synthetic summaries confirms ma
 
 
 Community toolbar alignment (2026-10-24): user requested Start New Community end-align with card Explore actions. Above 700px, MyCommunitiesTab toolbar uses inline-end padding equal to card-padding plus the existing 1px card border. This is local cross-component alignment geometry, not a new spacing token. It follows responsive card padding without changing shared tokens; stacked mobile layout remains unchanged.
+
+## Settings presentation refactor — 2026-10-25
+
+Approved structural slice implemented locally; completed Settings work accepted for commit on 2026-10-25. No public token added, changed or removed. New AccountSettingsTab/AccountPreferencesPanel/PremiumFeaturesPanel modules reuse section-gap and existing structural resets; AccountPanel actions continue to use action-footer-gap/ref-space-12. Existing heading/body/meta/card/row/label roles and shared setting-row remain authoritative for these presenters.
+
+AccountPreferenceSwitch.module.css scopes the existing control geometry/paint/motion while retaining the global community control consumer. Its nearby comment explains local ownership: coordinated 35x20px track, 14px thumb, 3px inset, 15px travel, 20px track radius, existing checked/unchecked/thumb paints and .15s motion have no approved switch contract and are preserved, not promoted into general scales or new theme promises. Existing shared focus behavior is unchanged.
+
+Removed the zero-consumer premium-feature-list global rule and Settings-only page stack/reset selectors after tracing consumers. Moved the communication-heading role from AccountPanel to the preferences module. Shared community/premium row rules and specialized 20px row gap remain unchanged. All 13 loaded-state responsive computed-style comparisons match; token scan reports 104 source files / 96 public definitions, no undefined references/cycles/unused public tokens. See docs/12 for browser states, tests and actual-zoom limitations. Alternate themes and unrelated active audit candidates remain separate work.

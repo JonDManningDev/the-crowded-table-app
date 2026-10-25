@@ -1,7 +1,8 @@
-import styles from './AccountPanel.module.css'
+import panelStyles from './AccountPanel.module.css'
+import styles from './AccountPreferencesPanel.module.css'
 import { Button } from '../../../components/primitives/Controls'
-import { useEffect, useState } from 'react'
-import { readAccountPreferences, saveAccountPreferences, type AccountPreferences } from '../api'
+import { AccountPreferenceSwitch } from './AccountPreferenceSwitch'
+import type { AccountPreferences } from '../types'
 
 const choices = [
   {
@@ -16,87 +17,45 @@ const choices = [
   },
 ] as const
 
-export function AccountPreferencesPanel({ userId }: { userId: string }) {
-  const [preferences, setPreferences] = useState<AccountPreferences | null>(null)
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [saved, setSaved] = useState(false)
-  useEffect(() => {
-    let active = true
-    void (async () => {
-      try {
-        const result = await readAccountPreferences(userId)
-        if (active) setPreferences(result)
-      } catch {
-        if (active) setError('Your account preferences could not be loaded. Reload to try again.')
-      }
-    })()
-    return () => { active = false }
-  }, [userId])
-  async function save() {
-    if (!preferences) return
-    setBusy(true)
-    setError('')
-    setSaved(false)
-    try {
-      await saveAccountPreferences(userId, preferences)
-      setSaved(true)
-    } catch {
-      setError('Your preferences could not be saved. Please try again.')
-    } finally {
-      setBusy(false)
-    }
-  }
+type AccountPreferencesPanelProps = {
+  preferences: AccountPreferences | null
+  isLoading: boolean
+  isSaving: boolean
+  loadError: string
+  saveError: string
+  isSaved: boolean
+  onPreferenceChange: (key: keyof AccountPreferences, checked: boolean) => void
+  onSave: () => void
+}
+
+export function AccountPreferencesPanel({
+  preferences, isLoading, isSaving, loadError, saveError, isSaved, onPreferenceChange, onSave,
+}: AccountPreferencesPanelProps) {
   return (
-    <section className="panel">
+    <section className={`panel ${styles.panel}`}>
       <h2 data-heading="card">Discovery preferences</h2>
-      {!preferences && !error && <p role="status">Loading account preferences…</p>}
+      {isLoading && <p role="status">Loading account preferences…</p>}
       {preferences && (
         <>
           {choices.map(item => (
-            <label className="setting-row" key={item.key}>
-              <span>
-                <strong>{item.title}</strong>
-                <small>{item.text}</small>
-              </span>
-              <input
-                type="checkbox"
-                role="switch"
-                disabled={busy}
-                checked={preferences[item.key]}
-                onChange={event => {
-                  setPreferences({ ...preferences, [item.key]: event.target.checked })
-                  setSaved(false)
-                }}
-              />
-            </label>
+            <AccountPreferenceSwitch key={item.key} label={item.title} description={item.text}
+              disabled={isSaving} checked={preferences[item.key]}
+              onChange={checked => onPreferenceChange(item.key, checked)}/>
           ))}
           <h2 data-heading="card" className={styles.communicationHeading}>Communication preferences</h2>
-          <label className="setting-row">
-            <span>
-              <strong>Allow direct messages</strong>
-              <small>Let other users contact you through your global Crowded Table user account. They must first be able to see your global account to do this.</small>
-            </span>
-            <input
-              type="checkbox"
-              role="switch"
-              disabled={busy}
-              checked={preferences.allow_direct_messages}
-              onChange={event => {
-                setPreferences({ ...preferences, allow_direct_messages: event.target.checked })
-                setSaved(false)
-              }}
-            />
-          </label>
-          <div className={styles.actions}>
-            <Button appearance="primary" className="button" loading={busy} onClick={() => void save()}>
-              {busy ? 'Saving…' : 'Save account preferences'}
+          <AccountPreferenceSwitch label="Allow direct messages"
+            description="Let other users contact you through your global Crowded Table user account. They must first be able to see your global account to do this."
+            disabled={isSaving} checked={preferences.allow_direct_messages}
+            onChange={checked => onPreferenceChange('allow_direct_messages', checked)}/>
+          <div className={panelStyles.actions}>
+            <Button appearance="primary" className="button" loading={isSaving} onClick={onSave}>
+              {isSaving ? 'Saving…' : 'Save account preferences'}
             </Button>
           </div>
         </>
       )}
-      {error && <p role="alert">{error}</p>}
-      {saved && <p role="status">Account preferences saved.</p>}
+      {(loadError || saveError) && <p role="alert">{loadError || saveError}</p>}
+      {isSaved && <p role="status">Account preferences saved.</p>}
     </section>
   )
 }
