@@ -12,6 +12,8 @@ The [frontend patterns](05-frontend-patterns.md) define the decisions and recomm
 
 ## Existing repository
 
+Data API implementation (2026-10-24): `src/features/user-accounts/api.ts` owns global profile/preferences reads and direct writes. `src/features/communities/api.ts` owns separate community profile saving and consolidated community-account preference saving. The latter is not wired to the sample UI. Restricted administrative views and content/tenant-detail DML are available in the local schema for future management UI; no speculative screen or query layer was introduced.
+
 The Vite app lives at the repository root alongside `docs/`: `src/`, `public/`, `package.json`, and `vite.config.ts`. Run frontend scripts from the root. Root `supabase/` already contains configuration, identity/tenant migrations, and database tests; see its [implementation guide](../supabase/README.md). PWA installation/offline support is not yet implemented.
 
 The five preview sections still use fixtures and in-memory actions. Real Supabase Auth, community creation through `create_tenant`, and an owner-only saved-community list now coexist with that prototype. The current layout is described in the root [README](../README.md#source-layout); it is not the target architecture.

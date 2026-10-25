@@ -41,9 +41,9 @@ After signing in with a verified account, choose **Start New Community** in the 
 
 ## Account implementation and deployment
 
-Global display name/bio and the two discovery preferences persist through verified-caller commands. Account Overview alone shows the profile summary. Other overview statistics/interests/games, premium subscriptions and the Explore Premium Features destination remain explicit placeholders. `/community/preview/profile` still edits the sample community profile in memory, separately from the global profile.
+Global display name/bio and the two discovery preferences persist through verified-self PostgREST writes with column grants, RLS and trusted audit triggers. Account Overview alone shows the profile summary. Other overview statistics/interests/games, premium subscriptions and the Explore Premium Features destination remain explicit placeholders. `/community/preview/profile` still edits the sample community profile in memory, separately from the global profile.
 
-All five migration versions through `20261016000200` were applied to local and hosted testing Supabase (`fsnipgsrlclbnfepcbvz`). Hosted migration history matched and the post-deployment dry run was empty on 2026-10-16. Frontend changes are local source/build work; no frontend hosting deployment was performed. See the [implementation audit](docs/12-implementation-status.md) for verification and remaining scope.
+Hosted testing Supabase (`fsnipgsrlclbnfepcbvz`) has seven migrations through `20261024000200`. The direct Data API/content-permission migration is deployed; 48 hosted PostgREST checks passed and synthetic test users/communities were removed. Current frontend account saves use the new schema; old RPC-based builds require updating. No frontend hosting deployment or environment switch was performed. See the [implementation audit](docs/12-implementation-status.md) for verification and remaining scope.
 
 ## Explore the prototype
 

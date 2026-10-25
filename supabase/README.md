@@ -6,6 +6,8 @@ Validated with Supabase CLI 2.119.0: a clean local rebuild, 85 pgTAP assertions,
 
 ## Global profile implementation — 2026-10-16
 
+Historical baseline: the RPC transports described in this section are replaced by `20261024000200_direct_data_api.sql`, now applied locally and to hosted testing; see the current access contract below.
+
 The forward migrations `20261016000100` and `20261016000200` align the deployed global-profile foundation with D-111/D-113/D-114. Global profiles now use trimmed 1–80 character names, nullable bios up to 2,000 characters, immutable identity, and trusted audit triggers. Existing profiles are preserved; their new timestamps mark audit adoption and historical actors remain null because the original migration did not record them. New writes derive the verified caller in `save_user_account_profile`; browser roles have self-only reads and no direct profile writes.
 
 Account flags `user_is_discoverable` and `enable_matchmaking` default true independently; community-account `show_global_profile` defaults false. `set_user_account_preferences` updates only supplied global values for the verified caller. `set_community_global_profile_visibility` changes only that caller's selected community account, under the same active-tenant and pending/approved-standing gates as curated profile editing. Existing joins preserve saved preferences. The global Settings UI persists the two account flags; the sample community UI does not pretend to edit a real community-account preference.
@@ -51,27 +53,35 @@ The global-profile additions above extend this original milestone description.
 
 The original eight application tables are: `user_accounts`, `tenants`, `tenant_settings`, `tenant_staff_assignments`, `community_accounts`, `community_account_profiles`, `tenant_website_content_overrides`, and `tenant_admin_actions`.
 
-All have RLS. Browser roles have no direct insert/update/delete privileges. Writes go through explicitly granted, verified-user RPCs with fixed empty search paths and fully qualified references. Internal helpers live in the non-exposed `app_private` schema. Only policy read helpers are executable by authenticated users. Never add `app_private` to exposed API schemas.
+All application tables have RLS. As of local migration `20261024000200`, independent edits use per-operation policies and column-specific DML grants. Retained commands use verified-user RPCs with fixed empty search paths and fully qualified references. Internal helpers live in the non-exposed `app_private` schema; only policy read helpers are executable by authenticated users. Never add `app_private` to exposed API schemas.
+
+| Direct PostgREST operation | Authorization / behavior |
+| --- | --- |
+| `user_account_profiles` upsert | Verified self; omit `user_id` so Auth supplies it; name/bio only |
+| `user_accounts` update | Verified self, explicit user-ID filter; discovery/matchmaking flags only |
+| `community_account_profiles` upsert | Verified self, active tenant, pending/approved standing; omit `user_id`; conflict key `(tenant_id,user_id)` |
+| `community_accounts` update | Same lifecycle/standing gates; one `saveCommunityAccountPreferences` request for all supported preference fields, currently `show_global_profile` only |
+| `tenants` update | Owner, including archived; name/location/timezone only |
+| `tenant_website_content_overrides` upsert/delete | Active same-tenant staff with `can_modify_content`; delegated edits require active tenant; owners retain archived access; delete resets an override |
+| `tenant_admin_candidates` select | Active same-tenant `can_create_admin`; tenant ID plus original verified-candidate projection |
+| `tenant_pending_community_accounts` select | Active same-tenant `can_approve_users`; tenant ID, user ID and optional display name |
+
+The two administrative views deliberately use definer semantics and explicit caller predicates; base profile reads remain self-only. Client filters cannot widen their audience. Profile inserts/updates and tenant detail edits normalize text in triggers; audit/identity safeguards apply to every write. Column grants permit restating upsert conflict keys, while triggers reject changing them. Browser writes cannot supply audit fields. Use explicit filters on UPDATE/DELETE (PostgREST safeupdate requires them) and `.select(key).single()` to surface zero-row results as failures. Resetting a missing/unknown override returns no row and is therefore a failed single-row save, rather than the former RPC's dedicated unknown-key exception.
 
 | RPC | Authorization / behavior |
 | --- | --- |
 | `lookup_tenant(p_slug)` | Anonymous or authenticated; seven safe fields for one active tenant |
 | `create_tenant(...)` | Verified account; atomically creates tenant, settings, sole owner, and optional approved community account; returns tenant UUID |
-| `update_tenant_details(...)` | Owner; name/location/timezone, never slug or ownership |
 | `set_tenant_archived(...)` | Owner; reversible archive/restore |
 | `set_auto_approve_users(...)` | Owner; affects future joins only |
 | `join_community(...)` | Verified user, active tenant; returns standing; retries preserve existing standing |
 | `approve_community_account(...)` | Active same-tenant staff with `can_approve_users`; pending → approved only |
-| `save_community_profile(...)` | Own pending/approved community account in active tenant; upserts display name/bio |
-| `list_admin_candidates(...)` | Active same-tenant staff with `can_create_admin`; verified community users, optional display names, standing/staff status only |
-| `list_pending_community_accounts(...)` | Active same-tenant staff with `can_approve_users`; IDs and optional display names only |
 | `create_tenant_admin(...)` | `can_create_admin`; target must be a verified same-tenant community account; no permission inheritance; duplicate assignments fail |
-| `set_admin_permissions(...)` | Owner; edits two flags on active admins only |
-| `set_website_content_override(...)` | Owner; supported slot only; `p_text_value = NULL` resets to default |
+| `set_admin_permissions(...)` | Owner; edits three flags on active admins; omitted/null flags retain their values, including legacy four-argument callers |
 
 Owner management commands work while archived. Ordinary participation and delegated admin actions do not. Owner authority remains independent of community standing; assigning an admin does not approve participation. No suspension/removal/reinstatement, staff invitation, ownership-transfer, or directory commands ship here.
 
-Authenticated direct reads are self-only for global accounts and community participation/profiles, owner-only for tenant details/settings/copy/audit, and self-or-owner for staff assignments. Archived self relationship reads are now allowed by migration 20261024000100; profile/private-content access is unchanged. Owners see other users' display names only through narrow administrative lists, not through full profile reads. The current website slots all belong to the private Community page; participant content reads await entitlement implementation. Render stored copy as text, never raw HTML.
+Authenticated direct reads are self-only for global accounts and community participation/profiles, owner-only for tenant details/settings/audit, and self-or-owner for staff assignments. Content editors may read override rows and their attribution; this exposes neither tenant-wide audit history nor other users' profiles. Archived self relationship reads remain allowed by migration 20261024000100. Owners see other users' display names only through narrow administrative views. Website slots remain private; ordinary participant content audiences are separate future work, with no payment prerequisite. Render stored copy as text, never raw HTML.
 
 ## Invariants and implementation choices
 
@@ -79,12 +89,20 @@ Authenticated direct reads are self-only for global accounts and community parti
 - Names: 1–120 trimmed characters; region/city nullable, at most 120. Country uses the enumerated two-letter ISO country-code set. Timezones must exist in PostgreSQL's timezone catalog.
 - Profiles: required trimmed display name of 1–80 characters; optional bio up to 2,000. No profile is required for staff authority.
 - Exactly one owner and one settings record must exist when a transaction completes. Unique and deferred constraint triggers enforce this; owner changes/deletion are prohibited. Owner inserts normalize all administrative flags to true; later disabling them is rejected.
-- Tenant mutations lock the tenant row before checking permissions/state, serializing archive, approvals, settings, and staff changes. Slug uniqueness is enforced by the database, including concurrent creation.
+- Retained commands lock the tenant row before checking permissions/state, serializing archive, approvals, settings, and staff changes. Independent edits do not explicitly lock the tenant; ordinary PostgreSQL row/FK locks still apply. Community profile/preferences use statement-time eligibility; an in-flight save may finish alongside an access/lifecycle change. Slug uniqueness is enforced by the database, including concurrent creation.
 - Audit actor UUIDs reference global users. `NULL` means system. Signup records are attributed to the new user; backend actions preserve the initiating user's JWT identity. A worker without a user context records system attribution. Do not run human-initiated jobs with a service credential and silently lose the initiating actor; design that worker's trusted attribution contract first.
 - Audit timestamps/actors are stamped by triggers. Referenced user/Auth deletion is restricted; human references are never nulled by deletion. `tenant_admin_actions` is append-only and deliberately omits update audit columns. It stores actor, operation, tenant and target identifiers, not profile/copy contents or a full before/after history.
 - New permission migrations must update owner initialization, checks, and tests together. No platform bypass is exposed to browser roles. Database administrators/service credentials remain trusted infrastructure.
 
 ## Validation
+
+For the direct Data API slice, run `npx supabase test db`, `node supabase/tests/direct_data_api.mjs`, and `node supabase/tests/direct_data_api_upgrade.mjs`. The first rolls back SQL fixtures. The HTTP/concurrency script accepts only the local loopback API on port 54321 and hardcodes this project's Docker database; it creates random synthetic identities/tenants and cleans up only those records. It exercises actual SDK upserts, filters/affected-row handling, independent member edits, profile saves while the tenant is locked, and retained permission/archive/slug races. The upgrade script creates and removes a temporary database with a minimal Auth schema contract for clean replay/populated upgrade checks; real Auth-schema behavior is covered by the other two suites. Credentials stay in process memory and are not printed.
+
+Completed local verification: 232 SQL assertions, 45 HTTP checks plus concurrency scenarios, clean replay/populated upgrade, 74 frontend tests, build, ESLint and database lint pass. The existing bundle-size warning remains. Run the SQL and HTTP suites sequentially: SQL tests assume their rollback fixtures are the only synthetic communities visible in the local database.
+
+Deployment boundary: `20261024000200` is applied locally and to hosted testing (`fsnipgsrlclbnfepcbvz`). All seven migration versions match and the final dry run is empty. Eight old RPCs are removed: use the updated frontend source; old RPC-based builds require updating. No frontend hosting deployment, compatibility fallback, or environment switch was performed.
+
+Hosted verification on 2026-10-24: `node supabase/tests/hosted_direct_data_api.mjs --allow-hosted-testing` passed 48 actual PostgREST checks. This separate, explicitly opted-in script pins the testing project and verifies linkage before using CLI-provided keys in memory. It creates real password sessions for random synthetic users, checks profile/preference/content-permission paths, and removes its application fixtures and Auth users, verifying zero fixture users/tenants remain. Normal Auth audit events may remain. It does not test email delivery, visual UI flows, or hosted concurrency races. Local scripts remain local-only. See implementation status for the detailed hosted coverage and credential resolution.
 
 `tests/identity_tenant.test.sql` uses pgTAP and real anonymous/authenticated roles against Supabase's Auth schema. Fixtures roll back. It covers two-tenant isolation, verification gates, owner invariants, protected writes, explicit admin permissions, public lookup, copy validation, archival, audit attribution, and restrictive deletion.
 

@@ -48,18 +48,18 @@ select throws_ok($$select public.join_community(current_setting('test.tenant_a')
 
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',true);
 select is(public.join_community(current_setting('test.tenant_a')::uuid),'pending','join requires approval by default');
-select lives_ok($$select public.save_community_profile(current_setting('test.tenant_a')::uuid,'Admin Candidate','Private biography')$$,'pending user can set own profile');
+select lives_ok($$insert into public.community_account_profiles(tenant_id,display_name,bio) values (current_setting('test.tenant_a')::uuid,'Admin Candidate','Private biography')$$,'pending user can set own profile');
 select is((select count(*) from public.community_account_profiles),1::bigint,'self profile readable');
-select throws_ok($$select public.list_admin_candidates(current_setting('test.tenant_a')::uuid)$$,'42501',null,'ordinary participant cannot list candidates');
+select is((select count(*) from public.tenant_admin_candidates),0::bigint,'ordinary participant cannot list candidates');
 
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
 select is((select count(*) from public.community_account_profiles),0::bigint,'owner has no blanket profile read');
-select is((select count(*) from public.list_admin_candidates(current_setting('test.tenant_a')::uuid)),1::bigint,'owner sees narrow candidate list');
+select is((select count(*) from public.tenant_admin_candidates where tenant_id=current_setting('test.tenant_a')::uuid),1::bigint,'owner sees narrow candidate list');
 select lives_ok($$select public.create_tenant_admin(current_setting('test.tenant_a')::uuid,'00000000-0000-0000-0000-000000000003')$$,'owner assigns existing community account');
 select throws_ok($$select public.create_tenant_admin(current_setting('test.tenant_a')::uuid,'00000000-0000-0000-0000-000000000002')$$,'22023',null,'other tenant account cannot be assigned');
 select throws_ok($$select public.create_tenant_admin(current_setting('test.tenant_a')::uuid,'00000000-0000-0000-0000-000000000003')$$,'23505',null,'repeat admin creation cannot overwrite grants');
 select lives_ok($$select public.set_auto_approve_users(current_setting('test.tenant_a')::uuid,true)$$,'owner enables auto approval');
-select is((select count(*) from public.list_pending_community_accounts(current_setting('test.tenant_a')::uuid)),1::bigint,'setting does not approve existing pending account');
+select is((select count(*) from public.tenant_pending_community_accounts where tenant_id=current_setting('test.tenant_a')::uuid),1::bigint,'setting does not approve existing pending account');
 
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',true);
 select ok((select not can_approve_users and not can_create_admin from public.tenant_staff_assignments),'new admin flags false');
@@ -71,21 +71,21 @@ select throws_ok($$update public.community_accounts set standing='removed'$$,'42
 
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000004',true);
 select is(public.join_community(current_setting('test.tenant_a')::uuid),'approved','new join auto approved');
-select lives_ok($$select public.save_community_profile(current_setting('test.tenant_a')::uuid,'Member')$$,'member saves profile');
+select lives_ok($$insert into public.community_account_profiles(tenant_id,display_name) values (current_setting('test.tenant_a')::uuid,'Member')$$,'member saves profile');
 select is((select count(*) from public.community_account_profiles),1::bigint,'no fellow member directory');
 
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
 select lives_ok($$select public.set_admin_permissions(current_setting('test.tenant_a')::uuid,'00000000-0000-0000-0000-000000000003',true,true)$$,'owner grants flags');
 select throws_ok($$select public.set_admin_permissions(current_setting('test.tenant_a')::uuid,'00000000-0000-0000-0000-000000000001',false,false)$$,'22023',null,'command cannot disable owner flags');
-select lives_ok($$select public.set_website_content_override(current_setting('test.tenant_a')::uuid,'community.hero.heading','Hello community')$$,'owner edits website copy');
-select throws_ok($$select public.set_website_content_override(current_setting('test.tenant_a')::uuid,'unknown',null)$$,'22023',null,'unknown key rejected on reset');
-select throws_ok($$select public.set_website_content_override(current_setting('test.tenant_a')::uuid,'community.hero.heading',repeat('x',201))$$,'23514',null,'slot text limit enforced');
+select lives_ok($$insert into public.tenant_website_content_overrides(tenant_id,content_key,text_value) values (current_setting('test.tenant_a')::uuid,'community.hero.heading','Hello community')$$,'owner edits website copy');
+select throws_ok($$insert into public.tenant_website_content_overrides(tenant_id,content_key,text_value) values (current_setting('test.tenant_a')::uuid,'unknown','Text')$$,'23514',null,'unknown key rejected');
+select throws_ok($$update public.tenant_website_content_overrides set text_value=repeat('x',201)$$,'23514',null,'slot text limit enforced');
 
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',true);
 select lives_ok($$select public.approve_community_account(current_setting('test.tenant_a')::uuid,'00000000-0000-0000-0000-000000000003')$$,'delegated approval works');
 select lives_ok($$select public.create_tenant_admin(current_setting('test.tenant_a')::uuid,'00000000-0000-0000-0000-000000000004')$$,'delegated admin creation works');
 select is((select count(*) from public.tenant_website_content_overrides),0::bigint,'admin does not gain private copy reads');
-select throws_ok($$select public.set_website_content_override(current_setting('test.tenant_a')::uuid,'community.hero.heading','Hacked')$$,'42501',null,'admin flags do not authorize copy editing');
+with edited as (update public.tenant_website_content_overrides set text_value='Hacked' returning 1) select is((select count(*) from edited),0::bigint,'admin flags do not authorize copy editing');
 select throws_ok($$select public.set_auto_approve_users(current_setting('test.tenant_a')::uuid,false)$$,'42501',null,'approval flag does not authorize settings');
 
 set local role anon;
@@ -101,10 +101,10 @@ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001'
 select lives_ok($$select public.set_tenant_archived(current_setting('test.tenant_a')::uuid,true)$$,'owner archives');
 select is((select count(*) from public.lookup_tenant('community-a')),0::bigint,'archived public lookup empty');
 select is((select count(*) from public.tenants),1::bigint,'owner retains archived management read');
-select lives_ok($$select public.set_website_content_override(current_setting('test.tenant_a')::uuid,'community.hero.heading',null)$$,'owner resets archived copy');
+select lives_ok($$delete from public.tenant_website_content_overrides where tenant_id=current_setting('test.tenant_a')::uuid and content_key='community.hero.heading'$$,'owner resets archived copy');
 select throws_ok($$select public.join_community(current_setting('test.tenant_a')::uuid)$$,'42501',null,'owner cannot participate while archived');
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',true);
-select throws_ok($$select public.list_admin_candidates(current_setting('test.tenant_a')::uuid)$$,'42501',null,'archived admin action denied');
+select is((select count(*) from public.tenant_admin_candidates where tenant_id=current_setting('test.tenant_a')::uuid),0::bigint,'archived admin list denied');
 select throws_ok($$select public.set_tenant_archived(current_setting('test.tenant_a')::uuid,false)$$,'42501',null,'admin cannot restore');
 select is((select count(*) from public.community_account_profiles),0::bigint,'archive hides participant profile');
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
@@ -130,7 +130,7 @@ select is((select created_by from public.community_accounts where tenant_id=curr
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000004',true);
 select is(public.join_community(current_setting('test.tenant_a')::uuid),'suspended','rejoin cannot reset suspended standing');
-select throws_ok($$select public.save_community_profile(current_setting('test.tenant_a')::uuid,'Changed')$$,'42501',null,'suspended participant cannot edit profile');
+with edited as (update public.community_account_profiles set display_name='Changed' returning 1) select is((select count(*) from edited),0::bigint,'suspended participant cannot edit profile');
 reset role;
 set constraints all immediate;
 select pass('deferred owner/settings constraints hold for all successful operations');

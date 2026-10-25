@@ -132,6 +132,8 @@ For attached tables, display the parent event's official/unofficial classificati
 
 ## Server state, UI state, and types
 
+Current Data API boundary (2026-10-24): `user-accounts/api.ts` saves global profiles with a caller-defaulted upsert and global preferences with an explicitly account-filtered update. `communities/api.ts` exposes `saveCommunityProfile` separately from the single `saveCommunityAccountPreferences(tenantId, preferences)` update. Use explicit supported fields rather than spreading input into database writes; do not forward user identity, standing, audit fields or preview-only preferences. Each save selects its affected key with `single()` so denied/missing rows surface as failures. Community APIs are ready for real feature integration; the sample profile/preferences UI remains a mock. Generated types reflect the local migration, which is not yet deployed to hosted testing.
+
 TanStack Query is the planned server-state layer for events, profiles, game libraries, community information/posts, championships/standings, registrations, Meet & Play availability, and notifications. Let it handle caching, request deduplication, loading/errors, stale data, refetching, invalidation, and mutation lifecycle instead of repeatedly rebuilding these with `useEffect` plus `useState`.
 
 An illustrative query identity is `['events', eventId]`; protected or tenant-dependent reads need the identity/tenant dimensions described below. Joining an event should invalidate the relevant event and affected lists so dependent UI reconciles with canonical server state. Optimistic updates may be useful for appropriate interactions, subject to the restrictions on seats, access, and results below.

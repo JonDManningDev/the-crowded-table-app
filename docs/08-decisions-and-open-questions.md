@@ -392,3 +392,13 @@ Implementation evidence: CommunitiesList replacement and restricted summary view
 
 
 2026-10-24 hosted approval and completion: user explicitly authorized community-summary deployment and hosted verification. Applied only 20261024000100 to the selected testing project; six-version history and empty dry run confirmed. Existing-data caller/access assertions and real All/Managed/Owned flows pass. Prior local-only restriction is superseded for this migration; no authorization for further deployment or token cleanup is inferred. See implementation status for hosted dataset limits.
+
+## Direct Data API and content permission — accepted 2026-10-24
+
+The user approved implementing the RPC/RLS review with these corrections: website override creation/edit/reset is governed by `tenant_staff_assignments.can_modify_content`, rather than owner-only access; all persisted community-account preferences are saved through one API; and community profile/preference saves use normal statement-time RLS without an explicit tenant lock. The user explicitly accepted in-flight saves completing alongside archival/access changes. Active-tenant and pending/approved-standing eligibility otherwise remains unchanged.
+
+The content flag defaults/backfills false for non-owners and always true for owners. Active same-tenant staff with the flag edit content in active communities; owners retain archived management. Owners control the grant through the retained permission RPC, with omitted values preserving existing grants. No tenant-detail/settings/staff-management/publication authority is implied. Authorized editors can read override rows and attribution; unrelated audits/profiles stay restricted.
+
+Replace global/community profile and preference saves, tenant detail updates, website override saves and two administrative list RPCs with PostgREST DML/restricted views. Retain the eight transaction/coordination/slug-lookup RPCs enumerated in the schema/backend documents. Only `show_global_profile` is currently a persisted community preference; notification/history mocks remain unchanged. Separate profile saving from preferences. Keep deferred staff-lifecycle/permission-renaming work separate.
+
+Implementation was initially authorized locally, including forward migrations, actual PostgREST and concurrency verification, generated types, and documentation reconciliation. The user subsequently explicitly authorized deployment to the selected hosted testing project and verification of profiles, preferences, and content permissions. That deployment and isolated API verification are complete; frontend hosting deployment remains separate. See implementation status for completion evidence and remaining verification limits.

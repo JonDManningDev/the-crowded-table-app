@@ -18,10 +18,11 @@ export async function readOwnProfile(userId: string) {
 
 export async function saveOwnProfile(name: string, bio: string) {
   if (!supabase) throw new Error('Account services are not configured.')
-  const result = await supabase.rpc('save_user_account_profile', {
-    p_display_name: name.trim(),
-    p_bio: bio.trim() || undefined,
-  })
+  // user_id defaults to the authenticated caller in Postgres; RLS verifies it.
+  const result = await supabase.from('user_account_profiles').upsert({
+    display_name: name.trim(),
+    bio: bio.trim() || null,
+  }, { onConflict: 'user_id' }).select('user_id').single()
   if (result.error) throw new Error('Your profile could not be saved. Please try again.')
 }
 
@@ -36,11 +37,13 @@ export async function readDiscoveryPreferences(userId: string) {
   return result.data
 }
 
-export async function saveDiscoveryPreferences(preferences: DiscoveryPreferences) {
+export async function saveDiscoveryPreferences(userId: string, preferences: DiscoveryPreferences) {
   if (!supabase) throw new Error('Account services are not configured.')
-  const result = await supabase.rpc('set_user_account_preferences', {
-    p_user_is_discoverable: preferences.user_is_discoverable,
-    p_enable_matchmaking: preferences.enable_matchmaking,
-  })
+  // RLS verifies the selected account belongs to the caller; single() rejects
+  // missing/denied rows instead of reporting an empty UPDATE as a successful save.
+  const result = await supabase.from('user_accounts').update({
+    user_is_discoverable: preferences.user_is_discoverable,
+    enable_matchmaking: preferences.enable_matchmaking,
+  }).eq('user_id', userId).select('user_id').single()
   if (result.error) throw result.error
 }

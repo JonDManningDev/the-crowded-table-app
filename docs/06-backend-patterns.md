@@ -6,6 +6,18 @@ Status: proposed standards and command contracts; unresolved operating rules rem
 
 Use caller-scoped Data API reads and narrow permitted edits. Seat confirmation, group edits, cancellation, manager decisions, competition confirmation, and admin corrections use database transactions. Derive the actor from verified identity, not request parameters; check live tenant standing, resource participation, and operation-specific permission. Payments and paid memberships are deferred: do not query entitlements or require payment verification for current functionality.
 
+### Direct Data API edits — accepted 2026-10-24
+
+The user authorized replacing the global/community profile saves, global/community preference saves, tenant detail edits, website override edits, and two administrative list RPCs with PostgREST tables/views. Implementation and local verification are complete; hosted deployment is not authorized by this slice. See the implementation record for results and rollout requirements.
+
+- Profiles use caller-defaulted `user_id`, per-operation verified-self RLS, database normalization/validation and existing identity/audit triggers. Community profiles and preferences retain active-tenant and pending/approved-standing gates, using ordinary statement-time RLS without a tenant lock. An in-flight save may finish alongside archival or an access change. Unrelated members' saves must not serialize on the tenant row.
+- `saveCommunityAccountPreferences(tenantId, preferences)` saves the complete supported preference object in one UPDATE. Only `show_global_profile` is currently persisted; preview notification/history switches remain mocks. Profile name/bio are saved separately.
+- `can_modify_content` governs override creation, editing and reset. It is false by default for non-owners and always true for owners; the owner controls delegation through the retained permission command. Active same-tenant staff with the flag may edit in active communities; owners retain archived management. Content editing grants no other administrative authority. Existing audit fields on override rows are available to authorized editors for attribution; unrelated tenant audits/profiles remain restricted.
+- Restricted `tenant_admin_candidates` and `tenant_pending_community_accounts` views expose tenant ID plus the former RPC fields, with explicit caller/permission predicates and no tenant lock. The pending view retains creation-time/user-ID ordering without exposing creation metadata. Full base profile access remains self-only.
+- Retain creation, joining, archival, approval, staff assignment, permission editing, auto-approval setting and individual public slug lookup RPCs. Other accepted lifecycle/staff changes remain separate work. Remove superseded RPCs in the forward migration and coordinate the frontend rollout; old frontend saves require the matching schema.
+
+Verification covers actual PostgREST insert/conflict-update paths, denied/missing-row outcomes, protected columns and audit actors, content permission/default/archival boundaries, administrative projections, independent member saves and retained command races. SQL tests, HTTP checks and upgrade/replay results are recorded in implementation status.
+
 ## Profile and joining commands — accepted target 2026-10-15
 
 D-111 retains curated `community_account_profiles` and adds `user_account_profiles`, both initially with display name and optional bio. Global-profile writes derive the verified caller from Auth and require no community account or active tenant. Community-profile writes retain their own lifecycle/standing checks. Both use trusted audit attribution; profile writes never grant participation or staff authority.

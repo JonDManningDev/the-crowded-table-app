@@ -46,6 +46,8 @@ The 2026-10-12 decisions also settle per-person event/table records, atomic grou
 
 The current build combines real Auth, global profiles, discovery preferences, community creation and relationship-summary reads with mock community screens. The target excludes paid gates; legacy community simulations remain pending refactor, and D-120 explicitly retains account premium placeholders without billing. See [implementation status](12-implementation-status.md) for verified boundaries.
 
+The 2026-10-24 direct Data API/content-permission refactor is implemented and its migration is deployed to hosted testing. It replaces eight RPCs with narrow DML/views and adds `can_modify_content`; community preferences have one save API. All seven migration versions match, the final dry run is empty, and 48 hosted PostgREST checks passed with fixture cleanup. Frontend hosting deployment remains separate. See [backend patterns](06-backend-patterns.md#direct-data-api-edits--accepted-2026-10-24) and the implementation record.
+
 ## Best next steps
 
 1. Preserve Auth/community persistence; implement the settled standing, per-person reservation, automatic/manual confirmation, group-edit, and notification rules without payment/member dependencies.

@@ -8,6 +8,8 @@ Current planning scope (2026-10-12): payments and paid memberships are deferred 
 
 ## First migration milestone
 
+This section records the original milestone. The 2026-10-24 direct Data API slice below supersedes its RPC-only write transport and owner-only website-copy authorization; broader accepted lifecycle/staff additions remain separate work.
+
 Include `user_accounts`, `tenants`, `tenant_settings`, `tenant_staff_assignments`, `community_accounts`, `community_account_profiles`, `tenant_website_content_overrides`, and `tenant_admin_actions` (canonical name replacing the conceptual `admin_actions`). Include constraints, indexes, audit handling, Auth signup provisioning, grants/RLS, controlled commands, and authorization tests with these tables.
 
 - Implement tenant creation with its owner/settings and optional approved creator participation; public lookup by slug; owner-managed tenant details/settings, archive/restore, and website-copy overrides; community joining/approval; self-profile reads/edits; admin assignment; and an owner-only command to edit the two initial admin permission flags. The permission configuration UI and configurable new-admin defaults remain deferred.
@@ -16,6 +18,16 @@ Include `user_accounts`, `tenants`, `tenant_settings`, `tenant_staff_assignments
 - Profile access is self-only initially, except for the narrow administrative selection/approval projections defined in the auth plan. No fellow-member directory or public profile access ships before the relevant community-access/sharing policies. Include website-copy persistence with owner-only editing initially; broader admin editing requires future explicit permission flags.
 - Implement joining and pending-account approval. The original milestone deferred suspension/removal/reinstatement commands; the later deactivation plan below adds `is_active` without replacing standing. Existing-account self-reactivation preserves standing; removed accounts require authorized reinstatement and never bypass discipline through the new-join path. Finalize slug syntax, reserved names, and text limits during implementation alongside routing.
 - Defer membership/payment/event tables and dependent features. SMTP, production callback destinations, and recovery screens do not block migration authoring, but must be configured/tested before signup is operational.
+
+## Direct Data API migration — 2026-10-24
+
+`20261024000200_direct_data_api.sql` is implemented and applied locally and to hosted testing. It adds `tenant_staff_assignments.can_modify_content` (non-null; false non-owner default/backfill; always true for owners), preserves the original two permission flags, and extends `set_admin_permissions` with optional `p_can_modify_content`. Omitted/null permission parameters preserve their current values, including legacy four-argument calls. This is not the deferred `can_grant_staff` rename or staff-activity migration.
+
+Global and community profile `user_id` defaults to `auth.uid()` and is not client-writable; RLS checks the verified caller. Grant only editable columns for profile INSERT/UPDATE, global/community preference UPDATE, tenant detail UPDATE, and content INSERT/UPDATE/DELETE. Upsert payloads restate tenant/content keys; invariant triggers reject changes to existing keys. Existing audit triggers remain authoritative and database normalization preserves trimmed names/locations and nullable blank bios.
+
+`tenant_admin_candidates` projects `tenant_id,user_id,standing,staff_status,staff_role,display_name`; `tenant_pending_community_accounts` projects `tenant_id,user_id,display_name` and orders by account creation time/user ID. Both are authenticated SELECT-only security-barrier definer views with explicit verified-caller, active-tenant and matching live staff-permission predicates. Candidate targets retain Auth verification/nonanonymous/nonbanned checks; pending targets retain the former standing-only filter. Missing profiles remain eligible. No bio/email/audit identities are exposed by these views, and base profile RLS stays self-only.
+
+Eight replaced RPCs are removed. Retain `create_tenant`, `join_community`, `set_tenant_archived`, `approve_community_account`, `create_tenant_admin`, `set_admin_permissions`, `set_auto_approve_users`, and `lookup_tenant`. The frontend and migration require a coordinated rollout; hosted deployment is pending. See the backend and authorization documents for eligibility and concurrency rules.
 
 ## Conventions and tenant boundary
 
@@ -87,7 +99,7 @@ Example slots for the Community page (keys are data values, not column names):
 
 Enforce uniqueness on `(tenant_id, content_key)`. Accept only application-defined keys, with slot-specific length limits and plain text/supported line breaks; do not accept arbitrary HTML, scripts, layouts, or behavior. A missing override uses the application default; resetting to default deletes the override. Location-aware defaults derive from the tenant location and have a fallback when city is absent. Saved custom copy remains explicit text and is not automatically rewritten when location changes. Action labels such as “Start a conversation” remain application-controlled initially.
 
-Content reads follow the intended page's visibility: private Community copy is not automatically public. Public projections expose display text without unnecessary audit actor IDs. Owners may edit copy without a community account; any later explicitly authorized non-owner admin must satisfy the active-community-account staff invariant; enforce authorization and actor attribution at the backend. See [customization permissions](04-auth-and-multi-tenancy.md#community-customization-permissions).
+Content reads follow the intended page's visibility: private Community copy is not automatically public. Public projections expose display text without unnecessary audit actor IDs. Website overrides now use can_modify_content, deployed to hosted testing by the 2026-10-24 slice. Owners need no community account; active non-owner staff with the flag can edit in active tenants. The broader active-community-account staff invariant remains a deferred migration. Enforce authorization and actor attribution at the backend. See [customization permissions](04-auth-and-multi-tenancy.md#community-customization-permissions).
 
 ### Settings and boundaries
 

@@ -39,7 +39,7 @@ export function AccountPreferencesPanel({ userId }: { userId: string }) {
     setError('')
     setSaved(false)
     try {
-      await saveDiscoveryPreferences(preferences)
+      await saveDiscoveryPreferences(userId, preferences)
       setSaved(true)
     } catch {
       setError('Your preferences could not be saved. Please try again.')
