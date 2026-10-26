@@ -1,0 +1,96 @@
+/* Preserve the compact topic-action typography/selection paints and 13/10/6/5px local grouping, plus 28px guidance separation. Topic actions are controls, not metadata-size aliases. */
+.topic-panel {
+  padding-top:6px;
+}
+
+.topic-panel>:global(.eyebrow) {
+  font-size:var(--ct-eyebrow-font-size);
+  padding:5px var(--ct-ref-space-12);
+  line-height:var(--ct-eyebrow-line-height);
+  color:var(--ct-eyebrow-color);
+}
+
+.topic-panel>button {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  padding:13px var(--ct-ref-space-12);
+  text-align:left;
+  font-size:11px;
+  border-radius:5px;
+  color:#768568;
+}
+
+.topic-panel>button.selected {
+  background:#e4ead9;
+  color:#426139;
+}
+
+.topic-panel>button>span {
+  margin-left:auto;
+  color:var(--ct-meta-color);
+  font-size:var(--ct-meta-font-size);
+  line-height:var(--ct-meta-line-height);
+}
+
+.guideline {
+  margin-top:28px;
+  background:var(--ct-card-background);
+  border-radius:var(--ct-card-border-radius);
+  padding:var(--ct-card-padding);
+}
+
+.guideline>svg {
+  color:#b28564;
+  margin-bottom:var(--ct-ref-space-12);
+}
+
+.guideline h3 {
+  font-size:var(--ct-heading-subsection-font-size);
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.guideline p {
+  font-size:var(--ct-body-font-size);
+  color:var(--ct-body-color);
+  line-height:var(--ct-body-line-height);
+}
+
+@media(max-width:1200px) {
+  .topic-panel>button {
+    font-size:10px;
+    padding-left:var(--ct-ref-space-8);
+    gap:var(--ct-ref-space-8);
+  }
+}
+
+@media(max-width:950px) {
+  .topic-panel {
+    display:flex;
+    overflow:auto;
+    padding:0;
+    gap:5px;
+  }
+
+  .topic-panel>:global(.eyebrow), .guideline {
+    display:none;
+  }
+
+  .topic-panel>button {
+    width:auto;
+    white-space:nowrap;
+    flex-shrink:0;
+    border:1px solid var(--ct-ref-color-stone-200);
+    gap:6px;
+  }
+
+  .topic-panel>button>span {
+    display:none;
+  }
+
+  .topic-panel>button>svg {
+    width:14px;
+  }
+}

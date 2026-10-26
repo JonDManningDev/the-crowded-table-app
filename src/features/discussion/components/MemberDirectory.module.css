@@ -1,0 +1,46 @@
+/* Preserve the member-card hover lift/paint, 5/17/18px avatar/tag spacing, 44px bio alignment and compact invitation label; keep this directory composition local. */
+.member-card {
+  text-align:center;
+}
+
+.member-card:hover {
+  transform:translateY(-3px);
+  border-color:#bdcaaa;
+}
+
+.member-card :global(.avatar) {
+  margin:5px auto 17px;
+}
+
+.member-card h3 {
+  font-size:var(--ct-heading-card-font-size);
+  margin-bottom:var(--ct-ref-space-8);
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.member-card>:global(.meta) {
+  display:flex;
+  justify-content:center;
+  gap:5px;
+  align-items:center;
+  font-size:var(--ct-meta-font-size);
+  line-height:var(--ct-meta-line-height);
+  color:var(--ct-meta-color);
+}
+
+.member-card :global(.tags) {
+  justify-content:center;
+  margin:18px 0;
+}
+
+.member-card>p:not(:global(.meta)) {
+  min-height:44px;
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.member-card :global(.text-button) {
+  font-size:10px;
+}

@@ -1,0 +1,45 @@
+/* Preserve 12/18px title spacing and local reply bubbles: 10px grouping, 7px corners, 15px rhythm, 25px avatar/8px initials and decorative surface. These are the existing thread composition, not new shared chat rules. */
+.detail-title {
+  font-size:var(--ct-heading-card-font-size);
+  line-height:var(--ct-heading-content-line-height);
+  margin:var(--ct-ref-space-12) 0 18px;
+  color:var(--ct-heading-color);
+}
+
+.chat-message {
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  border-radius:7px;
+  background:#f0f2e8;
+  padding:var(--ct-ref-space-12);
+  margin:15px 0;
+}
+
+.chat-message strong {
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.chat-message p {
+  font-size:var(--ct-body-font-size);
+  color:var(--ct-body-color);
+  margin:5px 0 0;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  line-height:var(--ct-body-line-height);
+}
+
+.chat-message>div {
+  min-width:0;
+}
+
+.chat-message :global(.avatar) {
+  width:25px;
+  height:25px;
+  font-size:8px;
+}
+
+/* Existing native-field editorial rhythm stays local; .form owns typography. */
+.form { gap:19px; margin-top:20px; }

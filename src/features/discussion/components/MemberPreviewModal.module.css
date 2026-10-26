@@ -1,0 +1,3 @@
+/* External advice separation uses the existing section role. Shared
+.member-preview/.description styles are retained for community Profile. */
+.guidance { margin-top:var(--ct-section-gap); }

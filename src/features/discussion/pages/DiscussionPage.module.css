@@ -1,0 +1,23 @@
+/* Preserve the editorial 230/190px topic column and 30/20px board gutter; the page owns outer placement while children own internal presentation. */
+.discussion-layout {
+  display:grid;
+  grid-template-columns:230px 1fr;
+  gap:30px;
+}
+
+@media(max-width:1200px) {
+  .discussion-layout {
+    grid-template-columns:190px 1fr;
+    gap:20px;
+  }
+}
+
+@media(max-width:950px) {
+  .discussion-layout {
+    grid-template-columns:1fr;
+  }
+}
+
+.discussion-layout > * { min-width:0; }
+
+.heroSpacing { margin-bottom:var(--ct-section-gap); }

@@ -1,3 +1,4 @@
+import { createMockDiscussion, readDiscussionContent, readDiscussionPosts, replyToMockDiscussion, toggleMockSavedGame } from '../features/discussion/api'
 import { confirmMockMatchResult, disputeMockMatchResult, readChampionshipContent, readChampionshipMatches, readChampionshipStandings, registerMockChampionship, submitMockMatchResult } from '../features/championships/api'
 import { Button } from '../components/primitives/Controls'
 import { ActionLink } from '../components/primitives/Controls'
@@ -21,7 +22,7 @@ const PremiumFeaturesPage = lazy(() => import('../features/user-accounts/pages/P
 const CommunityHomePage = lazy(() => import('./pages/CommunityHomePage').then(module => ({ default: module.CommunityHomePage })))
 const MeetPlayPage = lazy(() => import('../features/meet-and-play/pages/MeetPlayPage').then(module => ({ default: module.MeetPlayPage })))
 const ChampionshipPage = lazy(() => import('../features/championships/pages/ChampionshipPage').then(module => ({ default: module.ChampionshipPage })))
-const Community = lazy(() => import('../features/Community').then(module => ({ default: module.Community })))
+const DiscussionPage = lazy(() => import('../features/discussion/pages/DiscussionPage').then(module => ({ default: module.DiscussionPage })))
 const ProfilePage = lazy(() => import('../features/Profile').then(module => ({ default: module.ProfilePage })))
 
 function CommunityPage({ page }: { page: Page }) {
@@ -98,7 +99,22 @@ function CommunityPage({ page }: { page: Page }) {
           return result.feedback
         }}/>
     )
-    case 'discussion': return <Community model={model}/>
+    case 'discussion': return (
+      <DiscussionPage content={readDiscussionContent()} posts={readDiscussionPosts(model.posts)} savedGames={model.savedGames}
+        onCreateDiscussion={draft => {
+          const result = createMockDiscussion(draft, model.profile.name)
+          if (!result.ok) return false
+          model.setPosts(previous => [result.item, ...previous]); model.notify(result.notice)
+          return true
+        }}
+        onReplyToDiscussion={(id, body) => {
+          const result = replyToMockDiscussion(id, body, model.profile.name)
+          if (!result) return false
+          model.setPosts(result.updatePosts)
+          return true
+        }}
+        onToggleSavedGame={game => model.setSavedGames(toggleMockSavedGame(game))}/>
+    )
     default: return <ProfilePage model={model} open={open} membership={membership}/>
   }
 }

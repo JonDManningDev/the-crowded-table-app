@@ -1,0 +1,3 @@
+/* Preserve the existing 19px field rhythm/20px introduction separation;
+shared .form owns native field/label typography and 16px mobile inputs. */
+.form { gap:19px; margin-top:20px; }

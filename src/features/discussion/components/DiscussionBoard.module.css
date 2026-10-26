@@ -1,0 +1,66 @@
+/* Preserve the two-line body preview and local card hover paint/shadow, 18px list separation and 13/7px footer grouping; these are editorial card treatments outside general shared roles. */
+.post-list {
+  display:flex;
+  flex-direction:column;
+  gap:var(--ct-section-gap);
+  margin-top:18px;
+}
+
+.post-card {
+  width:100%;
+  background:var(--ct-card-background);
+  border:1px solid var(--ct-card-border-color);
+  border-radius:var(--ct-card-border-radius);
+  padding:var(--ct-card-padding);
+  text-align:left;
+}
+
+.post-card:hover {
+  border-color:#bbc9ab;
+  box-shadow:0 3px 10px #4c5d2610;
+}
+
+.post-card h3 {
+  font-size:var(--ct-heading-card-font-size);
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.post-card>p {
+  font-size:var(--ct-body-font-size);
+  color:var(--ct-body-color);
+  line-height:var(--ct-body-line-height);
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
+.post-footer {
+  border-top:1px solid #edf0e6;
+  padding-top:13px;
+  display:flex;
+  justify-content:space-between;
+  font-size:var(--ct-meta-font-size);
+  color:var(--ct-meta-color);
+  line-height:var(--ct-meta-line-height);
+}
+
+.post-footer>span {
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+@media(max-width:700px) {
+  .post-card :global(.host) :global(.tag) {
+    font-size:var(--ct-meta-font-size);
+    line-height:var(--ct-meta-line-height);
+    color:var(--ct-meta-color);
+  }
+}
+
+@media (max-width:700px) {
+  .post-footer { flex-wrap:wrap; }
+}

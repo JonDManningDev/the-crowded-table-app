@@ -1,0 +1,104 @@
+/* Preserve schematic map/road/marker geometry, illustration paints/shadow/tracking and compact labels, plus 130px card art/negative inset/20px separation. These decorative measurements are not geographic data or shared design roles. */
+.local-map {
+  height:260px;
+  background:#e5eadb;
+  border:1px solid #d6ddc9;
+  border-radius:9px;
+  position:relative;
+  overflow:hidden;
+  margin-bottom:var(--ct-section-gap);
+  background-image:repeating-linear-gradient(25deg,transparent 0,transparent 60px,#d9e1cd 60px,#d9e1cd 65px);
+}
+
+.map-road {
+  position:absolute;
+  height:16px;
+  background:#fcf9e9;
+  width:140%;
+  left:-20%;
+  transform:rotate(-15deg);
+  top:55%;
+  border:3px solid #d8dece;
+}
+
+.map-road.two {
+  transform:rotate(50deg);
+  top:30%;
+}
+
+.map-road.three {
+  transform:rotate(5deg);
+  top:15%;
+}
+
+.map-area {
+  position:absolute;
+  right:20px;
+  bottom:18px;
+  font-size:var(--ct-meta-font-size);
+  letter-spacing:4px;
+  color:var(--ct-meta-color);
+  line-height:var(--ct-meta-line-height);
+}
+
+.local-map button {
+  position:absolute;
+  background:#33583e;
+  color:#fff6da;
+  box-shadow:0 3px 12px #30442528;
+  border-radius:20px;
+  padding:var(--ct-ref-space-8);
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+.local-map button span {
+  font-size:10px;
+  padding-right:7px;
+}
+
+.place-card {
+  text-align:left;
+}
+
+.place-card>:global(.game-art) {
+  height:130px;
+  margin:-10px -10px 20px;
+  border-radius:6px;
+}
+
+.place-card h3 {
+  margin:var(--ct-ref-space-12) 0;
+}
+
+.place-card>:global(.meta) {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+:global(.form-row).three {
+  grid-template-columns:1.4fr 1fr 1fr;
+}
+
+@media(max-width:950px) {
+  /* Marker buttons retain an aria-label when their visual caption is hidden. */
+  .local-map button span {
+    display:none;
+  }
+}
+
+@media(max-width:700px) {
+  .local-map {
+    height:240px;
+  }
+
+  :global(.form-row).three {
+    grid-template-columns:1fr 1fr;
+  }
+
+  :global(.form-row).three>label:first-child {
+    grid-column:1/-1;
+  }
+}
