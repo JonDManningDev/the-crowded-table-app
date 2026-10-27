@@ -1,6 +1,6 @@
 # Incremental page presentation refactor
 
-Recorded 2026-10-25. Workflow and all four account-tab slices are approved and completed: Settings 5b3f5a4, AccountHomeTab 31dea35, independent InsightsCarousel f4e86ab, Profile b918fea, and Communities/account-auth simplification 3a68cb9. Community Home was accepted and committed as 6defc2b; Meet & Play was accepted and committed as 5e2fee8; Championship was accepted and committed as bccabe7; Discussion was accepted and committed as 58be746; Community Profile was accepted and committed as f9007cb; Authentication was accepted and committed as a035181. Create Community was accepted and committed as 89696c4. Shared ActivityDialog is implemented and verified locally, uncommitted for completion review. App membership/notification dialogs and remaining actions are the next separately reviewed target. No deployment occurred. See docs/12 for evidence and verification limits.
+Recorded 2026-10-25. Workflow and all four account-tab slices are approved and completed: Settings 5b3f5a4, AccountHomeTab 31dea35, independent InsightsCarousel f4e86ab, Profile b918fea, and Communities/account-auth simplification 3a68cb9. Community Home was accepted and committed as 6defc2b; Meet & Play was accepted and committed as 5e2fee8; Championship was accepted and committed as bccabe7; Discussion was accepted and committed as 58be746; Community Profile was accepted and committed as f9007cb; Authentication was accepted and committed as a035181. Create Community was accepted and committed as 89696c4. Shared ActivityDialog was accepted and committed as 594470c. App dialogs/preview actions are implemented, verified locally and accepted for commit. The original page/dialog inventory is covered; remaining follow-ups are distinguished below. No deployment occurred. See docs/12 for evidence and verification limits.
 
 ## Accepted working agreement
 
@@ -291,7 +291,7 @@ Community Home completion checkpoint (2026-10-25): implemented the approved page
 
 Community Home was committed as 6defc2b. Next target: the existing Meet & Play route, including its create-table and matching-preferences dialogs. Preserve its prototype functionality and appearance; defer community product inconsistencies until domain implementation, following the user's current structural-refactor direction. The user approved this plan and instructed implementation.
 
-### Proposed components and names
+### Approved components and names
 
 All files below live under features/meet-and-play, with a colocated CSS Module for each extracted component.
 
@@ -342,7 +342,7 @@ Meet & Play completion checkpoint (2026-10-25): implemented all five approved co
 
 Meet & Play was committed as 5e2fee8. Next target: the existing Championship page, including all five in-page views and its entry/result/rules dialogs. This is structural presentation/data/CSS cleanup, not the separately deferred Championship domain redesign. Preserve the current mock functionality, copy, commercial previews and appearance, following the user's preservation direction. The user approved this plan and instructed implementation.
 
-### Proposed components and names
+### Approved components and names
 
 All new files live under features/championships, using the canonical capability name. Each presenter/page has a colocated CSS Module.
 
@@ -401,7 +401,7 @@ Championship completion checkpoint (2026-10-25): implemented the approved page p
 
 Championship was committed as bccabe7 after the user's completion acceptance. Next target: the current Community.tsx page at /community/preview/discussion, including Discussions, Members, Game Recommendations and Local Spots plus its five dialogs. This is the next whole-page structural slice. Preserve current mock behavior, copy, appearance and shared simulation lifetime; no domain implementation or real data services. The user approved the following names/scope and instructed implementation.
 
-### Proposed components and names
+### Approved components and names
 
 All new files live under features/discussion; each page/presenter has a colocated CSS Module. Replace flat features/Community.tsx and Community.module.css. The legacy filename does not make social content part of the communities management/profile capability.
 
@@ -459,7 +459,7 @@ Discussion completion checkpoint (2026-10-25): implemented all twelve approved p
 
 ## Remaining structural refactor inventory — 2026-10-25
 
-Current checkpoint, 2026-10-27: Community Profile (item 1) is committed as f9007cb; Authentication (item 2) is committed as a035181; Create Community (item 3) is committed as 89696c4. Shared ActivityDialog is implemented locally, awaiting completion review; App-level dialogs/actions remain. The source descriptions below record the original inventory, not their current completion status.
+Current checkpoint, 2026-10-27: Community Profile (item 1) is committed as f9007cb; Authentication (item 2) is committed as a035181; Create Community (item 3) is committed as 89696c4. Shared ActivityDialog is committed as 594470c; App dialogs/preview actions are implemented locally and awaiting completion review. The source descriptions below record the original inventory, not their current completion status.
 
 Read-only source audit after Discussion completion acceptance. All four UserAccountPage tabs and Community Home/Meet & Play/Championship/Discussion have completed this structural process. Remaining targets, each needing its own concise reviewed plan before implementation:
 
@@ -476,7 +476,7 @@ PremiumFeaturesPage is already a small presentation-only placeholder using share
 
 Discussion was committed as 58be746. The user approved this plan and instructed implementation on 2026-10-27. Scope: existing features/Profile.tsx at /community/preview/profile, all three views (Overview, My Activity, Membership & Settings), nested activity views and edit/member-facing-preview/support dialogs. Preserve current appearance, mock behavior, shared navigation lifetime and the user's community/account separation. No real community profile integration or domain redesign.
 
-### Proposed components and names
+### Approved components and names
 
 Use features/communities/pages and features/communities/components. This is curated community-profile presentation, independent from user-accounts and the Discussion member-directory preview. Each new/modified presenter and page owns a colocated CSS Module.
 
@@ -695,3 +695,65 @@ Shared ActivityDialog completion checkpoint (2026-10-27): implemented ActivityDi
 Current booking/request/cancellation/chat/checkout outcomes, copy, simulated gates/address disclosure and lifetime are preserved. All 256 dialog comparisons and 128 card comparisons match across 16 widths; 144 increased-spacing/long-content cases pass. Native keyboard/validation/maxlength, modal dismissal/focus/scroll, capacity decisions, checkout and access changes are verified. TypeScript/build/lint, all 270 tests across 32 files and token checks pass; all 96 public definitions are unchanged. Temporary fixtures removed, evidence/screenshots saved outside the repo, and actual zoom/screen-reader/theme limitations recorded in docs/12. The existing 11px mobile chat-input override is a preserved discrepancy against the broader 16px rule; no visual correction was bundled. No real Auth/domain action, schema/configuration change, backend or deployment. Work is uncommitted for completion review; App membership/notification dialogs and remaining action cleanup await their own reviewed plan.
 
 Shared ActivityDialog completion accepted (2026-10-27): user requested commit and progression to the next target. The prior uncommitted completion checkpoint is superseded by acceptance. Commit the verified slice, then draft the App membership/notification dialogs and remaining action plan for review; its implementation requires separate approval.
+
+
+## App dialogs and preview actions plan — approved and implemented locally 2026-10-27
+
+Shared ActivityDialog is committed as 594470c. Next scope is the remaining inline App membership/notification presentation, the related two-view guest gate in app/router.tsx, and their direct preview-mode/notification-clear actions. Preserve appearance, copy, commercial simulation, App-owned state and existing reset policies. This is the next app-composition slice, not implementation of a real membership, notification or toast service. The revised plan was approved for implementation on 2026-10-27; completion evidence follows below.
+
+### Approved components and names
+
+| File/name | Responsibility |
+| --- | --- |
+| features/communities/components/MembershipPreviewModal.tsx | Controlled shared Modal containing the existing title variants, icon, L300/month price, supplied benefits, preview disclosure and mode-change action. Props: isMemberPreview, benefits, onChangePreview, onClose. Keep the small benefits list inside this component. |
+| features/notifications/components/CommunityNotificationsModal.tsx | Controlled existing Modal with guest explanation, supplied notification rows, empty state and Mark all as read. Props: isMemberPreview, notices, onMarkAllRead, onClose. Keep row rendering inside the modal; no individual notification-row abstraction. |
+| features/communities/components/CommunityGuestGate.tsx | Controlled existing Meet & Play/Discussion gate, including the two wording variants, lock/price/action/footer/botanical. Props: variant ('meet-play' or 'discussion') and onOpenMembership. Router retains the gate condition. |
+
+Each owns a colocated CSS Module. Reuse Modal, Button, Icon and Botanical. MembershipPreviewModal/CommunityGuestGate belong to communities; the existing cross-feature notification inbox now gives a notifications feature a concrete responsibility. Do not add a hook, provider, generic dialog manager, price primitive, row component or notification framework. App remains the parent coordinator; no additional controller is needed for these two small dialogs.
+
+Approved parent state names: selectedActivityId, isMembershipPreviewOpen, isNotificationsOpen (rename the existing activity/membership/notifications values). Keep independent visibility state rather than changing modal exclusivity or layering. Retain the selected activity key/gate and existing ActivityDialogController. Do not reorganize App shell/layout, route definitions or unrelated adapters.
+
+### API and mock ownership
+
+Extend the existing communities/api.ts/types.ts with readCommunityPreviewIdentity, readMembershipPreviewContent and switchMockCommunityPreview. The first two move App's direct previewCommunity fixture import and membershipBenefits array behind narrow copied data contracts; the latter retains the current boolean mode toggle. Static interface wording stays in presenters. Do not unify the separate Profile benefits data merely because strings happen to match, or expose new commercial configuration/services.
+
+Add one features/notifications/api.ts and types.ts for the existing inbox: readInitialCommunityNotifications supplies the same two initial messages; readCommunityNotifications projects the current strings into narrow CommunityNotification records containing message; addMockCommunityNotification preserves prepend ordering and duplicates; markAllMockCommunityNotificationsRead retains the existing clear-all result. No invented IDs/timestamps/read-state columns, asynchronous delays, loading/errors or new remote calls. The new feature contains actual existing presentation/operations only, not scaffolding for deferred delivery.
+
+useMockState continues owning the same notices/member state and applies these feature results through functional updates. Its notify adapter delegates append/prepend behavior; add markAllNotificationsRead and switchCommunityPreview methods for App to call instead of exposing those direct setters to UI. Existing feature-generated notification text and all other shared simulation data remain unchanged. App reads the feature projections and passes narrow props/callbacks; presenters import no mock/API/context. Keep one api.ts per feature and leave existing real community APIs unchanged. Unrelated prototype initial records and router state-application callbacks are not rewritten during this slice.
+
+### Behavior and scope boundaries
+
+Preserve both membership title/action variants, four benefits, L300/month and explicit simulation disclaimer. Changing the preview in this modal toggles member, closes membership and selected activity exactly as today. The Topbar preview switch toggles member and closes activity/notifications; do not silently normalize these two different closure policies. Route-path changes close all three dialogs through the current parent boundary; browser Back/Forward follows that same policy. Membership action does not create an account, entitlement or payment.
+
+Notifications retain newest-first order, duplicate messages, the two seed entries, current guest explanation and empty state. Mark all as read currently removes every stored notice rather than preserving read history; retain this simulation and its current open dialog. Bell badge continues reflecting stored notices even when the guest body hides them. Preview-mode changes do not erase data; switching back reveals retained notices. Reopening/navigation retains messages until clear/App refresh. Do not add timestamps, links, per-item reads, deduplication, preference enforcement, inbox retention, real notifications or cross-page toast/operation coordination. D-094's later delivery/read/mute requirements and the accepted toast direction remain separate work.
+
+The guest gate still blocks Meet & Play/Discussion in guest preview with its current copy, pricing and membership-modal callback. Preserve page remount/reset behavior. The user's structural-first instruction retains these commercial/member/notification discrepancies; D-064 and all real standing/audience/privacy requirements remain accepted future domain work. Do not change Auth, real account context, privacy rules, schema or deployment.
+
+### Styling and verification
+
+Move only owned .membership-dialog/.notification rules and the gate's exclusive .paywall rules from App.css into modules, including responsive/wrapping overrides. Audit .benefits, .paywall-price, .round-icon.gold, .meta/.muted, global heading overrides and all other consumers before removal: gate and membership share current legacy price treatment, while round-icon helpers still serve other pages. Preserve the shared Modal's direct-paragraph color cascade and guest/empty copy as rendered; token cleanup must not activate an overridden color. Keep independent local price/botanical/spacing treatments with comments and existing purpose-based heading/body/meta/card/list-row/focus roles. No shared token/control/value or deliberate visual refinement is proposed.
+
+Capture baseline/post member/guest membership variants, notifications guest/empty/populated/duplicates and both guest gates across mobile/tablet/desktop and adjacent 700/950/1200px boundaries. Verify preview toggling from both entry points, gate remounts, dialog open/close/Escape/backdrop/focus/scroll, badge/list/clear behavior, incoming mock notice continuity and route/mode resets without losing unrelated simulation data. Include long benefits/messages and increased text spacing. Recheck current Home/Profile membership openers, Topbar and ActivityDialog reset behavior.
+
+Add focused API/controlled-presenter/App integration cases, use marked isolated no-network fixtures, remove temporary sources before final TypeScript/build/lint/full-suite/token checks and inspect bundle impact. No live Auth/domain actions. Update documentation with actual results and zoom/screen-reader/theme limits, then stop for completion review and a final remaining-work inventory. Names, the notifications feature boundary and full scope were approved; this slice ends at completion review.
+
+
+App dialogs/preview actions implementation approved (2026-10-27): user approved the named three controlled presenters, parent state vocabulary and notifications feature/API boundary. Preserve current appearance/copy/simulations and distinct closure policies; execute, verify and document without real services, shared-token changes or deployment.
+
+App dialogs/preview actions completion checkpoint (2026-10-27): implemented the approved MembershipPreviewModal, CommunityNotificationsModal and CommunityGuestGate with owning CSS Modules, parent-owned visibility and unchanged current copy/appearance. App reads community identity/benefits and notification projections through feature APIs; useMockState delegates preview switching, seed/prepend/clear operations and exposes named actions instead of those setters. Shared Modal/control/round-icon/benefits consumers remain unchanged. Guest/member gates, duplicate/order/badge/clear behavior and the two closure policies remain preserved. No hook/provider/dialog manager/toast infrastructure.
+
+TypeScript/build/lint and all 281 tests across 36 files pass. All 104 baseline style/content/rectangle comparisons and 104 increased-spacing/long-content checks pass across 13 widths; narrow botanical clipping remains intentional. Keyboard action/outline, clear-in-place, alternate membership state, Escape/backdrop and focus restoration were browser-verified in isolated fixtures. Token audit: 265 source files, unchanged 96 public definitions, no undefined references/cycles/unused tokens. Temporary fixtures removed and evidence/screenshots saved outside the repo. docs/12 records emitted sizes and actual zoom/screen-reader/theme/hosted limits. No real Auth/domain action, backend/schema/configuration change or deployment. Work is uncommitted for completion review.
+
+### Remaining-work inventory after the page/dialog sequence — 2026-10-27
+
+The original inventory's account tabs, community pages, Auth, Create Community, shared ActivityDialog and App-owned dialogs/gates have now received their individually reviewed structural slices. No further unreviewed page or dialog implementation is implied. A current source scan finds mock imports in feature API files and the retained App/route-context/activity-controller compatibility adapters; controlled feature presenters no longer accept MockModel or import fixture stores.
+
+- **Shared styling/helpers:** App.css still intentionally supplies reused form/search/filter/section-heading/benefits/round-icon and other shared conventions; components/ui.tsx remains a collection of shared primitives/visual helpers with scoped styles. A separate consumer-led cleanup may move additional families when useful. Do not split every helper or invent React primitives without a concrete benefit. The older inventory's ui.tsx mock-Art import and direct game-art ownership descriptions are historical and no longer current.
+- **Prototype compatibility:** mock/useMockState and mock/data retain initial records and App-level state across features, while feature APIs own the migrated projection/command logic. Router callbacks still apply feature outcomes to that shared state. Full replacement with real server-state ownership, moving unrelated fixture records/types and removing compatibility format exports are separate follow-ups, not unfinished work in this approved presentation slice.
+- **Visible refinements/accessibility:** the existing 11px mobile table-chat input conflicts with the broader 16px direction; other recorded contrast/control/spacing/theme questions remain in docs/13–14. Fixes need a reviewed visual scope. Actual 200% zoom, screen-reader output, alternate themes and OS accessibility settings have not been established by viewport/text-spacing checks.
+- **Product implementation:** real community standing/audiences/profiles-on-join, bookings/groups/queues, messaging/moderation, notification delivery/read history/preferences, commercial reconciliation and app-scoped toasts/operation lifetime remain documented domain work. This refactor has not implemented them or changed their accepted requirements.
+- **Delivery/performance:** the existing >500 kB bundle warning and planned query/form/PWA/tooling decisions remain separate work. No hosted/domain acceptance or frontend deployment occurred; existing Auth operational acceptance items remain as recorded in docs/11.
+
+Stop for completion review. Choose any follow-up through its own concise reviewed plan; do not continue into shared-family redesign, real services or deployment automatically.
+
+App dialogs/preview actions completion accepted (2026-10-27): user requested committing the verified work. The preceding uncommitted checkpoint is superseded by this acceptance. Commit the slice with its documented evidence/limits; no follow-up implementation or deployment is authorized.

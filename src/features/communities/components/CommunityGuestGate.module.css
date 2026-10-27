@@ -1,0 +1,68 @@
+/* Preserve local gate geometry: 590/540px height, 80px/40px and 55px/22px insets, 600/430px reading caps, 20/22px copy rhythm and botanical 170/100px geometry/paint. Price keeps its legacy 40px display type/15px/25px rhythm. These preview/decorative purposes do not define new shared roles. */
+.gate {
+  min-height:590px;
+  background:var(--ct-card-background);
+  border-radius:var(--ct-card-border-radius);
+  position:relative;
+  text-align:center;
+  padding:80px 40px;
+  overflow:hidden;
+}
+
+.gate>:global(.round-icon) {
+  margin-bottom:22px;
+  background:#d9e3cc;
+}
+
+.gate h1 {
+  max-width:600px;
+  margin:var(--ct-ref-space-12) auto 20px;
+  font-size:var(--ct-heading-page-font-size);
+  line-height:var(--ct-heading-title-line-height);
+  color:var(--ct-heading-color);
+}
+
+.gate>p {
+  max-width:430px;
+  margin:0 auto 22px;
+  color:var(--ct-body-color);
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+}
+
+.gate>small {
+  display:block;
+  font-size:var(--ct-meta-font-size);
+  margin-top:22px;
+  color:var(--ct-meta-color);
+  line-height:var(--ct-meta-line-height);
+}
+
+.gate :global(.botanical) {
+  position:absolute;
+  right:5%;
+  bottom:0;
+  width:170px;
+  color:#a1ad8b;
+  opacity:.5;
+  pointer-events:none;
+}
+
+.price {
+  font-family:var(--ct-ref-font-family-serif);
+  font-size:40px;
+  margin:15px 0 25px;
+}
+
+.price span {
+  font-family:var(--ct-ref-font-family-sans);
+  font-size:var(--ct-meta-font-size);
+  color:var(--ct-meta-color);
+  margin-left:var(--ct-ref-space-8);
+  line-height:var(--ct-meta-line-height);
+}
+@media(max-width:700px) {
+  .gate {padding:55px 22px;min-height:540px;}
+  .gate :global(.botanical) {width:100px;right:-20px;}
+  .gate h1 {font-size:var(--ct-heading-page-compact-font-size);}
+}

@@ -1,0 +1,33 @@
+/* Preserve legacy preview display type (40px price), 15/25px price rhythm and 17px title offset. These local commercial-preview treatments are not shared heading/spacing roles. Shared benefits/round-icon and Modal retain their existing contracts. */
+.content {
+  text-align:center;
+}
+
+.content h2 {
+  margin-top:17px;
+}
+
+.content .benefits {
+  text-align:left;
+  display:inline-block;
+}
+
+.content>.disclosure {
+  font-size:var(--ct-meta-font-size);
+  line-height:var(--ct-meta-line-height);
+  color:var(--ct-meta-color);
+}
+
+.price {
+  font-family:var(--ct-ref-font-family-serif);
+  font-size:40px;
+  margin:15px 0 25px;
+}
+
+.price span {
+  font-family:var(--ct-ref-font-family-sans);
+  font-size:var(--ct-meta-font-size);
+  color:var(--ct-meta-color);
+  margin-left:var(--ct-ref-space-8);
+  line-height:var(--ct-meta-line-height);
+}

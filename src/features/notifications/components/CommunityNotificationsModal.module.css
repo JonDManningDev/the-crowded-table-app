@@ -1,0 +1,20 @@
+/* Preserve the existing 15px icon/copy gap and #97a680 decorative leaf paint locally; neither is a new general spacing or feedback role. Guest/empty direct paragraphs retain the shared Modal cascade. */
+.notification {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:15px;
+  padding:var(--ct-list-row-padding-block) 0;
+  border-bottom:1px solid var(--ct-ref-color-stone-200);
+}
+
+.notification svg {
+  color:#97a680;
+}
+
+.notification p {
+  font-size:var(--ct-body-font-size);
+  color:var(--ct-body-color);
+  margin:0;
+  line-height:var(--ct-body-line-height);
+}

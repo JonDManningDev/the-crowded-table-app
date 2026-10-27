@@ -1,3 +1,5 @@
+import { switchMockCommunityPreview } from '../features/communities/api'
+import { addMockCommunityNotification, markAllMockCommunityNotificationsRead, readInitialCommunityNotifications } from '../features/notifications/api'
 import { cancelMockActivityReservation, reserveMockActivity } from '../features/events/api'
 import { decideMockTableSeatRequest, sendMockTableMessage } from '../features/meet-and-play/api'
 import type { TableMessage, TableSeatRequestRecord } from '../features/meet-and-play/types'
@@ -25,10 +27,7 @@ export function useMockState() {
     status: 'pending',
     date: '2026-10-03',
   }])
-  const [notices, setNotices] = useState([
-    'Welcome to your table. October is looking lovely.',
-    'David P. requested a seat at Sunday birds & brunch.',
-  ])
+  const [notices, setNotices] = useState(readInitialCommunityNotifications)
   const [matching, setMatching] = useState(false)
   const [matchingPreferences, setMatchingPreferences] = useState({
     availability: 'Saturday evening',
@@ -43,7 +42,9 @@ export function useMockState() {
     digest: false,
     history: false,
   })
-  const notify = (message: string) => setNotices(previous => [message, ...previous])
+  const notify = (message: string) => setNotices(previous => addMockCommunityNotification(previous, message))
+  const markAllNotificationsRead = () => setNotices(markAllMockCommunityNotificationsRead())
+  const switchCommunityPreview = () => setMember(previous => switchMockCommunityPreview(previous))
   function join(item: Activity) {
     const result = reserveMockActivity(item, seats, member)
     if (!result) return
@@ -78,7 +79,7 @@ export function useMockState() {
   }
   return {
     member,
-    setMember,
+    switchCommunityPreview,
     profile,
     setProfile,
     items,
@@ -97,7 +98,7 @@ export function useMockState() {
     results,
     setResults,
     notices,
-    setNotices,
+    markAllNotificationsRead,
     notify,
     matching,
     setMatching,

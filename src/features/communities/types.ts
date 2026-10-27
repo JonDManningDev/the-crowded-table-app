@@ -61,3 +61,6 @@ export type CommunityProfileContent = {
   supportMaxLength: number
   historyDisclosure: string
 }
+
+export type CommunityPreviewIdentity = { name: string; subtitle: string; location: string; motto: string }
+export type MembershipPreviewContent = { benefits: string[] }

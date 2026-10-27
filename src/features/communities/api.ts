@@ -1,4 +1,5 @@
-import { interests } from '../../mock/data'
+import type { CommunityPreviewIdentity, MembershipPreviewContent } from './types'
+import { interests, previewCommunity } from '../../mock/data'
 import type { Activity, Profile, SeatStatus } from '../../mock/data'
 import { formatDate } from '../../lib/dateTime'
 import type { CommunityProfileActivity, CommunityProfileContent, CommunityProfileDetails, CommunityProfilePreferences } from './types'
@@ -176,4 +177,20 @@ export function saveMockCommunityPreferences() { return { isSaved: true } }
 export function saveMockCommunitySupportNote(note: string) {
   const normalized = note.trim()
   return normalized ? { notice: `Demo support note saved: ${normalized}` } : null
+}
+
+
+export function readCommunityPreviewIdentity(): CommunityPreviewIdentity {
+  return { ...previewCommunity }
+}
+export function readMembershipPreviewContent(): MembershipPreviewContent {
+  return { benefits: [
+    'Find and create member-hosted tables',
+    'Meet people in our private community',
+    'Reserve included official game nights',
+    'Enter the monthly championship',
+  ] }
+}
+export function switchMockCommunityPreview(isMemberPreview: boolean): boolean {
+  return !isMemberPreview
 }

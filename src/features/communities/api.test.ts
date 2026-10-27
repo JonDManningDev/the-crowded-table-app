@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-import { saveCommunityAccountPreferences, saveCommunityProfile } from './api'
+import { readCommunityPreviewIdentity, readMembershipPreviewContent, switchMockCommunityPreview, saveCommunityAccountPreferences, saveCommunityProfile } from './api'
 
 const db = vi.hoisted(() => ({ from: vi.fn(), update: vi.fn(), upsert: vi.fn(), eq: vi.fn(), select: vi.fn(), single: vi.fn() }))
 vi.mock('../../lib/supabase', () => ({ supabase: db }))
@@ -30,4 +30,16 @@ it('saves a separate community profile with database-derived user identity and a
   expect(db.from).toHaveBeenCalledExactlyOnceWith('community_account_profiles')
   expect(db.upsert).toHaveBeenCalledExactlyOnceWith({ tenant_id: 'community', display_name: 'Name', bio: null }, { onConflict: 'tenant_id,user_id' })
   expect(db.update).not.toHaveBeenCalled()
+})
+
+
+it('returns isolated community identity/benefit content and toggles only the mock preview flag', () => {
+  const identity = readCommunityPreviewIdentity(), content = readMembershipPreviewContent()
+  expect(identity).toEqual({ name: 'The Crowded Table', subtitle: 'GAMES · PEOPLE · BELONGING', location: 'Tegucigalpa, Honduras', motto: 'Different games.\nSame table.' })
+  expect(content.benefits).toHaveLength(4)
+  identity.name = 'Caller edit'; content.benefits.length = 0
+  expect(readCommunityPreviewIdentity().name).toBe('The Crowded Table')
+  expect(readMembershipPreviewContent().benefits).toHaveLength(4)
+  expect(switchMockCommunityPreview(true)).toBe(false); expect(switchMockCommunityPreview(false)).toBe(true)
+  expect(db.from).not.toHaveBeenCalled()
 })
