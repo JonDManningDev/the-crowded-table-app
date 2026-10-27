@@ -1,5 +1,5 @@
 import type { Activity, SeatStatus } from '../../mock/data'
-import type { CreateTableDraft, MatchingPreferencesDraft, MeetPlayContent, MeetPlayTableSummary, TableFilterValues } from './types'
+import type { CreateTableDraft, MatchingPreferencesDraft, MeetPlayContent, MeetPlayTableSummary, TableFilterValues, TableMessage, TableSeatRequest, TableSeatRequestRecord } from './types'
 
 export function readMeetPlayContent(): MeetPlayContent {
   const tableTypes = ['Board Game', 'RPG', 'TCG', 'Social / Party', 'Classic Games', 'Other']
@@ -77,4 +77,26 @@ export function saveMockMatchingPreferences(draft: MatchingPreferencesDraft) {
     matching: true,
     notice: 'Your matching preferences are with our community hosts. We’ll help you find a table.',
   }
+}
+
+
+export function readTableSeatRequests(requests: readonly TableSeatRequestRecord[], id: string): TableSeatRequest[] {
+  return requests.filter(request => request.activity === id).map(({ id, name, status }) => ({ id, name, status }))
+}
+
+export function readTableConversation(messages: Readonly<Record<string, readonly TableMessage[]>>, id: string): TableMessage[] {
+  return (messages[id] || []).map(entry => ({ ...entry }))
+}
+
+export function decideMockTableSeatRequest(id: string, accept: boolean, requests: readonly TableSeatRequestRecord[], items: readonly Activity[]) {
+  const request = requests.find(row => row.id === id)
+  const item = items.find(row => row.id === request?.activity)
+  if (!request || request.status !== 'pending' || !item || (accept && item.filled >= item.capacity)) return null
+  return { activityId: item.id, status: accept ? 'accepted' : 'declined', filledChange: accept ? 1 : 0,
+    notice: `${request.name}’s request was ${accept ? 'accepted' : 'declined'}.` }
+}
+
+export function sendMockTableMessage(author: string, text: string): TableMessage | null {
+  const trimmed = text.trim()
+  return trimmed ? { author, text: trimmed } : null
 }

@@ -12,8 +12,8 @@ import { Footer } from './app/layout/Footer'
 import styles from './App.module.css'
 import './App.css'
 
-const ActivityDialog = lazy(() => import('./components/Activity').then(module => ({
-  default: module.ActivityDialog,
+const ActivityDialogController = lazy(() => import('./app/ActivityDialogController').then(module => ({
+  default: module.ActivityDialogController,
 })))
 
 const membershipBenefits = [
@@ -89,7 +89,7 @@ export default function App() {
       </div>
       {activityAllowed && (
         <LazyContent key={activity}>
-          <ActivityDialog id={activity} model={model} onClose={() => setActivity(null)}/>
+          <ActivityDialogController id={activity} model={model} onClose={() => setActivity(null)}/>
         </LazyContent>
       )}
       {membership && (

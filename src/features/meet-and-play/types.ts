@@ -1,4 +1,4 @@
-import type { ActivityCardData } from '../events/types'
+import type { ActivityCardData } from '../../components/shared/ActivityCard'
 
 export type TableFilterValues = {
   searchQuery: string
@@ -46,3 +46,7 @@ export type MeetPlayContent = {
     playStyles: string[]
   }
 }
+
+export type TableSeatRequest = { id: string; name: string; status: string }
+export type TableSeatRequestRecord = TableSeatRequest & { activity: string }
+export type TableMessage = { author: string; text: string }

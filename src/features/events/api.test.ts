@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { activities, type Activity } from '../../mock/data'
-import { readCommunityHomeEvents, selectCommunityEvents } from './api'
+import { cancelMockActivityReservation, readActivityDetails, readCommunityHomeEvents, reserveMockActivity, selectCommunityEvents } from './api'
 
 it('projects official events from the supplied snapshot without exposing detail-only fields', () => {
   const events = readCommunityHomeEvents(activities, { azul: 'confirmed' })
@@ -64,4 +64,50 @@ it('preserves the existing month-only fixture selection rather than adding a liv
   const source: Activity[] = [{ ...activities[0], date: '2025-10-06' }]
   expect(selectCommunityEvents(readCommunityHomeEvents(source, {}), 'All evenings', 2026, 9)
     .calendar.days[5].events).toHaveLength(1)
+})
+
+
+it('projects details from the current snapshot and restricts address/chat presentation to simulated eligibility', () => {
+  const item = { ...activities.find(row => row.kind === 'table')!, private: true, address: 'Fictional test address' }
+  expect(readActivityDetails([], {}, true, 'missing')).toBeNull()
+  for (const status of [undefined, 'requested', 'waitlisted'] as const) {
+    const data = readActivityDetails([item], status ? { [item.id]: status } : {}, true, item.id)!
+    expect(data).not.toHaveProperty('address')
+    expect(data).toMatchObject({ canViewAddress: false, canChat: false, isHosting: false })
+  }
+  const confirmed = readActivityDetails([item], { [item.id]: 'confirmed' }, true, item.id)!
+  expect(confirmed).toMatchObject({ address: item.address, canViewAddress: true, canChat: true })
+  confirmed.tags.push('Caller edit')
+  expect(item.tags).not.toContain('Caller edit')
+  expect(readActivityDetails([{ ...item, host: 'You' }], {}, true, item.id)).toMatchObject({ isHosting: true, address: item.address, canChat: true })
+  expect(readActivityDetails([item], { [item.id]: 'confirmed' }, false, item.id)?.canChat).toBe(false)
+  expect(readActivityDetails([{ ...item, private: false }], { [item.id]: 'confirmed' }, true, item.id)).not.toHaveProperty('address')
+})
+it('preserves official guest and special cost precedence without introducing paid table eligibility', () => {
+  const item = activities.find(row => row.kind === 'official')!
+  expect(readActivityDetails([item], {}, true, item.id)).toMatchObject({ cost: 0, canChat: false })
+  expect(readActivityDetails([item], {}, false, item.id)?.cost).toBe(125)
+  expect(readActivityDetails([{ ...item, special: true, price: 250 }], {}, true, item.id)?.cost).toBe(250)
+  expect(readActivityDetails([{ ...item, special: true, price: undefined }], {}, false, item.id)?.cost).toBeUndefined()
+})
+it.each([
+  ['instant', 2, 5, 'confirmed', 1], ['request', 2, 5, 'requested', 0],
+  ['instant', 5, 5, 'waitlisted', 0], ['request', 5, 5, 'waitlisted', 0],
+] as const)('preserves %s reservation at %s/%s', (joinMode, filled, capacity, status, filledChange) => {
+  const item = { ...activities[0], joinMode, filled, capacity }
+  const result = reserveMockActivity(item, {}, true)!
+  expect(result).toMatchObject({ status, filledChange })
+  expect(result.notice).toContain(item.title)
+  expect(item.filled).toBe(filled)
+})
+it('keeps existing-seat and guest-table guards without blocking guest official previews', () => {
+  const item = activities[0]
+  expect(reserveMockActivity(item, { [item.id]: 'confirmed' }, true)).toBeNull()
+  expect(reserveMockActivity({ ...item, kind: 'table' }, {}, false)).toBeNull()
+  expect(reserveMockActivity(item, {}, false)).not.toBeNull()
+})
+it.each([undefined, 'confirmed', 'requested', 'waitlisted'] as const)('cancels %s without promoting waitlisted records', status => {
+  const seats: Record<string, 'confirmed' | 'requested' | 'waitlisted'> = status ? { test: status } : {}
+  expect(cancelMockActivityReservation('test', seats)).toEqual({ filledChange: status === 'confirmed' ? -1 : 0, notice: 'Your participation has been cancelled.' })
+  expect(seats).toEqual(status ? { test: status } : {})
 })

@@ -1,3 +1,6 @@
+import { cancelMockActivityReservation, reserveMockActivity } from '../features/events/api'
+import { decideMockTableSeatRequest, sendMockTableMessage } from '../features/meet-and-play/api'
+import type { TableMessage, TableSeatRequestRecord } from '../features/meet-and-play/types'
 import { useState } from 'react'
 import { activities, initialPosts, initialProfile } from './data'
 import type { Activity, Post, Profile, Result, SeatStatus } from './data'
@@ -8,8 +11,8 @@ export function useMockState() {
   const [items, setItems] = useState<Activity[]>(activities)
   const [seats, setSeats] = useState<Record<string, SeatStatus>>({})
   const [posts, setPosts] = useState<Post[]>(initialPosts)
-  const [messages, setMessages] = useState<Record<string, { author: string; text: string }[]>>({})
-  const [requests, setRequests] = useState([
+  const [messages, setMessages] = useState<Record<string, TableMessage[]>>({})
+  const [requests, setRequests] = useState<TableSeatRequestRecord[]>([
     { id: 'req1', activity: 'my-table', name: 'David P.', status: 'pending' },
   ])
   const [registered, setRegistered] = useState(false)
@@ -42,55 +45,36 @@ export function useMockState() {
   })
   const notify = (message: string) => setNotices(previous => [message, ...previous])
   function join(item: Activity) {
-    if (seats[item.id]) return
-    if (item.kind === 'table' && !member) return
-    const status: SeatStatus = item.filled >= item.capacity
-      ? 'waitlisted'
-      : item.joinMode === 'request'
-        ? 'requested'
-        : 'confirmed'
-    setSeats(previous => ({ ...previous, [item.id]: status }))
-    if (status === 'confirmed') {
-      setItems(previous => previous.map(row => (
-        row.id === item.id ? { ...row, filled: row.filled + 1 } : row
-      )))
+    const result = reserveMockActivity(item, seats, member)
+    if (!result) return
+    setSeats(previous => ({ ...previous, [item.id]: result.status }))
+    if (result.filledChange) {
+      setItems(previous => previous.map(row => row.id === item.id ? { ...row, filled: row.filled + result.filledChange } : row))
     }
-    notify(
-      status === 'confirmed'
-        ? `Your seat at ${item.title} is confirmed.`
-        : status === 'requested'
-          ? `Your request for ${item.title} was sent to the host.`
-          : `You’re on the waitlist for ${item.title}.`,
-    )
+    notify(result.notice)
   }
   function cancel(id: string) {
-    if (seats[id] === 'confirmed') {
-      setItems(previous => previous.map(row => (
-        row.id === id ? { ...row, filled: Math.max(0, row.filled - 1) } : row
-      )))
+    const result = cancelMockActivityReservation(id, seats)
+    if (result.filledChange) {
+      setItems(previous => previous.map(row => row.id === id ? { ...row, filled: Math.max(0, row.filled + result.filledChange) } : row))
     }
-    setSeats(previous => {
-      const next = { ...previous }
-      delete next[id]
-      return next
-    })
-    notify('Your participation has been cancelled.')
+    setSeats(previous => { const next = { ...previous }; delete next[id]; return next })
+    notify(result.notice)
   }
   function decideRequest(id: string, accept: boolean) {
-    const request = requests.find(row => row.id === id)
-    const item = items.find(row => row.id === request?.activity)
-    if (!request || request.status !== 'pending' || !item || (accept && item.filled >= item.capacity)) {
-      return
+    const result = decideMockTableSeatRequest(id, accept, requests, items)
+    if (!result) return
+    setRequests(previous => previous.map(row => row.id === id ? { ...row, status: result.status } : row))
+    if (result.filledChange) {
+      setItems(previous => previous.map(row => row.id === result.activityId ? { ...row, filled: row.filled + result.filledChange } : row))
     }
-    setRequests(previous => previous.map(row => (
-      row.id === id ? { ...row, status: accept ? 'accepted' : 'declined' } : row
-    )))
-    if (accept) {
-      setItems(previous => previous.map(row => (
-        row.id === item.id ? { ...row, filled: row.filled + 1 } : row
-      )))
-    }
-    notify(`${request.name}’s request was ${accept ? 'accepted' : 'declined'}.`)
+    notify(result.notice)
+  }
+  function sendMessage(id: string, text: string) {
+    const entry = sendMockTableMessage(profile.name, text)
+    if (!entry) return false
+    setMessages(previous => ({ ...previous, [id]: [...(previous[id] || []), entry] }))
+    return true
   }
   return {
     member,
@@ -105,7 +89,7 @@ export function useMockState() {
     posts,
     setPosts,
     messages,
-    setMessages,
+    sendMessage,
     requests,
     decideRequest,
     registered,

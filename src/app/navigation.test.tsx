@@ -643,3 +643,32 @@ it('saves only local support notices and preserves activity subviews until route
   fireEvent.click(screen.getByRole('button', { name: 'My Activity' }))
   expect(screen.getByRole('button', { name: 'Upcoming' }).getAttribute('aria-pressed')).toBe('true')
 })
+
+
+it('retains table messages and host decisions across routes and mode changes while discarding dialog drafts', async () => {
+  window.history.replaceState(null, '', pagePaths['meet-play'])
+  await renderReady(<App/>)
+  const openHosted = async () => {
+    fireEvent.click(screen.getByRole('button', { name: /Sunday birds & brunch/ }))
+    await screen.findByRole('dialog')
+  }
+  await openHosted()
+  fireEvent.click(screen.getByRole('button', { name: 'Accept' }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Message your table' }), { target: { value: '  Retained table hello  ' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Message your table' }), { target: { value: 'Unsent route draft' } })
+  await navigate('community-home')
+  expect(screen.queryByRole('dialog')).toBeNull()
+  await navigate('meet-play'); await openHosted()
+  expect((screen.getByRole('textbox', { name: 'Message your table' }) as HTMLInputElement).value).toBe('')
+  expect(screen.getByText('Retained table hello')).toBeTruthy()
+  expect(screen.getByText('accepted')).toBeTruthy()
+  fireEvent.change(screen.getByRole('textbox', { name: 'Message your table' }), { target: { value: 'Unsent mode draft' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Switch to guest preview' }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Switch to member preview' }))
+  await screen.findByLabelText('Search tables'); await openHosted()
+  expect((screen.getByRole('textbox', { name: 'Message your table' }) as HTMLInputElement).value).toBe('')
+  expect(screen.getByText('Retained table hello')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Accept' })).toBeNull()
+})

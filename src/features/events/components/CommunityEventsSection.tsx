@@ -1,5 +1,5 @@
 import { FilterChip, FilterChipGroup } from '../../../components/primitives/FilterChip'
-import { ActivityCard } from '../../../components/Activity'
+import { ActivityCard } from '../../../components/shared/ActivityCard'
 import { Tabs } from '../../../components/ui'
 import { EventCalendar } from './EventCalendar'
 import type { CommunityHomeEvent, EventCalendarData } from '../types'

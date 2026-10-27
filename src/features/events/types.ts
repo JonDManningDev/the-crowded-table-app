@@ -1,21 +1,4 @@
-import type { GameArtVariant } from '../../components/GameArt'
-
-// Rendering contract shared by official-event and legacy table cards.
-export type ActivityCardData = {
-  id: string
-  title: string
-  kind: 'official' | 'table'
-  art: GameArtVariant
-  category: string
-  date: string
-  time: string
-  capacity: number
-  filled: number
-  host: string
-  location: string
-  private: boolean
-  special?: boolean
-}
+import type { ActivityCardData } from '../../components/shared/ActivityCard'
 
 export type CommunityHomeEvent = ActivityCardData & { status?: string }
 
@@ -28,4 +11,12 @@ export type EventCalendarData = {
   leadingDays: number
   days: { day: number; events: CommunityHomeEvent[] }[]
   hasEvents: boolean
+}
+
+// Shared legacy detail projection, independent of the mock storage record.
+export type ActivityReservationStatus = 'confirmed' | 'requested' | 'waitlisted'
+export type ActivityDetails = ActivityCardData & {
+  end: string; description: string; tags: string[]; joinMode: 'instant' | 'request'
+  status?: ActivityReservationStatus; cost?: number; isHosting: boolean; canChat: boolean
+  canViewAddress: boolean; address?: string
 }

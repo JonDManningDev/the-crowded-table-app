@@ -1,3 +1,4 @@
+import { decideMockTableSeatRequest, readTableConversation, readTableSeatRequests, sendMockTableMessage } from './api'
 import { expect, it } from 'vitest'
 import { activities } from '../../mock/data'
 import { createMockTable, readMeetPlayContent, readMeetPlayTables, saveMockMatchingPreferences, selectMeetPlayTables } from './api'
@@ -92,4 +93,30 @@ it('copies matching preferences unchanged and produces only an in-memory update/
   expect(result.matching).toBe(true)
   draft.notes = 'Changed'
   expect(result.preferences.notes).toBe('  Keep my spacing  ')
+})
+
+
+it('projects only the selected table requests and messages without sharing mutable records', () => {
+  const requests = [{ id: 'r1', activity: 'table', name: 'Fictional guest', status: 'pending' }, { id: 'r2', activity: 'other', name: 'Other', status: 'pending' }]
+  const messages = { table: [{ author: 'Fictional host', text: 'Hello' }], other: [{ author: 'Other', text: 'Not this table' }] }
+  const selected = readTableSeatRequests(requests, 'table')
+  expect(selected).toEqual([{ id: 'r1', name: 'Fictional guest', status: 'pending' }])
+  selected[0].name = 'Edited'; const conversation = readTableConversation(messages, 'table'); conversation[0].text = 'Edited'
+  expect(requests[0].name).toBe('Fictional guest'); expect(messages.table[0].text).toBe('Hello')
+  expect(readTableConversation(messages, 'missing')).toEqual([])
+})
+it('accepts with capacity, declines at capacity, retains decision history and rejects duplicate decisions', () => {
+  const item = { ...activities[0], filled: 2, capacity: 3 }
+  const request = { id: 'request', activity: item.id, name: 'Fictional guest', status: 'pending' }
+  expect(decideMockTableSeatRequest(request.id, true, [request], [item])).toEqual({ activityId: item.id, status: 'accepted', filledChange: 1, notice: 'Fictional guest’s request was accepted.' })
+  expect(decideMockTableSeatRequest(request.id, false, [request], [{ ...item, filled: 3 }])).toMatchObject({ status: 'declined', filledChange: 0 })
+  expect(decideMockTableSeatRequest(request.id, true, [request], [{ ...item, filled: 3 }])).toBeNull()
+  expect(decideMockTableSeatRequest(request.id, true, [{ ...request, status: 'accepted' }], [item])).toBeNull()
+  expect(decideMockTableSeatRequest(request.id, true, [request], [])).toBeNull()
+  expect(decideMockTableSeatRequest('missing', true, [request], [item])).toBeNull()
+  expect(request.status).toBe('pending'); expect(item.filled).toBe(2)
+})
+it('trims mock messages, preserves plain text and rejects blank drafts without inventing a delivery service', () => {
+  expect(sendMockTableMessage('Community author', '  Hello\nthere  ')).toEqual({ author: 'Community author', text: 'Hello\nthere' })
+  expect(sendMockTableMessage('Community author', '  \n  ')).toBeNull()
 })
