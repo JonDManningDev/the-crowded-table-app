@@ -1,0 +1,68 @@
+/* Preserve the local switch 35x20px track/14px thumb, paints, offsets/motion and 20px grouping; these existing controls are not admitted as shared token roles. Shared action-footer spacing wins over the obsolete 25px sibling margin. */
+.setting-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  padding:var(--ct-list-row-padding-block) 0;
+  border-bottom:1px solid var(--ct-ref-color-stone-200);
+}
+
+.setting-row strong {
+  font-size:var(--ct-body-font-size);
+  display:block;
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.setting-row small {
+  display:block;
+  margin-top:var(--ct-label-meta-gap);
+  font-size:var(--ct-meta-font-size);
+  color:var(--ct-meta-color);
+  line-height:var(--ct-meta-line-height);
+}
+
+.setting-row input {
+  appearance:none;
+  width:35px;
+  height:20px;
+  background:#d6ddcc;
+  border:0;
+  border-radius:20px;
+  position:relative;
+  cursor:pointer;
+  flex-shrink:0;
+  padding:0;
+}
+
+.setting-row input:after {
+  content:'';
+  width:14px;
+  height:14px;
+  position:absolute;
+  top:3px;
+  left:3px;
+  background:white;
+  border-radius:50%;
+  transition:transform .15s;
+}
+
+.setting-row input:checked {
+  background:#4e7047;
+}
+
+.setting-row input:checked:after {
+  transform:translateX(15px);
+}
+
+.setting-row~:global(.actions) {
+  margin-top:var(--ct-action-footer-gap);
+  font-size:11px;
+}
+
+.support-link {
+  margin-top:25px;
+}
+
+.setting-row { flex-wrap:wrap; }

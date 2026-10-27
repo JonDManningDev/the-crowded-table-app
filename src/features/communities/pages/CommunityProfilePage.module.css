@@ -1,0 +1,65 @@
+/* Parent owns the existing 290/250px sidebar, 30/20px gutter, -15px tab alignment and 23px direct-panel separation. Preserve compact tab sizing and inherited panel heading roles during extraction. */
+.profile-layout {
+  display:grid;
+  grid-template-columns:290px 1fr;
+  gap:30px;
+}
+
+.profile-layout>div>:global(.tabs) {
+  margin-top:-15px;
+}
+
+.profile-layout>div>:global(.panel) {
+  margin-bottom:23px;
+}
+
+.profile-layout :global(.panel) h2 {
+  font-size:var(--ct-heading-card-font-size);
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.profile-layout :global(.panel) :global(.description) {
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+@media(max-width:1200px) {
+  .profile-layout {
+    grid-template-columns:250px 1fr;
+    gap:20px;
+  }
+
+  .profile-layout :global(.tabs) {
+    gap:var(--ct-ref-space-16);
+  }
+
+  .profile-layout :global(.tabs) button {
+    font-size:10px;
+  }
+}
+
+@media(max-width:950px) {
+  .profile-layout {
+    grid-template-columns:1fr;
+  }
+
+  .profile-layout>div>:global(.tabs) {
+    margin-top:0;
+  }
+}
+
+@media(max-width:700px) {
+  .profile-layout {
+    gap:25px;
+  }
+}
+
+.profile-layout > div > :global(.panel) + :global(.panel) { margin-top:var(--ct-section-gap); }
+
+.profile-layout > div { min-width:0; }
+
+@media (max-width:700px) {
+  .profile-layout { gap:var(--ct-section-gap); }
+}

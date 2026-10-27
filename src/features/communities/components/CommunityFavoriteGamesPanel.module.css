@@ -1,0 +1,30 @@
+/* Preserve local artwork height/corners and 11px caption separation; the existing adaptive 90px minimum and card-grid gap remain composition, not a new shared card family. */
+.favorites {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:13px;
+}
+
+.favorites :global(.game-art) {
+  height:100px;
+  border-radius:5px;
+}
+
+.favorites h3 {
+  font-size:var(--ct-heading-item-font-size);
+  margin:11px 0 0;
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+@media(max-width:700px) {
+  .favorites {
+    gap:9px;
+  }
+
+  .favorites :global(.game-art) {
+    height:85px;
+  }
+}
+
+.favorites { grid-template-columns:repeat(auto-fit, minmax(min(100%, 90px), 1fr)); gap:var(--ct-card-grid-gap); }

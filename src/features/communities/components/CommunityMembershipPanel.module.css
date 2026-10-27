@@ -1,0 +1,9 @@
+/* Preserve 15px title separation for this existing commercial preview. Shared benefits styling is retained for the App membership dialog. */
+.membership-settings {
+  background:var(--ct-card-background);
+  border-radius:var(--ct-card-border-radius);
+}
+
+.membership-settings h2 {
+  margin-top:15px;
+}

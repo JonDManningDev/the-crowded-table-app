@@ -1,3 +1,4 @@
+import { changeMockCommunityPreference, readCommunityProfileActivity, readCommunityProfileContent, readCommunityProfileDetails, readCommunityProfilePreferences, saveMockCommunityPreferences, saveMockCommunityProfile, saveMockCommunitySupportNote } from '../features/communities/api'
 import { createMockDiscussion, readDiscussionContent, readDiscussionPosts, replyToMockDiscussion, toggleMockSavedGame } from '../features/discussion/api'
 import { confirmMockMatchResult, disputeMockMatchResult, readChampionshipContent, readChampionshipMatches, readChampionshipStandings, registerMockChampionship, submitMockMatchResult } from '../features/championships/api'
 import { Button } from '../components/primitives/Controls'
@@ -23,7 +24,7 @@ const CommunityHomePage = lazy(() => import('./pages/CommunityHomePage').then(mo
 const MeetPlayPage = lazy(() => import('../features/meet-and-play/pages/MeetPlayPage').then(module => ({ default: module.MeetPlayPage })))
 const ChampionshipPage = lazy(() => import('../features/championships/pages/ChampionshipPage').then(module => ({ default: module.ChampionshipPage })))
 const DiscussionPage = lazy(() => import('../features/discussion/pages/DiscussionPage').then(module => ({ default: module.DiscussionPage })))
-const ProfilePage = lazy(() => import('../features/Profile').then(module => ({ default: module.ProfilePage })))
+const CommunityProfilePage = lazy(() => import('../features/communities/pages/CommunityProfilePage').then(module => ({ default: module.CommunityProfilePage })))
 
 function CommunityPage({ page }: { page: Page }) {
   const { model, open, membership } = useAppRouteContext()
@@ -115,7 +116,25 @@ function CommunityPage({ page }: { page: Page }) {
         }}
         onToggleSavedGame={game => model.setSavedGames(toggleMockSavedGame(game))}/>
     )
-    default: return <ProfilePage model={model} open={open} membership={membership}/>
+    default: return (
+      <CommunityProfilePage content={readCommunityProfileContent()} profile={readCommunityProfileDetails(model.profile)}
+        preferences={readCommunityProfilePreferences(model.preferences)} activity={readCommunityProfileActivity(model.items, model.seats, model.member)}
+        isMemberPreview={model.member} onOpenActivity={open} onOpenMembership={membership}
+        onSaveProfile={draft => {
+          const result = saveMockCommunityProfile(draft)
+          if (!result.ok) return false
+          model.setProfile(result.profile); model.notify(result.notice)
+          return true
+        }}
+        onPreferenceChange={(key, value) => model.setPreferences(changeMockCommunityPreference(key, value))}
+        onSavePreferences={() => saveMockCommunityPreferences().isSaved}
+        onSaveSupportNote={note => {
+          const result = saveMockCommunitySupportNote(note)
+          if (!result) return false
+          model.notify(result.notice)
+          return true
+        }}/>
+    )
   }
 }
 

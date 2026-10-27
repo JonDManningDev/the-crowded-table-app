@@ -1,0 +1,26 @@
+/* Preserve existing native-form option grouping and checkbox geometry. Shared .form owns field typography, 19/20px rhythm and 16px mobile inputs. */
+.interest-options {
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--ct-ref-space-12);
+}
+
+.interest-options label {
+  display:flex;
+  flex-direction:row;
+  gap:6px;
+  align-items:center;
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.interest-options input {
+  width:14px;
+  height:14px;
+}
+
+.form { gap:19px; margin-top:20px; }
+.row { display:grid; grid-template-columns:1fr 1fr; gap:var(--ct-ref-space-16); }
+.row > * { min-width:0; }
+@media (max-width:700px) { .row { gap:10px; } }

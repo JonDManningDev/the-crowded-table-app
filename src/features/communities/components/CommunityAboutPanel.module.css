@@ -1,0 +1,3 @@
+/* This independent community introduction consumes the complete body role;
+preserve its existing panel/section-heading placement. */
+.panel > :global(.description) { font-size:var(--ct-body-font-size); line-height:var(--ct-body-line-height); color:var(--ct-body-color); }

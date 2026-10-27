@@ -1,67 +1,19 @@
 import { InsightCard } from '../../../components/shared/InsightCard'
+import { Icon } from '../../../components/ui'
+import { CommunityAboutPanel } from './CommunityAboutPanel'
+import { CommunityFavoriteGamesPanel } from './CommunityFavoriteGamesPanel'
+import type { CommunityProfileContent, CommunityProfileDetails } from '../types'
 import styles from './CommunityProfileOverview.module.css'
-import { Button } from '../../../components/primitives/Controls'
-import { Icon, Tag } from '../../../components/ui'
-import type { MockModel } from '../../../mock/useMockState'
-import { GameArt } from '../../../components/GameArt'
 
-const favorites = [
-  { name: 'Wingspan', art: 'birds' as const },
-  { name: 'Codenames', art: 'social' as const },
-  { name: 'Azul', art: 'azul' as const },
-]
-
-export function CommunityProfileOverview({
-  profile,
-  onEdit,
-}: {
-  profile: MockModel['profile']
-  onEdit?: () => void
+export function CommunityProfileOverview({ profile, favorites, insight, onEdit }: {
+  profile: Pick<CommunityProfileDetails, 'bio' | 'style' | 'teach'>
+  favorites: CommunityProfileContent['favorites']; insight: CommunityProfileContent['insight']; onEdit?: () => void
 }) {
   return (
     <div className={styles.sections}>
-      <section className="panel">
-        <span className="eyebrow">A LITTLE INTRODUCTION</span>
-        <h2 data-heading="card">About me</h2>
-        <p className="description">{profile.bio}</p>
-        <div className="section-heading">
-          <h3 data-heading="subsection">At the table, I’m…</h3>
-          {onEdit && (
-            <Button appearance="ghost" className="text-button" onClick={onEdit}>
-              Edit <Icon name="arrow" size={16}/>
-            </Button>
-          )}
-        </div>
-        <div className="tags">
-          <Tag>{profile.style}</Tag>
-          {profile.teach && (
-            <Tag>
-              <Icon name="leaf" size={14}/> Happy to teach
-            </Tag>
-          )}
-          <Tag>Always up for a new game</Tag>
-        </div>
-      </section>
-      <InsightCard
-        icon={<Icon name="people" size={28}/>}
-        eyebrow="YOUR CIRCLE IS GROWING"
-        heading="18 different people. So many shared stories."
-        description="That’s how many community members you’ve played with. Here’s to the people you haven’t met yet."
-      />
-      <section className="panel">
-        <div className="section-heading">
-          <h2 data-heading="card">A few favorite games</h2>
-          <Icon name="dice"/>
-        </div>
-        <div className="favorites">
-          {favorites.map(game => (
-            <div key={game.name}>
-              <GameArt type={game.art}/>
-              <h3 data-heading="item">{game.name}</h3>
-            </div>
-          ))}
-        </div>
-      </section>
+      <CommunityAboutPanel profile={profile} onEdit={onEdit} />
+      <InsightCard icon={<Icon name={insight.icon} size={28} />} eyebrow={insight.eyebrow} heading={insight.heading} description={insight.description} />
+      <CommunityFavoriteGamesPanel favorites={favorites} />
     </div>
   )
 }

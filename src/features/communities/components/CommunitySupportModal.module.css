@@ -1,0 +1,3 @@
+/* Preserve local native-form field/intro rhythm; shared .form owns labels
+and inputs. No new field family or support styling contract is introduced. */
+.form { gap:19px; margin-top:20px; }
