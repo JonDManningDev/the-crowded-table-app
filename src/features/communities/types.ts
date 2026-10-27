@@ -1,5 +1,15 @@
 import type { GameArtVariant } from '../../components/GameArt'
 
+export type CommunityCreationDraft = {
+  name: string; slug: string; country: string; region: string; city: string; timezone: string; join: boolean
+}
+export type CommunityCreationOptions = {
+  countries: { code: string; name: string }[]; timezones: string[]; initialTimezone: string; isConfigured: boolean
+}
+export type CommunityCreationSummary = {
+  id: string; name: string; slug: string; locationLabel: string; timezone: string; join: boolean
+}
+
 export type CommunityHomeContent = {
   year: number
   initialMonth: number

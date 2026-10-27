@@ -686,7 +686,6 @@
 .section-heading { margin-top:var(--ct-section-gap); margin-bottom:var(--ct-section-gap); flex-wrap:wrap; }
 .panel > .actions, .panel > .button:last-child { margin-top:var(--ct-action-footer-gap); }
 .panel > :has(+ .actions), .panel > :has(+ .button:last-child) { margin-bottom:0; } .form-row > * { min-width:0; }
-.creation-card { overflow-wrap:anywhere; }
 .form label, .form fieldset { min-width:0; } .notification, .setting-row { flex-wrap:wrap; }
 
 @media (max-width:700px) {

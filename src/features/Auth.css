@@ -1,4 +1,0 @@
-.auth-page { min-height:80vh; padding:48px 20px; display:grid; place-items:start center; }
-.auth-links { margin-top:var(--ct-ref-space-24); font-size:var(--ct-body-font-size); }
-.auth-links { display:flex; flex-wrap:wrap; gap:var(--ct-ref-space-12); }
-.auth-error { color:#913d27; }

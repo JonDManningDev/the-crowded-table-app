@@ -2,12 +2,12 @@ import { MemoryRouter } from 'react-router'
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { CreateCommunity } from './CreateCommunity'
-import { countryCodes, validateTenant } from '../lib/tenantCreation'
-import sql from '../../supabase/migrations/20261001000100_identity_tenant_schema.sql?raw'
+import { CreateCommunityPage } from './CreateCommunityPage'
+import { countryCodes, validateCommunityCreation } from '../creation'
+import sql from '../../../../supabase/migrations/20261001000100_identity_tenant_schema.sql?raw'
 
 const api = vi.hoisted(() => ({ rpc: vi.fn(), from: vi.fn(), select: vi.fn(), order: vi.fn() }))
-vi.mock('../lib/supabase', () => ({ supabase: api }))
+vi.mock('../../../lib/supabase', () => ({ supabase: api }))
 beforeEach(() => {
   vi.resetAllMocks()
   api.rpc.mockResolvedValue({ data: 'tenant-uuid', error: null })
@@ -16,7 +16,7 @@ beforeEach(() => {
   api.order.mockResolvedValue({ data: [], error: null })
 })
 afterEach(cleanup)
-function start() { render(<MemoryRouter><CreateCommunity onBusyChange={vi.fn()}/></MemoryRouter>) }
+function start() { render(<MemoryRouter><CreateCommunityPage onBusyChange={vi.fn()}/></MemoryRouter>) }
 function fill() {
   fireEvent.change(screen.getByLabelText('Community name'), { target: { value: '  Our games  ' } })
   fireEvent.change(screen.getByLabelText('Community handle'), { target: { value: 'our-games' } })
@@ -77,8 +77,26 @@ it('blocks duplicate submissions while the command is pending', async () => {
   start(); fill(); submit(); submit()
   expect(api.rpc).toHaveBeenCalledTimes(1)
   expect((document.querySelector('fieldset') as HTMLFieldSetElement).disabled).toBe(true)
+  expect(document.querySelector('form')?.getAttribute('aria-busy')).toBe('true')
+  expect(screen.queryByRole('link', { name: 'Cancel' })).toBeNull()
   finish({ data: 'tenant-uuid', error: null })
   await screen.findByText('Your community is ready.')
+})
+
+it.each(['client', 'service'])('focuses a rendered %s error on the first and repeated failed submission', async mode => {
+  if (mode === 'service') api.rpc.mockResolvedValue({ data: null, error: { code: '23505' } })
+  start(); fill()
+  if (mode === 'client') fireEvent.change(screen.getByLabelText('Community handle'), { target: { value: 'auth' } })
+  submit()
+  const first = await screen.findByRole('alert')
+  await waitFor(() => expect(document.activeElement).toBe(first))
+  screen.getByLabelText('Community name').focus()
+  submit()
+  const repeated = await screen.findByRole('alert')
+  await waitFor(() => expect(document.activeElement).toBe(repeated))
+  expect((screen.getByLabelText('Community name') as HTMLInputElement).value).toBe('  Our games  ')
+  if (mode === 'client') expect(api.rpc).not.toHaveBeenCalled()
+  else expect(api.rpc).toHaveBeenCalledTimes(2)
 })
 it('does not automatically retry an ambiguous network failure', async () => {
   api.rpc.mockRejectedValue(new Error('network failed'))
@@ -99,7 +117,7 @@ it('keeps frontend country and reserved-handle hints aligned with the database c
   expect(countryCodes).toEqual(dbCodes)
   const handles = [...sql.match(/slug not in \(([^)]+)\)/)![1].matchAll(/'([^']+)'/g)].map(match => match[1])
   for (const slug of handles) {
-    expect(validateTenant({
+    expect(validateCommunityCreation({
       name: 'Test',
       slug,
       country: 'HN',

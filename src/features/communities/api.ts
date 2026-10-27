@@ -4,6 +4,41 @@ import { formatDate } from '../../lib/dateTime'
 import type { CommunityProfileActivity, CommunityProfileContent, CommunityProfileDetails, CommunityProfilePreferences } from './types'
 import type { CommunityHomeContent } from './types'
 import { supabase } from '../../lib/supabase'
+import type { CommunityCreationDraft, CommunityCreationOptions, CommunityCreationSummary } from './types'
+import { countryCodes, getCommunityCreationError } from './creation'
+
+function browserTimezone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } catch { return 'UTC' }
+}
+export function readCommunityCreationOptions(): CommunityCreationOptions {
+  const countryNames = new Intl.DisplayNames(['en'], { type: 'region' })
+  const initialTimezone = browserTimezone()
+  let timezones: string[]
+  try { timezones = [...new Set(['UTC', initialTimezone, ...Intl.supportedValuesOf('timeZone')])].sort() }
+  catch { timezones = ['UTC', initialTimezone, 'America/Tegucigalpa'] }
+  return { countries: countryCodes.map(code => ({ code, name: countryNames.of(code) || code })).sort((a, b) => a.name.localeCompare(b.name)),
+    timezones, initialTimezone, isConfigured: Boolean(supabase) }
+}
+
+export async function createCommunity(draft: CommunityCreationDraft): Promise<CommunityCreationSummary> {
+  if (!supabase) throw new Error('Account services are not configured yet. Please try again later.')
+  // Capture submitted strings before awaiting; the confirmed summary must not
+  // drift if a caller later changes its draft. No detail/profile read is added.
+  const submitted = { ...draft, name: draft.name.trim(), timezone: draft.timezone.trim(),
+    region: draft.region.trim(), city: draft.city.trim() }
+  const countryName = new Intl.DisplayNames(['en'], { type: 'region' }).of(submitted.country)
+  const locationLabel = [submitted.city, submitted.region, countryName].filter(Boolean).join(', ')
+  let result
+  try {
+    result = await supabase.rpc('create_tenant', {
+      p_name: submitted.name, p_slug: submitted.slug, p_country_code: submitted.country, p_timezone: submitted.timezone,
+      p_state_province: submitted.region || undefined, p_city: submitted.city || undefined, p_join_community: submitted.join,
+    })
+  } catch { throw new Error(getCommunityCreationError({})) }
+  if (result.error) throw new Error(getCommunityCreationError(result.error))
+  if (!result.data) throw new Error(getCommunityCreationError({}))
+  return { id: result.data, name: submitted.name, slug: submitted.slug, locationLabel, timezone: submitted.timezone, join: submitted.join }
+}
 
 export type CommunityAccountPreferences = {
   show_global_profile: boolean

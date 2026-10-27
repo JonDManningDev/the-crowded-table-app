@@ -8,14 +8,14 @@ import { AccountContext } from '../user-accounts/accountContext'
 import { useAuth } from './hooks'
 import { AuthPage } from './pages/AuthPage'
 import { AuthFeedback } from './components/AuthFeedback'
-import '../Auth.css'
 import styles from './AuthShell.module.css'
 
-const CreateCommunity = lazy(() => import('../CreateCommunity').then(module => ({ default: module.CreateCommunity })))
+const CreateCommunityPage = lazy(() => import('../communities/pages/CreateCommunityPage').then(module => ({ default: module.CreateCommunityPage })))
 
 export function AuthShell({ children }: { children: ReactNode }) {
   const auth = useAuth()
   const [email, setEmail] = useState('')
+  const [isCommunityCreating, setIsCommunityCreating] = useState(false)
   const profile = useUserAccount(auth.verifiedUserId)
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -28,12 +28,12 @@ export function AuthShell({ children }: { children: ReactNode }) {
   return <AccountContext.Provider key={auth.verifiedUserId || 'guest'} value={{
     ...profile, status: !auth.ready ? 'loading' : auth.verified ? 'signed-in' : 'signed-out',
     email: auth.verified ? auth.session?.user.email ?? null : null, userId: auth.verifiedUserId,
-    busy: auth.busy, signOut: () => { void auth.signOut() },
+    busy: auth.busy || isCommunityCreating, signOut: () => { void auth.signOut() },
   }}>
     {!auth.view && <AuthFeedback error={auth.error} notice={auth.notice} placement="shell"/>}
     {auth.view === 'create-community' ? (
       !auth.ready ? <main className={styles.gate}><p role="status">Checking your session…</p></main>
-        : auth.verified && auth.session ? <LazyContent key={auth.session.user.id}><CreateCommunity onBusyChange={auth.setBusy}/></LazyContent>
+        : auth.verified && auth.session ? <LazyContent key={auth.session.user.id}><CreateCommunityPage onBusyChange={setIsCommunityCreating}/></LazyContent>
         : <main className={styles.gate}><p>Please sign in with a verified account to continue.</p><Link to={authPaths.signin}>Sign in</Link></main>
     ) : auth.view ? <AuthPage view={auth.view} email={email} ready={auth.ready} configured={auth.configured}
       busy={auth.busy} error={auth.error} notice={auth.notice} cooldown={auth.cooldown}

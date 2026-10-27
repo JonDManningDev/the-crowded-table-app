@@ -206,5 +206,5 @@ export function useAuth() {
   }
   const verified = Boolean(session?.user.email_confirmed_at)
   return { session, ready, configured, view, verified, verifiedUserId: verified ? session?.user.id : undefined,
-    busy, setBusy, error, notice, linkFailed, cooldown, submitCredentials, resend, signOut }
+    busy, error, notice, linkFailed, cooldown, submitCredentials, resend, signOut }
 }

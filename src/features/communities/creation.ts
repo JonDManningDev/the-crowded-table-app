@@ -1,3 +1,5 @@
+import type { CommunityCreationDraft } from './types'
+
 // Keep these validation hints aligned with the first schema migration.
 // PostgreSQL remains authoritative, including uniqueness and reserved handles.
 export const countryCodes = `
@@ -22,17 +24,7 @@ const reserved = new Set([
   'settings', 'signup', 'support', 'terms', 'www',
 ])
 
-export type TenantDraft = {
-  name: string
-  slug: string
-  country: string
-  region: string
-  city: string
-  timezone: string
-  join: boolean
-}
-
-export function validateTenant(draft: TenantDraft): string | null {
+export function validateCommunityCreation(draft: CommunityCreationDraft): string | null {
   if (!draft.name.trim() || draft.name.trim().length > 120) {
     return 'Enter a community name of 1–120 characters.'
   }
@@ -52,7 +44,7 @@ export function validateTenant(draft: TenantDraft): string | null {
   return null
 }
 
-export function creationError(error: { code?: string; message?: string }) {
+export function getCommunityCreationError(error: { code?: string; message?: string }) {
   if (error.code === '23505') {
     return 'That community handle is already in use. Choose another, or check Your communities if you submitted this before.'
   }

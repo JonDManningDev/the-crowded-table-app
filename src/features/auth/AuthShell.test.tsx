@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAccount } from '../user-accounts/hooks'
-import { BrowserRouter } from 'react-router'
+import { BrowserRouter, useNavigate } from 'react-router'
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -12,8 +12,9 @@ const auth = vi.hoisted(() => ({
   getSession: vi.fn(), onAuthStateChange: vi.fn(), signUp: vi.fn(), signInWithPassword: vi.fn(),
   resend: vi.fn(), resetPasswordForEmail: vi.fn(), updateUser: vi.fn(), signOut: vi.fn(),
 }))
+const creationRpc = vi.hoisted(() => vi.fn())
 vi.mock('../../lib/supabase', () => ({
-  supabase: { auth },
+  supabase: { auth, rpc: creationRpc },
   authInitialization: Promise.resolve({ error: null }),
   get initialAuthRedirect() {
     const hash = new URLSearchParams(window.location.hash.slice(1))
@@ -239,4 +240,52 @@ it('locks duplicate native form submissions and retains failed credentials for r
   expect((screen.getByLabelText('Email address') as HTMLInputElement).value).toBe('person@example.com')
   submit()
   await waitFor(() => expect(auth.signInWithPassword).toHaveBeenCalledTimes(2))
+})
+
+it('ignores a departed creation result while a new Auth action remains busy', async () => {
+  window.history.replaceState(null, '', '/account/communities/new')
+  auth.getSession.mockResolvedValue({ data: { session }, error: null })
+  let finishCreation!: (value: unknown) => void, finishSignIn!: (value: unknown) => void
+  creationRpc.mockReturnValue(new Promise(resolve => { finishCreation = resolve }))
+  auth.signInWithPassword.mockReturnValue(new Promise(resolve => { finishSignIn = resolve }))
+  function BrowserHistoryControl() {
+    const navigate = useNavigate()
+    return <button onClick={() => navigate('/auth/sign-in')}>Review sign in</button>
+  }
+  render(<BrowserRouter><BrowserHistoryControl/><AuthShell><AccountActions/></AuthShell></BrowserRouter>)
+  await screen.findByLabelText('Community name')
+  fill('Community name', 'Fictional club'); fill('Community handle', 'fictional-club'); fill('Country', 'HN')
+  submit()
+  await waitFor(() => expect(creationRpc).toHaveBeenCalledOnce())
+  fireEvent.click(screen.getByRole('button', { name: 'Review sign in' }))
+  await screen.findByRole('heading', { name: 'Welcome back.' })
+  fill('Email address', 'person@example.com'); fill('Password', 'fictional-test-password'); submit()
+  expect((screen.getByRole('button', { name: 'Please wait…' }) as HTMLButtonElement).disabled).toBe(true)
+  await act(async () => { finishCreation({ data: 'old-tenant', error: null }) })
+  expect(screen.queryByText('Your community is ready.')).toBeNull()
+  expect((screen.getByRole('button', { name: 'Please wait…' }) as HTMLButtonElement).disabled).toBe(true)
+  await act(async () => { listener('SIGNED_IN', session); finishSignIn({ error: null }) })
+  expect(await screen.findByRole('button', { name: 'Sign Out' })).toBeTruthy()
+  expect(window.location.pathname).toBe('/account/home')
+})
+
+it('resets creation for another identity and ignores the old result while its replacement is pending', async () => {
+  window.history.replaceState(null, '', '/account/communities/new')
+  auth.getSession.mockResolvedValue({ data: { session }, error: null })
+  let finishOld!: (value: unknown) => void, finishNew!: (value: unknown) => void
+  creationRpc.mockReturnValueOnce(new Promise(resolve => { finishOld = resolve }))
+    .mockReturnValueOnce(new Promise(resolve => { finishNew = resolve }))
+  render(<BrowserRouter><AuthShell><div>Home</div></AuthShell></BrowserRouter>)
+  await screen.findByLabelText('Community name')
+  fill('Community name', 'Old club'); fill('Community handle', 'old-club'); fill('Country', 'HN'); submit()
+  await act(async () => { listener('SIGNED_IN', { user: { ...session.user, id: 'second-user', email: 'second@example.test' } }) })
+  expect((await screen.findByLabelText('Community name') as HTMLInputElement).value).toBe('')
+  fill('Community name', 'New club'); fill('Community handle', 'new-club'); fill('Country', 'HN'); submit()
+  expect(creationRpc).toHaveBeenCalledTimes(2)
+  await act(async () => { finishOld({ data: 'old-tenant', error: null }) })
+  expect(screen.queryByText('Your community is ready.')).toBeNull()
+  expect((document.querySelector('fieldset') as HTMLFieldSetElement).disabled).toBe(true)
+  await act(async () => { finishNew({ data: 'new-tenant', error: null }) })
+  expect((await screen.findByRole('status')).textContent).toContain('New club')
+  expect(screen.queryByText('Old club')).toBeNull()
 })
