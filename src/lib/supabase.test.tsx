@@ -27,7 +27,7 @@ it.each(['signup', 'recovery'])('handles %s when the real SDK consumes the URL b
   expect(initialized?.error).toBeNull()
   expect(window.location.hash).toBe('')
   const { BrowserRouter } = await import('react-router')
-  const { AuthShell } = await import('../features/Auth')
+  const { AuthShell } = await import('../features/auth/AuthShell')
   render(<StrictMode><BrowserRouter><AuthShell><div>Home</div></AuthShell></BrowserRouter></StrictMode>)
   if (type === 'signup') {
     await screen.findByText('Your email is confirmed. Welcome to The Crowded Table.')

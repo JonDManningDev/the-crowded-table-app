@@ -1,18 +1,18 @@
 import { useState } from 'react'
-import { useAccount } from './user-accounts/hooks'
+import { useAccount } from '../user-accounts/hooks'
 import { BrowserRouter } from 'react-router'
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { AuthShell } from './Auth'
-import { AccountActions } from './auth/AccountActions'
-import { AccountCommunitiesTab } from './user-accounts/components/AccountCommunitiesTab'
+import { AuthShell } from './AuthShell'
+import { AccountActions } from './AccountActions'
+import { AccountCommunitiesTab } from '../user-accounts/components/AccountCommunitiesTab'
 
 const auth = vi.hoisted(() => ({
   getSession: vi.fn(), onAuthStateChange: vi.fn(), signUp: vi.fn(), signInWithPassword: vi.fn(),
   resend: vi.fn(), resetPasswordForEmail: vi.fn(), updateUser: vi.fn(), signOut: vi.fn(),
 }))
-vi.mock('../lib/supabase', () => ({
+vi.mock('../../lib/supabase', () => ({
   supabase: { auth },
   authInitialization: Promise.resolve({ error: null }),
   get initialAuthRedirect() {
@@ -221,4 +221,22 @@ it('does not load profile data for an unverified restored session', async () => 
   }
   render(<BrowserRouter><AuthShell><Consumer/></AuthShell></BrowserRouter>)
   await screen.findByText(JSON.stringify({ status: 'signed-out', name: '', loading: false, error: '' }))
+})
+
+it('locks duplicate native form submissions and retains failed credentials for retry', async () => {
+  let resolve!: (value: { error: Error | null }) => void
+  auth.signInWithPassword.mockReturnValueOnce(new Promise(done => { resolve = done }))
+  window.history.replaceState(null, '', '/auth/sign-in')
+  await start()
+  fill('Email address', 'person@example.com')
+  fill('Password', 'fictional-draft-password')
+  act(() => { submit(); submit() })
+  expect(auth.signInWithPassword).toHaveBeenCalledOnce()
+  expect((screen.getByRole('button', { name: 'Please wait…' }) as HTMLButtonElement).disabled).toBe(true)
+  await act(async () => { resolve({ error: new Error('Please retry sign-in') }) })
+  expect(screen.getByRole('alert').textContent).toBe('Please retry sign-in')
+  expect((screen.getByLabelText('Password') as HTMLInputElement).value).toBe('fictional-draft-password')
+  expect((screen.getByLabelText('Email address') as HTMLInputElement).value).toBe('person@example.com')
+  submit()
+  await waitFor(() => expect(auth.signInWithPassword).toHaveBeenCalledTimes(2))
 })

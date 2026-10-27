@@ -1,0 +1,11 @@
+/* Preserved Auth-specific error paint; no approved shared error-text role fits.
+   Match .panel p specificity so ordinary panel copy cannot override feedback. */
+.error, :global(.panel) p.error { color:#913d27; }
+/* Mixed alert/status banner retains its legacy palette and shell geometry:
+   14/28px editorial inset and 238/210/175px shell offsets are not general spacing. */
+/* API messages can contain uninterrupted identifiers; wrap them within the
+   banner without changing normal message geometry or shared text rules. */
+.feedback { margin:0; padding:14px 28px; background:var(--ct-ref-color-sage-100); margin-left:238px; overflow-wrap:anywhere; }
+@media(max-width:1200px) { .feedback { margin-left:210px; } }
+@media(max-width:950px) { .feedback { margin-left:175px; } }
+@media(max-width:700px) { .feedback { margin-left:0; } }
