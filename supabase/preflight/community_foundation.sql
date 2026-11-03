@@ -14,7 +14,10 @@ with accounts as (
   from public.tenant_staff_assignments s left join public.community_accounts c using (tenant_id, user_id)
 ), blockers as (
   select
-    (select count(*) from staff where role = 'owner' and (status <> 'active' or standing is distinct from 'approved')) as owners_requiring_repair,
+    (select count(*) from public.tenants t where not exists (
+      select from public.tenant_staff_assignments s join public.community_accounts c using (tenant_id,user_id)
+      where s.tenant_id=t.id and s.role='owner' and s.status='active' and c.standing='approved'
+    )) as owners_requiring_repair,
     (select count(*) from staff where role <> 'owner' and status = 'active' and standing is distinct from 'approved') as ineligible_active_staff,
     (select count(*) from accounts where missing_profile and not usable_global) as missing_profile_sources,
     (select count(*) from accounts where standing not in ('pending','approved','suspended','removed')) as unknown_standings

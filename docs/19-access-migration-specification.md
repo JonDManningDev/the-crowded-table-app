@@ -17,6 +17,8 @@ Local gates precede hosted verification. Rehearse recovery, test privilege defau
 
 **Local checkpoint.** B-08 defaults for the existing postgres/public creator, G-03f reference data and the G-02 guard on existing community account/profile rows are verified. The standing reference is served over HTTP. Local preflight covers data readiness for the coordinated schema and writer switch. See [verification and remaining work](12-implementation-status.md#community-foundation-prerequisites--verified-locally-2026-11-03).
 
+A [disposable cutover rehearsal](12-implementation-status.md#community-write-cutover-rehearsal) now exercises the account and staff backfills. Promotion into the migration ledger depends on the coordinated writer and privilege switch.
+
 ## Review summary
 
 Recommend a coordinated foundation migration that:

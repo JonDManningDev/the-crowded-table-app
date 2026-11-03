@@ -2,7 +2,8 @@
 // Creates uniquely identified synthetic fixtures and removes only those fixtures.
 import assert from 'node:assert/strict';
 import { localStack } from './local-stack.mjs';
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
+import { holdLocalTransaction } from './hold-local-transaction.mjs';
 import { createHmac, randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
@@ -49,29 +50,7 @@ async function waitForBlocked(functionName) {
   }
   assert.fail(`${functionName} did not wait for the coordinating transaction`);
 }
-// Hold a real open transaction until the caller releases it; no timing sleeps.
-async function hold(statement) {
-  const process = spawn('docker', ['exec', '-i', container, 'psql', '-X', '-qAt', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1']);
-  let output = '', error = '';
-  const finished = new Promise((resolve, reject) => {
-    process.on('error', reject);
-    process.on('close', code => code === 0 ? resolve() : reject(new Error(error || `psql exited ${code}`)));
-  });
-  // Attach rejection handling immediately while waiting for readiness.
-  finished.catch(() => {});
-  const ready = new Promise((resolve, reject) => {
-    const timer = setTimeout(() => { process.stdin.end('rollback;'); reject(new Error('lock acquisition timed out')); }, 10000);
-    process.stdout.on('data', chunk => {
-      output += chunk;
-      if (output.includes('fixture_lock_ready')) { clearTimeout(timer); resolve(); }
-    });
-    process.stderr.on('data', chunk => { error += chunk; });
-    finished.catch(err => { clearTimeout(timer); reject(err); });
-  });
-  process.stdin.write(`begin; ${statement}; select 'fixture_lock_ready';\n`);
-  await ready;
-  return async (commit = false) => { process.stdin.end(commit ? 'commit;\n' : 'rollback;\n'); await finished; };
-}
+const hold = statement => holdLocalTransaction(container, 'postgres', statement);
 
 try {
   sql(`insert into auth.users(id,email,email_confirmed_at) values ${identities.map(id => `('${id}','${id}@example.test',${id === unverified ? 'null' : 'now()'})`).join(',')};`);
