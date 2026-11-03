@@ -1,0 +1,25 @@
+{
+  "name": "@crowded-table/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env.local src/index.ts",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "test:local": "node --env-file=.env.local tests/preferences-local.mjs",
+    "setup:local": "node scripts/setup-local.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
+    "fastify": "^5.12.8",
+    "kysely": "^0.29.8",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8",
+    "json-schema-to-ts": "^3.1.1"
+  }
+}

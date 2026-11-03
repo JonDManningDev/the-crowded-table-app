@@ -1,14 +1,15 @@
 // Real Supabase SDK/PostgREST and concurrent SQL checks. Local Docker only.
 // Creates uniquely identified synthetic fixtures and removes only those fixtures.
 import assert from 'node:assert/strict';
-import { execFileSync, execSync, spawn } from 'node:child_process';
+import { localStack } from './local-stack.mjs';
+import { execFileSync, spawn } from 'node:child_process';
 import { createHmac, randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const container = 'supabase_db_the-crowded-table-app';
-const config = JSON.parse(execSync('npx --yes supabase status --output json', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+const config = localStack();
 const url = new URL(config.API_URL);
-assert.ok(['127.0.0.1', 'localhost'].includes(url.hostname) && url.port === '54321', 'local API required');
+assert.ok(['127.0.0.1', 'localhost'].includes(url.hostname), 'local API required');
 const owner = randomUUID(), member = randomUUID(), other = randomUUID(), unverified = randomUUID();
 const identities = [owner, member, other, unverified];
 const slug = `data-api-${randomUUID()}`;
@@ -80,29 +81,16 @@ try {
   sql(asUser(other, `select public.join_community('${tenant}');`));
   const a = client(owner), b = client(member), c = client(other), u = client(unverified);
 
-  assert.equal((await success(b.from('user_accounts').select('allow_direct_messages').single())).allow_direct_messages, true);
-  await success(b.from('user_accounts').update({ allow_direct_messages: false }).eq('user_id', member).select('user_id').single());
-  assert.equal((await success(b.from('user_accounts').select('allow_direct_messages').single())).allow_direct_messages, false);
-  assert.equal(sql(`select updated_by from public.user_accounts where user_id='${member}';`), member);
-  await denied(b.from('user_accounts').update({ allow_direct_messages: null }).eq('user_id', member), '23502');
-  await denied(b.from('user_accounts').update({ allow_direct_messages: false }).eq('user_id', owner).select('user_id').single(), 'PGRST116');
-  await denied(u.from('user_accounts').update({ allow_direct_messages: false }).eq('user_id', unverified).select('user_id').single(), 'PGRST116');
-  await denied(b.from('user_accounts').update({ updated_by: owner }).eq('user_id', member), '42501');
+  await denied(b.from('user_accounts').select('allow_direct_messages'), '42501');
+  await denied(b.from('user_accounts').update({ allow_direct_messages: false }).eq('user_id', member), '42501');
   for (const display_name of ['First name', 'Changed name']) {
     const row = await success(b.from('user_account_profiles').upsert({ display_name, bio: ' ' }, { onConflict: 'user_id' }).select('user_id,display_name,bio,created_by,updated_by').single());
     assert.deepEqual(row, { user_id: member, display_name, bio: null, created_by: member, updated_by: member });
   }
-  await success(b.from('user_accounts').update({ user_is_discoverable: false, enable_matchmaking: false }).eq('user_id', member).select('user_id').single());
-  await success(b.from('user_accounts').update({ enable_matchmaking: true }).eq('user_id', member).select('user_id').single());
-  assert.deepEqual(await success(b.from('user_accounts').select('user_is_discoverable,enable_matchmaking').single()), { user_is_discoverable: false, enable_matchmaking: true });
-  assert.equal((await success(b.from('user_accounts').select('allow_direct_messages').single())).allow_direct_messages, false);
-  await success(b.from('user_accounts').update({ user_is_discoverable: false, enable_matchmaking: true, allow_direct_messages: true }).eq('user_id', member).select('user_id').single());
-  assert.deepEqual(await success(b.from('user_accounts').select('user_is_discoverable,enable_matchmaking,allow_direct_messages').single()), { user_is_discoverable: false, enable_matchmaking: true, allow_direct_messages: true });
-  await denied(b.from('user_accounts').update({ user_is_discoverable: true }).eq('user_id', owner).select('user_id').single(), 'PGRST116');
   await denied(b.from('user_account_profiles').update({ updated_by: owner }).eq('user_id', member), '42501');
   await denied(b.from('user_account_profiles').upsert({ user_id: owner, display_name: 'Spoofed' }), '42501');
   await denied(u.from('user_account_profiles').upsert({ display_name: 'Unverified' }), '42501');
-  await denied(u.from('user_accounts').update({ enable_matchmaking: false }).eq('user_id', unverified).select('user_id').single(), 'PGRST116');
+  await denied(u.from('user_accounts').update({ enable_matchmaking: false }).eq('user_id', unverified).select('user_id').single(), '42501');
 
   for (const display_name of ['Community name', 'Community updated']) {
     const row = await success(b.from('community_account_profiles').upsert({ tenant_id: tenant, display_name, bio: '' }, { onConflict: 'tenant_id,user_id' }).select('user_id,display_name,bio').single());
@@ -165,7 +153,7 @@ try {
   await success(a.from('tenant_website_content_overrides').update({ text_value: 'Archived owner' }).eq('tenant_id', tenant).select('content_key').single());
   await success(b.from('user_account_profiles').update({ bio: 'Global still editable' }).eq('user_id', member).select('user_id').single());
   sql(`update auth.users set banned_until=now()+interval '1 day' where id='${member}';`);
-  await denied(b.from('user_accounts').update({ enable_matchmaking: false }).eq('user_id', member).select('user_id').single(), 'PGRST116');
+  await denied(b.from('user_accounts').update({ enable_matchmaking: false }).eq('user_id', member).select('user_id').single(), '42501');
   await denied(b.from('user_account_profiles').upsert({ display_name: 'Banned' }), '42501');
   const creations = await Promise.all([a, c].map(actor => actor.rpc('create_tenant', {
     p_slug: `${slug}-race`, p_name: 'Concurrent creation', p_country_code: 'HN', p_timezone: 'UTC',

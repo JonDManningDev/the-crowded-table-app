@@ -10,7 +10,7 @@ const database = `crowded_table_api_test_${randomUUID().replaceAll('-', '')}`;
 assert.match(database, /^crowded_table_api_test_[0-9a-f]{32}$/);
 const migrations = new URL('../migrations/', import.meta.url);
 const files = readdirSync(migrations).filter(name => name.endsWith('.sql')).sort();
-assert.equal(files.at(-1), '20261024000300_account_communication_preferences.sql', 'update this test when the migration set changes');
+assert.equal(files.at(-1), '20261103000200_runtime_audit_actor.sql', 'update this test when the migration set changes');
 const owner = '30000000-0000-0000-0000-000000000001';
 const admin = '30000000-0000-0000-0000-000000000002';
 function sql(statement) {
@@ -42,6 +42,9 @@ try {
   sql(asUser(owner, `select public.create_tenant_admin('${tenant}','${admin}'); select public.set_admin_permissions('${tenant}','${admin}',true,false); select public.set_website_content_override('${tenant}','community.hero.heading','Original copy'); select public.set_tenant_archived('${tenant}',true);`));
   apply('20261024000200_direct_data_api.sql');
   apply('20261024000300_account_communication_preferences.sql');
+  apply('20261103000100_preferences_api.sql');
+  apply('20261103000200_runtime_audit_actor.sql');
+  assert.equal(sql(`select has_column_privilege('authenticated','public.user_accounts','enable_matchmaking','UPDATE');`), 'f');
   assert.equal(sql(`select bool_and(allow_direct_messages) from public.user_accounts;`), 't');
   assert.equal(sql(`select can_modify_content from public.tenant_staff_assignments where role='owner';`), 't');
   assert.equal(sql(`select can_approve_users and not can_create_admin and not can_modify_content from public.tenant_staff_assignments where role='admin';`), 't');

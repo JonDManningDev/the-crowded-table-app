@@ -18,7 +18,7 @@ select is((select count(*) from public.community_accounts),0::bigint,'signup doe
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
 select set_config('test.tenant_a',public.create_tenant('community-a','Community A','HN','America/Tegucigalpa')::text,true);
-select is((select count(*) from public.user_accounts),1::bigint,'account RLS is self-only');
+select throws_ok($$select count(*) from public.user_accounts$$,'42501',null,'browser cannot read raw account rows');
 select is((select count(*) from public.community_accounts),0::bigint,'owner can opt out of participation');
 select ok((select can_approve_users and can_create_admin from public.tenant_staff_assignments),'owner flags initialize true');
 select is((select auto_approve_users from public.tenant_settings),false,'auto approval defaults false');
@@ -42,7 +42,7 @@ select throws_ok($$select public.set_auto_approve_users(current_setting('test.te
 select is((select count(*) from public.tenant_admin_actions where tenant_id=current_setting('test.tenant_a')::uuid),0::bigint,'cross tenant audit reads denied');
 
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000005',true);
-select is((select count(*) from public.user_accounts),0::bigint,'unverified cannot read authenticated account');
+select throws_ok($$select count(*) from public.user_accounts$$,'42501',null,'browser cannot read raw account rows');
 select throws_ok($$select public.create_tenant('unverified','X','HN','UTC')$$,'42501',null,'unverified cannot create tenant');
 select throws_ok($$select public.join_community(current_setting('test.tenant_a')::uuid)$$,'42501',null,'unverified cannot join');
 

@@ -1,5 +1,7 @@
 # Auth and multi-tenancy plan
 
+**2026-11-03.** The [approved API transition](20-persistent-api-transition-proposal.md) governs new application-data paths. Earlier descriptions of direct browser access apply to the unmigrated implementation. Client feature boundaries, Supabase Auth and accepted product audiences continue to apply.
+
 For the current reactivation rules, see [G-03d in the migration specification](19-access-migration-specification.md). It supersedes earlier reinstatement rules in this document.
 
 Status: accepted intended product audiences and lifecycle rules govern authorization design, even where consuming UI is unfinished. Initial milestone policies below describe implementation status and do not override accepted target requirements. Distinguish unresolved proposals from settled decisions; resolve missing business rules before dependent access changes. The user's [2026-10-27 access-design direction](08-decisions-and-open-questions.md#product-driven-access-design--accepted-2026-10-27) supersedes the former blanket precedence of initial milestone boundaries.

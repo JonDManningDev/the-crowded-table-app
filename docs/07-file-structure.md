@@ -1,5 +1,7 @@
 # Application file structure and client refactor
 
+**2026-11-03.** The [approved API transition](20-persistent-api-transition-proposal.md) governs new application-data paths. Earlier descriptions of direct browser access apply to the unmigrated implementation. Client feature boundaries, Supabase Auth and accepted product audiences continue to apply.
+
 Footer extraction (2026-10-21): `app/layout/Footer.tsx` renders the shared footer in the existing App content position. Its colocated `Footer.module.css` owns the decorative text, border, spacing and mobile stacking rules previously in App.css. The footer continues to use the shared Icon primitive.
 
 Sidebar style ownership (2026-10-21): `app/layout/Sidebar.module.css` now owns all sidebar-specific presentation, including brand/location/motto, account area and desktop/tablet/mobile rules. Sidebar.tsx uses only module classes for these elements. Shared primitives (Avatar, Botanical, NavItem) retain their shared base styles; the module scopes its Botanical positioning override. App.css retains main-content offsets, which belong to the application shell.

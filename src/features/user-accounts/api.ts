@@ -1,3 +1,4 @@
+import { preferencesPath, preferencesSchema } from '../../../shared/account-preferences'
 import { previewCommunity } from '../../mock/data'
 import { supabase } from '../../lib/supabase'
 import type { CommunityFilter, CommunitySummary, CommunityCardData, AccountPreferences, AccountProfilePlaceholders, AccountProfileInsight, PremiumFeaturePlaceholder } from './types'
@@ -63,27 +64,36 @@ export async function saveOwnProfile(name: string, bio: string) {
   if (result.error) throw new Error('Your profile could not be saved. Please try again.')
 }
 
-export async function readAccountPreferences(userId: string): Promise<AccountPreferences> {
+async function requestPreferences(expectedUserId: string, preferences?: AccountPreferences) {
   if (!supabase) throw new Error('Account services are not configured.')
-  const result = await supabase
-    .from('user_accounts')
-    .select('user_is_discoverable,enable_matchmaking,allow_direct_messages')
-    .eq('user_id', userId)
-    .single()
-  if (result.error) throw result.error
-  return result.data
+  const { data, error } = await supabase.auth.getSession()
+  // A session switch must not save the preceding viewer's draft as the new user.
+  if (error || !data.session || data.session.user.id !== expectedUserId) throw new Error('Account session changed.')
+  const response = await fetch(preferencesPath, {
+    method: preferences ? 'PUT' : 'GET',
+    headers: {
+      Authorization: `Bearer ${data.session.access_token}`,
+      ...(preferences && { 'Content-Type': 'application/json' }),
+    },
+    body: preferences && JSON.stringify(preferences),
+    cache: 'no-store',
+    redirect: 'error',
+  })
+  if (!response.ok) throw new Error('Account preferences are unavailable.')
+  return response
+}
+
+export async function readAccountPreferences(userId: string): Promise<AccountPreferences> {
+  const response = await requestPreferences(userId)
+  const data = await response.json()
+  if (!preferencesSchema.required.every(key => typeof data?.[key] === 'boolean')) {
+    throw new Error('Invalid account preferences response.')
+  }
+  return data
 }
 
 export async function saveAccountPreferences(userId: string, preferences: AccountPreferences) {
-  if (!supabase) throw new Error('Account services are not configured.')
-  // RLS verifies the selected account belongs to the caller; single() rejects
-  // missing/denied rows instead of reporting an empty UPDATE as a successful save.
-  const result = await supabase.from('user_accounts').update({
-    user_is_discoverable: preferences.user_is_discoverable,
-    enable_matchmaking: preferences.enable_matchmaking,
-    allow_direct_messages: preferences.allow_direct_messages,
-  }).eq('user_id', userId).select('user_id').single()
-  if (result.error) throw result.error
+  await requestPreferences(userId, preferences)
 }
 
 export function toCommunityCards(rows: CommunitySummary[]): CommunityCardData[] {

@@ -3,10 +3,12 @@
   "private": true,
   "version": "0.1.1",
   "type": "module",
+  "workspaces": ["server"],
   "scripts": {
     "test": "vitest run",
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "vite --mode local-api",
+    "dev:api": "npm start -w server",
+    "build": "npm run check -w server && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

@@ -1,5 +1,7 @@
 # PWA and delivery plan
 
+**2026-11-03.** The [approved API transition](20-persistent-api-transition-proposal.md) governs new application-data paths. Earlier descriptions of direct browser access apply to the unmigrated implementation. Client feature boundaries, Supabase Auth and accepted product audiences continue to apply.
+
 For the current reactivation rules, see [G-03d in the migration specification](19-access-migration-specification.md). It supersedes earlier reinstatement rules in this document.
 
 Status: mobile PWA and product scope established; rollout and offline policy proposed.

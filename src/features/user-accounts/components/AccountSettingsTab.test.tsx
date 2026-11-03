@@ -10,14 +10,12 @@ function Settings({ userId = 'viewer', status = 'signed-in' }: { userId?: string
   </AccountContext.Provider></MemoryRouter>
 }
 
-const db = vi.hoisted(() => ({ from: vi.fn(), select: vi.fn(), eq: vi.fn(), single: vi.fn(), update: vi.fn() }))
-vi.mock('../../../lib/supabase', () => ({ supabase: db }))
+const api = vi.hoisted(() => ({ readAccountPreferences: vi.fn(), saveAccountPreferences: vi.fn() }))
+vi.mock('../api', async importOriginal => ({ ...await importOriginal<typeof import('../api')>(), ...api }))
 afterEach(() => { cleanup(); vi.resetAllMocks() })
 
 it('loads saved preferences and saves independent values without resetting them to defaults', async () => {
-  db.from.mockReturnValue(db); db.select.mockReturnValue(db); db.eq.mockReturnValue(db)
-  db.single.mockResolvedValue({ data: { user_is_discoverable: false, enable_matchmaking: true, allow_direct_messages: false }, error: null })
-  db.update.mockReturnValue(db)
+  api.readAccountPreferences.mockResolvedValue({ user_is_discoverable: false, enable_matchmaking: true, allow_direct_messages: false })
   render(<Settings/>)
   const search = await screen.findByRole('switch', { name: /Appear in global/ }) as HTMLInputElement
   const matching = screen.getByRole('switch', { name: /Participate in global/ }) as HTMLInputElement
@@ -33,23 +31,21 @@ it('loads saved preferences and saves independent values without resetting them 
   fireEvent.click(matching)
   fireEvent.click(screen.getByRole('button', { name: 'Save account preferences' }))
   await screen.findByText('Account preferences saved.')
-  expect(db.eq).toHaveBeenCalledWith('user_id', 'viewer')
-  expect(db.update).toHaveBeenCalledWith({ user_is_discoverable: false, enable_matchmaking: false, allow_direct_messages: true })
+  expect(api.readAccountPreferences).toHaveBeenCalledWith('viewer')
+  expect(api.saveAccountPreferences).toHaveBeenCalledWith('viewer', { user_is_discoverable: false, enable_matchmaking: false, allow_direct_messages: true })
 })
 
 it('does not invent default settings when a read fails', async () => {
-  db.from.mockReturnValue(db); db.select.mockReturnValue(db); db.eq.mockReturnValue(db)
-  db.single.mockResolvedValue({ data: null, error: { message: 'offline' } })
+  api.readAccountPreferences.mockRejectedValue(new Error('offline'))
   render(<Settings/>)
   await screen.findByRole('alert')
   expect(screen.queryByRole('switch')).toBeNull()
-  expect(db.update).not.toHaveBeenCalled()
+  expect(api.saveAccountPreferences).not.toHaveBeenCalled()
 })
 
 it('keeps the draft and reports failure when a preference update affects no eligible row', async () => {
-  db.from.mockReturnValue(db); db.select.mockReturnValue(db); db.eq.mockReturnValue(db); db.update.mockReturnValue(db)
-  db.single.mockResolvedValueOnce({ data: { user_is_discoverable: true, enable_matchmaking: true, allow_direct_messages: false }, error: null })
-  db.single.mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } })
+  api.readAccountPreferences.mockResolvedValueOnce({ user_is_discoverable: true, enable_matchmaking: true, allow_direct_messages: false })
+  api.saveAccountPreferences.mockRejectedValueOnce(new Error('missing'))
   render(<Settings/>)
   fireEvent.click(await screen.findByRole('switch', { name: /Appear in global/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Save account preferences' }))
@@ -60,9 +56,8 @@ it('keeps the draft and reports failure when a preference update affects no elig
 
 
 it('disables every switch during the single combined save', async () => {
-  db.from.mockReturnValue(db); db.select.mockReturnValue(db); db.eq.mockReturnValue(db); db.update.mockReturnValue(db)
-  db.single.mockResolvedValueOnce({ data: { user_is_discoverable: true, enable_matchmaking: false, allow_direct_messages: true }, error: null })
-  db.single.mockImplementationOnce(() => new Promise(() => {}))
+  api.readAccountPreferences.mockResolvedValueOnce({ user_is_discoverable: true, enable_matchmaking: false, allow_direct_messages: true })
+  api.saveAccountPreferences.mockImplementationOnce(() => new Promise(() => {}))
   render(<Settings/>)
   await screen.findByRole('switch', { name: /Allow direct messages/ })
   fireEvent.click(screen.getByRole('button', { name: 'Save account preferences' }))
@@ -78,13 +73,9 @@ function deferred<T>() {
   return { promise, resolve }
 }
 const initialPreferences = { user_is_discoverable: true, enable_matchmaking: false, allow_direct_messages: true }
-function prepareDatabase() {
-  db.from.mockReturnValue(db); db.select.mockReturnValue(db); db.eq.mockReturnValue(db); db.update.mockReturnValue(db)
-}
 
 it('keeps the premium placeholder and destinations available when preferences fail to load', async () => {
-  prepareDatabase()
-  db.single.mockResolvedValue({ data: null, error: { message: 'offline' } })
+  api.readAccountPreferences.mockRejectedValue(new Error('offline'))
   render(<Settings/>)
   await screen.findByRole('alert')
   expect(screen.getByText('Community ownership')).toBeTruthy()
@@ -94,7 +85,7 @@ it('keeps the premium placeholder and destinations available when preferences fa
 
 it.each(['signed-out', 'loading'] as const)('does not load preferences for a %s account even with a stale ID', status => {
   render(<Settings userId="stale" status={status}/>)
-  expect(db.from).not.toHaveBeenCalled()
+  expect(api.readAccountPreferences).not.toHaveBeenCalled()
   expect(screen.queryByRole('switch')).toBeNull()
 })
 
@@ -102,31 +93,29 @@ it('does not request preferences when the signed-in account has no ID', () => {
   render(<MemoryRouter><AccountContext.Provider value={{ status: 'signed-in', email: null }}>
     <AccountSettingsTab/>
   </AccountContext.Provider></MemoryRouter>)
-  expect(db.from).not.toHaveBeenCalled()
+  expect(api.readAccountPreferences).not.toHaveBeenCalled()
   expect(screen.queryByRole('switch')).toBeNull()
   expect(screen.getByText('Community ownership')).toBeTruthy()
 })
 
 it('discards a late load from the previous account and hides its draft during the new load', async () => {
-  prepareDatabase()
-  const first = deferred<{ data: typeof initialPreferences; error: null }>()
-  const second = deferred<{ data: typeof initialPreferences; error: null }>()
-  db.single.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+  const first = deferred<typeof initialPreferences>()
+  const second = deferred<typeof initialPreferences>()
+  api.readAccountPreferences.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
   const view = render(<Settings userId="first"/>)
   view.rerender(<Settings userId="second"/>)
   expect(screen.queryByRole('switch')).toBeNull()
-  await act(async () => { first.resolve({ data: initialPreferences, error: null }) })
+  await act(async () => { first.resolve(initialPreferences) })
   expect(screen.queryByRole('switch')).toBeNull()
-  await act(async () => { second.resolve({ data: { ...initialPreferences, user_is_discoverable: false }, error: null }) })
+  await act(async () => { second.resolve({ ...initialPreferences, user_is_discoverable: false }) })
   expect((screen.getByRole('switch', { name: /Appear in global/ }) as HTMLInputElement).checked).toBe(false)
 })
 
 it.each([null, { message: 'denied' }])('ignores a late save completion after switching accounts (error: %j)', async error => {
-  prepareDatabase()
   const pendingSave = deferred<{ data: null; error: typeof error }>()
-  db.single.mockResolvedValueOnce({ data: initialPreferences, error: null })
-    .mockReturnValueOnce(pendingSave.promise)
-    .mockResolvedValueOnce({ data: { ...initialPreferences, allow_direct_messages: false }, error: null })
+  api.readAccountPreferences.mockResolvedValueOnce(initialPreferences)
+    .mockResolvedValueOnce({ ...initialPreferences, allow_direct_messages: false })
+  api.saveAccountPreferences.mockImplementationOnce(async () => { if ((await pendingSave.promise).error) throw new Error('denied') })
   const view = render(<Settings userId="first"/>)
   await screen.findByRole('switch', { name: /Allow direct/ })
   fireEvent.click(screen.getByRole('button', { name: 'Save account preferences' }))
@@ -140,10 +129,8 @@ it.each([null, { message: 'denied' }])('ignores a late save completion after swi
 })
 
 it('retains a failed draft for retry, then clears success after the next edit', async () => {
-  prepareDatabase()
-  db.single.mockResolvedValueOnce({ data: initialPreferences, error: null })
-    .mockResolvedValueOnce({ data: null, error: { message: 'denied' } })
-    .mockResolvedValueOnce({ data: { user_id: 'viewer' }, error: null })
+  api.readAccountPreferences.mockResolvedValueOnce(initialPreferences)
+  api.saveAccountPreferences.mockRejectedValueOnce(new Error('denied')).mockResolvedValueOnce(undefined)
   render(<Settings/>)
   fireEvent.click(await screen.findByRole('switch', { name: /Allow direct/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Save account preferences' }))
@@ -151,8 +138,8 @@ it('retains a failed draft for retry, then clears success after the next edit', 
   expect((screen.getByRole('switch', { name: /Allow direct/ }) as HTMLInputElement).checked).toBe(false)
   fireEvent.click(screen.getByRole('button', { name: 'Save account preferences' }))
   await screen.findByText('Account preferences saved.')
-  expect(db.update).toHaveBeenNthCalledWith(1, { ...initialPreferences, allow_direct_messages: false })
-  expect(db.update).toHaveBeenNthCalledWith(2, { ...initialPreferences, allow_direct_messages: false })
+  expect(api.saveAccountPreferences).toHaveBeenNthCalledWith(1, 'viewer', { ...initialPreferences, allow_direct_messages: false })
+  expect(api.saveAccountPreferences).toHaveBeenNthCalledWith(2, 'viewer', { ...initialPreferences, allow_direct_messages: false })
   expect(screen.queryByRole('alert')).toBeNull()
   fireEvent.click(screen.getByRole('switch', { name: /Appear in global/ }))
   expect(screen.queryByText('Account preferences saved.')).toBeNull()

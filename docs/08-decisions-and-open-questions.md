@@ -547,6 +547,10 @@ Add `tenant_staff_assignments.can_moderate_all_chats`: broad moderation of all n
 
 All new flags remain false by default for non-owners and always true for owners under the existing invariant. Editing the new broad-moderation flag follows the existing owner-only staff-permission rule; AM-05's delegation exception still applies only to the two audit flags. After the October 31 report-permission merge, the inventory has ten accepted unmigrated additions plus the separate staff-creation rename. Documentation only; no migration, application or hosted changes are implemented.
 
+### Persistent application API — accepted 2026-11-03
+
+One Fastify service owns application authorization and transactions using Kysely and pg. Supabase Auth and PostgreSQL remain. A dedicated non-owner login enforces scoped grants, with database integrity and owner-only archive RLS retained. Migrate locally by feature starting with Account Settings. This supersedes the October 24 and October 28 transport choices. Matrix 16 and the settled Package 2–3 decisions govern behavior. See the [approved API transition](20-persistent-api-transition-proposal.md).
+
 ### Backend access layers — accepted direction 2026-10-28
 
 Customize PostgreSQL grants by operation to control client-accessible columns. Identity and audit columns are never client-writable; trusted database/server mechanisms supply them. INSERT and UPDATE grants may differ, with UPDATE narrower than INSERT. SELECT will usually grant all columns of the intended relation, subject to the accepted data/audience contract; this is a general convention, not approval to expose every field in every table or override a documented projection exception.

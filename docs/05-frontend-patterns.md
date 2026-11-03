@@ -1,5 +1,7 @@
 # Frontend code patterns
 
+**2026-11-03.** The [approved API transition](20-persistent-api-transition-proposal.md) governs new application-data paths. Earlier descriptions of direct browser access apply to the unmigrated implementation. Client feature boundaries, Supabase Auth and accepted product audiences continue to apply.
+
 For the current reactivation rules, see [G-03d in the migration specification](19-access-migration-specification.md). It supersedes earlier reinstatement rules in this document.
 
 Suspension workflow target: [suspension and clearance decisions](16-intended-access-matrix.md#suspension-and-clearance--accepted-2026-10-30). Present planned/registered community-public commitments individually for discretionary cancellation by the disciplining staff user; do not automatically cancel all or include private activities as suspension effects. Distinguish cancelling the target's hosted activity from withdrawing their reservation elsewhere. Reflect required permissions and server-confirmed scope. Clearing suspended standing returns approved; inactive clearance permits previously approved members to self-reactivate. No UI is implemented by this requirement.

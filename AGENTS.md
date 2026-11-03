@@ -7,14 +7,12 @@
 - Implement and verify against the applicable documented requirements, including acceptance criteria, privacy, authorization, and lifecycle rules. Report verification results and any unverified behavior accurately.
 - Before finishing implementation, update the relevant documentation with implementation and deployment status, remaining work, and any variances agreed upon with the user during execution. Reconcile affected documents; do not rewrite requirements merely to match an accidental implementation difference.
 
-# Database authorization and Data API design
+# Application data and authorization
 
-- Define the entitlement before choosing an interface. Identify the actor, operation, rows, fields, required context, and whether the caller may browse the matching set. Evaluate what a caller can learn with all client filters removed, every granted column selected, and all available joins or embeddings.
-- Use direct Data API reads and writes for ordinary operations. Specify column grants per method and RLS per operation. Let the database supply identity and audit fields and enforce invariants. An invoker view can project rows the caller already has permission to read.
-- Put reusable authorization in private helpers. Derive the actor from the verified session and check any protected relations inside the helper. Enforce the predicate within the policy or command that performs the operation. Client permission checks are advisory.
-- Justify each exposed RPC. For reads, identify the extra disclosure a direct relation permits or the source input the database must validate. For writes, identify the protected transition, concurrency hazard or effects that must commit together. A new screen, a complex join or routine audit stamping alone is insufficient.
-- Choose execution privileges independently of transport. Both tables and RPCs use the Supabase Data API. Prefer caller privileges. For every security definer function, document the protected access it needs, narrowly grant execution, and enforce caller, tenant and archive boundaries inside the function.
-- Verify through the actual API. Pair each allowed request with its nearest denial, including removed filters, extra columns, tenant substitution, unrelated source IDs and embeddings. Test stale inputs, retries and concurrent changes for transitions.
+- Follow the approved persistent API plan in `docs/20-persistent-api-transition-proposal.md`. Browser Supabase Auth supplies identity tokens. Feature adapters call typed HTTP operations for migrated data.
+- Define each actor, operation, row, field, enumeration and context from the intended access matrix. Authorize from verified identity and current database state. Serialize sensitive checks and writes together.
+- Use the dedicated least-privileged application role. Preserve database integrity, trusted attribution and G-02 archive RLS. For remaining direct surfaces verify grants, RLS, functions and embeddings until the whole dependency group cuts over.
+- Pair each allowed operation with its nearest denial and a direct-bypass test using the real runtime role and clients. Verify stale inputs, retries and concurrent transitions.
 
 # Development-only compatibility policy
 

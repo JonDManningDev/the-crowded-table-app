@@ -2,6 +2,19 @@
 
 Draft for review, 2026-10-31. Product rules already accepted in [matrix16](16-intended-access-matrix.md) remain authoritative. Physical tables, identifiers, interfaces and migration mechanics below are **proposed**, not deployed or automatically approved by this document. [Package 1](18-access-migration-baseline.md) supplies the verified starting point. This document does not authorize package 4 implementation or hosted deployment.
 
+## Approved execution addendum — 2026-11-03
+
+Use the [approved API transition](20-persistent-api-transition-proposal.md) for Package 4. Preserve the G-01–06 decisions and backfills below. Their earlier public SQL interfaces are historical transport proposals. Each group closes its old writer in the same cutover. No permanent external direct consumer has been identified. Confirm consumers before hosted changes.
+
+| Baseline obligations | Implementation owner and checkpoint |
+| --- | --- |
+| B-07, B-08, B-11 | Pilot self GET/PUT, restricted login, identity from bearer, strict writable fields, browser grants removed. Verify direct denial, real HTTP, audit actor and one UI save. Repeat the privilege manifest for every later slice, hardening future-object defaults before creating new exposed objects. |
+| B-01, B-02, B-03, B-09 | Community service transactions and forward SQL for G-01, G-03a–f, G-04a–d, G-06b/c. Replace optional owner join, validate backfills, stale approvals and locked standing/staff transitions before enabling creation. |
+| B-04, B-05, B-06, B-10 | Profile/visibility, queue, summary and history queries. Validate field projections, G-02 archive RLS and G-06a public landing copy. Retire all three definer views when remaining dependencies close. |
+| B-12 | G-05a–c. Implement verified sources and transactional resource effects with the first real records in each feature. No mock establishes access. |
+
+Local gates precede hosted verification. Rehearse recovery, test privilege defaults, catalog drift and all retired HTTP/GraphQL surfaces before requesting a hosted release.
+
 ## Review summary
 
 Recommend a coordinated foundation migration that:

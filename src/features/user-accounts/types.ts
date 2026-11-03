@@ -10,7 +10,7 @@ export type CommunicationPreferences = {
   allow_direct_messages: boolean
 }
 
-export type AccountPreferences = DiscoveryPreferences & CommunicationPreferences
+export type { AccountPreferences } from '../../../shared/account-preferences'
 
 export type PremiumFeaturePlaceholder = {
   id: string
