@@ -1,0 +1,16 @@
+/* Preserve existing 1.3fr/1fr columns, 30px gutter and 225/180px artwork with 7px corners and 28/20px separation. These are local media/composition geometry, not general spacing roles. */
+.detail-art {
+  height:225px;
+  border-radius:7px;
+  margin-bottom:28px;
+}
+
+.detail-grid {
+  display:grid;
+  grid-template-columns:1.3fr 1fr;
+  gap:30px;
+}
+
+.detail-grid > * { min-width:0; }
+
+@media(max-width:700px) { .detail-grid { grid-template-columns:1fr; } .detail-art { height:180px; margin-bottom:20px; } .detail-grid .reservation { grid-row:1; } }

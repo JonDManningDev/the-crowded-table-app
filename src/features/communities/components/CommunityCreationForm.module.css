@@ -1,0 +1,11 @@
+/* Preserve the existing 18px form rhythm and -10px helper offset locally.
+   They are legacy field/help composition, not card-grid or general spacing.
+   .form fieldset intentionally remains more specific for border/padding. */
+.fields { display:flex; flex-direction:column; gap:18px; padding:0; border:0; margin:0; min-width:0; }
+.fields .help { margin-top:-10px; font-size:var(--ct-body-font-size); }
+.participation { padding:var(--ct-card-padding); background:var(--ct-card-background); border:1px solid var(--ct-card-border-color); border-radius:var(--ct-card-border-radius); }
+.participation p { margin:var(--ct-ref-space-8) 0 0; font-size:var(--ct-body-font-size); }
+.links { margin-top:var(--ct-ref-space-24); font-size:var(--ct-body-font-size); display:flex; flex-wrap:wrap; gap:var(--ct-ref-space-12); }
+/* Existing creation error paint has no approved shared error-text role.
+   Match panel-paragraph specificity so ordinary copy cannot override it. */
+.error, :global(.panel) p.error { color:#913d27; }

@@ -1,0 +1,3 @@
+/* Existing outer statistic-strip rhythm is page-owned and deliberately local;
+   retain 22px/15px during extraction instead of creating shared spacing roles. */
+.stats { margin: 22px 0 15px; }

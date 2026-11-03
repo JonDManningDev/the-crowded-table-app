@@ -1,0 +1,91 @@
+/* Local numbered-step circles/19px numerals, 25px step rhythm and spirit-panel artwork/70px notice clearance preserve the existing editorial composition, outside shared general roles. */
+.layout {
+  display:grid;
+  grid-template-columns:1.4fr 1fr;
+  gap:var(--ct-card-grid-gap);
+}
+
+.warm {
+  background:var(--ct-card-background);
+  position:relative;
+  overflow:hidden;
+  border-radius:var(--ct-card-border-radius);
+}
+
+.warm>p {
+  position:relative;
+  z-index:1;
+  max-width:220px;
+}
+
+.warm h2 {
+  font-size:var(--ct-heading-hero-font-size);
+  line-height:var(--ct-heading-title-line-height);
+}
+
+.warm :global(.botanical) {
+  position:absolute;
+  right:2px;
+  bottom:35px;
+  width:110px;
+  color:#99a281;
+  opacity:.6;
+}
+
+.warm .note {
+  position:relative;
+  font-size:var(--ct-body-font-size);
+  margin-top:70px;
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.step {
+  display:flex;
+  gap:var(--ct-ref-space-16);
+  margin:25px 0;
+}
+
+.step>span {
+  width:29px;
+  height:29px;
+  border-radius:50%;
+  background:#e7edde;
+  display:grid;
+  place-items:center;
+  flex-shrink:0;
+  font-family:var(--ct-ref-font-family-serif);
+  font-size:19px;
+}
+
+.step h3 {
+  font-size:var(--ct-heading-subsection-font-size);
+  margin:2px 0 var(--ct-ref-space-8);
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.step p {
+  font-size:var(--ct-body-font-size);
+  margin-bottom:0;
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+@media (max-width:950px) {
+  .layout {
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width:950px) {
+  .warm {
+    display:none;
+  }
+}
+
+.layout > * { min-width:0; }
+
+@media (max-width:950px) {
+  .layout { gap:var(--ct-section-gap); }
+}

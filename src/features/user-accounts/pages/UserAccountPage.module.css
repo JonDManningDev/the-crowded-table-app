@@ -1,0 +1,63 @@
+/* Scope legacy shared components to account pages without changing community profiles. */
+.page { min-width: 0; overflow-wrap: anywhere; }
+.page[data-account-page] > :global(.tabs) { flex-wrap: wrap; }
+.page[data-account-page] :global(.section-heading),
+.page[data-account-page] :global(.setting-row) { flex-wrap: wrap; }
+.page[data-account-page] p:not(:where([data-decorative])),
+.page[data-account-page] :global(.panel) p:not(:where([data-decorative])),
+.page[data-account-page] :global(.setting-row) strong {
+  font-size: var(--ct-body-font-size);
+  line-height: var(--ct-body-line-height);
+}
+
+/* Keep decorative copy and feedback outside the ordinary paragraph palette. */
+.page[data-account-page] p:not(:where([data-decorative], [role="alert"], [role="status"], :global(.auth-error))),
+.page[data-account-page] :global(.setting-row) strong {
+  color: var(--ct-body-color);
+}
+
+.page[data-account-page] :is(h1, h2, h3) {
+  color: var(--ct-heading-color);
+}
+
+.page[data-account-page] :is(small, :global(.meta), :global(.location), :global(.tag), :global(.account-metadata)),
+.page[data-account-page] :global(.panel) p:global(.account-metadata) {
+  font-size: var(--ct-meta-font-size);
+  line-height: var(--ct-meta-line-height);
+  color: var(--ct-meta-color);
+}
+
+.page[data-account-page] :global(.eyebrow) {
+  font-size: var(--ct-eyebrow-font-size);
+  line-height: var(--ct-eyebrow-line-height);
+  color: var(--ct-eyebrow-color);
+}
+
+/* Visual roles are independent of the semantic heading level. */
+.page[data-account-page] :global(.page-heading) h1 {
+  font-size: var(--ct-heading-page-font-size);
+  line-height: var(--ct-heading-title-line-height);
+}
+.page[data-account-page] [data-heading="hero"] {
+  font-size: var(--ct-heading-hero-font-size);
+  line-height: var(--ct-heading-title-line-height);
+}
+.page[data-account-page] [data-heading="card"] {
+  font-size: var(--ct-heading-card-font-size);
+  line-height: var(--ct-heading-content-line-height);
+}
+.page[data-account-page] [data-heading="subsection"] {
+  font-size: var(--ct-heading-subsection-font-size);
+  line-height: var(--ct-heading-content-line-height);
+}
+.page[data-account-page] [data-heading="item"] {
+  font-size: var(--ct-heading-item-font-size);
+  line-height: var(--ct-heading-content-line-height);
+}
+@media (max-width: 700px) {
+  .page[data-account-page] :global(.page-heading) { flex-direction: column; }
+  .page[data-account-page] :global(.page-heading) > button { flex-shrink: 0; }
+  .page[data-account-page] :global(.page-heading) h1 {
+    font-size: var(--ct-heading-page-compact-font-size);
+  }
+}

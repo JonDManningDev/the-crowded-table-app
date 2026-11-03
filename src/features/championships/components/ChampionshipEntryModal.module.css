@@ -1,0 +1,3 @@
+/* Preserve the shared small-art convention; 23px separation is a local
+   illustration-to-entry-copy measurement, not a general spacing role. */
+.art { height: 160px; border-radius: 7px; margin-bottom: 23px; }

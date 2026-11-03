@@ -1,0 +1,19 @@
+/* The existing 10px filter-to-timezone gap is local to this compact toolbar;
+   preserve its wrapping rather than defining a new shared spacing role. */
+.filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: var(--ct-section-gap);
+}
+
+@media (max-width:700px) {
+  .filter-row {
+    display: block;
+    flex-wrap: wrap;
+  }
+  .filter-row>:global(.meta) {
+    display: none;
+  }
+}

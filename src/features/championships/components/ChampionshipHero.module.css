@@ -1,0 +1,106 @@
+/* Local rail illustration frame, shadows/rotation/overlap and 18/23/25/30px editorial insets preserve the existing composition; game-label 25px serif typography is decorative, not a new heading role. */
+.hero {
+  position:relative;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  background:var(--ct-card-background);
+  color:var(--ct-body-color);
+  border-radius:var(--ct-card-border-radius);
+  overflow:hidden;
+}
+
+.hero>div:first-child {
+  padding:var(--ct-card-padding);
+  z-index:1;
+}
+
+.hero h2 {
+  font-size:var(--ct-heading-hero-font-size);
+  color:var(--ct-heading-color);
+  margin-top:18px;
+  line-height:var(--ct-heading-title-line-height);
+}
+
+.hero p {
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.hero :global(.game-art) {
+  margin:30px 25px 30px 0;
+  transform:rotate(4deg);
+  border:7px solid #e5d3ad;
+  box-shadow:0 10px 35px #091b2045;
+  border-radius:8px;
+  align-self:center;
+  height:270px;
+}
+
+.hero :global(.botanical) {
+  position:absolute;
+  width:135px;
+  right:-15px;
+  bottom:-30px;
+  color:#c2cb9d;
+  opacity:.5;
+}
+
+.game {
+  font-family:var(--ct-ref-font-family-serif);
+  font-size:25px;
+  margin-bottom:23px;
+}
+
+.game span {
+  display:block;
+  font-family:var(--ct-ref-font-family-sans);
+  font-size:var(--ct-meta-font-size);
+  color:var(--ct-meta-color);
+  margin-top:7px;
+  line-height:var(--ct-meta-line-height);
+}
+
+.hero small {
+  display:block;
+  margin-top:var(--ct-ref-space-12);
+  color:var(--ct-meta-color);
+  font-size:var(--ct-meta-font-size);
+  line-height:var(--ct-meta-line-height);
+}
+
+@media (max-width:1200px) {
+  .hero :global(.game-art) {
+    height:235px;
+  }
+}
+
+@media (max-width:950px) {
+  .hero :global(.game-art) {
+    height:230px;
+    margin-right:15px;
+  }
+}
+
+@media (max-width:700px) {
+  .hero {
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width:700px) {
+  .hero :global(.game-art) {
+    height:200px;
+    margin:0 30px 25px;
+  }
+}
+
+@media (max-width:700px) {
+  .hero :global(.botanical) {
+    width:120px;
+  }
+}
+
+.hero > div:first-child > :global(.button) { margin-top:var(--ct-action-footer-gap); }
+
+.hero > div:first-child > :has(+ :global(.button)) { margin-bottom:0; }

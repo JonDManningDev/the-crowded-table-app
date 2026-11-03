@@ -1,0 +1,88 @@
+/* Local dense calendar geometry: 630px internal scroll width, 118/105px days,
+   irregular cell/header padding and 1.4 event leading preserve the prototype.
+   Grid/blank/categorical paints belong to this calendar, not feedback roles.
+   Event corners (4px) and time-label separation (3px) are dense-calendar
+   details; weekday 10px padding is independent of ordinary card padding. */
+.calendar-panel {
+  background: var(--ct-card-background);
+  border: 1px solid var(--ct-card-border-color);
+  border-radius: var(--ct-card-border-radius);
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.calendar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  padding: 20px;
+}
+
+.calendar-heading h3 {
+  margin: 0;
+}
+
+.rotate {
+  transform: rotate(180deg);
+  display: inline-flex;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7,minmax(0,1fr));
+  min-width: 630px;
+}
+
+.weekday {
+  font-size: var(--ct-meta-font-size);
+  text-align: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--ct-ref-color-stone-200);
+  color: var(--ct-meta-color);
+  line-height: var(--ct-meta-line-height);
+}
+
+.calendar-day {
+  min-height: 118px;
+  padding: var(--ct-ref-space-8);
+  border-right: 1px solid #eceee3;
+  border-bottom: 1px solid #eceee3;
+  font-size: var(--ct-meta-font-size);
+  color: var(--ct-meta-color);
+  line-height: var(--ct-meta-line-height);
+}
+
+.calendar-day.blank {
+  background: #f3f4ec;
+}
+
+.calendar-event {
+  /* Long titles and increased text spacing must fit the fixed day column. */
+  overflow-wrap: anywhere;
+  margin-top: var(--ct-ref-space-8);
+  padding: var(--ct-ref-space-8) 6px;
+  text-align: left;
+  border-radius: 4px;
+  font-size: var(--ct-meta-font-size);
+  width: 100%;
+  line-height: 1.4;
+}
+
+.calendar-event small {
+  display: block;
+  font-size: var(--ct-meta-font-size);
+  margin-top: 3px;
+  line-height: var(--ct-meta-line-height);
+  color: var(--ct-meta-color);
+}
+
+@media (max-width:950px) {
+  .calendar-day {
+    padding: 5px;
+    min-height: 105px;
+  }
+  .calendar-event {
+    padding: 5px var(--ct-ref-space-4);
+  }
+}

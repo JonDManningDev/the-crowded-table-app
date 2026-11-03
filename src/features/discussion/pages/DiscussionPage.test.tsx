@@ -1,0 +1,100 @@
+import { afterEach, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { DiscussionPage } from './DiscussionPage'
+import { readDiscussionContent } from '../api'
+import type { DiscussionPost } from '../types'
+
+Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: function (this: HTMLDialogElement) { this.setAttribute('open', '') } })
+Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function (this: HTMLDialogElement) { this.removeAttribute('open') } })
+afterEach(cleanup)
+const posts: DiscussionPost[] = [{ id: 'thread', author: 'Peer', title: 'A welcoming game', body: 'A kind hello', topic: 'General', replies: [] }]
+function props() {
+  return { content: readDiscussionContent(), posts, savedGames: [], onCreateDiscussion: vi.fn().mockReturnValue(true),
+    onReplyToDiscussion: vi.fn().mockReturnValue(true), onToggleSavedGame: vi.fn() }
+}
+
+it('initializes from the selected topic, retains rejected drafts and resets on cancellation or successful creation', () => {
+  const input = props()
+  input.onCreateDiscussion.mockReturnValue(false)
+  render(<DiscussionPage {...input}/>)
+  fireEvent.click(screen.getByRole('button', { name: /^Off-topic/ }))
+  fireEvent.change(screen.getByLabelText('Search discussions'), { target: { value: 'retained query' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Start a conversation' }))
+  expect((screen.getByLabelText('Topic') as HTMLSelectElement).value).toBe('Off-topic')
+  fireEvent.change(screen.getByLabelText('A little headline'), { target: { value: '  Hello  ' } })
+  fireEvent.change(screen.getByLabelText('Pull up a chair'), { target: { value: 'Body' } })
+  expect(screen.getByLabelText('A little headline').getAttribute('maxlength')).toBe('100')
+  expect(screen.getByLabelText('Pull up a chair').getAttribute('maxlength')).toBe('2000')
+  fireEvent.submit(screen.getByRole('dialog').querySelector('form')!)
+  expect(input.onCreateDiscussion).toHaveBeenCalledWith({ topic: 'Off-topic', title: '  Hello  ', body: 'Body' })
+  expect((screen.getByLabelText('A little headline') as HTMLInputElement).value).toBe('  Hello  ')
+  fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }))
+  expect((screen.getByLabelText('Search discussions') as HTMLInputElement).value).toBe('retained query')
+  fireEvent.click(screen.getByRole('button', { name: 'Start a conversation' }))
+  expect((screen.getByLabelText('A little headline') as HTMLInputElement).value).toBe('')
+  input.onCreateDiscussion.mockReturnValue(true)
+  fireEvent.change(screen.getByLabelText('A little headline'), { target: { value: 'Title' } })
+  fireEvent.change(screen.getByLabelText('Pull up a chair'), { target: { value: 'Body' } })
+  fireEvent.submit(screen.getByRole('dialog').querySelector('form')!)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect((screen.getByLabelText('Search discussions') as HTMLInputElement).value).toBe('')
+  expect(screen.getByRole('heading', { name: 'A welcoming game' })).toBeTruthy()
+})
+
+it('retains topic/spot filters across views but clears search and keeps every map marker', () => {
+  render(<DiscussionPage {...props()}/>)
+  fireEvent.click(screen.getByRole('button', { name: /^Off-topic/ }))
+  fireEvent.change(screen.getByLabelText('Search discussions'), { target: { value: 'search' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Members' }))
+  expect((screen.getByLabelText('Search members') as HTMLInputElement).value).toBe('')
+  fireEvent.click(screen.getByRole('button', { name: 'Discussions' }))
+  expect(screen.getByRole('heading', { name: 'Be the first to pull up a chair' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Local Spots' }))
+  fireEvent.change(screen.getByLabelText('Filter local spots'), { target: { value: 'Cafés' } })
+  expect(screen.queryByRole('heading', { name: 'The Dice Corner' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'The Dice Corner' }))
+  expect(screen.getByRole('dialog').textContent).toContain('not a verified venue listing')
+  fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Game Recommendations' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Local Spots' }))
+  expect((screen.getByLabelText('Filter local spots') as HTMLSelectElement).value).toBe('Cafés')
+})
+
+it('keeps the reply draft through snapshot changes/rejections, clears on success and resets on reopening', () => {
+  const input = props()
+  input.onReplyToDiscussion.mockReturnValue(false)
+  const view = render(<DiscussionPage {...input}/>)
+  fireEvent.click(screen.getByRole('button', { name: /Peer\s*Community member/ }))
+  fireEvent.change(screen.getByLabelText('Join the conversation'), { target: { value: '  My reply  ' } })
+  view.rerender(<DiscussionPage {...input} posts={[{ ...posts[0], replies: [{ author: 'Peer', body: 'Newly received' }] }]}/>)
+  expect((screen.getByLabelText('Join the conversation') as HTMLTextAreaElement).value).toBe('  My reply  ')
+  expect(screen.getByLabelText('Join the conversation').getAttribute('maxlength')).toBe('1000')
+  fireEvent.submit(screen.getByRole('dialog').querySelector('form')!)
+  expect(input.onReplyToDiscussion).toHaveBeenCalledWith('thread', '  My reply  ')
+  expect((screen.getByLabelText('Join the conversation') as HTMLTextAreaElement).value).toBe('  My reply  ')
+  input.onReplyToDiscussion.mockReturnValue(true)
+  fireEvent.submit(screen.getByRole('dialog').querySelector('form')!)
+  expect((screen.getByLabelText('Join the conversation') as HTMLTextAreaElement).value).toBe('')
+  expect(screen.getByRole('dialog')).toBeTruthy()
+  fireEvent.change(screen.getByLabelText('Join the conversation'), { target: { value: 'Cancelled reply' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }))
+  fireEvent.click(screen.getByRole('button', { name: /Peer\s*Community member/ }))
+  expect((screen.getByLabelText('Join the conversation') as HTMLTextAreaElement).value).toBe('')
+})
+
+it('uses typed targets to separate colliding fixture names/IDs and forwards saved-game actions/shortcut', () => {
+  const input = props()
+  render(<DiscussionPage {...input} posts={[{ ...posts[0], id: 'Lucía M.' }]}/>)
+  fireEvent.click(screen.getByRole('button', { name: /Peer\s*Community member/ }))
+  expect(screen.getAllByRole('dialog')).toHaveLength(1)
+  expect(screen.getByRole('dialog').textContent).toContain('Around the community board')
+  expect(screen.getByRole('dialog').textContent).not.toContain('Someone around your table')
+  fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Game Recommendations' }))
+  fireEvent.click(within(screen.getByRole('heading', { name: 'Cascadia' }).closest('article')!).getByRole('button'))
+  expect(input.onToggleSavedGame).toHaveBeenCalledWith('Cascadia')
+  fireEvent.click(screen.getByRole('button', { name: 'Talk about your favorites' }))
+  expect(screen.getByRole('button', { name: 'Discussions' }).getAttribute('aria-pressed')).toBe('true')
+  fireEvent.click(screen.getByRole('button', { name: 'Start a conversation' }))
+  expect((screen.getByLabelText('Topic') as HTMLSelectElement).value).toBe('Game recommendations')
+})

@@ -1,0 +1,6 @@
+/* Preserve legacy creation reading geometry: 80vh/48px/20px composition and
+   the 680px form cap are local constraints, not new shared spacing/card roles. */
+.page { min-height:80vh; padding:48px 20px; display:grid; place-items:start center; }
+.card { width:100%; max-width:680px; overflow-wrap:anywhere; }
+.card h1 { font-size:var(--ct-heading-page-font-size); line-height:var(--ct-heading-title-line-height); margin:var(--ct-ref-space-12) 0 var(--ct-ref-space-24); }
+@media(max-width:700px) { .card h1 { font-size:var(--ct-heading-page-compact-font-size); } }

@@ -1,0 +1,60 @@
+.welcome {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: var(--ct-ref-space-32);
+  padding: var(--ct-card-padding);
+  border: 1px solid var(--ct-card-border-color);
+  border-radius: var(--ct-card-border-radius);
+  background: var(--ct-card-background);
+}
+
+/* Preserve welcome-specific tracking/weight and the 17px heading rhythm.
+   No existing role defines these treatments; general-scale substitution would
+   change the reviewed composition. Keep local pending separate refinement. */
+.label {
+  font-size: var(--ct-eyebrow-font-size);
+  line-height: var(--ct-eyebrow-line-height);
+  letter-spacing: 2px;
+  font-weight: 600;
+  color: var(--ct-eyebrow-color);
+}
+
+.welcome h2 { margin: 17px 0; }
+.welcome h2 em { font-weight: 400; }
+
+.welcome p {
+  /* Existing welcome-copy wrapping constraint, not general page width. */
+  max-width: 460px;
+  font-size: var(--ct-body-font-size);
+  color: var(--ct-body-color);
+  line-height: var(--ct-body-line-height);
+  margin-bottom: 0;
+}
+
+/* Preserve this illustration's 26px gap, 28px inset, arch/lower corners,
+   palette and caption tracking. These are local artwork composition;
+   card/control roles and spacing-scale substitutions would alter the artwork. */
+.illustration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  border: 1px solid #bccbb3;
+  border-radius: 50% 50% 8px 8px;
+  color: #53694b;
+  background: #f8f7f24d;
+  padding: 28px;
+}
+
+.illustration span {
+  font-size: var(--ct-meta-font-size);
+  line-height: var(--ct-meta-line-height);
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .welcome { grid-template-columns: 1fr; }
+  .illustration { display: none; }
+}

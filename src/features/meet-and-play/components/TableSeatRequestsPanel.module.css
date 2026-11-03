@@ -1,0 +1,38 @@
+/* Preserve local 25/20px request-section separation and 10px row gap. Request rows use the established list-row and label/meta roles; section geometry remains local. */
+.request-list .muted {
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.request-list {
+  border-top:1px solid var(--ct-ref-color-stone-200);
+  margin-top:25px;
+  padding-top:20px;
+}
+
+.request {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:var(--ct-list-row-padding-block) 0;
+  flex-wrap:wrap;
+}
+
+.request>div {
+  flex:1;
+}
+
+.request strong {
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.request small {
+  display:block;
+  font-size:var(--ct-meta-font-size);
+  color:var(--ct-meta-color);
+  line-height:var(--ct-meta-line-height);
+  margin-top:var(--ct-label-meta-gap);
+}

@@ -1,0 +1,2 @@
+.page { width: 100%; min-width: 0; }
+.page p { color: var(--ct-body-color); font-size: var(--ct-body-font-size); line-height: var(--ct-body-line-height); }

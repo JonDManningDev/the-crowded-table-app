@@ -1,0 +1,67 @@
+/* Local final trophy 110px/25px separation and paints, tag 20px spacing, 15px provisional-row grouping and point paint preserve the illustrative finale, not shared feedback roles. */
+.layout {
+  display:grid;
+  grid-template-columns:1.4fr 1fr;
+  gap:var(--ct-card-grid-gap);
+}
+
+.final {
+  text-align:center;
+  padding:var(--ct-card-padding);
+  background:var(--ct-card-background);
+  border-radius:var(--ct-card-border-radius);
+}
+
+.trophy {
+  width:110px;
+  height:110px;
+  border-radius:50%;
+  background:#e8dbb4;
+  color:#9c8242;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin:0 0 25px;
+}
+
+.final :global(.tags) {
+  justify-content:center;
+  margin:20px 0;
+}
+
+.row {
+  display:flex;
+  align-items:center;
+  gap:15px;
+  padding:var(--ct-list-row-padding-block) 0;
+  border-bottom:1px solid var(--ct-ref-color-stone-200);
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.row:last-of-type {
+  margin-bottom:20px;
+}
+
+.points {
+  margin-left:auto;
+  color:#80916e;
+}
+
+@media (max-width:950px) {
+  .layout {
+    grid-template-columns:1fr;
+  }
+}
+
+.layout > * { min-width:0; }
+
+.row { flex-wrap:wrap; }
+
+@media (max-width:950px) {
+  .layout { gap:var(--ct-section-gap); }
+}
+
+/* Provisional names remain readable even when a profile has no word breaks. */
+.row > strong { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }

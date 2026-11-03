@@ -1,0 +1,25 @@
+/* Local toolbar composition preserves 13px/10px gaps, 22px outer rhythm,
+   compact 11px select labels/10px padding and its existing warm field paint.
+   Input typography is a control role, not metadata despite numerical equality.
+   Shared search and check-label conventions remain shared with Discussion. */
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 22px 0;
+}
+.filters select {
+  font-size: 11px;
+  padding: 10px;
+  background: #f8f8f1;
+}
+@media (max-width: 1200px) {
+  .filters { flex-wrap: wrap; }
+  .search { min-width: 200px; }
+}
+@media (max-width: 700px) {
+  .filters { gap: 10px; flex-wrap: wrap; }
+  .search { flex-basis: 100%; }
+  .filters select { flex: 1; font-size: 16px; }
+  .beginner { width: 100%; margin-top: 6px; }
+}

@@ -1,0 +1,6 @@
+/* Preserve the legacy 20px term/value separation for this definition list;
+   it is not card-grid composition or a new shared spacing value. */
+.summary { display:grid; grid-template-columns:auto 1fr; gap:var(--ct-ref-space-8) 20px; }
+.summary dd { margin:0; overflow-wrap:anywhere; }
+.summary dt { color:var(--ct-meta-color); font-size:var(--ct-meta-font-size); line-height:var(--ct-meta-line-height); }
+@media(max-width:700px) { .summary { grid-template-columns:1fr; gap:var(--ct-ref-space-4); } }

@@ -1,0 +1,9 @@
+/* Existing 19px field rhythm/20px intro separation stay local while shared
+   .form owns native field/label typography and 16px mobile inputs. */
+.form { gap: 19px; margin-top: 20px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ct-ref-space-16); }
+.row > * { min-width: 0; }
+@media (max-width: 700px) {
+  /* Preserve the established compact form-row spacing. */
+  .row { gap: 10px; }
+}

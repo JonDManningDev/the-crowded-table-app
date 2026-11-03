@@ -1,0 +1,3 @@
+/* Session-gate geometry preserves the legacy Auth page inset and short-page
+   height. Local ownership avoids promoting 48/20px to a general spacing role. */
+.gate { min-height:80vh; padding:48px 20px; display:grid; place-items:start center; }

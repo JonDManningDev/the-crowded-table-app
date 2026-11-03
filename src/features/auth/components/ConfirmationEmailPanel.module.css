@@ -1,0 +1,2 @@
+/* The panel is a fragment; its native form retains shared field styling. */
+.form { min-width: 0; }

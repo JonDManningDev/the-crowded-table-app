@@ -1,0 +1,31 @@
+/* Compact-banner rhythm (18px gap, 7px copy offset) and 240px wrapping basis
+   stay local; these are not card-grid, metadata-row or action-footer spacing. */
+.banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: var(--ct-card-padding);
+  background: var(--ct-card-background);
+  border-radius: var(--ct-card-border-radius);
+}
+.icon { display: flex; flex: 0 0 auto; color: var(--ct-body-color); }
+.copy { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.heading {
+  margin: 0;
+  color: var(--ct-heading-color);
+  font-size: var(--ct-heading-subsection-font-size);
+  line-height: var(--ct-heading-content-line-height);
+}
+.description {
+  margin: 7px 0 0;
+  color: var(--ct-body-color);
+  font-size: var(--ct-body-font-size);
+  line-height: var(--ct-body-line-height);
+}
+.action { flex: 0 1 auto; margin-left: auto; min-width: 0; max-width: 100%; }
+@media (max-width: 700px) {
+  .banner { align-items: flex-start; }
+  .copy { flex-basis: 0; }
+  .action { flex-basis: 100%; margin-left: 0; }
+}

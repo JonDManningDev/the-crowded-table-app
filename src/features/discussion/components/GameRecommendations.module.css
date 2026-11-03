@@ -1,0 +1,35 @@
+/* Preserve 175px artwork, 65px quotation alignment and the existing card composition; shared card/body/meta/action roles retain ownership of ordinary presentation. */
+.recommendation {
+  border:1px solid var(--ct-card-border-color);
+  border-radius:var(--ct-card-border-radius);
+  overflow:hidden;
+  background:var(--ct-card-background);
+}
+
+.recommendation>:global(.game-art) {
+  height:175px;
+}
+
+.recommendation>div:last-child {
+  padding:var(--ct-card-padding);
+}
+
+.recommendation h3 {
+  font-size:var(--ct-heading-card-font-size);
+  margin-top:var(--ct-ref-space-12);
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.recommendation p {
+  font-size:var(--ct-body-font-size);
+  color:var(--ct-body-color);
+  line-height:var(--ct-body-line-height);
+  min-height:65px;
+}
+
+.recommendation :global(.host) {
+  font-size:var(--ct-meta-font-size);
+  line-height:var(--ct-meta-line-height);
+  color:var(--ct-meta-color);
+}

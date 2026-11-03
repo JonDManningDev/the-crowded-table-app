@@ -10,7 +10,15 @@ it.each(['signup', 'recovery'])('handles %s when the real SDK consumes the URL b
   localStorage.clear()
   vi.stubEnv('VITE_SUPABASE_URL', `https://auth-test-${type}.example.com`)
   vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', 'sb_publishable_test_only')
-  const user = { id: '00000000-0000-4000-8000-000000000001', email: 'person@example.com', email_confirmed_at: '2026-10-02T12:00:00Z', aud: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: '2026-10-02T12:00:00Z' }
+  const user = {
+    id: '00000000-0000-4000-8000-000000000001',
+    email: 'person@example.com',
+    email_confirmed_at: '2026-10-02T12:00:00Z',
+    aud: 'authenticated',
+    app_metadata: {},
+    user_metadata: {},
+    created_at: '2026-10-02T12:00:00Z',
+  }
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(user), { status: 200, headers: { 'Content-Type': 'application/json' } })))
   const path = type === 'signup' ? '/auth/callback' : '/auth/reset-password'
   window.history.replaceState(null, '', `${path}#access_token=test-token&refresh_token=test-refresh&expires_in=3600&token_type=bearer&type=${type}`)
@@ -18,11 +26,12 @@ it.each(['signup', 'recovery'])('handles %s when the real SDK consumes the URL b
   const initialized = await client.authInitialization
   expect(initialized?.error).toBeNull()
   expect(window.location.hash).toBe('')
-  const { AuthShell } = await import('../features/Auth')
-  render(<StrictMode><AuthShell><div>Home</div></AuthShell></StrictMode>)
+  const { BrowserRouter } = await import('react-router')
+  const { AuthShell } = await import('../features/auth/AuthShell')
+  render(<StrictMode><BrowserRouter><AuthShell><div>Home</div></AuthShell></BrowserRouter></StrictMode>)
   if (type === 'signup') {
     await screen.findByText('Your email is confirmed. Welcome to The Crowded Table.')
-    expect(window.location.pathname + window.location.hash).toBe('/#home')
+    expect(window.location.pathname + window.location.hash).toBe('/account/home')
   } else {
     await screen.findByRole('button', { name: 'Save new password' })
     expect(window.location.pathname + window.location.hash).toBe('/auth/reset-password')

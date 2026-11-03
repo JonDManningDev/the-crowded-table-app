@@ -1,0 +1,36 @@
+/* Brand copy and local composition retain their existing treatment;
+   this is not an action footer or metadata role. See batch twenty-one. */
+.footer {
+  border-top: 1px solid var(--ct-ref-color-stone-200);
+  margin-top: 44px;
+  padding: 23px 0 28px;
+  display: flex;
+  justify-content: space-between;
+  color: #929886;
+  gap: 10px;
+}
+
+.footer span:first-child {
+  font-family: var(--ct-ref-font-family-serif);
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  gap: var(--ct-ref-space-8);
+}
+
+.footer span:last-child {
+  font-size: 8px;
+  letter-spacing: 2px;
+}
+
+@media (max-width: 700px) {
+  .footer {
+    flex-direction: column;
+    gap: 15px;
+    margin-top: var(--ct-ref-space-32);
+    align-items: center;
+    text-align: center;
+  }
+
+  .footer span:last-child { font-size: 7px; }
+}

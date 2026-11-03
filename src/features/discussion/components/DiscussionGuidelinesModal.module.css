@@ -1,0 +1,3 @@
+/* Preserve the existing editorial list inset; shared .rules owns text and
+item rhythm, also used by Championship. No general spacing role applies. */
+.rules { padding-left:20px; }

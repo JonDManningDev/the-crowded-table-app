@@ -2,11 +2,31 @@
 
 Status: interactive frontend exploration, not a production implementation.
 
+This guide describes the five mock sections. Real Supabase Auth, community creation, and the owner-only community list have since been added alongside them; see the [root README](../README.md). The [canonical client architecture](05-frontend-patterns.md) and [refactor inventory](07-file-structure.md#current-conflicts-and-refactor-candidates) guide the upcoming structural changes without requiring the current prototype to match the illustrative tree immediately.
+
+## Current design differs from legacy simulations
+
+The 2026-10-12 decisions supersede the prototype's paid-member/guest preview, membership paywalls, prices, checkout/payment simulation, and commercial profile controls. The descriptions and walkthroughs below report existing mock behavior, not the target requirements. Remove those simulations during the domain refactor; payments and paid memberships are late-stage work, with no current feature dependency.
+
+The target table setting is `manually_confirm_seats = false` by default. Automatic confirmation and manual manager review both confirm whole groups directly, with no recipient acceptance, response window, or reservation expiration. Manager rejections remove requests from active queues and promptly notify the booking account with timestamp, rejecting user, and optional reason. Group-edit priority rules and per-person records are documented in the [schema plan](03-database-schema.md#automatic-and-manual-seat-confirmation). These are planning changes; this documentation update does not implement them in the mock client.
+
+## Personal and community navigation — 2026-10-03
+
+The default destination remains My Home (`/account/home`), now a tab under My Account. Account tabs appear between the heading and content: Overview (`/account`), My Home, My Communities (`/account/communities`), and Settings (`/account/settings`). The summary card appears only on Overview. Global name/bio and discovery preferences persist; sample statistics/interests/games and notification preferences remain placeholders.
+
+The sidebar account row uses the persisted display name, first-character badge and one-line ellipsis, links to `/account`, and omits the former account subtitle. Missing profiles display “Your account” until explicitly edited; no name is fabricated from email or a community profile. Mobile navigation includes My Account.
+
+The auth bar and global sample disclaimer are removed. Sign Out sits at the right of the breadcrumb; signed-out users can Sign in/Create Account there. My Communities contains Start New Community, fetched owned communities, and a labeled sample row. Creation/cancellation returns to this list and reloads it. There is no separate auth-bar community-list screen. Joined-but-not-owned communities and actual community switching remain unimplemented.
+
+Sample community routes are `/community/preview`, `/community/preview/meet-play`, `/community/preview/championship`, `/community/preview/discussion`, and `/community/preview/profile`. Old hash routes are unsupported. The sample community Profile retains its original mock tabs and independent in-memory edits. Successful sign-in, confirmation and recovery return to My Home.
+
+D-120 explicitly retains My Premium Features and the `/account/premium-features` placeholder for future work. The sample ownership row's Manage button opens My Communities; there is no subscription source, per-feature management interface, billing, or purchased access. This is a scoped prototype exception, not implementation of deferred commercial features.
+
 ## Coverage
 
 | Reference | Implemented counterparts |
 | --- | --- |
-| Official events infographic | Home/official list, category filters, month calendar, detail dialog, member reservation, guest simulated checkout, full-event waitlist |
+| Official events infographic | Community Home/official list, category filters, month calendar, detail dialog, member reservation, guest simulated checkout, full-event waitlist |
 | Meet & Play infographic | Table browser, search/category/location/beginner filters, details, creation form, My Tables, host request approval, seat requests, waitlists, confirmed-player chat |
 | Championship infographic | Overview/detail, how it works/rules, registration, leaderboard, past champions, Final Table and provisional qualifiers; result submission/confirmation/dispute added from the docs |
 | Community infographic | Topic board, discussion/replies, searchable member directory, member details, recommendations/save list, illustrative Local Spots map/cards |
@@ -16,37 +36,37 @@ Desktop uses a left navigation rail and wider multi-column layouts. At small wid
 
 ## Useful walkthroughs
 
-1. **Home:** open Azul, take a seat, observe confirmation and the fictional address, then cancel. Switch to Calendar and select an event. Wingspan starts full to demonstrate a waitlist.
+1. **Community Home:** open Azul, take a seat, observe confirmation and the fictional address, then cancel. Switch to Calendar and select an event. Wingspan starts full to demonstrate a waitlist.
 2. **Meet & Play:** take a seat at Codenames & coffee, then send a chat message. Request a Cascadia seat; pending requests do not unlock an address or chat. Commander starts full.
 3. **Hosting:** open Sunday birds & brunch and accept or decline David's seeded request. Create a table with a fictional address; it appears under My Tables, and the address stays out of listing cards.
 4. **Matching:** use Find my people and save preferences; reopen to revise them.
 5. **Championship:** register, open My Matches, and confirm or dispute the seeded result from Lucía. Confirmation updates both players' standings. Submit your own result; you cannot confirm it yourself.
-6. **Community:** create a conversation, reply to it, search members, save a game recommendation, and explore the illustrative places.
+6. **Discussion:** create a conversation, reply to it, search members, save a game recommendation, and explore the illustrative places.
 7. **Profile:** edit name/bio/interests and see the shell update. Upcoming activity reflects reservations and hosted tables. Toggle/save preferences and preview the member-facing profile.
-8. **Guest:** use the header switch. Meet & Play and Community become paywalls. Official events and Championship remain accessible with simulated paid entry. Payments do not unlock membership; use the separate membership preview action.
+8. **Guest:** use the header switch. Meet & Play and Discussion become paywalls. Official events and Championship remain accessible with simulated paid entry. Payments do not unlock membership; use the separate membership preview action.
 
-Changes survive page navigation in the current browser session. A full refresh resets everything. No data is written to local storage or sent to a backend.
+Changes within these five mock sections survive page navigation in the current browser session; a full refresh resets that preview state. Those mock interactions do not persist or send data to a backend. The separate account flows persist real Auth sessions, create communities in Supabase, and read the saved owner list.
 
 ## Reconciled design choices
 
-- Use the settled five navigation destinations, rather than the inconsistent Events/Community/Profile combinations in the generated images. Official events live within Home.
-- No member tables on the Home feed. The list currently includes all five example official events so the full event range can be reviewed.
+- Use the settled five navigation destinations, rather than the inconsistent Events/Community/Profile combinations in the generated images. Official events live within Community Home; My Home is a separate personal destination.
+- No member tables on the Community Home feed. The list currently includes all five example official events so the full event range can be reviewed.
 - Use L300 membership, L125 eligible drop-in, and illustrative L200 championship entry from the handoff, rather than conflicting infographic prices. Special-event L250 is sample data only.
 - October 2026 dates match their actual weekdays; the Codenames example uses Friday October 9. Qualifying closes October 24 before the October 25 final.
 - Private addresses appear only after confirmed seats or to the host. All built-in addresses are explicitly fictional. No real personal addresses should be entered in the preview.
-- Rename “Public Profile” to “member-facing profile.” No general DMs, friend/follower counts, public person ratings, or popularity rankings.
+- Rename “Public Profile” to “member-facing profile.” Community-scoped DMs are now MVP, with approved accounts at both endpoints in the same community, recipient controls, and initial report/block UI. Suspended/removed users retain their own DM history read-only. Recipient discovery must respect community/profile visibility; a main-account block must not expose that user's other community profiles. No friend/follower counts, public person ratings, or popularity rankings.
 - Local Spots is included as an exploratory infographic view, although it remains later product scope. Its map is schematic and venues/details are sample content, not verified directions.
 - Use original local vector illustrations and initials instead of reproducing distorted generated logos/photos. Colors, serif headings, botanical details, and warm visual tone follow the references.
 
 ## Deliberate simulation limits
 
-Membership switching is a UI preview, not authentication or secure authorization. All fixtures are shipped to the browser. Real RLS/address security belongs in the later backend implementation.
+Membership switching is a UI preview, not authentication or secure authorization. All fixtures are shipped to the browser. Identity/tenant RLS is already implemented; production event/table address security remains part of the later domain implementation. Preview membership never grants real tenant permissions.
 
 Seats count the host in this prototype. Waitlists support join/cancel but not timed offers or automatic promotion. Host approval uses a seeded incoming request; sending your own request to another host remains pending because there is no second live user.
 
 Payment is a clearly labeled simulation. Championship currently models two-player matches with illustrative 5/3-point scoring; ties go to review. Initial rankings/history/achievements are seeded; confirmed demo matches increment standings, but this is not a full championship engine. Finalists remain provisional.
 
-Chat has in-memory messages and an illustrative 48-hour lifecycle label, with no actual clock-based archival or Realtime. Notifications are a simple in-memory inbox. Settings and support notes are local preview interactions; they trigger no external delivery. Photos, production sign-in, admin dashboards, backend moderation, PWA installation/offline, and payment-provider integration are not implemented by this mockup pass.
+Chat has in-memory messages and an illustrative 48-hour lifecycle label, with no actual clock-based archival or Realtime. Notifications are a simple in-memory inbox. Global profile/discovery settings are persisted; other settings and support notes are local preview interactions; they trigger no external delivery. Photos, admin dashboards, backend moderation, PWA installation/offline, and payment-provider integration remain unimplemented. Real sign-in/callback/recovery flows now exist separately; their verification status is in the [Auth operations record](11-auth-operations.md#url-configuration).
 
 ## Validation
 

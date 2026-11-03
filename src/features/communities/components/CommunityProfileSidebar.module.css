@@ -1,0 +1,128 @@
+/* Preserve independent botanical framing/paint, 30/22/20px inset, 27/18px statistics rhythm, 30px statistical type and decorative quote/status typography/paints. These local editorial/artwork purposes do not define shared heading or feedback roles. */
+.profile-summary {
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+  padding:30px 22px 20px;
+}
+
+.profile-summary :global(.botanical) {
+  position:absolute;
+  right:-14px;
+  top:0;
+  width:93px;
+  opacity:.45;
+  color:#a0ac8d;
+}
+
+.profile-summary :global(.avatar) {
+  position:relative;
+  margin-bottom:20px;
+}
+
+.profile-summary h2 {
+  margin:0 0 10px;
+  font-size:var(--ct-heading-card-font-size);
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.profile-summary :global(.location) {
+  justify-content:center;
+  margin-bottom:22px;
+}
+
+.profile-summary .profile-quote {
+  font-family:var(--ct-ref-font-family-serif);
+  font-size:20px;
+  font-style:italic;
+  color:#7c856e;
+}
+
+.profile-summary :global(.tags) {
+  justify-content:center;
+}
+
+.profile-stats {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  margin:27px 0;
+  padding:18px 0;
+  border-top:1px solid #e5e8db;
+  border-bottom:1px solid #e5e8db;
+}
+
+.profile-stats strong {
+  display:block;
+  font-family:var(--ct-ref-font-family-serif);
+  font-size:30px;
+  font-weight:400;
+}
+
+.profile-stats span {
+  font-size:var(--ct-meta-font-size);
+  color:var(--ct-meta-color);
+  line-height:var(--ct-meta-line-height);
+}
+
+.member-status {
+  background:#efe6cf;
+  border-radius:7px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:15px 11px;
+  text-align:left;
+  width:100%;
+  margin-bottom:var(--ct-ref-space-16);
+  color:#877440;
+}
+
+.member-status strong {
+  font-size:10px;
+}
+
+.member-status small {
+  display:block;
+  font-size:var(--ct-meta-font-size);
+  margin-top:var(--ct-label-meta-gap);
+  color:var(--ct-meta-color);
+  line-height:var(--ct-meta-line-height);
+}
+
+.profile-summary>:global(.text-button) {
+  font-size:9px;
+}
+
+.profile-side-note {
+  padding:40px 20px;
+  text-align:center;
+  color:#9b967a;
+}
+
+.profile-side-note>p {
+  font-family:var(--ct-ref-font-family-serif);
+  font-size:28px;
+  margin:15px 0;
+  line-height:1.2;
+}
+
+@media(max-width:950px) {
+  .profile-side-note {
+    display:none;
+  }
+
+  .profile-summary .profile-stats {
+    max-width:400px;
+    margin:20px auto;
+  }
+
+  .profile-summary .member-status {
+    max-width:370px;
+    margin:20px auto;
+  }
+}
+
+.profile-summary h2 {
+  overflow-wrap: anywhere;
+}

@@ -1,7 +1,7 @@
 {
   "name": "the-crowded-table-app",
   "private": true,
-  "version": "0.1",
+  "version": "0.1.1",
   "type": "module",
   "scripts": {
     "test": "vitest run",
@@ -13,7 +13,8 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-router": "^8.4.0"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",

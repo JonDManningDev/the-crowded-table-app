@@ -1,0 +1,7 @@
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ct-ref-space-12);
+  margin-top: var(--ct-action-footer-gap);
+}

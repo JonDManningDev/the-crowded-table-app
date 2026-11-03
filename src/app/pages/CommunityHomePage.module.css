@@ -1,0 +1,6 @@
+.hero { margin-bottom: var(--ct-section-gap); }
+/* Existing weekly-strip separation is a local page composition exception;
+   preserve 35px during extraction rather than promoting it to the scale. */
+.schedule { margin-bottom: 35px; }
+.featuredActivity { margin-top: var(--ct-section-gap); }
+.promotion { margin: var(--ct-section-gap) 0; }

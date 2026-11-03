@@ -1,32 +1,28 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Libre+Caslon+Display&display=swap');
+@import './styles/tokens/index.css';
+
 :root {
-  font-family:'DM Sans',sans-serif;
-  color:#253e34;
-  background:#f8f7f2;
+  font-family:var(--ct-body-font-family);
+  color:var(--ct-body-color);
+  background:var(--ct-page-background);
   font-synthesis:none;
   text-rendering:optimizeLegibility;
   -webkit-font-smoothing:antialiased;
   font-weight:400;
-  font-size:14px;
-  line-height:1.6;
-  --ink:#173f32;
-  --muted:#747c70;
-  --line:#e3e5da;
-  --cream:#f8f7f2;
-  --green:#224c3a;
-  --sage:#e8ede3;
-  --peach:#f5e4d6;
-  --rust:#a15d40;
-  --serif:'Libre Caslon Display',Georgia,serif
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height)
 }
 
 * {
   box-sizing:border-box
 }
 
+html {
+  scrollbar-gutter:stable;
+}
+
 body {
-  margin:0;
-  min-width:360px
+  margin:0
 }
 
 button,input,select,textarea {
@@ -42,7 +38,7 @@ button {
   color:inherit;
   background:none;
   border:0;
-  transition:background .18s,transform .18s,box-shadow .18s
+  transition:background var(--ct-control-transition-duration),transform var(--ct-control-transition-duration),box-shadow var(--ct-control-transition-duration)
 }
 
 button:disabled {
@@ -56,11 +52,11 @@ a {
 }
 
 button,input,select,textarea,a {
-  outline-offset:4px
+  outline-offset:var(--ct-focus-outline-offset)
 }
 
 *:focus-visible {
-  outline:2px solid #ad704c
+  outline:var(--ct-focus-outline-width) solid var(--ct-focus-outline-color)
 }
 
 h1,h2,h3,p {
@@ -68,35 +64,41 @@ h1,h2,h3,p {
 }
 
 h1,h2,h3 {
-  font-family:var(--serif);
+  font-family:var(--ct-heading-font-family);
   font-weight:400;
-  color:var(--ink);
-  line-height:1.12
+  color:var(--ct-heading-color);
+  line-height:var(--ct-heading-content-line-height)
 }
 
 h1 {
-  font-size:49px;
+  font-size:var(--ct-heading-page-font-size);
+  line-height:var(--ct-heading-title-line-height);
   letter-spacing:-1px;
   margin-bottom:14px
 }
 
 h2 {
-  font-size:34px;
+  font-size:var(--ct-heading-card-font-size);
   margin-bottom:15px;
   letter-spacing:-.5px
 }
 
 h3 {
-  font-size:25px;
+  font-size:var(--ct-heading-subsection-font-size);
   margin-bottom:10px
 }
 
 p {
-  margin-bottom:16px
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+  margin-bottom:var(--ct-ref-space-16)
 }
 
 small {
-  font-size:12px
+  font-size:var(--ct-meta-font-size);
+  line-height:var(--ct-meta-line-height);
+  color:var(--ct-meta-color)
 }
 
 strong {
@@ -108,17 +110,18 @@ svg {
   vertical-align:middle
 }
 
+/* Preserve native-field exceptions until their design review; see batch twenty-three. */
 input,select,textarea {
   border:1px solid #d7dccf;
   border-radius:7px;
   padding:11px 13px;
   background:#fffefa;
-  color:#253e34;
+  color:var(--ct-body-color);
   min-width:0
 }
 
 input[type=checkbox] {
-  accent-color:var(--green)
+  accent-color:var(--ct-ref-color-forest-800)
 }
 
 textarea {

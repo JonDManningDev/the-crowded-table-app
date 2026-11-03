@@ -1,0 +1,70 @@
+/* Preserve local category tracking/weight/10px separation, 7px tag gap, 9/15px host rhythm and compact 28px/9px avatar, 18px title separation and 25px guidance spacing. These are legacy detail composition and decorative identity treatments, not new shared roles. */
+.eyebrow {
+  font-size:var(--ct-eyebrow-font-size);
+  letter-spacing:2px;
+  font-weight:650;
+  line-height:var(--ct-eyebrow-line-height);
+  color:var(--ct-eyebrow-color);
+  display:block;
+  margin-bottom:10px;
+}
+
+.tags {
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+}
+
+.host {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-bottom:15px;
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.host :global(.avatar) {
+  width:28px;
+  height:28px;
+  font-size:9px;
+}
+
+.detail-title {
+  font-size:var(--ct-heading-card-font-size);
+  line-height:var(--ct-heading-content-line-height);
+  margin:var(--ct-ref-space-12) 0 18px;
+  color:var(--ct-heading-color);
+}
+
+.description {
+  font-size:var(--ct-body-font-size);
+  color:var(--ct-body-color);
+  line-height:var(--ct-body-line-height);
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+
+.details .description {
+  margin:var(--ct-ref-space-24) 0;
+}
+
+.details .eyebrow {
+  font-size:var(--ct-eyebrow-font-size);
+  line-height:var(--ct-eyebrow-line-height);
+  color:var(--ct-eyebrow-color);
+}
+
+.section-label {
+  font-size:var(--ct-heading-subsection-font-size);
+  margin:25px 0 var(--ct-ref-space-12);
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.details .muted {
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}

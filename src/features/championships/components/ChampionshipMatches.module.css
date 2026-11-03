@@ -1,0 +1,49 @@
+/* Local result-row 20px grouping, 12/7px heading spacing and compact controls preserve the current result composition; shared row padding and text/action roles remain authoritative. */
+.result {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  border-top:1px solid var(--ct-ref-color-stone-200);
+  padding:var(--ct-list-row-padding-block) 0;
+}
+
+.result h3 {
+  font-size:var(--ct-heading-subsection-font-size);
+  margin:var(--ct-ref-space-12) 0 7px;
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.result p {
+  font-size:var(--ct-body-font-size);
+  margin:0;
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+@media (max-width:700px) {
+  .result {
+    display:block;
+  }
+}
+
+@media (max-width:700px) {
+  .result :global(.actions) {
+    margin-top:var(--ct-ref-space-16);
+  }
+}
+
+@media (max-width:700px) {
+  .result :global(.meta) {
+    font-size:var(--ct-meta-font-size);
+    line-height:var(--ct-meta-line-height);
+    color:var(--ct-meta-color);
+  }
+}
+
+.result { flex-wrap:wrap; }
+
+/* Long profile names must wrap within result rows instead of expanding the page. */
+.result > div { min-width: 0; max-width: 100%; }
+.result h3 { overflow-wrap: anywhere; }

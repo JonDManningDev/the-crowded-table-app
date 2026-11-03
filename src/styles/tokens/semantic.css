@@ -1,0 +1,99 @@
+/* Default light-theme roles. Paint roles form the initial theme contract.
+   Do not add theme scopes until the complete contract/overlay checks are scheduled.
+   Direct role values intentionally avoid one-consumer primitive indirection. */
+:root {
+  --ct-page-background: var(--ct-ref-color-ivory-100);
+  --ct-body-font-family: var(--ct-ref-font-family-sans);
+  --ct-heading-font-family: var(--ct-ref-font-family-serif);
+  --ct-body-font-size: 13px;
+  --ct-body-line-height: 1.8;
+  --ct-meta-font-size: 11px;
+  --ct-meta-line-height: 1.8;
+  --ct-eyebrow-font-size: 9px;
+  --ct-eyebrow-line-height: 1.6;
+  --ct-heading-page-font-size: 48px;
+  --ct-heading-page-compact-font-size: 36px;
+  --ct-heading-hero-font-size: clamp(36px, 4vw, 54px);
+  --ct-heading-card-font-size: 30px;
+  --ct-heading-subsection-font-size: 24px;
+  --ct-heading-item-font-size: 20px;
+  --ct-heading-title-line-height: 1.1;
+  --ct-heading-content-line-height: 1.2;
+  --ct-heading-color: var(--ct-ref-color-forest-900);
+  --ct-body-color: var(--ct-ref-color-moss-600);
+  --ct-meta-color: var(--ct-ref-color-warm-gray-600);
+  --ct-eyebrow-color: var(--ct-ref-color-forest-900);
+  --ct-card-background: var(--ct-ref-color-ivory-50);
+  --ct-card-border-color: var(--ct-ref-color-stone-200);
+  --ct-card-padding: 27px;
+  --ct-card-border-radius: 9px;
+  --ct-section-gap: var(--ct-ref-space-24);
+  --ct-action-footer-gap: var(--ct-ref-space-24);
+  --ct-card-grid-gap: 18px;
+  --ct-list-row-padding-block: 20px;
+  --ct-label-meta-gap: 5px;
+  --ct-control-border-radius: 6px;
+  --ct-control-min-height: 43px;
+  --ct-control-transition-duration: .18s;
+  --ct-focus-outline-color: #ad704c;
+  --ct-focus-outline-width: 2px;
+  --ct-focus-outline-offset: var(--ct-ref-space-4);
+  --ct-filter-background: var(--ct-ref-color-ivory-50);
+  --ct-filter-color: var(--ct-ref-color-moss-600);
+  --ct-filter-border-color: var(--ct-ref-color-stone-200);
+  --ct-filter-background-hover: #ecefe5;
+  --ct-filter-background-selected: #e6ebdc;
+  --ct-filter-color-selected: var(--ct-ref-color-forest-900);
+  --ct-filter-background-selected-hover: #dbe3cf;
+  --ct-action-primary-background: var(--ct-ref-color-forest-800);
+  --ct-action-primary-color: #fffdf2;
+  --ct-action-primary-background-hover: #153d2b;
+  --ct-action-primary-border-color: var(--ct-ref-color-forest-800);
+  --ct-action-secondary-background: var(--ct-ref-color-ivory-100);
+  --ct-action-secondary-color: var(--ct-ref-color-forest-900);
+  --ct-action-secondary-border-color: var(--ct-ref-color-stone-200);
+  --ct-action-secondary-background-hover: var(--ct-ref-color-sage-100);
+  --ct-action-outline-color: var(--ct-ref-color-forest-800);
+  --ct-action-outline-background-hover: var(--ct-ref-color-sage-100);
+  --ct-action-outline-border-color: #cbd3c0;
+  --ct-action-ghost-color: var(--ct-ref-color-forest-900);
+  --ct-action-ghost-background-hover: var(--ct-ref-color-sage-100);
+  --ct-action-destructive-background: #963e32;
+  --ct-action-destructive-background-hover: #7b3026;
+  --ct-action-destructive-color: #fff;
+  --ct-action-destructive-border-color: #963e32;
+  /* Shared action state treatments; no artificial numbered shadow scale. */
+  --ct-action-box-shadow-hover: 0 3px 10px #224c3a1a;
+  --ct-action-box-shadow-pressed: inset 0 1px 3px #173f3230;
+  --ct-link-color: var(--ct-ref-color-forest-900);
+  --ct-nav-color: var(--ct-ref-color-forest-900);
+  --ct-nav-background-hover: #e7eadf;
+  --ct-nav-background-current: var(--ct-ref-color-sage-100);
+  --ct-nav-color-current: var(--ct-ref-color-forest-900);
+  --ct-nav-indicator-color: var(--ct-ref-color-forest-800);
+
+  /* Local-view selection is independent of metadata and route navigation.
+     Future theme scopes must explicitly map all three Tabs paint roles. */
+  --ct-cmp-tabs-item-color: var(--ct-ref-color-warm-gray-600);
+  --ct-cmp-tabs-item-color-selected: var(--ct-ref-color-forest-800);
+  --ct-cmp-tabs-indicator-color-selected: var(--ct-ref-color-forest-800);
+
+  /* Notice owns these variant paints; future theme scopes must map every pair
+     and the shared border explicitly, alongside the body text role. */
+  --ct-cmp-notice-informational-background: #eef0eb;
+  --ct-cmp-notice-informational-icon-color: var(--ct-ref-color-warm-gray-600);
+  --ct-cmp-notice-positive-background: var(--ct-ref-color-sage-100);
+  --ct-cmp-notice-positive-icon-color: var(--ct-ref-color-forest-800);
+  --ct-cmp-notice-pending-background: #eeeaf2;
+  --ct-cmp-notice-pending-icon-color: #665578;
+  --ct-cmp-notice-caution-background: #f6ecd9;
+  --ct-cmp-notice-caution-icon-color: #805b24;
+  --ct-cmp-notice-container-border-color: var(--ct-ref-color-stone-200);
+}
+
+/* Preserve the approved responsive card measurement, outside the general scale. */
+@media (max-width: 1200px) {
+  :root {
+    --ct-card-padding: 22px;
+  }
+}

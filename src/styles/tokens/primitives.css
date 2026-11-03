@@ -1,0 +1,20 @@
+/* Raw foundations only. See docs/14-design-tokens.md for admission rules.
+   All six spacing steps are approved; role-specific measurements stay semantic. */
+:root {
+  --ct-ref-space-4: 4px;
+  --ct-ref-space-8: 8px;
+  --ct-ref-space-12: 12px;
+  --ct-ref-space-16: 16px;
+  --ct-ref-space-24: 24px;
+  --ct-ref-space-32: 32px;
+  --ct-ref-color-forest-900: #173f32;
+  --ct-ref-color-forest-800: #224c3a;
+  --ct-ref-color-moss-600: #53644f;
+  --ct-ref-color-warm-gray-600: #6b665e;
+  --ct-ref-color-ivory-50: #fffef9;
+  --ct-ref-color-ivory-100: #f8f7f2;
+  --ct-ref-color-sage-100: #e8ede3;
+  --ct-ref-color-stone-200: #e3e5da;
+  --ct-ref-font-family-sans: 'DM Sans', sans-serif;
+  --ct-ref-font-family-serif: 'Libre Caslon Display', Georgia, serif;
+}

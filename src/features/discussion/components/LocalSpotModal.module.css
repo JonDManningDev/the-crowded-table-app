@@ -1,0 +1,3 @@
+/* Existing sample illustration geometry and 23px copy separation stay
+local; the shared small-art convention remains for other dialogs. */
+.art { height:160px; border-radius:7px; margin-bottom:23px; }

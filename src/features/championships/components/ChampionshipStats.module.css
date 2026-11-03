@@ -1,0 +1,53 @@
+/* Local statistic typography (35px, 27px mobile), strip 23/15px padding and 6/7px mobile grouping preserve the existing display; these are statistics, not heading-size aliases. */
+.strip {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  padding:23px 0;
+  border-bottom:1px solid var(--ct-ref-color-stone-200);
+}
+
+.strip>div {
+  text-align:center;
+  border-right:1px solid var(--ct-ref-color-stone-200);
+}
+
+.strip>div:last-child {
+  border:0;
+}
+
+.strip strong {
+  font-family:var(--ct-ref-font-family-serif);
+  font-size:35px;
+  font-weight:400;
+  display:block;
+}
+
+.strip span {
+  font-size:var(--ct-meta-font-size);
+  color:var(--ct-meta-color);
+  line-height:var(--ct-meta-line-height);
+}
+
+@media (max-width:700px) {
+  .strip {
+    padding:15px 0;
+    gap:6px;
+  }
+}
+
+@media (max-width:700px) {
+  .strip strong {
+    font-size:27px;
+  }
+}
+
+@media (max-width:700px) {
+  .strip span {
+    display:block;
+    padding:0 7px;
+  }
+}
+
+@media (max-width:700px) {
+  .strip { grid-template-columns:repeat(2,minmax(0,1fr)); row-gap:var(--ct-ref-space-24); }
+}

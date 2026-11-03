@@ -1,0 +1,380 @@
+# Access migration — packages 2 and 3 specification
+
+Draft for review, 2026-10-31. Product rules already accepted in [matrix16](16-intended-access-matrix.md) remain authoritative. Physical tables, identifiers, interfaces and migration mechanics below are **proposed**, not deployed or automatically approved by this document. [Package 1](18-access-migration-baseline.md) supplies the verified starting point. This document does not authorize package 4 implementation or hosted deployment.
+
+## Review summary
+
+Recommend a coordinated foundation migration that:
+
+1. Installs the standing capability lookup, first approval, disciplinary restriction, paused staff and accepted settings/permission flags.
+2. Separates member-readable community-account facts, private preferences and manager-writable participant permissions so normal operations can use direct Data API/RLS.
+3. Uses distinct pending requests so stale approvals cannot act on later applications. Return eligibility follows the current restriction flag and first approval timestamp.
+4. Uses checked transactional commands for ownership, joining, requests, discipline, staff lifecycle and permission delegation; keeps routine profile/preference/settings/copy edits direct where independent.
+5. Retires the three flagged definer views. Use an invoker projection for eligible staff candidates and checked reads for pending requests and relationship summaries. The transport review below supersedes the earlier three-RPC recommendation.
+6. Adds independent visibility predicates, structured history/category access and explicit grants/default privileges; removes old transports and caller assumptions in the same development release.
+
+G-01 and G-02 were decided on 2026-11-03: copy the global name and bio once into the missing community profile, and enforce the archive owner boundary with RLS. Accepted 2026-11-03 (G-03a): store `show_global_profile`, `allow_direct_messages` and `allow_private_invitations` in `public.community_account_preferences`, one row per `(tenant_id,user_id)`. This is the migration target; no database changes have been applied. Other physical decisions remain under review.
+
+## Scope and dependency boundary
+
+This is the foundation for all intended audiences, including unfinished features. It covers the existing nine tables, accepted flags on them, standing/reference data, current caller changes, block identity needed by profile authorization, requests and reactivation and account/staff history. It specifies how future activity/chat/report/competition consumers must use these contracts. It does not invent full reservation, conversation, competition or global-account-deactivation schemas merely to make a foundation migration appear complete.
+
+**G-05a (accepted 2026-11-03).** The account and security migration can proceed independently. A separate database package will deliver app-wide match and competition records together with the checks that authorize global-profile reads from those records. Verify that access against actual match and competition records before marking it complete.
+
+**G-05b (accepted 2026-11-03).** Each feature authorizes the message, event or other record when serving it and derives the profile link from the associated community account. The account migration provides a single-profile lookup by tenant and target. On opening the link, check current viewer eligibility, tenant and target standing, and archive rules. No source ID, receipt or repeat source authorization is required. An eligible viewer may reopen a known link even after losing access to the original record. Inactive accounts remain excluded from ordinary directory, search and unfiltered base-table reads.
+
+**G-05c (accepted 2026-11-03).** Before a feature accepts its first records, its database package must implement and test every applicable effect of blocking, discipline, deactivation and archival in the originating transaction. A failure must roll back both the initiating action and its resource changes. Use the accepted rules for that resource, including staff-selected cancellations during suspension.
+
+Some accepted access depends on actual source records: activity-derived global profiles and transactional block/discipline/resource cascades. Their provider queries need concrete resource tables/FKs and operations. G-05a through G-05c set the delivery boundaries for those paths. Do not install stubs that deny a legitimate audience and label the matrix implemented. Conversely, do not accept client-supplied context IDs or booleans as proof of an encounter or activity entitlement.
+
+## Physical schema proposal
+
+### Existing tables and field moves
+
+| Relation | Proposed final changes |
+| --- | --- |
+| public.user_accounts | Keep three independent global preference booleans and existing identity/audit columns. No guessed global lifecycle flag. Trusted Auth provisioning remains |
+| public.user_account_profiles | Keep existing columns/limits/default identity. Broaden SELECT authorization; retain self display_name/bio INSERT and UPDATE |
+| public.community_accounts | Keep tenant_id/user_id, audit fields and standing; replace standing CHECK with FK; add first_approved_at timestamptz NULL and has_disciplinary_restriction boolean NOT NULL DEFAULT false. Move show_global_profile to the new preference relation; do not add is_active. Do not add removed to the new lookup |
+| public.community_account_profiles | Keep current columns. Creation only inside account/join/owner commands, update only display_name/bio. No standalone client INSERT or identity UPDATE |
+| public.tenants | Same fields; broaden active-member full reads; keep narrower public projection. Creation always establishes an approved owner community account |
+| public.tenant_settings | Keep auto_approve_users; add pause_community_events and allow_public_chat_visibility, allow_public_activity_visibility, allow_public_directory_visibility, all boolean NOT NULL DEFAULT false |
+| public.tenant_staff_assignments | Rename can_create_admin to can_grant_staff; add the ten accepted flags below; allow active/paused/revoked. Owner invariant covers all thirteen flags and approved community standing |
+| public.tenant_website_content_overrides | Same fields; public/page projections and member reads; INSERT validated slot context + text; UPDATE text_value only; DELETE restores default |
+| public.tenant_admin_actions | Keep immutable original columns and records; action becomes an FK to a predefined catalogue. Add operation_id uuid NOT NULL for correlation, reason text NULL, details jsonb NOT NULL DEFAULT '{}'. Validate permitted detail keys/types by action; no private message bodies/report evidence in details |
+
+G-03b accepted 2026-11-03: store `can_post_public_events` in `public.community_account_permissions`, one row per community account. It defaults false; the holder can read it, and effective same-community staff with `can_manage_community_permissions` can read and change it. The separate preference table is also accepted. The privacy rules are unchanged. A role's column grants cannot vary by which RLS policy admitted a row, and permissive policies combine. Separate rows avoid combining self preference edits with manager permission edits or exposing self-only fields through a peer SELECT policy. [PostgreSQL RLS semantics](https://www.postgresql.org/docs/17/ddl-rowsecurity.html).
+
+| New relation | Keys and fields | Ownership / purpose |
+| --- | --- | --- |
+| public.community_standing | standing text PK; six NOT NULL boolean capabilities below | Shared across communities. Grant SELECT to anon and authenticated. Only migrations write definitions |
+| public.community_account_preferences | PK/FK (tenant_id,user_id) → community_accounts; show_global_profile false, allow_direct_messages true, allow_private_invitations true; standard trusted audit fields | Exactly one row per account; private self reads and eligible self edits; helper access without exposing another person's preference values |
+| public.community_account_permissions | Same composite PK/FK; can_post_public_events boolean NOT NULL DEFAULT false; standard trusted audit fields | Exactly one row per account; self/participant-permission-manager reads, manager edits; not staff permissions |
+| public.user_account_blocks | PK (blocker_user_id,blocked_user_id), FKs to user_accounts, distinct-user CHECK; created_at/created_by trusted | Directed records; either direction enforces bilateral consequences. Caller reads own outgoing records; mutation through transactional block command, not direct DML |
+| app_private.community_account_requests | id uuid PK; unique (tenant_id,user_id) account FK; kind text CHECK join/reactivation; requested_at and requested_by trusted | Currently pending work. Approval, withdrawal and deactivation remove the applicable request. Restriction clearance closes a pending reactivation request in the same transaction. Immutable request UUID distinguishes a later request by the same person |
+| app_private.account_action_types | code text PK; usage text CHECK command/legacy; description text | Predefined semantic actions. Legacy codes preserve historical evidence; new commands cannot emit legacy codes |
+| app_private.tenant_admin_action_categories | PK (action_id,category); FK action_id → tenant_admin_actions; category text CHECK community_account/staff_account | Immutable event membership, including dual history. Do not derive old event visibility from the person's current role |
+
+All new mutable account-owned rows receive standard trusted audit attribution. Reference data and append-only records use their specified fields instead. Composite tenant/account FKs prevent tenant substitution; roots and dependent rows are established atomically. No cascade deletes of accounts, audit or report evidence. Current request rows are intentionally removable workflow state; append-only actions retain the fact of a submission/withdrawal/approval.
+
+Do not retain old preference columns, compatibility views or aliases after moving values and updating callers. The flag inventory now groups the three preferences under their accepted destination. Preserve existing show_global_profile values during the move, subject to the required inactive reset.
+
+### Standing seeds and invariants
+
+| standing | standard chat visibility | standard activity visibility | other profile visibility | own profile management | standard participation | standard DMs |
+| --- | --- | --- | --- | --- | --- | --- |
+| pending | false | false | false | true | false | false |
+| approved | true | true | true | true | true | true |
+| suspended | true | true | true | true | false | true |
+| inactive | false | false | false | false | false | false |
+
+Physical columns are enable_standard_chat_visibility, enable_standard_activity_visibility, enable_other_profile_visibility, enable_own_profile_management, enable_standard_participation and enable_standard_dms. G-03f (accepted 2026-11-03) reserves all writes to migrations and grants SELECT on these reference rows to everyone. Public visibility fallbacks and authorized historical reads are separate from these baseline capabilities.
+
+Proposed invariants:
+
+- Approved and suspended require first_approved_at; the first approved insertion/transition stamps it only if null. Preserve it forever afterward. Suspended implies has_disciplinary_restriction=true; pending/approved imply false. Inactive may retain either value.
+- Suspension command accepts an approved target; an already suspended repeat is an idempotent outcome, not a new first approval. Removing pending/approved/suspended targets sets inactive with a restriction. G-06b (accepted 2026-11-03) rejects pending → suspended. Direct removal of a never-approved applicant closes the join request and preserves a null first_approved_at. Clearance leaves the account inactive and the next application follows the current joining policy. G-06c permits disciplinary removal after voluntary deactivation under the same staff authorization checks.
+- Every active staff assignment requires approved account standing; owner additionally requires active owner assignment/all flags true and may never be disciplined or deactivated. Active owner, settings, community account, preferences and permissions rows exist at deferred commit checks. Owner profile creation follows the approved creation contract; profile completeness is not a new prerequisite to exercising staff authority.
+- Inactive implies stored show_global_profile=false across the two relations. A privacy save racing deactivation must not re-enable it. Reactivation does not restore an old true value.
+- Baseline standard_participation=false is not a blanket activity denial. Suspended private creation/reservation uses its separate approved-or-suspended eligibility check and ordinary resource constraints. Shared Discussion/event/table posting remains governed separately; own DMs use standard_dms.
+
+### Staff flags
+
+Keep can_approve_users and can_modify_content, rename can_create_admin to can_grant_staff. Add can_discipline_users, can_discipline_staff, can_manage_community_activities, can_manage_official_activities, can_manage_community_permissions, can_see_private_events, can_manage_settings, can_moderate_all_chats, can_audit_community_accounts and can_audit_staff_accounts. All are NOT NULL DEFAULT false for non-owners; force true for owner assignments. can_handle_reports is not a column or alias. can_discipline_users includes report review/acknowledgment/resolution and direct user discipline; no report prerequisite.
+
+No new enable_competitions flag, permission-derived role badge, private-activity capability flag or staff suspended status is proposed. Existing enable_matchmaking covers global competitions. Keep can_post_public_events and pause_community_events spellings unless separately renamed; broadening a staff permission name does not silently rename every event field.
+
+## Requests and return-state design
+
+**Accepted 2026-11-03 (G-03c):** Each pending join or reactivation request has its own row in `app_private.community_account_requests` and a fresh request UUID. A unique `(tenant_id,user_id)` permits at most one pending request of either kind per community account. Approval, withdrawal or clearance of the restriction on a pending reactivation request removes that exact row; deactivation removes any pending request under the existing cleanup rules. The audit record remains. A later application receives a new UUID, so approval from a stale screen cannot apply to it.
+
+**Accepted 2026-11-03 (G-03d):** Previously approved inactive accounts may self-reactivate when has_disciplinary_restriction is false, including after forced removal. If first_approved_at is null, the current joining policy applies once unrestricted. An active restriction always blocks reactivation. Do not persist a return_requirement, infer one from the reason for departure, or scan audit records for additional gates. Clearing a restriction is the judgment of effective same-community staff with can_discipline_users. The staff interface should explain the consequence before clearance: a previously approved member may then return without another staff decision.
+
+| Transition | Standing/restriction result | Request and history behavior |
+| --- | --- | --- |
+| New join or unrestricted never-approved return | Current auto-approval setting chooses pending or approved | Create a fresh join request if pending; stamp the first approval if approved. Never reuse a withdrawn UUID |
+| Voluntary deactivation | inactive; preserve the restriction flag and first approval timestamp | Remove pending requests; reset global sharing; pause an active non-owner staff assignment |
+| Direct removal from pending, approved or suspended | inactive, restricted | Remove pending requests; revoke active/paused non-owner staff atomically; keep structured history |
+| Disciplinary removal after voluntary deactivation | Remain inactive, set restricted, preserve first approval | Audit removal and revoke any paused staff assignment in the same transaction under both discipline permissions |
+| Request return while restricted | Remain inactive and restricted | A pending reactivation request can bring the restriction to staff for review. Filing it grants no access |
+| Clear suspended restriction | approved, unrestricted | Preserve first approval and audit the clearance; do not restore staff or resources |
+| Clear inactive restriction | inactive, unrestricted | Close any pending reactivation request in the clearance transaction and retain its UUID in the audit event. The member chooses when to return |
+| Self-reactivate after prior approval | approved if inactive, unrestricted and first_approved_at is not null | Same path for voluntary departure and cleared removal. Preserve first approval and audit the member’s return |
+| Approve a pending join | approved, unrestricted | can_approve_users must act on the exact current request. Preserve stale-request rejection |
+
+No return-state backfill or dedicated lifecycle table is needed for this rule. Use current account state under lock and the distinct request UUID to reject stale actions; any concurrency revision used by a command is technical metadata only. Clearance, self-reactivation and ordinary first-time approval remain distinct audited events. Staff assignments, bookings and cancelled resources are not restored by return. Independent archive, Auth and history-access rules still apply. Clearance also succeeds when there is no pending reactivation request.
+
+## Structured actions and history
+
+New command action identifiers proposed: community_join_requested, community_join_withdrawn, community_approved, community_deactivated, community_suspended, community_removed, community_restriction_cleared, community_reactivation_requested, community_reactivation_withdrawn, community_reactivated, staff_created, staff_paused, staff_resumed, staff_revoked, staff_reappointed and staff_permissions_changed. Existing tenant/settings/content events stay separate owner-only categories unless independently authorized. Do not parse reason text to choose a transition.
+
+details is a validated action-specific object, not arbitrary caller JSON: permit only required before/after standing, restriction, staff status, changed permission names/values, request ID, revision and related action IDs. Set operation_id/actor/time on the server; reason is supporting text. Restriction clearance records its defined resolution and previous/new states, not a set of individually closed historical sanctions. Optional report linkage must use a real same-community report FK when that domain exists; no mandatory report or unverified UUID placeholder.
+
+Category rules are frozen when each event is written:
+
+- Staff assignment creation belongs to both histories; later role changes belong to staff history.
+- Active → revoked and revoked → active belong to both histories. G-04b (accepted 2026-11-03). A `paused → revoked` staff assignment change appears only in staff-account history. If the same transaction disciplines the community account, record that action separately in community-account history.
+- Accepted G-04a (2026-11-03). Community-account suspension and its reason belong only to community-account history, including when the member holds a staff assignment. In the same transaction, record an active-to-revoked assignment change as a separate linked event in both histories. A staff-history reader can see that change. Reading the suspension reason requires community-history access, including when following the event link. Keep the suspension reason out of the shared revocation event, including its details.
+- Accepted G-04c (2026-11-03). Classify each new account audit event by what changed, regardless of the member’s staff role. Membership requests, approvals, standing and restrictions belong to community-account history. Staff assignments, roles and permissions belong to staff-account history. Assignment creation, active → revoked and revoked → active appear in both histories. When one transaction changes both accounts, record linked events and authorize each read independently.
+- Accepted G-04d (2026-11-03). Preserve every original audit entry. Assign each history category independently when the historical evidence establishes it. An assignment insert proves creation and belongs in both histories. A generic assignment update establishes staff history only unless further historical evidence proves a dual-history transition. Entries with neither category established remain visible only to the community owner. A person’s current role is not historical evidence of a transition. Retain original action names.
+
+Owners read all actions. An effective holder of either category's audit flag reads events in that category; a dual-category event does not require both flags. can_grant_staff or can_discipline_users alone does not grant historical browsing. Report handling includes its authorized resolution notes but not the general audit timeline. No audit grant exposes raw report evidence, omitted messages or full private conversations.
+
+Use one checked list_account_history RPC with optional exact event ID for discipline/history workflows; no direct browser queries of the underlying history/category tables. Return the full permitted action record and safe validated detail fields. Keep audit writes internal and append-only.
+
+## Archive enforcement decision
+
+**Accepted 2026-11-03:** use RLS to enforce owner-only access to community-account content when the entire community is archived. This supersedes the earlier UI/API-only enforcement choice. The affected tables may remain accessible through the direct Data API under their ordinary column grants and row policies. Compose the archive check with the existing audience rules: an archived community must never satisfy a permissive self/member/staff read branch for a non-owner.
+
+Owner means the community owner. A non-owner cannot retrieve even their own archived community profile. Ownership does not unlock someone else's private preferences. Any privileged RPC, projection or service path that bypasses base-table RLS must enforce the same boundary before returning affected data. Verify direct reads, joins and historical profile links alongside those paths. Independently authorized DM, activity and report history and personal relationship summaries keep their existing audiences; none grants a full archived profile. No individual account archive state or Edge proxy is required for this rule.
+
+## Grant and policy plan
+
+### Defaults and object privileges
+
+Keep the existing postgres ownership model for this migration; do not introduce a new privileged role merely to support unchanged ownership. Remove anon/authenticated automatic table/sequence grants from postgres defaults in public. Revoke their automatic function grants there. Revoke global default PUBLIC EXECUTE on future postgres-created functions, then grant approved function signatures explicitly. The global scope for postgres function defaults is intentional: per-schema defaults cannot subtract the built-in global PUBLIC EXECUTE. This changes future postgres-created functions across schemas, not existing extension functions or defaults for other creator roles. Document that authoring rule and verify before/after ACL manifests. [PostgreSQL default privilege rules](https://www.postgresql.org/docs/17/sql-alterdefaultprivileges.html).
+
+Preserve existing trusted service-role requirements explicitly; no browser service key or new service-role caller bypass. Limit revocations/regrants of existing objects to the reviewed application manifest, not ALL objects in unrelated schemas. No API-role CREATE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN or grant options. app_private remains absent from exposed API schemas.
+
+All SECURITY DEFINER functions pin search_path='', qualify every reference, reject unauthorized callers/targets internally and have explicit EXECUTE ACLs. No dynamic SQL based on client identifiers/permission strings. Revoke PUBLIC execution in the same transaction as creation. RLS owner bypass remains an intentional property of trusted definers, so their own checks are mandatory. Do not mark authorization helpers IMMUTABLE or cache decisions across requests.
+
+### Direct Data API relations with archive RLS
+
+Every table with browser grants has RLS. SELECT grants use explicit approved column lists rather than automatically exposing future fields; for current full-row audiences those lists include all current identity/audit fields. Policies are per operation, with both USING and WITH CHECK where applicable. Reference lookup can grant SELECT to anon/authenticated, with a universal read policy and no writes.
+
+| Relation | Authenticated SELECT predicate | INSERT | UPDATE columns and predicate | DELETE |
+| --- | --- | --- | --- | --- |
+| user_accounts | verified self | None | Three global preference flags, verified self | None |
+| user_account_profiles | Verified self or discoverable target, subject to bilateral blocks for non-self; contextual profile inspection uses the checked read below | display_name,bio; verified self, identity default auth.uid() | display_name,bio; verified self | None |
+| community_accounts | Own facts in active community; eligible member + target approved/suspended; owner management/archived exception | None | None | None |
+| community_account_profiles | Own pending/approved/suspended in active community; approved/suspended viewer and approved/suspended target; archived owner; no ordinary inactive target listing | None | display_name,bio; own enable_own_profile_management and permitted tenant | None |
+| community_account_preferences | Self, permitted tenant; inactive may read own preferences but cannot edit; archived non-owner denied | None | Three preference flags; self pending/approved, active tenant; extra serialized inactivity guard | None |
+| community_account_permissions | Self or effective can_manage_community_permissions in permitted tenant | None | can_post_public_events only; same-tenant permission manager | None |
+| tenants | Owner including archived; approved/suspended member in active tenant | None | name,country_code,state_province,city,timezone; owner | None |
+| tenant_settings | Owner including archived; approved/suspended member in active tenant | None | All five settings flags; can_manage_settings with established owner archived exception | None |
+| tenant_staff_assignments | Own assignment, including paused/revoked; owner or effective can_grant_staff for same community | None | None; controlled grant/status commands | None |
+| tenant_website_content_overrides | Authorized member of destination page or can_modify_content editor; owner archived management | tenant_id,content_key,text_value; validated slot/context and editor | text_value only; editor | Editor reset only |
+| user_account_blocks | Verified blocker self | None | None | None; transactional unblock |
+| tenant_admin_actions | No direct API grant; checked history RPC instead | None | None | None |
+
+Unauthenticated callers receive no raw rows from these relations except the public standing reference. They use safe public projections below. New private request/catalogue/category relations have no anon/authenticated table grants. Grant only the private-schema usage and signature-specific execution needed by invoker policies/views. Keep app_private outside exposed schemas. Never grant API roles access to raw Auth, private request/category tables, or a predicate that tests arbitrary users’ Auth status.
+
+Suspended own-profile editing does not silently add preference editing: the existing accepted exception concerns profile fields and own DMs/private activities. Inactive callers cannot read full community profiles, including using historical links; own account facts/return controls are a separate contract. Member profile reads are not blocked by personal blocks. Public identity projections do not include bio/audit fields.
+
+For column-specific edits, use PATCH/update and request an allowed key back with single() to surface denied/missing rows. Global own-profile upsert remains permitted because its immutable identity derives from Auth and only profile fields are written. Community profiles are created by join/creation, then PATCHed. Override creation uses INSERT and later PATCH text_value; do not restore immutable-key UPDATE grants just to preserve an old upsert payload.
+
+### Policy/helper interfaces
+
+Proposed app_private helpers derive the caller from verified_user(); public/client callers never select their own acting user ID.
+
+| Helper / responsibility | Contract |
+| --- | --- |
+| verified_user() | Keep authoritative confirmed email/non-anonymous/current-ban caller checks; no raw Auth response |
+| is_owner(tenant) | Verified caller, active owner assignment, approved community account; usable for accepted archived-owner operations |
+| has_permission(tenant,code) | Whitelisted thirteen permission names; active assignment, approved account, active tenant except explicitly authorized owner archived operations. No arbitrary column lookup |
+| account_capabilities(tenant) | Internal current standing/capability lookup, not a client-readable target settings object |
+| can_read_community_account/profile(tenant,target) | Operation-specific predicates matching the table above; no general inactive-target branch or blanket staff full-bio access |
+| can_edit_community_profile/preferences(tenant) | Separate predicates; profile permits suspended, preferences use pending/approved; archived non-owner access denied |
+| can_select_global_profile(target) | Direct table SELECT: verified self or discovery-enabled non-self, with bilateral block denial. Does not add community/activity-only targets to raw table searches |
+| can_inspect_global_profile(target,validated_context) | Internal single-profile authorization: self or an accepted discovery/community/activity path, with bilateral block denial for non-self. Validate or derive context from authoritative records, never a caller assertion |
+| pair_is_blocked(viewer,target) | Internal only; check both directed edges, used by action predicates; no callable arbitrary-pair oracle |
+| is_staff_candidate(tenant,target) | Narrow private definer predicate for the invoker view. Derive the verified actor, require effective can_grant_staff in this active tenant and an approved same-tenant target before testing confirmed, non-anonymous and currently unbanned Auth identity. Return only candidate-set membership. No Auth column or generic eligibility checker is exposed. |
+| member_directory_badge(tenant,target) | Narrow private definer for reading protected assignment data. Validate active tenant, approved/suspended viewer and eligible same-tenant target inside the helper. Return only effective role or null. Public directory computes its badge under its separate checked scope. |
+| can_read_action(action_id) | Owner or qualifying immutable event category; independent of operational permissions |
+| can_read_content_key(tenant,key) | All seven supported Community hero and welcome keys are public for active communities regardless of public chat, activity or directory settings. Apply archive rules separately |
+
+Avoid recursive RLS by having narrowly reviewed definers read protected account/staff/preferences rows internally. Policy and view helpers stay outside the exposed API schemas. Their results disclose only the scoped predicate or approved badge. No public helper reveals qualifying affiliations, target preference values or Auth status. Do not use a function named for one operation, such as standard participation, as a universal allow/deny for every profile, DM, activity and historical read.
+
+Single-profile non-self inspection is: no bilateral block AND (target discovery enabled OR at least one qualifying shared active community with target sharing enabled OR a verified global-activity source). Both community accounts must have approved/suspended standing for community sharing; inactive resets the target flag and contributes no access. Sharing across multiple communities combines by OR, regardless of the currently displayed community. Matchmaking enabled alone is never global discoverability. Accepted retained match/competition relationships still qualify after opt-out. Anonymous global-profile access is always denied.
+
+The inactive-profile lookup accepts one tenant and target. Keeping inactive targets outside ordinary SELECT policies prevents an unfiltered profile query or embedding from becoming a former-member directory. Reading a source record and opening its community profile link are separate operations.
+
+
+## Query interfaces and transport choices
+
+These are proposed Data API contracts. In Package 1, all three flagged objects are definer views. The candidate view directly joins Auth users and triggered the Auth exposure finding. The existing summary view has an application caller. Test each replacement against the [baseline](18-access-migration-baseline.md) and the [accepted field contracts](16-intended-access-matrix.md).
+
+**Relations callers may browse.** An invoker view requires the caller’s underlying SELECT privileges and RLS. Its projection does not narrow what the caller can retrieve directly from those tables. Grant SELECT only to authenticated on the two invoker views below. Removing every filter, requesting every granted column or embedding related rows must stay within the caller's independent base-table rights.
+
+| Data API read | Entitlement with client filters removed | Why the relation suffices |
+| --- | --- | --- |
+| Direct community_accounts / community_account_profiles, with community_directory as a security-invoker projection | Approved/suspended members may browse approved/suspended peers in each shared active community, including all eight profile fields and the accepted account facts. Own onboarding and archived-owner reads remain separate RLS branches. The directory itself requires an eligible viewer and target, even when self/owner branches allow other direct reads. | Use direct SELECT for browsing and opening an eligible peer. The projection joins already-readable facts to display names, dates and a role badge. A scoped private badge helper returns only the effective role. No SELECT grant on peers’ assignments, permissions or preferences is needed. |
+| Direct user_account_profiles | Verified actor may enumerate discoverable nonblocked profiles and read their own profile. All seven profile fields are authorized. Apply search semantics to omit a nondiscoverable self in search. | Discovery is a row predicate. Keep contextual grants out of this policy or unfiltered reads would list people who opted out of search. |
+| staff_candidates (security-invoker view, replacing tenant_admin_candidates) | Verified, effective can_grant_staff managers may enumerate eligible candidates across only the active communities they manage. Require approved target standing even when the client omits the tenant filter. Return tenant_id, user_id, standing, optional display_name, staff_role and staff_status. Preserve candidates with no profile or assignment. | Managers already have member reads on approved account/profile rows and management reads on same-tenant assignments. Use left joins and the scoped is_staff_candidate predicate for private Auth eligibility. An ordinary member querying the view gets no candidates. Removing filters cannot expose raw Auth or the reason a target failed. No new underlying grants. |
+
+**Checked projections.** Each RPC below needs definer access only to the identified protected sources. Return explicit scalar fields or fixed nested projections, never a protected table row type with implicit relationships. Apply all audience checks before sorting, counting, cursors or returning results. An exact lookup cannot be turned into a collection by omitting inputs, using wildcard text, applying a result filter or embedding another relation.
+
+| Client-callable read | Caller, subject, fields and enumeration | Required proof or disclosure prevented |
+| --- | --- | --- |
+| lookup_tenant(slug) | Anonymous or authenticated, exact known active slug, at most one result. Extend the existing seven fields (id, slug, name, country_code, state_province, city, timezone) with auto_approve_users, the three public visibility flags and a collection of the seven supported hero/welcome overrides that exist. Each override contains only tenant_id, content_key, text_value. The enclosing tenant ID identifies the settings flags. Missing overrides use the application defaults. | One exact, server-enforced lookup for facts with the same public audience. Read protected tenant/settings/copy rows internally. Reject empty/list inputs, match slug by equality, and give the same absent result for unknown and archived. Unfiltered public SELECT would enumerate communities. Full settings/copy rows would also disclose the operational pause flag or audit fields. Member/editor full-row reads remain direct. |
+| read_public_directory(slug,cursor,limit) | Anyone may enumerate eligible approved/suspended display names and effective role badges within one known active community only while allow_public_directory_visibility is true. Use an opaque page cursor. No member UUID, standing, dates, bio or audit fields in public rows. | Recheck exact slug, tenant activity, directory flag and target eligibility on every page. These checks and protected account/profile/assignment reads differ from public landing copy. Public grants on the bases would permit cross-community enumeration and conflict with full member field grants. |
+| list_community_account_requests(tenant,cursor,limit) | Effective can_approve_users may enumerate current join and reactivation requests in that active community. Effective can_discipline_users alone may enumerate only current restricted-return requests there. Return request_id, kind, requested_at, target user_id, standing, first_approved_at, restriction flag, optional community display_name and stale-state token. | Pending/inactive applicant names and private queue entries are visible for review even when the full profile is ineligible. A direct profile grant for those rows would disclose bio and audit fields. Preserve missing-profile applicants. No target Auth-ban check. Withdrawal/deactivation removes the request. Listing never conveys approval or clearance authority. |
+| list_my_communities(filter,cursor_created_at,cursor_id,limit) | Verified caller may enumerate their own qualifying relationships only. Return id, name, city, state_province, country_code, operational_status, created_at, is_owned, is_managed, is_member. All/managed/owned narrow that set. | Pending and archived relationships qualify for summary fields even where tenant/account RLS denies the underlying rows. An invoker join would lose those cards, and expanding base policies would grant full-row access. Derive actor from session. Preserve created_at DESC, id ASC keyset order and bounded pages. |
+| read_global_profile(target,source_kind?,source_id?) | Verified actor, exactly one target’s seven profile fields. Direct self/discovery reads already suffice. For other targets require a qualifying shared active community or a validated app-wide encounter and no bilateral block. No listing of context-only profiles, raw preferences or qualifying affiliations. | A shared-community check reads both accounts and the target’s protected sharing preference. Activity proof binds the readable source, viewer and encountered target. Keep the G-05a path in the app-wide feature package. A known target ID alone and an enabled matchmaking flag confer no access. |
+| read_inactive_community_profile(tenant,target) | Verified approved/suspended viewer in the same active community, one inactive target, eight profile fields and authorized account status/date facts. Archived owner access follows its separate policy. | Require both exact IDs, verify the target belongs to the tenant, and check current viewer eligibility. A relation granting the same inactive rows would permit listing all former members. The exact lookup also works for a saved or shared link held by an eligible viewer. |
+| list_account_history(tenant,target?,category?,event_id?,cursor?,limit?) | Community owner or effective holder of the relevant audit permission may browse full authorized action records and validated details in that community. An exact event ID returns at most one record with identical fields and authorization. | The accepted history workflow forbids direct history/category queries. Apply tenant, actor, archive and immutable category membership on every access, including linked events. Intersect exact ID with the authorized set **before pagination** and ignore pagination in exact-ID mode. Missing and inaccessible IDs yield the same result. No separate detail RPC or access to private report evidence. |
+| read_my_community_request(tenant) | Verified self, one active community, zero or one pending join/return request. Return only own request_id, kind and requested_at. No cross-user or cross-community listing. | The request relation is private by accepted design. The narrow projection supplies the identifier for withdrawal. Read standing, first_approved_at and restriction directly from the authorized own community_accounts row, including while inactive in an active community. Determine actual return under lock in the command. Do not expose staff notes, history, or an independent return-approval layer. |
+
+Use anon/authenticated EXECUTE only for the two public slug reads. Grant authenticated EXECUTE on the other checked reads and validate the actor, scope and archive exceptions within each. Distinguish the caller from a target supplied for lookup. Retire the three original view names and replace their consumers without compatibility wrappers. Candidate eligibility and community profiles are independent of personal blocks. Direct-contact selectors apply their separate bilateral checks.
+
+**Accepted queue audience.** Effective staff with `can_discipline_users` may browse pending reactivation requests for currently restricted accounts in their active community, including the optional community display name. Ordinary join requests require `can_approve_users`. Staff with both permissions see the union once. Audit history requires its own permission. The queue RPC selects current requests for the specified tenant and applies the permission predicate before counting, sorting or pagination. A discipline-only reader qualifies only when the request kind is reactivation and the target account is inactive and restricted. Reevaluate on each call. Clearance closes the request in the same transaction and leaves the account inactive.
+
+For summaries, is_managed describes a retained active assignment with approved account standing, including an archived relationship where appropriate; it does not grant operational authority in an archived community. is_owned is current approved owner; is_member covers pending/approved/suspended, not inactive. Paused/revoked staff can still qualify as members. Preserve the existing All = owned or member rule and stable pagination. Archived history navigation is not a full account/profile access exception.
+
+### Search versus contextual inspection
+
+Direct global profile table reads expose self/discoverable rows only. Global search must explicitly apply discovery scope (and omit a hidden self row from search results if self is included in the base policy). A shared-community or activity entitlement opens a single authorized profile through the checked read; it must not add every context-visible target to generic global search. Knowing a target UUID does not satisfy an entitlement. No new opt-in setting is introduced.
+
+Similarly, the ordinary community directory excludes inactive targets even when the viewer can read an old message involving them. The inactive-profile RPC returns one specified profile after checking community eligibility. It never queries message or activity history. Pending/non-member/inactive viewers of public content get the allowed author identity projection, not full community profiles. Full-profile fields cannot leak through PostgREST embeddings, GraphQL, helper outputs, errors or role-badge functions.
+
+Private helper access alone is not a reason to put every operation behind RPC. Routine self edits, full eligible-member row reads, settings updates, participant-permission edits and copy edits remain direct under the proposed grant plan. Specialized read RPCs cover genuine field/context exceptions; transactional RPCs cover coordinated writes.
+
+### Caller and execution boundaries
+
+Reads by members and editors of tenant settings and website overrides stay on their existing direct table paths, including authorized audit fields. A request for every member-authorized column must still exclude another account’s preferences and all rows outside the caller’s audience. Public clients use the fixed landing projection. Selecting all columns, omitting a page filter, or embedding profiles from account rows must never turn the public audience into a member or manager. Private request, history and category rows remain inaccessible to both API roles.
+
+## Transactional command contracts
+
+All actor IDs, account IDs derived from the session, timestamps and audit metadata are server-controlled. Tenant/target/request/resource IDs supplied by callers are selectors, not authority. Inputs are typed, permission changes use an exact key allowlist, and no command accepts arbitrary action/details SQL. New names below replace legacy interfaces, not aliases.
+
+| Command | Authorization and atomic effects |
+| --- | --- |
+| create_tenant(details,community_profile) | Verified actor; creates tenant/settings, approved owner account, submitted curated profile, preferences and participant permissions, active owner assignment with all flags true, first approval and events. Remove p_join_community. No deferred ownership-transfer feature introduced |
+| join_community(tenant,community_profile) | Verified actor; validates submitted profile and current policy, creates account/profile/dependents and current request if pending. Existing accounts use an explicit return outcome; never overwrite a curated profile from a global fallback |
+| deactivate_community_account(tenant) | Self non-owner; cleans up pending requests and global-sharing reset; pauses active staff. Executes accepted departure resource effects atomically when those domains exist |
+| request_community_reactivation(tenant) | Self inactive account; recheck restriction and first_approved_at under lock. If restricted, request staff review only. Otherwise self-reactivate after prior approval, or apply current joining policy if never approved. Never restore staff or resources |
+| withdraw_community_request(tenant,request_id) | Self current request; remove that request and audit withdrawal. Join withdrawal makes the account inactive; return withdrawal leaves it inactive. Neither clears discipline or changes first approval |
+| approve_community_request(tenant,request_id,expected_revision) | can_approve_users; approve only a current pending join requiring first approval. Check request UUID/kind and restriction under lock; consume request and stamp first approval. No repeat approval of a cleared former member |
+| discipline_community_account(tenant,target,action,expected_revision,selected_effects,reason?) | can_discipline_users; also can_discipline_staff for active/paused staff target. Owner denied. Suspend or remove, update standing and restriction, revoke staff where required and apply revalidated selected/mandatory cascades with correlated events. Report optional |
+| clear_community_restriction(tenant,target,expected_revision,reason?) | can_discipline_users; suspended becomes approved, inactive stays inactive. A previously approved inactive member may now return on their own. Close any pending reactivation request atomically with audited clearance. Staff restoration remains separate |
+| grant_staff(tenant,target) | Effective can_grant_staff, approved target, no existing assignment; defaults false for non-owner staff. No silent revoked reappointment or privileged flag payload |
+| resume_staff(tenant,target) | Another effective can_grant_staff holder; approved target, paused assignment only. Retained flags resume; cannot resume self or revoked assignment |
+| revoke_staff(tenant,target,reason?) | can_discipline_staff; active/paused non-owner to revoked without implicitly removing community participation |
+| reappoint_staff(tenant,target,reviewed_permissions) | Owner only, approved revoked target, explicitly reviewed full permission set. Distinct from paused resume; no automatic old-grant restoration |
+| set_staff_permissions(tenant,target,patch) | Owner may change all non-owner flags; effective can_grant_staff may change only the two audit flags. Reject an entire patch containing any unauthorized/unknown key. Protect owner row; action history records actual changes |
+| set_tenant_archived(tenant,archived) | Owner; preserve existing resource cancellation/history rules and no automatic reopening on restore; subsequent account-content reads enforce archive RLS |
+| set_user_block(target,blocked,validated_encounter,confirmed_effects) | Verified actor; own directed block only, never remove counterpart's block. Validate encounter and current mandatory private-resource/casual-match effects; preserve competition participation, independent guests and in-progress resources. No direct table writes bypass these effects |
+
+Use direct RLS-governed writes for self profile text, preferences, delegated settings, participant permissions, and validated copy insert/edit/reset. Preserve the per-method column lists above. A trigger stamps trusted audit metadata. Lifecycle commands instead need the protected writes in the table above: use authenticated-only definer execution with in-command actor, tenant, owner/archive and target checks before every privileged change. Owners alone may archive or restore. Privilege to update settings does not permit changing lifecycle status.
+
+Staff granting never grants unrelated staff flags; owners subsequently manage grants, with the explicit two-audit-flag delegation exception. can_discipline_staff by itself does not discipline community participation. can_discipline_users report closure does not automatically discipline, and direct discipline does not fabricate or transition a report. Report submission/review APIs belong to the separately modeled reporting domain, with selected evidence, permanent retention and existing submitter access.
+
+No direct auto-approval settings RPC is needed for an independent boolean edit: use a column-granted UPDATE under can_manage_settings. The setting change affects future applicable requests, not the existing queue. Remove set_auto_approve_users after current consumers/tests are migrated; do not retain it for compatibility.
+
+### Locking, concurrency and retries
+
+Lifecycle/approval/staff commands lock the tenant and target account, then related request/assignment rows; multi-target operations use a fixed tenant/user ordering. Block operations additionally require a fixed global identity-pair/resource ordering shared with admission commands. Finalize that ordering with the actual resource implementations, not unrelated local conventions. Every command rechecks current caller authority, target state, source access and resource timing after locks; precomputed UI previews are not authorization.
+
+For approval, lock the account and verify the exact request UUID. For discipline and clearance, compare the expected account version with the locked account and recheck current standing, restriction and staff authority. Withdrawal followed by a new request must not let an old approval apply to the new request. Changes of permission, standing or archive state must not leave a partially committed command. Repeated completed requests return an explicit already-applied/stale result without duplicating effects/events; where resource notification deduplication is needed use stable operation/event IDs.
+
+The split preference row needs a database guard in addition to RLS: serialize preference writes with the parent account transition and re-read current standing before accepting true show_global_profile. Cross-table locking can deadlock if a direct update already holds the preference row while a lifecycle command holds its parent; a deadlock/serialization abort must roll back the entire write, with controlled retry against fresh state. Do not claim a specific trigger ordering eliminates this without the two-session test. The required outcome is that an inactive account cannot commit sharing=true, regardless of which request began first. Existing statement-time treatment of independent profile edits is separate from this strict stored-state invariant.
+
+Timestamp stamping, owner/staff root validation, trusted identities, restriction/standing consistency and audit append-only checks are not substitutes for command permissions. Conversely, a trusted command must still satisfy those structural invariants. No ordinary client-supplied session variable, claimed backend flag or chosen current_user may disable them.
+
+## Migration and caller sequence
+
+Use a new forward migration after 20261024000300, with one atomic schema/authority switch where feasible. Do not edit already-applied historical migrations. “No compatibility” means no old runtime interfaces or dual writes; it does not mean discarding required data/history or the migration ledger.
+
+1. Revalidate package-1 object/ACL/source manifests and aggregate data preflight. Stop on unreviewed drift, owner anomalies or unexpected legacy states. Record expected affected counts; current counts are only a snapshot.
+2. Establish explicit default privileges before creating objects. Install lookup/catalogue tables and seeded capabilities/action identifiers. Keep new API objects ungranted until their contract is complete.
+3. Add first_approved_at and restriction fields, capture pre-conversion standing, and backfill: approved/suspended/removed get created_at; pending stays null. Mark suspended/removed restricted; removed becomes inactive with the restriction set. Never invent past reason text or actual approval times.
+4. Create/copy preference rows, preserving show_global_profile exactly except required inactive reset; initialize new DM/invitation preferences true and participant permission false. **Pending join backfill (accepted 2026-11-03).** Preserve each existing pending join application as one pending request. Copy `community_accounts.created_at` into `requested_at` as an approximation. Link the request UUID to an immutable migration audit event identifying the source column and the approximate nature of the timestamp. Keep the account pending and its first approval date null. Use the account user ID for requested_by and trusted migration attribution for the adoption event.
+5. **Accepted G-01:** insert the missing community profile from the same user’s global display_name and bio once, preserving a null bio. Use trusted migration attribution and insert only if the (tenant_id,user_id) profile is still absent. Never overwrite an existing community profile. Verify a rerun changes zero existing profiles and later edits on either profile stay independent. Stop if a required source is missing or invalid; do not fabricate text.
+6. Require approved owner community accounts; creation/repair of any missing owner account must be an explicit migration action with proper profile/input and trusted date semantics. Current preflight has no such owner to repair. Do not silently auto-approve unexpected non-owner staff; surface those rows before switching invariants.
+7. Rename the existing staff grant, add ten false flags for non-owners and true flags for owners, expand owner checks and paused state. Existing can_approve_users/can_modify_content/can_create_admin values are preserved under their intended names; no implied expansion of non-owner powers.
+8. Preserve all audit records. Assign operation IDs for legacy records with explicit migration provenance; preserve original created_at/created_by. Apply G-04d independently to each category. Preserve the original event even when neither category can be assigned. Install validated structured writes for new commands.
+9. Install final command bodies, guards, deferred root checks, helpers, grants and policies. Replace dependencies in the same migration, drop the three flagged views and re-create lookup_tenant(text) with its expanded result type and explicit execution grants. Rebuild dependent callers and generated types together. Remove moved columns rather than leaving aliases. Narrow identity grants and replace upsert-based community/copy callers.
+10. Validate FKs/checks, required dependent row counts, no inactive sharing, no invalid active staff/owner, exactly-one-owner/settings roots, grants/EXECUTE allowlists and no residual incompatible functions. Notify API schema reload at completion; a failed migration rolls back the switch.
+11. Regenerate database.types.ts; update community creation draft/form/hook/API/tests, profile/preference API locations, summary RPC and pagination, and request/staff command consumers. Replace old expectations, not just snapshots. Deploy database/frontend as a coordinated development release with no parallel legacy fallback.
+12. Verify locally, then request the separately scoped hosted deployment at its concrete review checkpoint; run hosted postflight and advisor/API checks after deployment. Record actual package-4/5 status separately.
+
+### Required caller changes
+
+- Remove the creation “also join” checkbox, join boolean and p_join_community parameter. Present/submit the curated community-profile draft as part of ownership creation. Prefill may copy the current global profile for editing; it is not a live shared profile.
+- Change saveCommunityAccountPreferences to the new self-only table and combined three-field preference object. Change community profile save from upsert to update of display_name/bio and require affected-row confirmation.
+- Replace readMyCommunities' view query with list_my_communities and its ordered cursor contract. Keep the ten-field card input and all/managed/owned semantics; no mock fallback on denial.
+- Use explicit INSERT/PATCH/DELETE for website overrides so immutable keys need no UPDATE grant. Change permission patch typing to the thirteen canonical flags with narrow delegated audit-edit UI capabilities.
+- Add separate discovery and contextual profile-read APIs; do not reuse a profile search query with OR-based sharing/activity authorization. Community profile links pass only tenant and target to the inactive-profile lookup. Public author/directory cards must never fetch a full profile to discard fields afterward.
+- Fetch public landing fields, flags and copy by one exact slug. Fetch public directory pages separately using that slug. Members browse the invoker directory or eligible base rows. Staff management browses staff_candidates, with client filters for convenience only.
+- Use the request queue for permitted review fields and the private self-request projection for an outstanding request ID. Read own standing directly. For history details call the same history RPC with event_id. Handle absent targets without disclosing whether another tenant owns them.
+- Regenerate all view/relationship/function types and update tests asserting optional owner participation, self-only peer profiles, owner-only settings or legacy view names. No hidden fallback to old interfaces.
+
+## Future-domain integration contracts
+
+| Domain | Required authority/data integration before dependent access ships |
+| --- | --- |
+| Global activity profile access (separate G-05a package) | Real typed source FKs and caller visibility for prospective matches, accepted matches, competition registrations and authenticated spectators. Opt-out removes pending suggestions/requests, preserves accepted sources; bilateral blocks deny full profiles. Never authorize from enable_matchmaking alone |
+| Inactive community profiles (G-05b) | The account package owns the exact-target read. Each feature returns links for the community accounts identified by records the viewer may read. Public identity cards retain their minimal fields. |
+| Community activities | Use standard participation for new community-public creation/reservation, separate suspended private eligibility, can_post_public_events and pause flag per accepted scope, plus resource/invitation/block/capacity rules. Visibility is separate from participation; official visibility remains public |
+| Chats/Discussion | Independent public chat setting, private resource audience, DM endpoints/consent/blocks, suspended own-DM exception and 24-hour normal-completion send window. Moderator scope never rewrites another user's words; public read access includes accepted expandable hidden chat bodies |
+| Discipline/deactivation/archive | Actual same-transaction resource withdrawal/cancellation and outbox work; suspension only revalidated selected public commitments, removal/departure use their accepted cascades. Preserve guests/in-progress cases and no automatic restoration |
+| Blocks | Future private host/participant exclusions and mandatory upcoming effects; casual matching follows them; competitions retain participation/pairings with communication-only block effects and full global-profile denial |
+| Reports/history | Selected evidence and allowed gap metadata, immutable permanent retention, independent submitter reads and can_discipline_users workflow. No full private conversation or general history entitlement follows |
+| Global deactivation | One future transaction removes pending community requests; no guessed new global activity flag or Auth deletion flow in this foundation |
+
+Community features authorize their own records and obtain profile link targets as follows. These checks belong to the source read.
+
+| Feature record | Where the link target comes from | Audience for the feature record |
+| --- | --- | --- |
+| direct_message | direct_conversation_messages and same-tenant direct_conversation_participants; target is the source author/participant actually linked to the encounter | Caller has retained conversation/message read access; a known conversation ID alone is insufficient |
+| event_host or table_host | events organizer or tables host, with authoritative same-tenant community-account FK | Caller may read that concrete event/table under its public/private/history rule |
+| event_registration or table_participation | Stable per-person event_registrations/table_participations; target comes from attendee_user_id, not a caller-selected guest identity | Caller may read the roster/participation context; a guest row does not invent a global/community account |
+| discussion_post | Proposed topic/post author relationship in the Discussion domain | Caller may read the post/thread and its retained placeholder according to its audience; full profile still requires approved/suspended community viewer |
+
+The feature supplies tenant and target in the link. The profile caller passes only those values. App-wide activity entitlements still require source validation: existing matchmaking_requests is community-scoped, while global prospective/accepted matches and app-wide competition/spectator relationships need their own typed design. Reusing community registrations to authorize global profiles would contradict the accepted distinction. Private-label storage/text limits and global activity storage remain separate design items; no invented generic global activity table is made canonical here.
+
+Do not add an “always false until feature exists” branch to a supposedly complete authorization helper, a generic access_grants cache without real source provenance, or a client-chosen context bypass. The migration implementation must explicitly identify which provider schemas are supplied in its reviewed scope. Full feature UI is not required to implement these accepted backend contracts; missing actual business/schema rules are the dependency.
+
+## Verification specification
+
+Verification must prove allowed operations as well as denials. Use a fresh local migration replay and an upgrade from the eight-migration baseline with synthetic rows for every legacy standing, optional owner account, missing profile and non-owner grant combination. The previously captured hosted data is too small to prove transition coverage.
+
+| Area | Required evidence |
+| --- | --- |
+| Catalog/defaults | Exact column grants, RLS policies, function ACL/search_path and owner checks; new table/function created under intended creator does not accidentally acquire API rights; new objects explicitly granted only after policy installation |
+| Unfiltered relation reads | Through the actual Data API, omit tenant, target and standing filters, request every granted column and try related-resource embeddings. Verify approved/suspended peer enumeration and direct self/discovery access. Inactive historical targets, hidden global profiles, peers’ preferences and unrelated staff assignments must remain outside those base reads. |
+| Public projections | Compare exact active slug with unknown, archived, empty and wildcard inputs. Confirm no collection lookup. With directory off, flags and public copy still resolve but no roster does. With directory on, try extracting bio, UUID, audit and adjacent tenants via fields, cursor reuse or embeddings. |
+| Operational reads | Compare staff candidate invoker rows as manager/member/other-tenant manager, including missing profiles and Auth-ineligible candidates. Check queue name versus full bio, no applicant-ban filter, and no withdrawn UUID. Compare a pending or archived personal summary with direct tenant-row denial. |
+| Exact and contextual reads | Open a former member’s profile from an authorized message and again by saved link after message access ends. Deny the same lookup after viewer deactivation, tenant substitution or archival for a non-owner. Verify unfiltered queries and embeddings exclude inactive peers. Separately, for activity-derived global profiles, reject unrelated targets, sources and unreadable records. Test history detail outside the first page and deny unauthorized linked actions. Compare own request access across users and archive state. |
+| Stale workflows | Submit A, withdraw, reapply as B, then approve A through the API. B must remain pending and unchanged. Race approval/withdrawal, clearance/reactivation and permission revocation. Verify retries never duplicate transitions or effects. |
+| Field audiences | Full authorized profile/audit UUID reads; private preferences never appear in peer/direct/nested queries; public lookup/settings/directory/copy exclude private columns. Column-union self/manager escalation attempts fail |
+| Community page text | Read all seven overrides via lookup_tenant as anon with all three public visibility flags off. Verify exactly tenant_id, content_key and text_value in each nested override and that archived text is unavailable through that public path |
+| Profile paths | Search-opted-out target absent from global search even if context-viewable; shared-community OR semantics; contextual accepted match/competition paths; no anonymous global profile; bilateral block applies to all non-self paths |
+| Community lifecycle | Pending own onboarding only, suspended profile/DM/private-activity exceptions, inactive directory exclusion and eligible exact-target inactive profile reads, owner-only archived account content across RLS and privileged read paths |
+| Permission model | All thirteen flags independently; owner invariants; active/paused/revoked and approved prerequisite; can_grant_staff edits only audit flags without owner authority; audit flags do not confer actions or full current assignment reads |
+| Removal after voluntary deactivation | Verify unchanged standing and original approval date, recorded removal and blocked self-reactivation. For paused staff, deny a caller missing either discipline permission with no partial effects, and verify atomic revocation under both. After clearance the member remains inactive and may choose to return |
+| Pending applicant discipline | Verify a rejected suspension leaves the request, standing and first approval unchanged. Direct removal must atomically close the request, audit removal and leave the account inactive, restricted and never approved. After clearance test reapplication with auto-approval on and off |
+| Queue audiences | Through the actual Data API seed one pending join and one restricted return in the same active community. With discipline alone, request every page without a kind filter and verify only the return appears, including its optional name. Approval alone and both flags see both requests once. Neither flag, another tenant, paused staff and archived tenants yield no queue rows. Verify discipline alone cannot approve a join or read audit history. After clearance, verify the return disappears and the account stays inactive. |
+| Pending join upgrade | Compare the pre-upgrade set of pending tenant/user pairs with the migrated queue. Verify one request per pair, exact equality with the source created_at, linked timestamp provenance and null first_approved_at. Exercise both a populated queue and an empty queue |
+| Requests/return | Reject stale request IDs and returns while restricted. Previously approved users self-reactivate after either voluntary departure or cleared removal, even with auto-approval off. Never-approved users follow current joining policy. Test clearance with and without a pending reactivation request. Verify the queue row is gone, history is retained, the account stays inactive, and the closed UUID cannot be acted on again. Verify staff and bookings stay unrestored |
+| History/report | Verify a staff-history-only reader can read the linked active-to-revoked event but cannot retrieve the suspension record or reason through list, detail or linked-event reads. Verify a community-history-only reader sees any accompanying community discipline and cannot retrieve the paused-to-revoked staff event by list, ID or link. A staff-history reader can retrieve the staff event. Dual categories readable under either grant; unrelated categories denied; verify assignment inserts in both histories, generic assignment updates in staff history alone absent further evidence, and unclassified records in the owner log only; no direct history writes/queries in workflow; report resolution without sanction and direct discipline without report |
+| Real HTTP/SDK | anon and authenticated Data API/RPC calls, single()/zero-row outcomes, nested relations and alternate exposed APIs; no success from UI-only gating; no bypass through a dropped name/type/helper |
+| Two-session races | Deactivate vs sharing save, withdraw/reapply vs approve, revoke actor vs discipline, staff appointment vs account suspension, owner protection, block/admission timing and archive boundaries. No partially applied data/audit/outbox effects |
+| Cleanup/deployment | No fixture residue; compare hosted migration/catalog parity and rerun advisors after deployment. Original Auth-exposure/three definer-view errors should disappear; intentional authorized definer RPC warnings are reviewed, not a zero-warning goal |
+
+No tests of this target have been run. The package-1 replay verifies the old baseline only. Documentation checks are not SQL compilation, authorization coverage or deployed correctness.
+
+## Implementation gates and recommendation status
+
+| ID | Decision / dependency | Proposed resolution and effect |
+| --- | --- | --- |
+| G-01 — resolved 2026-11-03 | Missing legacy community profile | Copy global display_name and bio once at migration time; existing community profiles are untouched |
+| G-02 — resolved 2026-11-03 | Archived account/profile enforcement | Enforce the existing community-owner boundary with RLS and equivalent checks on paths that bypass RLS |
+| G-03a — resolved 2026-11-03 | Three personal community preferences | One community_account_preferences row per community account |
+| G-03b — resolved 2026-11-03 | Staff-managed participant permission | Store can_post_public_events in community_account_permissions; no duplicate field on the account or preference row |
+| G-03c — resolved 2026-11-03 | Pending join/reactivation requests | One pending row per account in app_private.community_account_requests; fresh ID per application, retained audit history |
+| G-03d — resolved 2026-11-03 | Inactive return eligibility | Restriction flag plus first approval timestamp; no extra return requirement, repeat approval or history-derived gate |
+| G-03e — resolved 2026-11-03 | Pending reactivation request at clearance | Close it atomically, retain audit history and leave the account inactive until the member returns |
+| G-03f — resolved 2026-11-03 | Standing reference | One shared lookup, readable by everyone and writable only through migrations |
+| G-04a — resolved 2026-11-03 | Suspension of community members who hold staff assignments | Suspension and reason in community-account history only. Linked active-to-revoked assignment event in both histories |
+| G-04b — resolved 2026-11-03 | Revocation of a paused staff assignment | Staff-account history only. Record any accompanying community discipline separately |
+| G-04c — resolved 2026-11-03 | New audit events | Classify by what changed and apply the agreed dual-history exceptions |
+| G-04d — resolved 2026-11-03 | Existing audit records | Assign only evidenced categories. Preserve owner-only visibility when neither is established |
+| G-05a — resolved 2026-11-03 | App-wide match and competition records | Separate database package delivers the records, access checks and verification together |
+| G-05b — resolved 2026-11-03 | Historical community profile access | Account package checks exact-target profile eligibility. Each feature authorizes its own record once when serving the link |
+| G-05c — resolved 2026-11-03 | Resource changes triggered by blocking, discipline, deactivation and archival | Each feature package integrates and tests its transactional effects before accepting its first records |
+| G-06a — resolved 2026-11-03 | Seven Community hero and welcome overrides | Public three-column projection in active communities, independent of public chat, activity and directory visibility |
+| G-06b — resolved 2026-11-03 | Discipline of a never-approved pending applicant | Reject suspension. Direct removal closes the request, sets inactive and restricted, and preserves null first approval |
+| G-06c — resolved 2026-11-03 | Discipline after voluntary deactivation | Authorized removal preserves inactive standing and first approval date, sets the restriction and applies staff revocation where required |
+
+The listed G-01 through G-06 access decisions are settled. The restricted-return queue audience is also settled. The pending-request backfill in step 4 is accepted. Package 4 is the next local implementation and verification checkpoint. The October 31 preflight counted zero pending accounts. Repeat the count at migration time.

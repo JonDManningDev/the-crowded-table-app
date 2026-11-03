@@ -1,0 +1,9 @@
+.panel { margin: 0; }
+/* 90px is the existing artwork tile fit constraint, not general spacing. */
+.games { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 90px), 1fr)); gap: var(--ct-card-grid-gap); }
+/* Preserve favorite artwork framing and title rhythm (100/85px height, 5px
+   corners, 11px title margin). These are not universal card/control roles. */
+.games .art { height: 100px; border-radius: 5px; }
+.games h3 { font-size: var(--ct-heading-item-font-size); margin: 11px 0 0;
+  line-height: var(--ct-heading-content-line-height); color: var(--ct-heading-color); }
+@media (max-width: 700px) { .games .art { height: 85px; } }

@@ -1,0 +1,3 @@
+/* Existing ordered-rule inset stays local; shared .rules provides text and
+   item rhythm for both this dialog and Discussion guidelines. */
+.rules { padding-left: 20px; }

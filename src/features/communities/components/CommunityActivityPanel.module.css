@@ -1,0 +1,92 @@
+/* Preserve existing 15/9px activity grouping, 70x55/48x45px artwork, compact tag insets and achievement 20px padding/15px heading rhythm/9px caption gap. These dense editorial measurements stay local. */
+.activity-row {
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:15px;
+  text-align:left;
+  padding:var(--ct-list-row-padding-block) 0;
+  border-bottom:1px solid var(--ct-ref-color-stone-200);
+}
+
+.activity-row>:global(.game-art) {
+  width:70px;
+  height:55px;
+  border-radius:5px;
+  flex-shrink:0;
+}
+
+.activity-row>div:nth-child(2) {
+  flex:1;
+}
+
+.activity-row strong {
+  font-size:var(--ct-body-font-size);
+  display:block;
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.activity-row small {
+  display:block;
+  color:var(--ct-meta-color);
+  font-size:var(--ct-meta-font-size);
+  line-height:var(--ct-meta-line-height);
+  margin-top:var(--ct-label-meta-gap);
+}
+
+.achievement-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:var(--ct-card-grid-gap);
+}
+
+.achievement {
+  text-align:center;
+  padding:20px var(--ct-ref-space-8);
+}
+
+.achievement h3 {
+  font-size:var(--ct-heading-subsection-font-size);
+  margin:15px 0 9px;
+  line-height:var(--ct-heading-content-line-height);
+  color:var(--ct-heading-color);
+}
+
+.achievement p {
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+@media(max-width:700px) {
+  .activity-row {
+    gap:9px;
+  }
+
+  .activity-row :global(.tag) {
+    font-size:var(--ct-meta-font-size);
+    padding:var(--ct-ref-space-4) 6px;
+    line-height:var(--ct-meta-line-height);
+    color:var(--ct-meta-color);
+  }
+
+  .activity-row>:global(.game-art) {
+    width:48px;
+    height:45px;
+  }
+
+  .achievement-grid {
+    grid-template-columns:1fr;
+  }
+
+  .achievement {
+    border-bottom:1px solid var(--ct-ref-color-stone-200);
+  }
+}
+
+.activity-row { flex-wrap:wrap; }
+
+@media (max-width:700px) {
+  .achievement-grid { gap:var(--ct-ref-space-24); }
+}

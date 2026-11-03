@@ -1,0 +1,69 @@
+/* Preserve this invitation's botanical placement/paint, 60/35px editorial gap and compact eyebrow fit. These local illustration/text compositions do not define shared spacing or feedback roles. */
+.community-hero {
+  display:flex;
+  align-items:center;
+  gap:60px;
+  position:relative;
+  overflow:hidden;
+  background:var(--ct-card-background);
+  border-radius:var(--ct-card-border-radius);
+  padding:var(--ct-card-padding);
+  border:1px solid #dfe5d5;
+}
+
+.community-hero h2 {
+  font-size:var(--ct-heading-hero-font-size);
+  margin-bottom:0;
+  line-height:var(--ct-heading-title-line-height);
+  color:var(--ct-heading-color);
+}
+
+.community-hero>p {
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+  position:relative;
+  z-index:1;
+  margin:0;
+}
+
+.community-hero>p strong {
+  font-weight:500;
+  color:#536e42;
+}
+
+.community-hero :global(.botanical) {
+  position:absolute;
+  right:10px;
+  bottom:-20px;
+  width:135px;
+  color:#93a17c;
+  opacity:.6;
+}
+
+@media(max-width:1200px) {
+  .community-hero {
+    gap:35px;
+  }
+}
+
+@media(max-width:950px) {
+  .community-hero>p {
+    display:none;
+  }
+}
+
+@media(max-width:700px) {
+  .community-hero :global(.eyebrow) {
+    font-size:var(--ct-eyebrow-font-size);
+    max-width:200px;
+    line-height:var(--ct-eyebrow-line-height);
+    color:var(--ct-eyebrow-color);
+  }
+
+  .community-hero :global(.botanical) {
+    width:85px;
+    right:-12px;
+    opacity:.35;
+  }
+}

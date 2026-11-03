@@ -1,0 +1,28 @@
+.panel { min-width: 0; overflow-wrap: anywhere; }
+.icon {
+  /* Coordinate this panel's approved icon geometry locally. Decorative paint
+     and 10px content spacing remain independent of card and control roles. */
+  --_ct-hero-feature-icon-size: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_ct-hero-feature-icon-size);
+  height: var(--_ct-hero-feature-icon-size);
+  border-radius: 50%;
+  background: #d8e0cd;
+  color: var(--ct-body-color);
+  margin-bottom: 10px;
+}
+.heading {
+  margin: 0;
+  font-size: var(--ct-heading-subsection-font-size);
+  line-height: var(--ct-heading-content-line-height);
+  color: var(--ct-heading-color);
+}
+.description {
+  margin: 10px 0 0;
+  font-size: var(--ct-body-font-size);
+  line-height: var(--ct-body-line-height);
+  color: var(--ct-body-color);
+}
+.action { margin-top: var(--ct-action-footer-gap); }

@@ -1,0 +1,94 @@
+/* Local podium/highlight paints and 29px markers express decorative rank/current-player identity, not feedback. Preserve 75/35px rank columns, 18px note separation, 15/6px mobile cells and compact host typography. */
+.scroll {
+  overflow:auto;
+}
+
+.leaderboard {
+  width:100%;
+  border-collapse:collapse;
+  text-align:left;
+}
+
+.leaderboard th {
+  font-size:var(--ct-meta-font-size);
+  letter-spacing:1px;
+  text-transform:uppercase;
+  font-weight:500;
+  color:var(--ct-meta-color);
+  padding:var(--ct-ref-space-12);
+  line-height:var(--ct-meta-line-height);
+}
+
+.leaderboard td {
+  padding:var(--ct-ref-space-16) var(--ct-ref-space-12);
+  border-top:1px solid #eceee5;
+  font-size:var(--ct-body-font-size);
+  line-height:var(--ct-body-line-height);
+  color:var(--ct-body-color);
+}
+
+.leaderboard td:first-child {
+  width:75px;
+}
+
+.leaderboard :global(.host) {
+  margin:0;
+}
+
+.rank {
+  width:29px;
+  height:29px;
+  display:grid;
+  place-items:center;
+  color:#859276;
+}
+
+.you {
+  background:#edf1e4;
+}
+
+.leaderboard+:global(.meta) {
+  margin:18px 0 0;
+}
+
+@media (max-width:700px) {
+  .leaderboard td {
+    padding:15px 6px;
+  }
+}
+
+@media (max-width:700px) {
+  .leaderboard td:first-child {
+    width:35px;
+  }
+}
+
+@media (max-width:700px) {
+  .leaderboard :global(.host) {
+    gap:5px;
+    font-size:10px;
+  }
+}
+
+@media (max-width:700px) {
+  .leaderboard :global(.tag) {
+    font-size:var(--ct-meta-font-size);
+    padding:2px 4px;
+    line-height:var(--ct-meta-line-height);
+    color:var(--ct-meta-color);
+  }
+}
+
+.rank-0 {
+  color:#ac8b40;
+  background:#f5ecd3;
+  border-radius:50%;
+}
+
+.rank-1 {
+  color:#829085;
+}
+
+.rank-2 {
+  color:#ae7f5f;
+}

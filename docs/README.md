@@ -1,45 +1,95 @@
 # The Crowded Table — planning documents
 
-Status: revised from the user-supplied product handoff. Product direction below reflects that handoff; implementation designs remain proposals.
+Status: revised from the user-supplied product handoff and subsequent explicit decisions. Current implementation/deployment evidence is in [implementation status](12-implementation-status.md). The client architecture direction recorded on 2026-10-02, clarified on 2026-10-03 for personal versus community scope, is current and canonical; other implementation designs remain proposals where identified.
 
 ## Source and precedence
+
+Packages 2–3 draft (2026-10-31): [access migration specification](19-access-migration-specification.md) proposes physical field separation, standing/request/return schemas, commands, grants/RLS/helpers, contextual reads, migration order and verification. It is for review, not implementation approval. On 2026-11-03 G-01/G-02 were settled: copy the global name and bio once into the missing community profile and enforce archived account-content access with RLS. Accepted 2026-11-03 (G-03a): store `show_global_profile`, `allow_direct_messages` and `allow_private_invitations` in `public.community_account_preferences`, one row per `(tenant_id,user_id)`. This is the migration target; no database changes have been applied. G-03b accepted 2026-11-03: store `can_post_public_events` in `public.community_account_permissions`, one row per community account. It defaults false; the holder can read it, and effective same-community staff with `can_manage_community_permissions` can read and change it. G-03c also settles pending-request storage: one private request row per community account, a fresh ID per application, and retained audit history after the row leaves the queue. G-01 through G-06 and the pending join timestamp backfill are now settled. Package 4 local implementation and verification are next.
+
+Package 1 baseline verified (2026-10-31): [access migration baseline](18-access-migration-baseline.md) compares all eight migrations with the hosted catalog and an isolated local replay, inventories grants/RLS/helpers/views/triggers/callers, refreshes Security Advisor and records the required change list. Authenticated SELECT grants exist on all nine tables; the earlier dashboard label is not evidence of absent grants. Original four advisor errors remain. No hosted application/schema changes; continue with package 2/3 design.
+
+Report handling and discipline consolidated (2026-10-31): [combined report and discipline authority](16-intended-access-matrix.md#report-handling-and-direct-discipline--accepted-2026-10-31). can_discipline_users covers reports and disciplinary tools; reports are normal workflow, but direct authorized action does not require one. Existing evidence/audit/staff-target/owner boundaries remain; the separate report-handler flag is omitted from the migration target.
+
+Development compatibility policy (2026-10-31): the root [AGENTS.md](../AGENTS.md#development-only-compatibility-policy) prohibits introducing backward compatibility for previous implementations and requires removing it when discovered. Remove those development-only instructions when proposing a transition to live production with real users. See the [flag inventory](17-database-flag-inventory.md) for the canonical target names; earlier aliases are not interfaces to preserve.
+
+Column-access review complete for the nine existing application tables (2026-10-30): see [accepted column contracts](16-intended-access-matrix.md#column-access-decisions). The next stage is the concrete grants/RLS/helpers/projections/commands and comprehensive migration specification, including planned fields and supporting structures. Accepted audiences remain authoritative; no deployment or implementation is claimed by this documentation milestone.
+
+Latest suspension/clearance requirements (2026-10-30): [suspension and clearance decisions](16-intended-access-matrix.md#suspension-and-clearance--accepted-2026-10-30) settle the remaining combined discipline permission and clearance transitions. Suspended accounts retain private activity eligibility; only new community-public creation/reservations are blocked, with discretionary per-item existing-public cancellations. Do not reuse older blanket activity denials as canonical policy.
+
+Latest accepted access refinements (2026-10-30): [staff, restoration and activity decisions](16-intended-access-matrix.md#october-30-follow-up--staff-restoration-and-activity-access) supersede activity-only staff eligibility, optional/inactive owner accounts and per-action restriction reconstruction. Communication decisions are now recorded in [accepted communication rules](16-intended-access-matrix.md#communication-follow-up--accepted-2026-10-30); remaining implementation details are identified there. Documentation updates do not authorize implementation.
+
+Accepted backend access layers (2026-10-28): operation-specific PostgreSQL column grants, RLS with authorization helpers, Data REST where sufficient, Edge Function APIs for complex business logic, and specialized database RPCs for transactional requests. Identity/audit columns are never client-writable; UPDATE may be narrower than INSERT; SELECT usually includes all columns subject to intended field/audience exceptions. Detailed design remains for review; RLS was selected for archive enforcement on November 3. See [the direction](08-decisions-and-open-questions.md#backend-access-layers--accepted-direction-2026-10-28).
+
+Accepted access-design direction (2026-10-27): design database structure, grants, policies and queries/functions for intended product use, independently of whether consuming UI is finished. Current milestone restrictions are implementation facts, not permanent security requirements. Record intended audiences and unresolved rules explicitly; do not add RPCs or other workarounds merely to preserve a temporary restriction. See [the decision](08-decisions-and-open-questions.md#product-driven-access-design--accepted-2026-10-27).
 
 The user supplied an extensive summary of **Find Boardgame Cafe Ideas** after the chat reader returned only five recent prompts. That summary is the product source for these plans. The five reference infographics in `visuals/` have now also been reviewed and used for the interactive frontend prototype. Where generated imagery conflicts with the settled brief, the brief takes precedence.
 
 The user's explicit Vite + TypeScript + React Compiler, Supabase, multi-tenancy/RLS, and mobile PWA requirements take precedence over the handoff's tentative stack suggestions. Prices, example dates, and eventual features retain the tentative status given in the handoff.
 
+The later client architecture decisions supersede overlapping tentative frontend/layout proposals. Read [frontend patterns](05-frontend-patterns.md) for accepted boundaries, data/state, and styling; [file structure](07-file-structure.md) for illustrative paths, current conflicts, and refactor progression; and [client review questions](08-decisions-and-open-questions.md#client-architecture-review-questions) for unresolved choices. The direction is reviewable, not immutable, and does not require empty folders or immediate implementation of every example.
+
+The platform supports user-created communities and multi-community accounts. **Home** is the personal landing/feed; **Communities** is the user's community hub under My Account (formerly My Home/My Communities). My Home remains a feed placeholder; My Communities now uses All/Managed/Owned relationship filters and shared community cards under My Account; the summary-view migration is deployed to the selected hosted testing project and verified against existing hosted data. **Community Home**, Meet & Play, Championship, **Discussion**, and Profile belong to the community being browsed. The Tegucigalpa sample community is not the whole platform; see D-043 through D-045.
+
+The 2026-10-12 decisions also settle per-person event/table records, atomic groups, pending-group edit priority, and `tables.manually_confirm_seats` (default false). Automatic tables confirm eligible whole groups as seats allow; manual tables use manager decisions with no second acceptance or deadline. Rejections leave the queue and notify the booker with timestamp, rejecting user, and optional reason. Payments and paid memberships are deferred until a late stage; current feature design must ignore them. Legacy prototype payment/member UI is a refactor discrepancy, not an accepted requirement.
+
 ## Planning set
 
 | Document | Purpose |
 | --- | --- |
+| [Implementation status](12-implementation-status.md) | Account/navigation audit, deployed migrations, verification boundaries and remaining work |
 | [Vision and concept](01-vision-and-concept.md) | Community-first vision, brand, functionality, navigation, and MVP |
 | [Decisions and open questions](08-decisions-and-open-questions.md) | Established direction, proposed choices, and unresolved rules |
-| [Architecture](02-architecture.md) | System boundaries, public/private data, and entitlements |
+| [Architecture](02-architecture.md) | System boundaries, public/private data, and commercial deferral |
 | [Database schema plan](03-database-schema.md) | Entities, relationships, constraints, and migration sequence |
-| [Auth and multi-tenancy](04-auth-and-multi-tenancy.md) | Identity, paid access, roles, participation, and isolation |
-| [Frontend patterns](05-frontend-patterns.md) | Mobile UI, feature boundaries, data, chat, and paywalls |
+| [Database flag inventory](17-database-flag-inventory.md) | Existing and proposed boolean flags by table, latest names/renames, purposes and implementation status |
+| [Access migration baseline](18-access-migration-baseline.md) | Verified package 1 repository/hosted comparison, catalog evidence, current callers and required migration changes |
+| [Access migration specification](19-access-migration-specification.md) | Packages 2–3 draft: target schema/transitions, grants/RLS/helpers, queries, migration and verification gates |
+| [Auth and multi-tenancy](04-auth-and-multi-tenancy.md) | Identity, community standing, roles, participation, and isolation |
+| [Intended access matrix](16-intended-access-matrix.md) | Product-derived readers, writers, field/lifecycle boundaries, implementation gaps, accepted AM-01 participation sharing, AM-02 search/activity scope, AM-03 lifecycle, AM-04 blocking/profile visibility, AM-05 roster/staff/audits and remaining AM questions |
+| [UI style guide](13-ui-style-guide.md) | Canonical navigation, links, buttons, shared appearances, tokens and accessibility |
+| [CSS-native design tokens](14-design-tokens.md) | Approved token grammar, scales, ownership, theme contracts and gated migration |
+| [Page refactor workflow](15-page-refactor-workflow.md) | Accepted tab/page review process and approved Settings/Home/Profile/Communities refactors |
+| [Frontend patterns](05-frontend-patterns.md) | Canonical client boundaries, data/state, CSS Modules/theming, and product UI conventions |
 | [Backend patterns](06-backend-patterns.md) | Transactional commands, privacy, waitlists, results, and audit |
-| [File structure](07-file-structure.md) | Proposed repository layout and module responsibilities |
+| [File structure](07-file-structure.md) | Illustrative client layout, ownership, current-code conflicts, and refactor sequence |
 | [PWA and delivery](09-pwa-and-delivery.md) | Incremental delivery, mobile behavior, and acceptance gates |
 | [Frontend prototype guide](10-frontend-prototype.md) | Interactive pages, walkthroughs, reconciled visuals, and simulation limits |
 | [Auth operations and review checkpoints](11-auth-operations.md) | Supabase dashboard recommendations, Resend setup, verification status, and triggers for revisiting configuration |
 
 ## Status language
 
-- **Established:** explicit user requirement or product direction in the supplied handoff.
+- **Established:** explicit user requirement or accepted product direction from the handoff or subsequent decisions.
+- **Current canonical direction:** accepted architecture used to guide new work; revise explicitly as evidence warrants. It does not imply already-implemented code.
+- **Recommended convention:** the preferred way to apply an accepted direction; scale it to actual complexity.
+- **Illustrative future structure:** an example of possible paths, routes, components, or configuration, not a required inventory.
+- **Introduce when needed:** an abstraction, directory, or tool contingent on a concrete use; do not scaffold it speculatively.
 - **Proposed:** implementation recommendation or business idea still awaiting agreement.
 - **Open:** a rule that needs resolution before its dependent implementation.
 - **Later:** explicitly deferred or eventual functionality.
 
-The MVP includes official events, membership gating, member tables, private table chat, Championship, minimal Community, Profile, and admin controls. Implementation milestones are smaller than the MVP; completing one milestone does not silently reduce the launch scope.
+The current build combines real Auth, global profiles, discovery preferences, community creation and relationship-summary reads with mock community screens. The target excludes paid gates; legacy community simulations remain pending domain implementation, and D-120 explicitly retains account premium placeholders without billing. See [implementation status](12-implementation-status.md) for verified boundaries.
+
+The 2026-10-24 direct Data API/content-permission refactor is implemented and its migration is deployed to hosted testing. It replaces eight RPCs with narrow DML/views and adds `can_modify_content`; community preferences have one save API. All seven migration versions match, the final dry run is empty, and 48 hosted PostgREST checks passed with fixture cleanup. Frontend hosting deployment remains separate. See [backend patterns](06-backend-patterns.md#direct-data-api-edits--accepted-2026-10-24) and the implementation record.
 
 ## Best next steps
 
-1. Review the revised vision and settle tenant meaning, membership-state access, payment confirmation, and expiry effects on existing participation.
-2. Draw the main mobile flows: nonmember drop-in, member hosting/requesting a seat, and championship registration/result confirmation.
-3. Agree on the permission and state-transition rules before turning the schema plan into migrations.
-4. Build the private-table flow with synthetic tenants and address-leak tests; then add the remaining MVP flows in the delivery plan.
-5. Select routing, query, form, styling, and PWA tools against those needs.
+Standing-design discussion (October 30): [standing capability design](03-database-schema.md#standing-capability-redesign--discussion-2026-10-30) records accepted structured server-side discipline/return processing and suspended own-profile editing, alongside the proposed standing lookup, first-approval timestamp and separate standard-DM capability. Distinguish these proposals from the older accepted schema and deployed implementation; no migration or application change has occurred.
+
+October 30 follow-up settles public identity/profile boundaries, a separate default-false directory flag, any-qualifying-shared-community global sharing, inactive public browsing, public cancelled/not-archived activity visibility, pending-request removal on community-only deactivation, and staff transition audit categories. See [access-matrix follow-up](16-intended-access-matrix.md#october-30-follow-up--public-identity-sharing-lifecycle-and-audit). Requirements only; the original Security Advisor remediation remains unimplemented.
+
+AM-08 update (2026-10-28): global opt-out revokes pending matching requests/suggestions but preserves accepted matches and existing competition entries until manual cancellation. Casual matching follows community block rules; competitive play globally and within communities has communication-only block effects. Refresh/navigation updates revoked displays, and authorized historical recognition retains private labels without reopening hidden profiles. See [AM-08](16-intended-access-matrix.md#am-08--revocation-existing-matches-and-historical-recognition) for remaining detailed contracts. Full global profiles remain mutually blocked within competitions; the identity needed for authorized pairings/results remains available. Documentation only.
+
+AM-07 update (2026-10-28): approval requirements are disclosed wherever joining is presented, including anonymously; community users may read the creation-pause flag. New default-false activity/chat visibility settings independently support non-member exploration, explicitly including signed-out visitors and pending applicants; official activities are always visible independently of the activity flag, with no private-visibility exception. Any future participation gates remain separate. Resolve the remaining audience/lifecycle boundaries in [AM-07](16-intended-access-matrix.md#am-07--non-manager-operational-information-and-copy-audiences). UI navigation remains a proposal and the flags are not implemented.
+
+AM-06 partial decision (2026-10-28): global account deactivation removes all associated pending community-join requests as part of its business logic; approval staff must not receive them. The global lifecycle remains unimplemented. Auth bans retain pending requests without an added applicant-ban check; a scheduled app-level consequences job remains a deferred possibility. Community-only inactivity remains a queue decision in the [access matrix](16-intended-access-matrix.md#am-06--approval-queue-visibility-and-transitions-for-unusual-targets).
+
+Security Advisor follow-up (2026-10-27): the [intended access matrix](16-intended-access-matrix.md) now records settled requirements for every existing table/view, planned-domain audiences, current gaps and eight decision groups. AM-01 now establishes mandatory intra-community curated-profile visibility for participation, with corresponding global-profile sharing separately controlled by each user's community-account flag. AM-02 now settles authenticated global search with discovery opt-out, independent community/global-activity visibility, the shared global matchmaking/competition flag and isolation of community activities from global profiles. AM-03 now settles voluntary inactivity: non-staff search exclusion, historical profile access with inactive status for active authorized viewers, no inactive profile viewing/account edits, and resetting community global sharing false. The October 28 clarification adds suspension read-only access with own-DM/profile exceptions and removed/inactive equivalence; when the entire community is archived, community-account content is accessible only to the community owner, enforced through RLS under the November 3 revision. AM-04 preserves blocked-pair community-profile/shared-content visibility, denies global-profile data mutually across qualifying paths, and removes the pair from DM/invitation selectors. AM-05 adds community-public standing/dates, active role badges, staff-grant-authorized assignment/permission inspection and two independent account-audit flags with explicit delegation; its migration inventory identifies the remaining staff flags. The subsequent permission clarification names user/staff discipline flags, renames event management to activity management, and adds independent non-private chat moderation through can_moderate_all_chats; ten additions remain unmigrated after the October 31 report-permission consolidation. Resolve the remaining applicable AM questions before choosing remediation. The [three-RPC proposal](06-backend-patterns.md#security-advisor-read-rpc-proposal--2026-10-27) remains under reassessment because its fixed-base-policy premise is superseded. [Investigation evidence](12-implementation-status.md#security-advisor-investigation-and-proposal--2026-10-27) remains valid, and the findings remain unresolved. Documentation only; no remediation is implemented or deployed.
+
+1. Preserve Auth/community persistence; implement the settled standing, per-person reservation, automatic/manual confirmation, group-edit, and notification rules without payment/member dependencies.
+2. Draw mobile account-holder/guest registration, automatic confirmation, manager approve/reject/issue, and group-edit flows; keep championship design separate.
+3. Use the canonical client boundaries to refactor the prototype incrementally, preserving working Auth and community persistence; resolve the review questions needed for each slice.
+4. Agree on permission/state-transition rules for subsequent domain migrations; build the private-table flow with synthetic tenants and address-leak tests, then the remaining MVP flows.
+5. The CSS-native token batches through Community are accepted. The final token audit and cascade correction are accepted. Review the completed premium setting-row alignment in docs/14-design-tokens.md before further changes; active spacing candidates and visual/accessibility decisions remain open. Scoped themes and their browser fixture remain deferred. Select form/validation and PWA tools and adopt the planned TanStack Query layer as relevant slices need them.
 
 Recommended additional artifacts: mobile wireframes with the warm club aesthetic, a concise visual system, and a state-transition/acceptance specification as the open rules are resolved. Operational setup instructions belong in a runbook before pilot deployment.
 
@@ -47,13 +97,35 @@ Recommended additional artifacts: mobile wireframes with the warm club aesthetic
 
 | Term | Meaning |
 | --- | --- |
-| Community / tenant | Proposed independent Crowded Table community boundary; initially Tegucigalpa |
+| Community / tenant | Established independently operated Crowded Table community boundary; initially Tegucigalpa |
 | Community account | A user's association with a tenant, including a nonpaying participant |
-| Membership entitlement | Time-bounded access to paid community benefits; independent of staff role and payment provider |
+| Membership entitlement | Deferred paid-access concept; no current gate or implementation dependency |
 | Official event | Activity hosted by The Crowded Table and eligible for its own admission rules |
-| Member table | A member-hosted activity in the private Meet & Play network |
-| Championship entry | Access to one competition; never a substitute for private-network membership |
+| Member table | Legacy term for a community-hosted game table; no paid membership implied |
+| Championship entry | Participation in one competition; does not grant unrelated private-resource access |
 | Confirmed participant | A person whose seat/registration has completed the required checks |
 | The Final Table | Official in-person championship final |
 
 Keep product intent in the vision, permissions in the auth plan, structure in the schema, and unresolved choices in the decision register. Revise related documents together when a choice changes.
+
+Global communication preferences (2026-10-24): account settings now save discovery and global allow_direct_messages together with one button. Migration 20261024000300 is applied locally and to hosted testing; frontend hosting deployment remains separate. Messaging and global visibility enforcement remain deferred. See implementation status.
+
+Account navigation (2026-10-24): Home, Profile, Communities, Settings share one navigation definition. Profile uses /account/profile; /account and / replace-redirect to Home. Breadcrumbs use My Account / destination. See the decision register and implementation status for verification.
+
+Community Home structural refactor (2026-10-25): app/pages/CommunityHomePage now composes controlled hero/schedule/events/calendar children with feature API projections over the existing mock snapshot. The user explicitly retained its paid promotion/ticket callout and shared checkout simulation until community feature implementation; this scoped preservation supersedes removal for this structural slice only. No payment requirements or real event APIs are introduced. See docs/15 for approved scope and docs/12 for verification/completion review.
+
+Meet & Play structural refactor (2026-10-25): implemented feature-owned MeetPlayPage with controlled hero/filter/create/matching components and one mock API/types boundary over the existing shared simulation. Appearance, guest gate and mock behaviors remain intact; community product inconsistencies are deferred as directed. No real services/schema/deployment. See docs/12 for evidence/limits and docs/15 for completion review.
+
+Championship structural refactor (2026-10-25): implemented the approved feature-owned ChampionshipPage, ten controlled presenters and one mock API/types boundary. Mock scoring/registration/result/commercial behavior remains preserved; Q-007/Q-008 remain deferred. Shared token definitions are unchanged. No real services/schema/deployment. See docs/12 for verification/limits and docs/15 for completion review.
+
+Discussion structural refactor (2026-10-25): implemented the approved feature-owned DiscussionPage, eleven controlled presenters and one mock API/types boundary. Appearance, guest gate, sample directory/recommendations/Local Spots and in-memory post/reply/save behavior remain preserved. Shared token definitions are unchanged; no real services/schema/deployment. See docs/12 for verification/limits and docs/15 for completion review.
+
+Community Profile structural refactor (2026-10-27): implemented CommunityProfilePage with controlled community-owned panels/dialogs, parent-owned UI state and mock functions in the existing communities/api.ts. Global account data and real community APIs remain unchanged. Current appearance, immediate mock preferences, activity/profile/support behavior and commercial previews remain preserved. No schema/deployment. See docs/12 for evidence/limits and docs/15 for completion review.
+
+Authentication structural refactor (2026-10-27): implemented feature-owned AuthShell/useAuth/api.ts/types.ts and controlled AuthPage/forms/navigation/feedback with CSS Modules. Real SDK configuration, payloads, routes and account identity boundaries remain preserved; duplicate-action and obsolete-page-effect guards are covered. App-scoped toast delivery remains deferred. TypeScript/build/lint, 224 tests and responsive/token verification pass. docs/12 records limits and the disclosed accidental sign-out of the verification browser session. Auth was accepted and committed as a035181. No schema/configuration changes or deployment.
+
+Create Community structural refactor (2026-10-27): implemented CreateCommunityPage, controlled form/success presenters and useCommunityCreation within the existing communities feature API/types boundary. Participation stays inside the form; the real creation command, wording and owner/participant behavior remain preserved. Request-owner cleanup and post-render error focus are verified. TypeScript/build/lint, 250 tests and responsive/token checks pass; docs/12 records limits and bundle measurements. No live creation/Auth action, schema/configuration change or deployment in this slice. Create Community was accepted and committed as 89696c4; the shared ActivityDialog slice below is now implemented locally for completion review.
+
+Shared ActivityDialog structural refactor (2026-10-27): implemented the app controller, controlled detail/reservation/table-request/conversation presenters and existing feature API transitions over the same mock state. ActivityCard/module/contract are shared under components/shared for both events and tables. Current appearance/copy/simulation remain preserved. TypeScript/build/lint, 270 tests and responsive/token checks pass; docs/12 records evidence and limits, including the retained 11px mobile chat-input discrepancy. No real services/schema/deployment. Shared ActivityDialog was accepted and committed as 594470c; the App dialogs/preview actions slice below is implemented locally for completion review.
+
+App dialogs/preview actions refactor (2026-10-27): implemented controlled MembershipPreviewModal, CommunityNotificationsModal and CommunityGuestGate, existing-parent state and community/notification API boundaries. Current appearance/copy/in-memory behavior remain preserved. TypeScript/build/lint, 281 tests and responsive/token checks pass. No real services/schema/deployment. The user accepted completion and requested commit; docs/15 records the completed original page/dialog inventory and separate remaining follow-ups.
