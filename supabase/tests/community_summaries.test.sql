@@ -33,7 +33,7 @@ select is((select count(*) from public.my_community_summaries where is_managed),
 select is((select count(*) from public.my_community_summaries where is_owned),0::bigint,'staff is not owner');
 select ok((select is_member and not is_managed from public.my_community_summaries where name='List 6'),'revocation retains All membership');
 select is((select count(*) from public.my_community_summaries where operational_status='archived'),3::bigint,'archived summaries remain visible');
-select is((select count(*) from public.community_accounts),7::bigint,'self relationships include archived and retained removed rows');
+select is((select count(*) from public.community_accounts),4::bigint,'raw self relationships exclude archived non-owner rows but include active-tenant removed rows');
 select is((select count(*) from public.community_accounts where user_id<>auth.uid()),0::bigint,'no other memberships exposed');
 select is((select count(*) from public.tenant_staff_assignments),3::bigint,'self active/revoked archived assignments readable');
 select is((select count(*) from public.tenant_staff_assignments where user_id<>auth.uid()),0::bigint,'no other staff exposed');

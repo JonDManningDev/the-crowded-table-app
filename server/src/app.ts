@@ -1,3 +1,6 @@
+import { registerCommunityProfile } from './communities/profile.ts'
+import { registerStandingReference } from './communities/standing.ts'
+import { errorResponse } from './http.ts'
 import Fastify from 'fastify'
 import { randomUUID } from 'node:crypto'
 import { preferencesPath, preferencesSchema, type AccountPreferences } from '../../shared/account-preferences.ts'
@@ -16,6 +19,7 @@ export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<s
   })
   app.get('/health/live', async () => ({ live: true }))
   app.get('/health/ready', async () => { await checkRuntime(db); return { ready: true } })
+  registerStandingReference(app, db, verify)
   app.register(async routes => {
     routes.decorateRequest('actor', '')
     routes.addHook('onRequest', async (request, reply) => {
@@ -24,9 +28,9 @@ export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<s
       if (!actor) return reply.code(401).send({ code: 'unauthenticated', requestId: request.id })
       request.setDecorator('actor', actor)
     })
+    registerCommunityProfile(routes, db)
     const querystring = { type: 'object', additionalProperties: false, properties: {} }
-    const failure = { type: 'object', required: ['code', 'requestId'], properties: { code: { type: 'string' }, requestId: { type: 'string' } } }
-    const response = { 200: preferencesSchema, 403: failure, 404: failure }
+    const response = { 200: preferencesSchema, 403: errorResponse, 404: errorResponse }
     routes.get(preferencesPath, { schema: { querystring, response } }, async (request, reply) => {
       const result = await accountPreferences(db, request.getDecorator<string>('actor'), request.id)
       if (result.status !== 200) return reply.code(result.status).send({ code: result.status === 403 ? 'ineligible' : 'missing', requestId: request.id })

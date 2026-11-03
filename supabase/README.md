@@ -35,6 +35,16 @@ Run `npm run dev:api` and `npm run dev` in separate terminals. Vite proxies `/ap
 
 Run `npm run test:local -w server` for the real Auth/HTTP/SQL suite. It creates and removes only synthetic local users. If local services are forwarded to alternative **loopback** ports, set `CT_LOCAL_API_PORT` and `CT_LOCAL_DB_PORT` for setup and tests. Keep `SUPABASE_JWT_ISSUER` bound to the issuing project's canonical Auth URL. Run pgTAP, populated upgrade, direct HTTP, frontend tests, build and lint as well. The historical hosted test script targets the previous hosted schema and requires revision at coordinated cutover.
 
+## Community foundation preflight
+
+Run the [aggregate preflight](preflight/community_foundation.sql) on local Docker before preparing the coordinated writer switch. Resolve any blockers and repeat under the migration locks.
+
+```powershell
+Get-Content -Raw supabase/preflight/community_foundation.sql | docker exec -i supabase_db_the-crowded-table-app psql -X -qAt -U postgres -v ON_ERROR_STOP=1
+```
+
+The local API test command also checks the public standing reference and the authenticated exact-target community profile route. The latter returns only the eight curated profile fields. It enforces the community owner boundary on archived profiles. Its six capabilities describe a baseline. Resource-specific private activity, archived history and disciplinary exceptions still require their own authorization.
+
 ## Local development
 
 From the repository root, with Docker running and the Supabase CLI available:

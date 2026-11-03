@@ -93,6 +93,20 @@ isOneToOne: false
       referencedColumns: ["user_id"]
     }
                   ]
+                },"community_standing": {
+                  Row: {
+                    "enable_other_profile_visibility": boolean,"enable_own_profile_management": boolean,"enable_standard_activity_visibility": boolean,"enable_standard_chat_visibility": boolean,"enable_standard_dms": boolean,"enable_standard_participation": boolean,"standing": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "enable_other_profile_visibility": boolean,"enable_own_profile_management": boolean,"enable_standard_activity_visibility": boolean,"enable_standard_chat_visibility": boolean,"enable_standard_dms": boolean,"enable_standard_participation": boolean,"standing": string
+                  }
+                  Update: {
+                    "enable_other_profile_visibility"?: boolean,"enable_own_profile_management"?: boolean,"enable_standard_activity_visibility"?: boolean,"enable_standard_chat_visibility"?: boolean,"enable_standard_dms"?: boolean,"enable_standard_participation"?: boolean,"standing"?: string
+                  }
+                  Relationships: [
+
+                  ]
                 },"tenant_admin_actions": {
                   Row: {
                     "action": string,"content_key": string | null,"created_at": string,"created_by": string | null,"id": string,"target_user_id": string | null,"tenant_id": string

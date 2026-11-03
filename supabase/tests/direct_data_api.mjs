@@ -75,7 +75,7 @@ async function hold(statement) {
 
 try {
   sql(`insert into auth.users(id,email,email_confirmed_at) values ${identities.map(id => `('${id}','${id}@example.test',${id === unverified ? 'null' : 'now()'})`).join(',')};`);
-  tenant = sql(asUser(owner, `select public.create_tenant('${slug}','API fixture','HN','UTC');`));
+  tenant = sql(asUser(owner, `select public.create_tenant('${slug}','API fixture','HN','UTC',null,null,true);`));
   secondTenant = sql(asUser(other, `select public.create_tenant('${slug}-b','Other fixture','HN','UTC');`));
   sql(asUser(member, `select public.join_community('${tenant}');`));
   sql(asUser(other, `select public.join_community('${tenant}');`));
@@ -129,7 +129,8 @@ try {
   await success(a.from('tenants').update({ name: ' Renamed ', city: ' ' }).eq('id', tenant).select('id').single());
   await success(a.rpc('set_admin_permissions', { p_tenant_id: tenant, p_user_id: member, p_can_approve_users: true, p_can_create_admin: true }));
   assert.equal((await success(b.from('tenant_staff_assignments').select('can_modify_content').eq('tenant_id', tenant).single())).can_modify_content, true);
-  assert.equal((await success(b.from('tenant_admin_candidates').select('*'))).length, 2);
+  const candidates = await success(b.from('tenant_admin_candidates').select('*'));
+  assert.deepEqual(candidates.map(row => row.user_id).sort(), [owner, member, other].sort());
   assert.equal((await success(b.from('tenant_pending_community_accounts').select('*'))).length, 2);
   await denied(b.from('tenant_admin_candidates').select('bio'), '42703');
 
@@ -147,6 +148,14 @@ try {
   const joining = a.rpc('join_community', { p_tenant_id: tenant }).then(result => result);
   try { await waitForBlocked('join_community'); } finally { await archive(true); }
   await denied(joining, '42501');
+  assert.deepEqual(await success(b.from('community_accounts').select('*').eq('tenant_id', tenant)), []);
+  assert.deepEqual(await success(b.from('community_account_profiles').select('*').eq('tenant_id', tenant).eq('user_id', member)), []);
+  assert.deepEqual(await success(c.from('community_account_profiles').select('*').eq('tenant_id', tenant)), []);
+  assert.deepEqual(await success(a.from('community_account_profiles')
+    .select('user_id,community_accounts(show_global_profile)').eq('tenant_id', tenant).eq('user_id', member)), []);
+  assert.deepEqual(await success(a.from('community_accounts').select('show_global_profile').eq('tenant_id', tenant).eq('user_id', member)), []);
+  const card = await success(b.from('my_community_summaries').select('id,operational_status').eq('id', tenant).single());
+  assert.equal(card.operational_status, 'archived');
   await denied(b.from('community_account_profiles').upsert({ tenant_id: tenant, display_name: 'Archived' }, { onConflict: 'tenant_id,user_id' }), '42501');
   await denied(b.from('community_accounts').update({ show_global_profile: false }).eq('tenant_id', tenant).select('tenant_id').single(), 'PGRST116');
   await denied(b.from('tenant_website_content_overrides').delete().eq('tenant_id', tenant).select('content_key').single(), 'PGRST116');

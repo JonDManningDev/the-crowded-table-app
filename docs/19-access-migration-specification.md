@@ -15,6 +15,8 @@ Use the [approved API transition](20-persistent-api-transition-proposal.md) for 
 
 Local gates precede hosted verification. Rehearse recovery, test privilege defaults, catalog drift and all retired HTTP/GraphQL surfaces before requesting a hosted release.
 
+**Local checkpoint.** B-08 defaults for the existing postgres/public creator, G-03f reference data and the G-02 guard on existing community account/profile rows are verified. The standing reference is served over HTTP. Local preflight covers data readiness for the coordinated schema and writer switch. See [verification and remaining work](12-implementation-status.md#community-foundation-prerequisites--verified-locally-2026-11-03).
+
 ## Review summary
 
 Recommend a coordinated foundation migration that:

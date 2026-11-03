@@ -10,7 +10,7 @@ const database = `crowded_table_api_test_${randomUUID().replaceAll('-', '')}`;
 assert.match(database, /^crowded_table_api_test_[0-9a-f]{32}$/);
 const migrations = new URL('../migrations/', import.meta.url);
 const files = readdirSync(migrations).filter(name => name.endsWith('.sql')).sort();
-assert.equal(files.at(-1), '20261103000200_runtime_audit_actor.sql', 'update this test when the migration set changes');
+assert.equal(files.at(-1), '20261103000500_exact_community_profile_api.sql', 'update this test when the migration set changes');
 const owner = '30000000-0000-0000-0000-000000000001';
 const admin = '30000000-0000-0000-0000-000000000002';
 function sql(statement) {
@@ -28,6 +28,27 @@ function init() {
 function cleanup() {
   execFileSync('docker', ['exec', container, 'dropdb', '-U', 'postgres', '--if-exists', '--force', database]);
 }
+const preflight = readFileSync(new URL('../preflight/community_foundation.sql', import.meta.url), 'utf8');
+function checkCommunityUpgradeInputs(tenant) {
+  const pending = randomUUID(), suspended = randomUUID(), removed = randomUUID();
+  sql(`insert into auth.users(id,email,email_confirmed_at) values
+    ('${pending}','pending@example.test',now()),('${suspended}','suspended@example.test',now()),('${removed}','removed@example.test',now());
+    insert into public.community_accounts (tenant_id,user_id,standing,show_global_profile) values
+    ('${tenant}','${pending}','pending',false),('${tenant}','${suspended}','suspended',true),('${tenant}','${removed}','removed',true);
+    insert into public.user_account_profiles(user_id,display_name) values ('${pending}','Only global'),('${removed}','Former member');`);
+  // The old creator did not participate and the delegated staff user is still pending.
+  const before = JSON.parse(sql(preflight));
+  assert.equal(before.ready, false);
+  assert.deepEqual(before.blockers, { owners_requiring_repair: 1, ineligible_active_staff: 1, missing_profile_sources: 1, unknown_standings: 0 });
+  // Simulate explicitly repaired inputs in this disposable database only.
+  sql(`insert into public.community_accounts(tenant_id,user_id,standing) values ('${tenant}','${owner}','approved');
+    insert into public.user_account_profiles(user_id,display_name) values ('${owner}','Owner'),('${suspended}','Suspended');
+    update public.community_accounts set standing='approved' where tenant_id='${tenant}' and user_id='${admin}';`);
+  const after = JSON.parse(sql(preflight));
+  assert.equal(after.ready, true);
+  assert.deepEqual(after.backfills, { accounts: 5, copy_global_profile_once: 4, preserve_curated_profile: 1,
+    adopt_pending_request: 1, approximate_first_approval: 4, mark_restricted: 2, convert_to_inactive: 1, clear_inactive_sharing: 1 });
+}
 function apply(file) { sql(readFileSync(new URL(file, migrations), 'utf8')); }
 try {
   init();
@@ -44,6 +65,10 @@ try {
   apply('20261024000300_account_communication_preferences.sql');
   apply('20261103000100_preferences_api.sql');
   apply('20261103000200_runtime_audit_actor.sql');
+  checkCommunityUpgradeInputs(tenant);
+  apply('20261103000300_community_standing_reference.sql');
+  apply('20261103000400_archived_community_content.sql');
+  apply('20261103000500_exact_community_profile_api.sql');
   assert.equal(sql(`select has_column_privilege('authenticated','public.user_accounts','enable_matchmaking','UPDATE');`), 'f');
   assert.equal(sql(`select bool_and(allow_direct_messages) from public.user_accounts;`), 't');
   assert.equal(sql(`select can_modify_content from public.tenant_staff_assignments where role='owner';`), 't');
