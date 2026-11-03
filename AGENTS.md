@@ -3,8 +3,23 @@
 - Before giving a substantive response or executing a request, review relevant in-repo decisions and design documentation. Start with `docs/README.md`, search the decision register (`docs/08-decisions-and-open-questions.md`), and read the applicable feature, architecture, schema, authorization, and operational documents. Do not treat current code or mocks as the product specification.
 - Follow **Brainstorm → Create Documentation → Execute according to documentation → Verify according to documentation → Update Documentation**. Continue from the established stage; do not restart brainstorming or request approval for decisions already documented and authorized.
 - Distinguish accepted decisions from proposals, open questions, historical milestones, and deferred features. Current explicit user instructions take precedence. Resolve material conflicts or missing business rules before implementing dependent behavior; do not silently invent policy or expand scope.
+- Design tables, grants, RLS policies, and queries/functions for the accepted intended product use, including features whose UI is not built yet. Do not make an unfinished feature a reason for a permanent access restriction or treat deployed milestone policies as canonical requirements. Distinguish current behavior, intended audiences, and genuinely unresolved rules; resolve the latter before dependent access changes. Evaluate direct Data API/RLS, safe projections, and RPCs against the intended contract rather than adding workarounds to preserve temporary restrictions.
 - Implement and verify against the applicable documented requirements, including acceptance criteria, privacy, authorization, and lifecycle rules. Report verification results and any unverified behavior accurately.
 - Before finishing implementation, update the relevant documentation with implementation and deployment status, remaining work, and any variances agreed upon with the user during execution. Reconcile affected documents; do not rewrite requirements merely to match an accidental implementation difference.
+
+# Database authorization and Data API design
+
+- Define the entitlement before choosing an interface. Identify the actor, operation, rows, fields, required context, and whether the caller may browse the matching set. Evaluate what a caller can learn with all client filters removed, every granted column selected, and all available joins or embeddings.
+- Use direct Data API reads and writes for ordinary operations. Specify column grants per method and RLS per operation. Let the database supply identity and audit fields and enforce invariants. An invoker view can project rows the caller already has permission to read.
+- Put reusable authorization in private helpers. Derive the actor from the verified session and check any protected relations inside the helper. Enforce the predicate within the policy or command that performs the operation. Client permission checks are advisory.
+- Justify each exposed RPC. For reads, identify the extra disclosure a direct relation permits or the source input the database must validate. For writes, identify the protected transition, concurrency hazard or effects that must commit together. A new screen, a complex join or routine audit stamping alone is insufficient.
+- Choose execution privileges independently of transport. Both tables and RPCs use the Supabase Data API. Prefer caller privileges. For every security definer function, document the protected access it needs, narrowly grant execution, and enforce caller, tenant and archive boundaries inside the function.
+- Verify through the actual API. Pair each allowed request with its nearest denial, including removed filters, extra columns, tenant substitution, unrelated source IDs and embeddings. Test stale inputs, retries and concurrent changes for transitions.
+
+# Development-only compatibility policy
+
+- This application is still in development. Do not spend effort introducing backward compatibility to support previous implementations. Remove existing backward-compatibility mechanisms when discovered, including obsolete compatibility wrappers, aliases, fallback paths and parallel legacy interfaces; update current callers to the intended implementation.
+- When a transition to a live production state with real users is proposed, remove these development-only compatibility instructions and document the appropriate production compatibility and migration requirements before proceeding with that transition.
 
 # Design tokens and styling
 
