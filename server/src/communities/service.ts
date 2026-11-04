@@ -7,12 +7,14 @@ import type { DirectoryCursors } from '../directory-cursors.ts'
 import { type CommunityLanding } from '../../../shared/community-configuration.ts'
 import { type DirectoryPage, type DirectoryQuery, type PublicDirectoryRow } from '../../../shared/community-directory.ts'
 import { staffFlags, type CommunityCommand, type CommandResult, type CreateCommunityInput, type CuratedProfile, type StaffPermissions } from '../../../shared/community-commands.ts'
+import { type AccountReview, type CommunityRequest, type OwnCommunityRequestResponse, type StaffCandidate } from '../../../shared/community-reads.ts'
 
 type Tx = Transaction<ApiTables>
 interface CommunityDependencies { db: AppDatabase; cursors: DirectoryCursors }
 
 export function createCommunityService({ db, cursors }: CommunityDependencies) {
   return {
+    // Public access and standing
     listStandings() {
       return db.selectFrom('community_standing').select(standingFields).orderBy('standing').execute()
     },
@@ -22,11 +24,25 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
     publicDirectory(params: { slug: string }, query: DirectoryQuery) {
       return db.transaction().execute(tx => readPublicDirectory(tx, params.slug, query, cursors))
     },
+    // Creation and lifecycle
     createCommunity(context: AuthenticatedContext, input: CreateCommunityInput) {
       return withEligibleActorTransaction(db, context, tx => createCommunity(tx, context.actorId, input))
     },
     executeCommand(context: AuthenticatedContext, params: { tenantId: string }, input: CommunityCommand) {
       return withEligibleActorTransaction(db, context, tx => communityCommand(tx, context.actorId, params.tenantId, input))
+    },
+    // Requests and reviews
+    ownRequest(context: AuthenticatedContext, params: { tenantId: string }) {
+      return ownRequest(db, context, params)
+    },
+    reviewAccount(context: AuthenticatedContext, params: { tenantId: string; target: string }) {
+      return reviewAccount(db, context, params)
+    },
+    staffCandidates(context: AuthenticatedContext, params: { tenantId: string }, query: { after?: string }) {
+      return staffCandidates(db, context, params, query)
+    },
+    pendingRequests(context: AuthenticatedContext, params: { tenantId: string }, query: { after?: string }) {
+      return pendingRequests(db, context, params, query)
     }
   }
 }
@@ -235,4 +251,64 @@ export async function communityCommand(tx: Tx, actor: string, tenant: string, cm
     return changeStanding(c, user, member, assignment, effective, cmd)
   }
   return changeAssignment(c, user, member, assignment, owner, cmd)
+}
+
+// Requests and reviews
+function ownRequest(db: AppDatabase, context: AuthenticatedContext, params: { tenantId: string }) {
+  const actor = context.actorId;
+  const tenant = params.tenantId;
+  return withEligibleActorTransaction<OwnCommunityRequestResponse | { status: 404 }>(db, context, async tx => {
+    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+    const row = (await sql<OwnCommunityRequestResponse>`select case when r.id is not null then
+        jsonb_build_object('request_id',r.id,'kind',r.kind,'requested_at',r.requested_at) end as request
+        from public.community_accounts c join public.tenants t on t.id=c.tenant_id
+        left join app_private.community_account_requests r using(tenant_id,user_id)
+        where c.tenant_id=${tenant} and c.user_id=${actor} and t.operational_status='active'`.execute(tx)).rows[0]
+    return row ?? { status: 404 as const }
+  })
+}
+function reviewAccount(db: AppDatabase, context: AuthenticatedContext, params: { tenantId: string; target: string }) {
+  const actor = context.actorId;
+  const tenantId = params.tenantId;
+  const target = params.target;
+  return withEligibleActorTransaction(db, context, async tx => {
+    await sql`select set_config('ct.tenant_id',${tenantId},true)`.execute(tx)
+    const row = (await sql<AccountReview>`select c.standing,c.revision,case when c.user_id=${actor} then r.id end as request_id
+          from public.community_accounts c join public.tenants t on t.id=c.tenant_id
+          left join app_private.community_account_requests r using(tenant_id,user_id)
+          where c.tenant_id=${tenantId} and c.user_id=${target} and t.operational_status='active'
+            and (c.user_id=${actor} or exists(select from public.tenant_staff_assignments s where
+              s.tenant_id=c.tenant_id and s.user_id=${actor} and s.status='active' and s.can_discipline_users))
+          `.execute(tx)).rows[0]
+    return row ? { row } : { status: 404 as const }
+  })
+}
+function staffCandidates(db: AppDatabase, context: AuthenticatedContext, params: { tenantId: string }, query: { after?: string }) {
+  const tenantId = params.tenantId;
+  return withEligibleActorTransaction(db, context, async tx => {
+    await sql`select set_config('ct.tenant_id',${tenantId},true)`.execute(tx)
+    const rows = (await sql<StaffCandidate>`select c.tenant_id,c.user_id,c.standing,p.display_name,s.status as staff_status,s.role as staff_role
+          from public.community_accounts c left join public.community_account_profiles p using(tenant_id,user_id)
+          left join public.tenant_staff_assignments s using(tenant_id,user_id)
+          where c.tenant_id=${tenantId} and c.standing='approved' and app_private.is_staff_candidate(c.tenant_id,c.user_id,false)
+            and (${query.after ?? null}::uuid is null or c.user_id>${query.after ?? null}::uuid)
+          order by c.user_id limit 51`.execute(tx)).rows
+    return { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].user_id : null }
+  })
+}
+function pendingRequests(db: AppDatabase, context: AuthenticatedContext, params: { tenantId: string }, query: { after?: string }) {
+  const actor = context.actorId;
+  const tenantId = params.tenantId;
+  return withEligibleActorTransaction(db, context, async tx => {
+    await sql`select set_config('ct.tenant_id',${tenantId},true)`.execute(tx)
+    const rows = (await sql<CommunityRequest>`select r.id,r.kind,r.user_id,r.requested_at,c.revision,c.standing,c.first_approved_at,
+          c.has_disciplinary_restriction,p.display_name from app_private.community_account_requests r
+          join public.community_accounts c using(tenant_id,user_id) left join public.community_account_profiles p using(tenant_id,user_id)
+          join public.tenant_staff_assignments s on s.tenant_id=r.tenant_id and s.user_id=${actor} and s.status='active'
+          where r.tenant_id=${tenantId} and app_private.active_tenant(r.tenant_id)
+            and (s.can_approve_users or (s.can_discipline_users and r.kind='reactivation' and c.standing='inactive' and c.has_disciplinary_restriction))
+            and (${query.after ?? null}::uuid is null or r.id>${query.after ?? null}::uuid)
+          order by r.id limit 51`.execute(tx)).rows
+    return { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].id : null }
+  })
 }

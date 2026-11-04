@@ -25,3 +25,11 @@ Creation and commands retain 32768-byte bodies, tagged eligibility, creation 201
 Preservation review passed: 110 SQL templates (with input-binding/format normalization), unchanged HTTP fixture, client/shared contracts, migrations, lockfile, runtime privilege manifest, startup/actor/cursor facilities. No required gate remains blocked. Next: checkpoint 3; later groups remain untouched.
 
 During checkpoint 2 verification, the first typecheck and two baseline HTTP cases found an omitted `randomUUID` import; the first community-local creation consequently returned 503 and stopped before self-service. The import moved with its implementation; all gates were rerun successfully without assertion changes.
+
+## Checkpoint 3 — Requests and reviews
+
+9 community operations migrated cumulatively. All 49 backend cases, server TypeScript and root lint passed. Required local suites passed sequentially: `community-local`, `access-audit-local`. Existing assertions, transaction barriers and lock observations were retained.
+
+Own request, review, staff candidates and queue retain their statement boundaries and exact projections. Null requests differ from missing accounts; review retains 403/404 unavailable. The final legacy registration and inline request SQL/schemas are removed.
+
+Preservation review passed: 110 SQL templates (with input-binding/format normalization), unchanged HTTP fixture, client/shared contracts, migrations, lockfile, runtime privilege manifest, startup/actor/cursor facilities. No required gate remains blocked. Next: checkpoint 4; later groups remain untouched.

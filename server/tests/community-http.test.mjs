@@ -64,6 +64,50 @@ const operations = [
     "body": true,
     "tagged": true,
     "public": false
+  },
+  {
+    "group": 3,
+    "name": "ownRequest",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/me/request",
+    "params": true,
+    "query": false,
+    "body": false,
+    "tagged": true,
+    "public": false
+  },
+  {
+    "group": 3,
+    "name": "reviewAccount",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/accounts/:target/review",
+    "params": true,
+    "query": false,
+    "body": false,
+    "tagged": true,
+    "public": false
+  },
+  {
+    "group": 3,
+    "name": "staffCandidates",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/staff-candidates",
+    "params": true,
+    "query": true,
+    "body": false,
+    "tagged": true,
+    "public": false
+  },
+  {
+    "group": 3,
+    "name": "pendingRequests",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/requests",
+    "params": true,
+    "query": true,
+    "body": false,
+    "tagged": true,
+    "public": false
   }
 ];
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/http-contract.json', import.meta.url), 'utf8'))

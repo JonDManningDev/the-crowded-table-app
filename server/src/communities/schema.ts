@@ -83,11 +83,29 @@ const routesSchemas = (() => {
     region: string(120), city: string(120), profile
   })
   const params = object({ tenantId: uuid })
+  const nullableUuid = { type: ['string', 'null'], format: 'uuid' }
+  const timestamp = { type: 'string', format: 'date-time' }
+  const standing = { type: 'string', enum: ['pending', 'approved', 'suspended', 'inactive'] }
   const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse, 409: errorResponse }
   const commandResponse = object({ outcome: { type: 'string' }, tenantId: uuid, revision: uuid, requestId: uuid }, ['outcome', 'tenantId'])
+  const ownRequestSchema = object({ request: { ...object({ request_id: uuid, kind: { type: 'string', enum: ['join', 'reactivation'] }, requested_at: timestamp }), type: ['object', 'null'] } })
+  const reviewSchema = object({ standing, revision: uuid, request_id: nullableUuid })
+  const candidateSchema = object({
+    tenant_id: uuid, user_id: uuid, standing: { type: 'string', const: 'approved' }, display_name: { type: ['string', 'null'] },
+    staff_role: { type: ['string', 'null'], enum: ['owner', 'admin', null] }, staff_status: { type: ['string', 'null'], enum: ['active', 'paused', 'revoked', null] }
+  })
+  const requestSchema = object({
+    id: uuid, kind: { type: 'string', enum: ['join', 'reactivation'] }, user_id: uuid, requested_at: timestamp,
+    revision: uuid, standing, first_approved_at: { type: ['string', 'null'], format: 'date-time' }, has_disciplinary_restriction: bool, display_name: { type: ['string', 'null'] }
+  })
+  const pageSchema = (items: object) => object({ rows: { type: 'array', items }, next: nullableUuid })
   return {
     createCommunity: { body: createSchema, querystring: object({}), response: { 201: commandResponse, ...errors } },
-    executeCommand: { params, body: commandSchema, querystring: object({}), response: { 200: commandResponse, ...errors } }
+    executeCommand: { params, body: commandSchema, querystring: object({}), response: { 200: commandResponse, ...errors } },
+    ownRequest: { params, querystring: object({}), response: { 200: ownRequestSchema, ...errors } },
+    reviewAccount: { params: object({ tenantId: uuid, target: uuid }), querystring: object({}), response: { 200: reviewSchema, ...errors } },
+    staffCandidates: { params, querystring: object({ after: uuid }, []), response: { 200: pageSchema(candidateSchema), ...errors } },
+    pendingRequests: { params, querystring: object({ after: uuid }, []), response: { 200: pageSchema(requestSchema), ...errors } }
   }
 })()
 
@@ -99,3 +117,9 @@ export const publicDirectorySchema = directorySchemas.publicDirectory
 // Creation and lifecycle
 export const createCommunitySchema = routesSchemas.createCommunity
 export const executeCommandSchema = routesSchemas.executeCommand
+
+// Requests and reviews
+export const ownRequestSchema = routesSchemas.ownRequest
+export const reviewAccountSchema = routesSchemas.reviewAccount
+export const staffCandidatesSchema = routesSchemas.staffCandidates
+export const pendingRequestsSchema = routesSchemas.pendingRequests
