@@ -1,5 +1,6 @@
 import { CommunityError } from './communities/commands.ts'
 import { registerCommunityCommands } from './communities/routes.ts'
+import { registerAccountRecords } from './communities/records.ts'
 import { registerAccountHistory } from './communities/history.ts'
 import { registerSelfService } from './accounts/self-service.ts'
 import { registerCommunityConfiguration, registerCommunityLanding } from './communities/configuration.ts'
@@ -40,6 +41,7 @@ export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<s
     })
     registerCommunityCommands(routes, db)
     registerAccountHistory(routes, db)
+    registerAccountRecords(routes, db)
     registerSelfService(routes, db)
     registerCommunityConfiguration(routes, db)
     registerCommunityProfile(routes, db)

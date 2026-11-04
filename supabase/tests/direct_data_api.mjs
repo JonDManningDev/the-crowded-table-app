@@ -73,7 +73,7 @@ try {
   await denied(b.from('my_community_summaries').select('*'), 'PGRST205');
   await denied(b.from('community_accounts').update({standing:'approved'}).eq('tenant_id',tenant), '42501');
   for (const actor of [a,b]) {
-    for (const table of ['tenants','tenant_settings','tenant_website_content_overrides']) {
+    for (const table of ['tenants','tenant_settings','tenant_website_content_overrides','tenant_staff_assignments','community_account_permissions']) {
       await denied(actor.from(table).select('*'),'42501');
     }
     await denied(actor.from('tenants').update({name:'Bypass'}).eq('id',tenant),'42501');
@@ -82,6 +82,7 @@ try {
     await denied(actor.from('tenant_website_content_overrides').delete().eq('tenant_id',tenant),'42501');
     for (const rpc of ['lookup_tenant','create_tenant','join_community','set_tenant_archived','approve_community_account','set_admin_permissions','create_tenant_admin','set_auto_approve_users']) await denied(actor.rpc(rpc),'PGRST202');
   }
+  await denied(a.from('community_account_permissions').update({can_post_public_events:true}).eq('tenant_id',tenant),'42501');
   await denied(a.from('tenant_staff_assignments').update({can_grant_staff:false}).eq('tenant_id',tenant),'42501');
   await denied(a.from('community_accounts').insert({tenant_id:tenant,user_id:unverified,standing:'approved'}),'42501');
   await denied(a.from('tenant_admin_candidates').select('*'),'PGRST205');

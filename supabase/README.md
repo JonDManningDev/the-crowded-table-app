@@ -67,7 +67,7 @@ GET/PUT `/api/me/profile` returns `{ profile }`, with a null profile only when t
 
 PATCH `/api/communities/:tenantId/me/profile` accepts the name/bio pair and returns `{ tenantId }`. Pending, approved and suspended members may edit their own existing profile in an active community. GET/PATCH `/api/communities/:tenantId/me/preferences` returns the three private preference flags; PATCH accepts a nonempty subset. Reads permit inactive self and archived owner; edits require pending/approved self and an active tenant. Profile writes retain statement-time lifecycle checks without a tenant lock. Preference writes lock the account before the preference row, matching inactivity's lock order. The browser adapter still submits only its supported sharing flag; mock community controls remain simulations.
 
-All operations use verified Auth and `private, no-store`. Feature adapters bind writes to the initiating user and summaries to one identity across every page. The five-suite `npm run test:local -w server` command includes self-service HTTP authorization, normalization/attribution, pagination, removed REST/GraphQL paths, runtime omission tests, rollback, independent edits and both sharing/inactivity orders. The retained direct Data API suite now expects self-service access to fail. Hosted deployment still requires a matched schema/API/frontend release and separate authorization.
+All operations use verified Auth and `private, no-store`. Feature adapters bind writes to the initiating user and summaries to one identity across every page. The six-suite `npm run test:local -w server` command includes self-service HTTP authorization, normalization/attribution, pagination, removed REST/GraphQL paths, runtime omission tests, rollback, independent edits and both sharing/inactivity orders. The retained direct Data API suite now expects self-service access to fail. Hosted deployment still requires a matched schema/API/frontend release and separate authorization.
 
 ## Local community landing and configuration
 
@@ -84,6 +84,26 @@ Migration `20261103001300` drops `lookup_tenant` and all ordinary browser table/
 Public landing copy remains readable with all three public visibility flags off. Those flags govern their independent domains, not the seven hero/welcome slots. Text is stored literally, with the existing per-slot length limits; no HTML interpretation is introduced. Repeating an unchanged write is a no-op; deleting a missing override returns 404. Actor and timestamp attribution remain trusted, and audit details never copy text bodies.
 
 Protected operations verify Auth, lock the tenant before checking current authority, and use `private, no-store`. Public responses use `no-store`. Database grants, configuration write guards and archive RLS provide independent boundaries. The fifth local API suite tests intended/denied audiences, safe projections, rollback, retries, REST/GraphQL bypasses, runtime omission and both configuration/permission lock orders. No management or landing UI is introduced, and no hosted rollout is included.
+
+## Local staff records and participant permissions
+
+Migration `20261103001400` retires ordinary browser staff-assignment grants and the legacy holder/owner browser policy. Participant permissions remain closed to browser roles. The [shared record types](../shared/community-records.ts) describe the full authorized records; staff commands continue to own assignment creation, status and staff-flag changes.
+
+| HTTP operation | Authorization |
+| --- | --- |
+| GET `/api/communities/:tenantId/staff/:userId` | Holder or effective same-community `can_grant_staff`; holders retain paused/revoked reads. |
+| GET `/api/communities/:tenantId/staff` | Effective same-community `can_grant_staff` enumerates full assignments. |
+| GET `/api/communities/:tenantId/accounts/:userId/permissions` | Holder or effective `can_manage_community_permissions`; returns participant permissions, never staff flags. |
+| GET `/api/communities/:tenantId/participant-permissions` | Effective `can_manage_community_permissions` enumerates participant permission records. |
+| PATCH `/api/communities/:tenantId/accounts/:userId/permissions` | Effective `can_manage_community_permissions`; accepts exactly one boolean, `can_post_public_events`. |
+
+The approved owner qualifies for both management audiences and is the only archived reader/writer. Other actors require an active community; effective managers require an active assignment and approved membership. Holder reads do not grant management rights. Stored participant permissions survive inactive/suspended standing; event admission must still enforce its separate lifecycle and activity rules. These endpoints introduce no event-creation behavior.
+
+Lists return `{ rows, next }`, ordered by user UUID, with optional `cursor` and `limit` (50 default, 100 maximum). Cursors bind actor, tenant and record kind. Each page rechecks current authority. Exact reads return the same 404 for absent and inaccessible records. All responses use `private, no-store`; tenant locks serialize reads/edits with lifecycle and staff changes.
+
+A changed participant flag records one `community_permissions_changed` event with boolean `before`/`after` details, trusted actor/correlation and community-history classification, including for staff targets. No-op saves preserve timestamps and produce no event. Independent RLS restricts participant reads/writes and protects both record kinds on archive. Lifecycle commands retain the scoped assignment reads they need; their internal runtime grant is broader than the HTTP full-record audience.
+
+The sixth API suite covers fields, audiences, pages, states, attribution/categories, no-op/rollback, direct REST/GraphQL denials, runtime permission omission and both read/write serialization orders. The existing PostgREST suite and pgTAP also verify the retired surfaces. No new UI or hosted release is included.
 
 ## Local development
 
