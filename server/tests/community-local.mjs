@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, randomBytes } from 'node:crypto'
 import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
@@ -15,7 +15,7 @@ const endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
-const app = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer))
+const app = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), randomBytes(32).toString('hex'))
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -89,7 +89,8 @@ try {
     await admin.query("select set_config('request.jwt.claim.sub',$1,true)",[owner.id])
     const resolve = async q => (await admin.query('select graphql.resolve($1) as result',[q])).rows[0].result
     const allowed = await resolve(graphRead)
-    assert.equal(allowed.data?.community_accountsCollection?.edges[0]?.node.tenant_id,tenant,JSON.stringify(allowed.errors))
+    assert.ok(allowed.errors?.length && !allowed.data?.community_accountsCollection)
+    assert.equal((await resolve('{__typename}')).data.__typename,'Query')
     const change = await resolve(graphChange('name:"GraphQL fixture"'))
     assert.ok(change.errors?.length && !change.data?.updatetenantsCollection)
     const denied = await resolve(graphChange('operational_status:"archived"'))

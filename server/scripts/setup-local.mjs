@@ -1,7 +1,7 @@
 // Run after the pilot migration. Only the credential-less local role is initialized.
 import { localStack } from '../../supabase/tests/local-stack.mjs'
 import { randomBytes } from 'node:crypto'
-import { writeFileSync, existsSync } from 'node:fs'
+import { writeFileSync, existsSync, readFileSync, appendFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import pg from 'pg'
 
@@ -29,6 +29,9 @@ try {
     writeFileSync(serverEnv, `DATABASE_URL=${dbUrl.href}\nSUPABASE_URL=${config.API_URL}\nSUPABASE_PUBLISHABLE_KEY=${config.ANON_KEY}\nSUPABASE_JWT_ISSUER=${config.issuer}\n`, { flag: 'wx', mode: 0o600 })
   } else {
     assert.ok(existsSync(serverEnv), 'Supply the existing ct_api credential in server/.env.local.')
+  }
+  if (!/^DIRECTORY_CURSOR_KEY=/m.test(readFileSync(serverEnv,'utf8'))) {
+    appendFileSync(serverEnv, `\nDIRECTORY_CURSOR_KEY=${randomBytes(32).toString('hex')}\n`)
   }
   await admin.query('commit')
   if (!existsSync(browserEnv)) writeFileSync(browserEnv,

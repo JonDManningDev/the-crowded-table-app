@@ -45,6 +45,8 @@ export async function checkRuntime(db: AppDatabase) {
       and to_regprocedure('public.lookup_tenant(text)') is null
       and has_function_privilege(current_user,'app_private.community_landing(text)','EXECUTE')
       and not has_any_column_privilege('authenticated','public.user_account_profiles','SELECT,INSERT,UPDATE')
+      and not has_any_column_privilege('authenticated','public.community_accounts','SELECT')
+      and has_function_privilege(current_user,'app_private.public_community_directory(text,uuid,integer)','EXECUTE')
       and not has_any_column_privilege('authenticated','public.tenant_staff_assignments','SELECT')
       and has_column_privilege(current_user,'public.community_account_permissions','can_post_public_events','UPDATE')
       and not has_table_privilege('authenticated','public.tenant_admin_actions','SELECT') as ready

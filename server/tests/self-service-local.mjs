@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, randomBytes } from 'node:crypto'
 
 import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
@@ -17,7 +17,7 @@ const endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
-const app = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer))
+const app = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), randomBytes(32).toString('hex'))
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -149,7 +149,8 @@ try {
     await admin.query('set local role authenticated')
     await admin.query("select set_config('request.jwt.claim.sub',$1,true)",[owner.id])
     const resolve=async q=>(await admin.query('select graphql.resolve($1) as result',[q])).rows[0].result
-    assert.equal((await resolve('{ community_accountsCollection(filter:{tenant_id:{eq:"'+tenant+'"}}){edges{node{tenant_id}}}}')).data.community_accountsCollection.edges[0].node.tenant_id,tenant)
+    assert.equal((await resolve('{__typename}')).data.__typename,'Query')
+    assert.ok((await resolve('{community_accountsCollection{edges{node{tenant_id}}}}')).errors?.length)
     for(const table of ['user_account_profiles','community_account_profiles','community_account_preferences','my_community_summaries']) {
       const result=await resolve('{ '+table+'Collection { edges { node { '+(table==='my_community_summaries'?'id':'user_id')+' } } } }')
       assert.ok(result.errors?.length)

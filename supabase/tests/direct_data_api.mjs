@@ -87,7 +87,7 @@ try {
   await denied(a.from('community_accounts').insert({tenant_id:tenant,user_id:unverified,standing:'approved'}),'42501');
   await denied(a.from('tenant_admin_candidates').select('*'),'PGRST205');
   await command(owner,{kind:'archive',archived:true});
-  assert.deepEqual(await success(b.from('community_accounts').select('*').eq('tenant_id',tenant)),[]);
+  await denied(b.from('community_accounts').select('*').eq('tenant_id',tenant),'42501');
   sql(`update auth.users set banned_until=now()+interval '1 day' where id='${member}';`);
   await denied(b.from('user_account_profiles').upsert({display_name:'Banned'}),'42501');
   const creations = await Promise.allSettled([owner,other].map(actor => create(actor,slug+'-race')));

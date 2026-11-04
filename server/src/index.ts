@@ -8,7 +8,7 @@ function required(name: string) {
   return value
 }
 const db = connectDatabase(required('DATABASE_URL'))
-const api = buildApi(db, verifyBearer(required('SUPABASE_URL'), required('SUPABASE_PUBLISHABLE_KEY'), process.env.SUPABASE_JWT_ISSUER))
+const api = buildApi(db, verifyBearer(required('SUPABASE_URL'), required('SUPABASE_PUBLISHABLE_KEY'), process.env.SUPABASE_JWT_ISSUER), required('DIRECTORY_CURSOR_KEY'))
 try {
   await checkRuntime(db)
   await api.listen({ host: process.env.HOST ?? '127.0.0.1', port: Number(process.env.PORT ?? 3001) })

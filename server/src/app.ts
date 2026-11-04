@@ -1,3 +1,5 @@
+import { directoryCursors } from './communities/directory-cursor.ts'
+import { registerCommunityDirectory, registerPublicDirectory } from './communities/directory.ts'
 import { CommunityError } from './communities/commands.ts'
 import { registerCommunityCommands } from './communities/routes.ts'
 import { registerAccountRecords } from './communities/records.ts'
@@ -13,7 +15,8 @@ import { preferencesPath, preferencesSchema, type AccountPreferences } from '../
 import { accountPreferences } from './accounts/preferences.ts'
 import { checkRuntime, type AppDatabase } from './database.ts'
 
-export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<string | null>) {
+export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<string | null>, directoryCursorKey: string) {
+  const cursors = directoryCursors(directoryCursorKey)
   const app = Fastify({ bodyLimit: 8192, requestIdHeader: false, genReqId: () => randomUUID(),
     ajv: { customOptions: { removeAdditional: false, coerceTypes: false, useDefaults: false } } })
   app.addHook('onClose', () => db.destroy())
@@ -30,6 +33,7 @@ export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<s
   app.get('/health/live', async () => ({ live: true }))
   app.get('/health/ready', async () => { await checkRuntime(db); return { ready: true } })
   registerStandingReference(app, db, verify)
+  registerPublicDirectory(app, db, verify, cursors)
   registerCommunityLanding(app, db, verify)
   app.register(async routes => {
     routes.decorateRequest('actor', '')
@@ -42,6 +46,7 @@ export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<s
     registerCommunityCommands(routes, db)
     registerAccountHistory(routes, db)
     registerAccountRecords(routes, db)
+    registerCommunityDirectory(routes, db, cursors)
     registerSelfService(routes, db)
     registerCommunityConfiguration(routes, db)
     registerCommunityProfile(routes, db)
