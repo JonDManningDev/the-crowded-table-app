@@ -1,6 +1,6 @@
 # Final Fastify architecture refactoring plan
 
-**Status: finalized architecture plan, 2026-11-04. Implementation deferred to a new session at the user's request.** This documentation save does not implement the refactor. Begin the next implementation session by checking the current checkout and following Phase 1 below.
+**Status: finalized architecture plan, 2026-11-04; Phase 1 complete and locally verified.** Phase 1 adds documentation, a reviewed HTTP contract fixture and injection tests. Production source restructuring remains deferred to Phases 2–5. See [Phase 1 evidence](evidence/fastify-phase-1-2026-11-04/README.md) for the starting revision, local environment, behavior inventory and verification results.
 
 This plan governs the structural refactor of the existing persistent API. The [approved API transition](20-persistent-api-transition-proposal.md), [intended access matrix](16-intended-access-matrix.md), and [final access audit](21-final-local-access-audit.md) remain the behavior and security context. It supersedes earlier proposed target structures from the architecture-planning discussion, not accepted product or database requirements.
 
@@ -8,7 +8,7 @@ This plan governs the structural refactor of the existing persistent API. The [a
 
 Refactor the existing API into frontend-aligned features with mandatory `routes.ts`, `service.ts`, and `schema.ts` files. Preserve all 41 explicit HTTP operations, 28 automatic HEAD operations, and existing security/database behavior.
 
-No application changes have been made as part of this plan.
+Phase 1 changes tests and documentation only. No production application source, shared contract, database migration or runtime privilege change is included.
 
 ```text
 server/src/
@@ -233,6 +233,8 @@ Schema relocation must not tighten inputs, add header validation, change error p
 
 Record existing failures separately; do not weaken assertions to establish a passing baseline.
 
+Phase 1 is complete: all 14 injection cases, server TypeScript and root lint passed; the original nine real Auth/HTTP suites and client boundary scan passed both before and after additions. The checked-in [HTTP contract fixture](../server/tests/fixtures/http-contract.json) captures all 69 registrations, full schemas (shared by GET/HEAD), declared response statuses, effective body limits and authentication categories. `npm run test:http -w server` runs the environment-independent injection gate. [Baseline evidence](evidence/fastify-phase-1-2026-11-04/README.md) records actual handler/error mappings, cache and cursor contracts, lifecycle exceptions, integration coverage and test results. Do not refresh the fixture merely to pass a structural refactor; investigate any drift against the preserved contract. Permanent architecture guidance is now in `AGENTS.md`; its source-layout requirements apply as each later phase migrates its responsibilities. No Phase 1 gate remains blocked; Phase 2 has not started.
+
 ### Phase 2 — Shared facilities and ownership
 
 - Establish the descriptive authentication/error modules.
@@ -305,7 +307,7 @@ Real-runtime authorization, bypass, rollback and concurrency tests remain author
 
 ### Repository-level architecture contract
 
-Add the following durable rules to the existing agent guidance during implementation:
+The following durable rules are recorded in the existing agent guidance by Phase 1 and apply as the corresponding source responsibilities migrate:
 
 - Match backend HTTP feature names to frontend feature ownership by default. Assign each operation one authoritative owner and document functional exceptions.
 - Every HTTP feature has `routes.ts`, `service.ts`, and `schema.ts`, regardless of size.

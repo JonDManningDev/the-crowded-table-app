@@ -549,6 +549,8 @@ All new flags remain false by default for non-owners and always true for owners 
 
 ### Persistent application API — accepted 2026-11-03
 
+Fastify structural target accepted 2026-11-04: the [refactoring plan](22-fastify-architecture-refactoring-plan.md) establishes one HTTP owner per operation, frontend-aligned features with mandatory routes/service/schema triads, matching operation section order, encapsulated plugins and explicit dependencies. Token verification, HTTP authentication, locked actor eligibility, application errors and HTTP error translation have separate designated owners. Preserve the existing HTTP/security/database contract and migrate through mandatory phase/group checkpoints. Phase 1 adds baseline documentation and tests; production restructuring awaits Phases 2–5. This supersedes older structural proposals without reopening accepted product policy.
+
 One Fastify service owns application authorization and transactions using Kysely and pg. Supabase Auth and PostgreSQL remain. A dedicated non-owner login enforces scoped grants, with database integrity and owner-only archive RLS retained. Migrate locally by feature starting with Account Settings. This supersedes the October 24 and October 28 transport choices. Matrix 16 and the settled Package 2–3 decisions govern behavior. See the [approved API transition](20-persistent-api-transition-proposal.md).
 
 ### Backend access layers — accepted direction 2026-10-28

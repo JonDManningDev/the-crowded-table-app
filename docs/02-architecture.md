@@ -1,5 +1,7 @@
 # Architecture plan
 
+**Fastify structure — approved 2026-11-04.** The [refactoring plan](22-fastify-architecture-refactoring-plan.md) owns the backend target, operation ownership, section ordering, explicit dependencies and staged verification gates. Phase 1 records and tests the existing HTTP contract; production restructuring remains awaiting Phases 2–5. The API transition and intended access matrix continue to govern behavior.
+
 **Client/server workspaces — approved 2026-11-03.** Frontend source, styles, public assets and build/test configuration now belong to the top-level `client/` workspace; `src/` examples below are client-relative. API code remains in `server/`, shared HTTP contracts and generated database types in `shared/`, and database tooling in `supabase/`. The root package orchestrates both applications. See [workspace structure](07-file-structure.md#approved-clientserver-workspace-restructuring--2026-11-03).
 
 **2026-11-03.** The [approved API transition](20-persistent-api-transition-proposal.md) governs new application-data paths. Earlier descriptions of direct browser access apply to the unmigrated implementation. Client feature boundaries, Supabase Auth and accepted product audiences continue to apply.

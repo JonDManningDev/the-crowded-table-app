@@ -14,6 +14,19 @@
 - Use the dedicated least-privileged application role. Preserve database integrity, trusted attribution and G-02 archive RLS. For remaining direct surfaces verify grants, RLS, functions and embeddings until the whole dependency group cuts over.
 - Pair each allowed operation with its nearest denial and a direct-bypass test using the real runtime role and clients. Verify stale inputs, retries and concurrent transitions.
 
+# Persistent API architecture
+
+- Follow the approved target in `docs/22-fastify-architecture-refactoring-plan.md`. Phase 1 establishes documentation and HTTP regression coverage; the existing source layout remains until its scheduled migration. Apply these rules to migrated features without pulling later phases into the current checkpoint.
+- Match backend HTTP feature names to frontend feature ownership by default. Assign each operation one authoritative owner and document functional exceptions. Do not reorganize the frontend for symmetry.
+- Every HTTP feature has `routes.ts`, `service.ts`, and `schema.ts`, regardless of size. Maintain identical operation section names and ordering across the three files.
+- Routes own HTTP integration; services own operations and database orchestration; schemas own transport validation and serialization. Keep runtime HTTP schemas out of service logic and SQL projections. Preserve justified shared DTO contracts without conflating transport, domain and database types.
+- Register encapsulated feature plugins. Put shared authentication in the authenticated parent and feature hooks in their proper scope. Keep public/protected registrations in the same feature directory when they share ownership; do not add nesting merely to mirror files.
+- Construct resources and service instances centrally and pass narrow explicit dependencies. Do not introduce a global service locator. Keep token verification, HTTP authentication, transaction eligibility and error translation under their designated owners.
+- Use request decorators for verified context; permit infrastructure decorators only for a concrete lifecycle or encapsulation benefit. Prefer cohesive feature files; supporting modules require a demonstrated responsibility, not a file-length threshold.
+- Preserve PostgreSQL authority and existing security/consistency behavior. Injection tests establish HTTP wiring, not database correctness. Keep the reviewed HTTP baseline intact; do not regenerate it merely to clear a refactor failure.
+- Follow the staged verification gates in document 22. Migrate community operation groups incrementally, in its section order; pass the relevant integration, authorization and concurrency checks, review the diff and checkpoint each group before proceeding. A failed or unavailable required check blocks progression until resolved or explicitly adjudicated by the user.
+- Update documentation when ownership or boundaries change. Do not add compatibility aliases, duplicate registrations or parallel legacy interfaces during the transition.
+
 # Development-only compatibility policy
 
 - This application is still in development. Do not spend effort introducing backward compatibility to support previous implementations. Remove existing backward-compatibility mechanisms when discovered, including obsolete compatibility wrappers, aliases, fallback paths and parallel legacy interfaces; update current callers to the intended implementation.

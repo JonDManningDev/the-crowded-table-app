@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Fastify refactor Phase 1 — 2026-11-04
+
+The [approved architecture target](22-fastify-architecture-refactoring-plan.md) now has a checked-in HTTP preservation baseline and a separate environment-independent `npm run test:http -w server` gate. All 41 explicit operations and 28 generated HEAD registrations are captured with complete schemas, declared statuses, authentication timing and effective body limits. Injection tests cover HTTP scope, validation precedence, fixed projections, exceptional mappings, trusted request IDs, body-limit overrides and common error/logging behavior. Architecture, backend patterns, file structure, decision register, agent guidance and the local runbook point to the same staged target.
+
+All 14 injection cases, server TypeScript and root lint passed. The original nine local real Auth/HTTP suites and 130-file client boundary scan passed both before and after additions, including runtime privilege-manifest, authorization/bypass, rollback and concurrency coverage. No pre-existing application failure or unresolved Phase 1 gate remains. Per-suite results, active loopback ports, starting revision, observed lifecycle/cache/cursor contracts and unverified checks are recorded in [Phase 1 evidence](evidence/fastify-phase-1-2026-11-04/README.md). The final diff confirms production source, shared contracts, migrations, dependency versions/lockfile and runtime privilege manifest are unchanged. Phase 1 is complete; Phase 2 has not started.
+
 For the current reactivation rules, see [G-03d in the migration specification](19-access-migration-specification.md). It supersedes earlier reinstatement rules in this document.
 
 ## Access migration packages 2–3 — draft for review, 2026-10-31
