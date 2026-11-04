@@ -42,6 +42,28 @@ const operations = [
     "body": false,
     "tagged": false,
     "public": true
+  },
+  {
+    "group": 2,
+    "name": "createCommunity",
+    "method": "POST",
+    "path": "/api/communities",
+    "params": false,
+    "query": false,
+    "body": true,
+    "tagged": true,
+    "public": false
+  },
+  {
+    "group": 2,
+    "name": "executeCommand",
+    "method": "POST",
+    "path": "/api/communities/:tenantId/commands",
+    "params": true,
+    "query": false,
+    "body": true,
+    "tagged": true,
+    "public": false
   }
 ];
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/http-contract.json', import.meta.url), 'utf8'))

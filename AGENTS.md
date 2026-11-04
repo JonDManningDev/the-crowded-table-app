@@ -16,7 +16,7 @@
 
 # Persistent API architecture
 
-- Follow the approved target in `docs/22-fastify-architecture-refactoring-plan.md`. Phases 1–3 establish the baseline, shared facilities and user-account triad. Phase 4 checkpoint 1/8 is verified (public access and standing); the three community self-service operations remain in `server/src/accounts/self-service.ts` until checkpoint 4. Keep unmigrated groups in their existing modules until their checkpoint. Health remains for Phase 5. Do not pull later work into a checkpoint.
+- Follow the approved target in `docs/22-fastify-architecture-refactoring-plan.md`. Phases 1–3 establish the baseline, shared facilities and user-account triad. Phase 4 checkpoint 2/8 is verified (creation and lifecycle); the three community self-service operations remain in `server/src/accounts/self-service.ts` until checkpoint 4. Keep unmigrated groups in their existing modules until their checkpoint. Health remains for Phase 5. Do not pull later work into a checkpoint.
 - Match backend HTTP feature names to frontend feature ownership by default. Assign each operation one authoritative owner and document functional exceptions. Do not reorganize the frontend for symmetry.
 - Every HTTP feature has `routes.ts`, `service.ts`, and `schema.ts`, regardless of size. Maintain identical operation section names and ordering across the three files.
 - Routes own HTTP integration; services own operations and database orchestration; schemas own transport validation and serialization. Keep runtime HTTP schemas out of service logic and SQL projections. Preserve justified shared DTO contracts without conflating transport, domain and database types.

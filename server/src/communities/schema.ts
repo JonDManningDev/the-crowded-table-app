@@ -1,5 +1,6 @@
 import { errorResponse } from '../http-errors.ts'
 import { copySlots } from '../../../shared/community-configuration.ts'
+import { staffFlags, type CommunityCommand } from '../../../shared/community-commands.ts'
 
 const standingSchemas = (() => {
   const fields = ['standing', 'enable_standard_chat_visibility', 'enable_standard_activity_visibility',
@@ -57,7 +58,44 @@ const directorySchemas = (() => {
   }
 })()
 
+const routesSchemas = (() => {
+  const uuid = { type: 'string', format: 'uuid' }
+  const string = (maxLength: number, minLength = 0) => ({ type: 'string', minLength, maxLength })
+  const bool = { type: 'boolean' }
+  const object = (properties: Record<string, unknown>, required = Object.keys(properties)) =>
+    ({ type: 'object', properties, required, additionalProperties: false })
+  const profile = object({ displayName: string(80, 1), bio: { type: ['null', 'string'], maxLength: 2000 } })
+  const flags = Object.fromEntries(staffFlags.map(flag => [flag, bool]))
+  const shapes: Record<CommunityCommand['kind'], Record<string, unknown>> = {
+    join: { profile }, deactivate: {}, reactivate: {}, withdraw: { requestId: uuid }, approve: { requestId: uuid, revision: uuid },
+    suspend: { target: uuid, revision: uuid, reason: string(2000) }, remove: { target: uuid, revision: uuid, reason: string(2000) },
+    clear: { target: uuid, revision: uuid, reason: string(2000) }, grant: { target: uuid }, resume: { target: uuid },
+    revoke: { target: uuid, reason: string(2000) }, reappoint: { target: uuid, permissions: object(flags) },
+    permissions: { target: uuid, permissions: { ...object(flags, []), minProperties: 1 } },
+    archive: { archived: bool },
+  }
+  const commandSchema = {
+    oneOf: Object.entries(shapes).map(([kind, props]) =>
+      object({ kind: { const: kind }, ...props }, ['kind', ...Object.keys(props).filter(key => key !== 'reason')]))
+  }
+  const createSchema = object({
+    name: string(120, 1), slug: string(63, 3), country: string(2, 2), timezone: string(128, 1),
+    region: string(120), city: string(120), profile
+  })
+  const params = object({ tenantId: uuid })
+  const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse, 409: errorResponse }
+  const commandResponse = object({ outcome: { type: 'string' }, tenantId: uuid, revision: uuid, requestId: uuid }, ['outcome', 'tenantId'])
+  return {
+    createCommunity: { body: createSchema, querystring: object({}), response: { 201: commandResponse, ...errors } },
+    executeCommand: { params, body: commandSchema, querystring: object({}), response: { 200: commandResponse, ...errors } }
+  }
+})()
+
 // Public access and standing
 export const listStandingsSchema = standingSchemas.listStandings
 export const readLandingSchema = configSchemas.readLanding
 export const publicDirectorySchema = directorySchemas.publicDirectory
+
+// Creation and lifecycle
+export const createCommunitySchema = routesSchemas.createCommunity
+export const executeCommandSchema = routesSchemas.executeCommand

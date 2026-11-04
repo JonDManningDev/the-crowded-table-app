@@ -5,14 +5,13 @@ import { optionalAuthentication, verifyOptionalIdentity, getAuthenticatedContext
 import type { BearerVerifier } from '../token-verifier.ts'
 import { ApplicationError } from '../application-errors.ts'
 import { type DirectoryQuery } from '../../../shared/community-directory.ts'
-import { staffFlags, type CommunityCommand, type CreateCommunityInput } from '../../../shared/community-commands.ts'
+import { type CommunityCommand, type CreateCommunityInput } from '../../../shared/community-commands.ts'
 import { type AccountReview, type CommunityRequest, type OwnCommunityRequestResponse, type StaffCandidate } from '../../../shared/community-reads.ts'
 import { errorResponse } from '../http-errors.ts'
 import type { FastifyInstance } from 'fastify'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction } from '../actor-transaction.ts'
 import type { AppDatabase } from '../database.ts'
-import { communityCommand, createCommunity } from './commands.ts'
 
 type PublicCommunityOperations = Pick<CommunityService, "listStandings" | "readLanding" | "publicDirectory">
 export const publicCommunityRoutes: FastifyPluginAsync<{ service: PublicCommunityOperations; verify: BearerVerifier }> = async (routes, { service, verify }) => {
@@ -22,66 +21,35 @@ export const publicCommunityRoutes: FastifyPluginAsync<{ service: PublicCommunit
   routes.get<{ Params: { slug: string }; Querystring: DirectoryQuery }>("/api/public/communities/:slug/directory", { onRequest: optionalAuthentication(verify), schema: schemas.publicDirectorySchema }, request => service.publicDirectory(request.params, request.query))
 }
 
+type ProtectedCommunityOperations = Pick<CommunityService, "createCommunity" | "executeCommand">
+export const communityRoutes: FastifyPluginAsync<{ service: ProtectedCommunityOperations }> = async (routes, { service }) => {
+  // Creation and lifecycle
+  routes.post<{ Body: CreateCommunityInput }>("/api/communities", { bodyLimit: 32768, schema: schemas.createCommunitySchema }, async (request, reply) => { let result; try { result = await service.createCommunity(getAuthenticatedContext(request), request.body) } catch (e) { if (e instanceof Error && 'code' in e && e.code === '23505') throw new ApplicationError(409, 'handle_taken'); throw e } if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id }); return reply.code(201).send(result.value) })
+  routes.post<{ Params: { tenantId: string }; Body: CommunityCommand }>("/api/communities/:tenantId/commands", { bodyLimit: 32768, schema: schemas.executeCommandSchema }, async (request, reply) => { const result = await service.executeCommand(getAuthenticatedContext(request), request.params, request.body); if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id }); return result.value })
+}
+
 // Pending Phase 4 request registrations; removed at checkpoint 3.
 const uuid = { type: 'string', format: 'uuid' }
-const string = (maxLength: number, minLength = 0) => ({ type: 'string', minLength, maxLength })
 const bool = { type: 'boolean' }
 const object = (properties: Record<string, unknown>, required = Object.keys(properties)) =>
   ({ type: 'object', properties, required, additionalProperties: false })
-const profile = object({ displayName: string(80, 1), bio: { type: ['null', 'string'], maxLength: 2000 } })
-const flags = Object.fromEntries(staffFlags.map(flag => [flag, bool]))
-const shapes: Record<CommunityCommand['kind'], Record<string, unknown>> = {
-  join: { profile }, deactivate: {}, reactivate: {}, withdraw: { requestId: uuid }, approve: { requestId: uuid, revision: uuid },
-  suspend: { target: uuid, revision: uuid, reason: string(2000) }, remove: { target: uuid, revision: uuid, reason: string(2000) },
-  clear: { target: uuid, revision: uuid, reason: string(2000) }, grant: { target: uuid }, resume: { target: uuid },
-  revoke: { target: uuid, reason: string(2000) }, reappoint: { target: uuid, permissions: object(flags) },
-  permissions: { target: uuid, permissions: { ...object(flags, []), minProperties: 1 } },
-  archive: { archived: bool },
-}
-const commandSchema = {
-  oneOf: Object.entries(shapes).map(([kind, props]) =>
-    object({ kind: { const: kind }, ...props }, ['kind', ...Object.keys(props).filter(key => key !== 'reason')]))
-}
-const createSchema = object({
-  name: string(120, 1), slug: string(63, 3), country: string(2, 2), timezone: string(128, 1),
-  region: string(120), city: string(120), profile
-})
 const params = object({ tenantId: uuid })
 const nullableUuid = { type: ['string', 'null'], format: 'uuid' }
 const timestamp = { type: 'string', format: 'date-time' }
 const standing = { type: 'string', enum: ['pending', 'approved', 'suspended', 'inactive'] }
 const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse, 409: errorResponse }
-const commandResponse = object({ outcome: { type: 'string' }, tenantId: uuid, revision: uuid, requestId: uuid }, ['outcome', 'tenantId'])
 const ownRequestSchema = object({ request: { ...object({ request_id: uuid, kind: { type: 'string', enum: ['join', 'reactivation'] }, requested_at: timestamp }), type: ['object', 'null'] } })
 const reviewSchema = object({ standing, revision: uuid, request_id: nullableUuid })
 const candidateSchema = object({
-  tenant_id: uuid, user_id: uuid, standing: { type: 'string', const: 'approved' }, display_name: { type: ['string', 'null'] },
+tenant_id: uuid, user_id: uuid, standing: { type: 'string', const: 'approved' }, display_name: { type: ['string', 'null'] },
   staff_role: { type: ['string', 'null'], enum: ['owner', 'admin', null] }, staff_status: { type: ['string', 'null'], enum: ['active', 'paused', 'revoked', null] }
 })
 const requestSchema = object({
-  id: uuid, kind: { type: 'string', enum: ['join', 'reactivation'] }, user_id: uuid, requested_at: timestamp,
+id: uuid, kind: { type: 'string', enum: ['join', 'reactivation'] }, user_id: uuid, requested_at: timestamp,
   revision: uuid, standing, first_approved_at: { type: ['string', 'null'], format: 'date-time' }, has_disciplinary_restriction: bool, display_name: { type: ['string', 'null'] }
 })
 const pageSchema = (items: object) => object({ rows: { type: 'array', items }, next: nullableUuid })
-export function registerCommunityCommands(routes: FastifyInstance, db: AppDatabase) {
-  routes.post<{ Body: CreateCommunityInput }>('/api/communities', { bodyLimit: 32768, schema: { body: createSchema, querystring: object({}), response: { 201: commandResponse, ...errors } } }, async (req, reply) => {
-    const actor = getAuthenticatedContext(req).actorId
-    let result
-    try { result = await withEligibleActorTransaction(db, getAuthenticatedContext(req), tx => createCommunity(tx, actor, req.body)) }
-    catch (e) {
-      if (e instanceof Error && 'code' in e && e.code === '23505') throw new ApplicationError(409, 'handle_taken')
-      throw e
-    }
-    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: req.id })
-    return reply.code(201).send(result.value)
-  })
-  routes.post<{ Params: { tenantId: string }; Body: CommunityCommand }>('/api/communities/:tenantId/commands',
-    { bodyLimit: 32768, schema: { params, body: commandSchema, querystring: object({}), response: { 200: commandResponse, ...errors } } }, async (req, reply) => {
-      const actor = getAuthenticatedContext(req).actorId
-      const result = await withEligibleActorTransaction(db, getAuthenticatedContext(req), tx => communityCommand(tx, actor, req.params.tenantId, req.body))
-      if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: req.id })
-      return result.value
-    })
+export function registerCommunityRequests(routes: FastifyInstance, db: AppDatabase) {
   routes.get<{ Params: { tenantId: string } }>('/api/communities/:tenantId/me/request', {
     schema: { params, querystring: object({}), response: { 200: ownRequestSchema, ...errors } },
   }, async (req, reply) => {
@@ -99,8 +67,6 @@ export function registerCommunityCommands(routes: FastifyInstance, db: AppDataba
     if ('status' in result.value) return reply.code(result.value.status).send({ code: 'missing', requestId: req.id })
     return result.value
   })
-  // Read exact revision tokens for self or an authorized target review. A
-  // single statement resolves the current authority and target in one snapshot.
   routes.get<{ Params: { tenantId: string; target: string } }>('/api/communities/:tenantId/accounts/:target/review',
     { schema: { params: object({ tenantId: uuid, target: uuid }), querystring: object({}), response: { 200: reviewSchema, ...errors } } }, async (req, reply) => {
       const actor = getAuthenticatedContext(req).actorId, { tenantId, target } = req.params

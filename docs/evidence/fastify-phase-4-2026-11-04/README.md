@@ -15,3 +15,13 @@ SQL review compares all 110 template expressions, preserving literal SQL and nor
 Standing retains post-validation optional verification and no cache directive; landing/directory retain optional onRequest verification and no-store. Standing reads without an actor transaction; landing retains its single raw query; public directory retains its own transaction without an eligibility gate. The legacy commands/request registrar remains alongside the public plugin until checkpoints 2–3.
 
 Preservation review passed: 110 SQL templates (with input-binding/format normalization), unchanged HTTP fixture, client/shared contracts, migrations, lockfile, runtime privilege manifest, startup/actor/cursor facilities. No required gate remains blocked. Next: checkpoint 2; later groups remain untouched.
+
+## Checkpoint 2 — Creation and lifecycle
+
+5 community operations migrated cumulatively. All 49 backend cases, server TypeScript and root lint passed. Required local suites passed sequentially: `community-local`, `self-service-local`. Existing assertions, transaction barriers and lock observations were retained.
+
+Creation and commands retain 32768-byte bodies, tagged eligibility, creation 201 and 23505 → handle_taken, request/revision handling, all command/audit/locking implementations, rollback and retries. The protected plugin inherits required authentication once; remaining reads use registerCommunityRequests.
+
+Preservation review passed: 110 SQL templates (with input-binding/format normalization), unchanged HTTP fixture, client/shared contracts, migrations, lockfile, runtime privilege manifest, startup/actor/cursor facilities. No required gate remains blocked. Next: checkpoint 3; later groups remain untouched.
+
+During checkpoint 2 verification, the first typecheck and two baseline HTTP cases found an omitted `randomUUID` import; the first community-local creation consequently returned 503 and stopped before self-service. The import moved with its implementation; all gates were rerun successfully without assertion changes.
