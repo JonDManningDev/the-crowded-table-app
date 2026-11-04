@@ -45,8 +45,27 @@ test('configuration is checked before allocation and retains environment names/d
   assert.deepEqual(readApiConfig(environment), { ...config, issuer: undefined, port: 3001 })
   assert.deepEqual(readApiConfig({ ...environment, HOST: 'localhost', PORT: '0', SUPABASE_JWT_ISSUER: 'issuer' }),
     { ...config, host: 'localhost', issuer: 'issuer' })
+  for (const [text, port] of [['0', 0], ['1', 1], ['3001', 3001], ['003001', 3001], ['65535', 65535]]) {
+    assert.equal(readApiConfig({ ...environment, PORT: text }).port, port)
+  }
+  for (const port of ['', ' ', '\t', '\n', ' 3001', '3001 ', '3001\n', '+3001', '-0', '-1', '65536',
+    '1.5', '3001.0', '0xBB9', '3e3', 'NaN', 'Infinity', '-Infinity', 'not-a-port', '٣٠٠١', '9'.repeat(400)]) {
+    assert.throws(() => readApiConfig({ ...environment, PORT: port }),
+      { name: 'Error', message: 'PORT must be a decimal integer between 0 and 65535.' }, JSON.stringify(port))
+  }
   for (const key of Object.keys(environment)) {
     assert.throws(() => readApiConfig({ ...environment, [key]: '' }), new RegExp(`Missing ${key}`))
+  }
+})
+
+test('invalid programmatic ports fail before any construction, readiness or cleanup', async t => {
+  for (const port of [NaN, Infinity, -Infinity, -1, 65536, 1.5, undefined, null, '3001']) {
+    const h = fixture(t)
+    await assert.rejects(startApi({ ...config, port }, h.dependencies),
+      { name: 'Error', message: 'PORT must be a decimal integer between 0 and 65535.' }, String(port))
+    assert.deepEqual(h.events, [])
+    assert.equal(h.destroys, 0)
+    assert.equal(h.app, undefined)
   }
 })
 
@@ -192,6 +211,17 @@ test('buildApi uses the supplied cleanup callback rather than implicitly destroy
 test('direct CLI configuration failure exits nonzero with the existing generic startup diagnostic', () => {
   const environment = { ...process.env }
   for (const key of ['DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'DIRECTORY_CURSOR_KEY']) delete environment[key]
+  const result = spawnSync(process.execPath, [fileURLToPath(new URL('../src/index.ts', import.meta.url))],
+    { env: environment, encoding: 'utf8', timeout: 10000 })
+  assert.ifError(result.error)
+  assert.equal(result.status, 1)
+  assert.equal(result.stdout, '')
+  assert.equal(result.stderr.trim(), 'API startup failed. Check the runtime credentials, migrations and listener configuration.')
+})
+
+test('malformed PORT keeps the CLI nonzero exit and generic startup diagnostic', () => {
+  const environment = { ...process.env, DATABASE_URL: config.databaseUrl, SUPABASE_URL: config.projectUrl,
+    SUPABASE_PUBLISHABLE_KEY: config.publishableKey, DIRECTORY_CURSOR_KEY: config.cursorKey, PORT: 'not-a-port' }
   const result = spawnSync(process.execPath, [fileURLToPath(new URL('../src/index.ts', import.meta.url))],
     { env: environment, encoding: 'utf8', timeout: 10000 })
   assert.ifError(result.error)

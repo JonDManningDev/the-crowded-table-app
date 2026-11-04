@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Fastify review follow-ups — 2026-11-04
+
+Implemented from clean checkpoint `2448c1e`. Environment `PORT` accepts ASCII decimal digits only and numeric values `0`–`65535`, including leading zeros and explicit `0`; absent configuration still defaults to `3001`. Empty/whitespace, signed, fractional, hexadecimal, exponent and out-of-range forms are rejected. Programmatic ports are checked before any constructor, readiness check or resource allocation. Existing valid startup, cleanup and generic CLI failure behavior remain intact.
+
+The new AJV regression case uses a fresh harness with a test-only default-bearing query schema. Omitted input remains absent and explicit input survives, without database execution or a production route. All 63 backend cases (the existing 60 plus three new cases), server TypeScript and root lint passed sequentially. The Phase 1 fixture and historical Phase 1–5 evidence remain unchanged. [Follow-up evidence](evidence/fastify-review-followups-2026-11-04/README.md) records cases, commands and scope. No required check remains blocked; no Supabase execution, migrations, environment-file edits, dependencies or frontend work are included.
+
 ## Fastify refactor Phase 5 — 2026-11-04
 
 All five phases are complete and locally verified. User accounts, communities and health each use the approved routes/service/schema triad with matching section and operation order. The health service receives only the existing readiness-check callback; its service-only plugin registers outside authentication. Liveness has no database access, readiness awaits each check and propagates failures, and fixed success contracts provide reply types without attaching runtime schemas. Community transport typing now preserves schema literals while retaining justified shared command/DTO types. The retired Data API test imports the real community implementations and uses explicit eligible-result handling; no compatibility interface remains.

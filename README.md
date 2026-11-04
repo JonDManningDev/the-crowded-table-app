@@ -34,6 +34,8 @@ Browser configuration lives in ignored `client/.env.hosted-db.local`; `client/.e
 
 ## Independent local Supabase target
 
+API startup defaults to port `3001` when `PORT` is absent. When supplied, `PORT` must contain only ASCII decimal digits and represent an integer from `0` through `65535`; leading zeros are accepted. Empty values, whitespace, signs, fractions, hexadecimal and exponent forms are rejected before resource construction. Explicit `PORT=0` requests an ephemeral listener. Programmatic `startApi` calls must supply a numeric integer in the same range. Invalid ports retain the existing generic CLI startup-failure diagnostic.
+
 Use the same root install, then run these commands in separate terminals:
 
 ```sh

@@ -310,6 +310,12 @@ All 60 backend cases, server TypeScript, root lint, nine local real Auth/HTTP su
 
 Each phase and community group must be independently reviewable and reversible through its code commit. No database migration or deployment rollback is required.
 
+### Review follow-ups — port validation and AJV defaults
+
+Completed from checkpoint `2448c1e` on 2026-11-04. Environment `PORT` now requires ASCII decimal digits representing an integer from `0` through `65535`; absent values retain the `3001` default and leading zeros/explicit `0` are accepted. Empty/whitespace, signed, fractional, hexadecimal, exponent and out-of-range forms are rejected. Numeric programmatic ports are validated at the start of `startApi`, before verifier/cursor construction and database allocation. Failures use `Error("PORT must be a decimal integer between 0 and 65535.")`; the CLI retains its existing generic diagnostic and nonzero status.
+
+A fresh test harness registers a test-only route with an optional default-bearing query field, proving that `useDefaults:false` preserves absent input and explicit values. It neither changes production routes nor enters the fixture-comparison application. All 63 backend cases, server TypeScript and root lint passed sequentially. The HTTP fixture and prior Phase 1–5 evidence remain unchanged. See [follow-up evidence](evidence/fastify-review-followups-2026-11-04/README.md). No Supabase execution, database changes, environment-file edits, dependency changes or frontend work are included; the completed five-phase architecture remains intact.
+
 ## 5. Acceptance criteria and permanent guidance
 
 All existing behavior remains unchanged:

@@ -15,6 +15,18 @@ export interface ApiConfig {
   port: number
 }
 
+const invalidPortMessage = 'PORT must be a decimal integer between 0 and 65535.'
+
+function validatePort(port: number): number {
+  if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error(invalidPortMessage)
+  return port
+}
+
+function readPort(value = '3001'): number {
+  if (!value || /[^0-9]/.test(value)) throw new Error(invalidPortMessage)
+  return validatePort(Number(value))
+}
+
 export function readApiConfig(environment: NodeJS.ProcessEnv = process.env): ApiConfig {
   function required(name: string) {
     const value = environment[name]
@@ -25,7 +37,7 @@ export function readApiConfig(environment: NodeJS.ProcessEnv = process.env): Api
     databaseUrl: required('DATABASE_URL'), projectUrl: required('SUPABASE_URL'),
     publishableKey: required('SUPABASE_PUBLISHABLE_KEY'), issuer: environment.SUPABASE_JWT_ISSUER,
     cursorKey: required('DIRECTORY_CURSOR_KEY'), host: environment.HOST ?? '127.0.0.1',
-    port: Number(environment.PORT ?? 3001),
+    port: readPort(environment.PORT),
   }
 }
 
@@ -40,6 +52,7 @@ export interface StartupDependencies {
 const startupDependencies: StartupDependencies = { verifyBearer, directoryCursors, connectDatabase, buildApi, checkRuntime }
 
 export async function startApi(config = readApiConfig(), dependencies: StartupDependencies = startupDependencies) {
+  validatePort(config.port)
   // Validate the identity/cursor configuration before allocating the pool.
   const verify = dependencies.verifyBearer(config.projectUrl, config.publishableKey, config.issuer)
   const cursors = dependencies.directoryCursors(config.cursorKey)

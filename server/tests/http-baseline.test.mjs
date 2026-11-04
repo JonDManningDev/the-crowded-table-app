@@ -145,6 +145,21 @@ test('strict AJV behavior rejects extra fields, coercion and missing values; no 
   assert.deepEqual(response.json(), preferences)
 })
 
+test('AJV leaves omitted default-bearing fields absent and preserves explicitly supplied values', async t => {
+  const h = createHttpHarness(t)
+  h.app.get('/test-only/defaults', { schema: { querystring: {
+    type: 'object', additionalProperties: false,
+    properties: { value: { type: 'string', default: 'generated' } },
+  } } }, async request => request.query)
+  const omitted = await h.app.inject('/test-only/defaults')
+  assert.equal(omitted.statusCode, 200)
+  assert.deepEqual(omitted.json(), {})
+  const supplied = await h.app.inject('/test-only/defaults?value=supplied')
+  assert.equal(supplied.statusCode, 200)
+  assert.deepEqual(supplied.json(), { value: 'supplied' })
+  assert.deepEqual(h.queries, [])
+})
+
 test('malformed JSON and byte limits preserve authentication precedence and command overrides', async t => {
   const h = createHttpHarness(t)
   const headers = { ...authorization, 'content-type': 'application/json' }
