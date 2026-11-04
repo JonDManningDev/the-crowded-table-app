@@ -152,6 +152,83 @@ const operations = [
     "body": true,
     "tagged": false,
     "public": false
+  },
+  {
+    "group": 5,
+    "name": "readDetails",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/details",
+    "params": true,
+    "query": false,
+    "body": false,
+    "tagged": false,
+    "public": false
+  },
+  {
+    "group": 5,
+    "name": "saveDetails",
+    "method": "PATCH",
+    "path": "/api/communities/:tenantId/details",
+    "params": true,
+    "query": false,
+    "body": true,
+    "tagged": false,
+    "public": false
+  },
+  {
+    "group": 5,
+    "name": "readSettings",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/settings",
+    "params": true,
+    "query": false,
+    "body": false,
+    "tagged": false,
+    "public": false
+  },
+  {
+    "group": 5,
+    "name": "saveSettings",
+    "method": "PATCH",
+    "path": "/api/communities/:tenantId/settings",
+    "params": true,
+    "query": false,
+    "body": true,
+    "tagged": false,
+    "public": false
+  },
+  {
+    "group": 5,
+    "name": "readCopy",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/copy",
+    "params": true,
+    "query": false,
+    "body": false,
+    "tagged": false,
+    "public": false
+  },
+  {
+    "group": 5,
+    "name": "saveCopy",
+    "method": "PUT",
+    "path": "/api/communities/:tenantId/copy/:contentKey",
+    "params": true,
+    "query": false,
+    "body": true,
+    "tagged": false,
+    "public": false
+  },
+  {
+    "group": 5,
+    "name": "deleteCopy",
+    "method": "DELETE",
+    "path": "/api/communities/:tenantId/copy/:contentKey",
+    "params": true,
+    "query": false,
+    "body": false,
+    "tagged": false,
+    "public": false
   }
 ];
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/http-contract.json', import.meta.url), 'utf8'))

@@ -4,6 +4,7 @@ import * as schemas from './schema.ts'
 import { optionalAuthentication, verifyOptionalIdentity, getAuthenticatedContext } from '../http-authentication.ts'
 import type { BearerVerifier } from '../token-verifier.ts'
 import { ApplicationError } from '../application-errors.ts'
+import { type CopyKey, type CommunityDetailsInput, type CommunitySettings } from '../../../shared/community-configuration.ts'
 import { type DirectoryQuery } from '../../../shared/community-directory.ts'
 import { type CommunityCommand, type CreateCommunityInput } from '../../../shared/community-commands.ts'
 import { type CommunityPreferences } from '../../../shared/self-service.ts'
@@ -22,7 +23,7 @@ export const publicCommunityRoutes: FastifyPluginAsync<{ service: PublicCommunit
   routes.get<{ Params: { slug: string }; Querystring: DirectoryQuery }>("/api/public/communities/:slug/directory", { onRequest: optionalAuthentication(verify), schema: schemas.publicDirectorySchema }, request => service.publicDirectory(request.params, request.query))
 }
 
-type ProtectedCommunityOperations = Pick<CommunityService, "createCommunity" | "executeCommand" | "ownRequest" | "reviewAccount" | "staffCandidates" | "pendingRequests" | "readProfile" | "saveOwnProfile" | "readOwnPreferences" | "saveOwnPreferences">
+type ProtectedCommunityOperations = Pick<CommunityService, "createCommunity" | "executeCommand" | "ownRequest" | "reviewAccount" | "staffCandidates" | "pendingRequests" | "readProfile" | "saveOwnProfile" | "readOwnPreferences" | "saveOwnPreferences" | "readDetails" | "saveDetails" | "readSettings" | "saveSettings" | "readCopy" | "saveCopy" | "deleteCopy">
 export const communityRoutes: FastifyPluginAsync<{ service: ProtectedCommunityOperations }> = async (routes, { service }) => {
   // Creation and lifecycle
   routes.post<{ Body: CreateCommunityInput }>("/api/communities", { bodyLimit: 32768, schema: schemas.createCommunitySchema }, async (request, reply) => {
@@ -78,4 +79,13 @@ export const communityRoutes: FastifyPluginAsync<{ service: ProtectedCommunityOp
   routes.patch<{ Params: { tenantId: string }; Body: schemas.CommunityProfileInput }>("/api/communities/:tenantId/me/profile", { schema: schemas.saveOwnProfileSchema }, request => service.saveOwnProfile(getAuthenticatedContext(request), request.params, request.body))
   routes.get<{ Params: { tenantId: string } }>("/api/communities/:tenantId/me/preferences", { schema: schemas.readOwnPreferencesSchema }, request => service.readOwnPreferences(getAuthenticatedContext(request), request.params))
   routes.patch<{ Params: { tenantId: string }; Body: Partial<CommunityPreferences> }>("/api/communities/:tenantId/me/preferences", { schema: schemas.saveOwnPreferencesSchema }, request => service.saveOwnPreferences(getAuthenticatedContext(request), request.params, request.body))
+
+  // Configuration and copy
+  routes.get<{ Params: { tenantId: string } }>("/api/communities/:tenantId/details", { schema: schemas.readDetailsSchema }, request => service.readDetails(getAuthenticatedContext(request), request.params))
+  routes.patch<{ Params: { tenantId: string }; Body: Partial<CommunityDetailsInput> }>("/api/communities/:tenantId/details", { schema: schemas.saveDetailsSchema }, request => service.saveDetails(getAuthenticatedContext(request), request.params, request.body))
+  routes.get<{ Params: { tenantId: string } }>("/api/communities/:tenantId/settings", { schema: schemas.readSettingsSchema }, request => service.readSettings(getAuthenticatedContext(request), request.params))
+  routes.patch<{ Params: { tenantId: string }; Body: Partial<CommunitySettings> }>("/api/communities/:tenantId/settings", { schema: schemas.saveSettingsSchema }, request => service.saveSettings(getAuthenticatedContext(request), request.params, request.body))
+  routes.get<{ Params: { tenantId: string } }>("/api/communities/:tenantId/copy", { schema: schemas.readCopySchema }, request => service.readCopy(getAuthenticatedContext(request), request.params))
+  routes.put<{ Params: { tenantId: string; contentKey: CopyKey }; Body: { text_value: string } }>("/api/communities/:tenantId/copy/:contentKey", { schema: schemas.saveCopySchema }, request => service.saveCopy(getAuthenticatedContext(request), request.params, request.body))
+  routes.delete<{ Params: { tenantId: string; contentKey: CopyKey } }>("/api/communities/:tenantId/copy/:contentKey", { schema: schemas.deleteCopySchema }, request => service.deleteCopy(getAuthenticatedContext(request), request.params))
 }

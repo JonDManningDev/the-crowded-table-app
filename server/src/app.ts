@@ -4,7 +4,6 @@ import { publicCommunityRoutes, communityRoutes } from './communities/routes.ts'
 import { createCommunityService } from './communities/service.ts'
 import { registerAccountRecords } from './communities/records.ts'
 import { registerAccountHistory } from './communities/history.ts'
-import { registerCommunityConfiguration } from './communities/configuration.ts'
 import { registerHttpErrors } from './http-errors.ts'
 import { registerRequiredAuthentication } from './http-authentication.ts'
 import type { BearerVerifier } from './token-verifier.ts'
@@ -22,13 +21,11 @@ export interface BuildApiOptions {
 }
 
 export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
-  const app = Fastify({
-    bodyLimit: 8192, requestIdHeader: false, genReqId: () => randomUUID(),
-    ajv: { customOptions: { removeAdditional: false, coerceTypes: false, useDefaults: false } }
-  })
+  const app = Fastify({ bodyLimit: 8192, requestIdHeader: false, genReqId: () => randomUUID(),
+    ajv: { customOptions: { removeAdditional: false, coerceTypes: false, useDefaults: false } } })
   app.addHook('onClose', cleanup)
   registerHttpErrors(app)
-  const communityService = createCommunityService({ db, cursors })
+  const communityService = createCommunityService({db,cursors})
   const userAccountService = createUserAccountService({ db, cursors })
   app.get('/health/live', async () => ({ live: true }))
   app.get('/health/ready', async () => { await checkRuntime(db); return { ready: true } })
@@ -36,19 +33,39 @@ export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
     service: {
       listStandings: communityService.listStandings,
       readLanding: communityService.readLanding,
-      publicDirectory: communityService.publicDirectory
-    }, verify
+      publicDirectory: communityService.publicDirectory,
+    },
+    verify,
   })
   app.register(async routes => {
     registerRequiredAuthentication(routes, verify)
-    routes.register(communityRoutes, { service: { createCommunity: communityService.createCommunity, executeCommand: communityService.executeCommand, ownRequest: communityService.ownRequest, reviewAccount: communityService.reviewAccount, staffCandidates: communityService.staffCandidates, pendingRequests: communityService.pendingRequests, readProfile: communityService.readProfile, saveOwnProfile: communityService.saveOwnProfile, readOwnPreferences: communityService.readOwnPreferences, saveOwnPreferences: communityService.saveOwnPreferences } })
+    routes.register(communityRoutes, {
+      service: {
+        createCommunity: communityService.createCommunity,
+        executeCommand: communityService.executeCommand,
+        ownRequest: communityService.ownRequest,
+        reviewAccount: communityService.reviewAccount,
+        staffCandidates: communityService.staffCandidates,
+        pendingRequests: communityService.pendingRequests,
+        readProfile: communityService.readProfile,
+        saveOwnProfile: communityService.saveOwnProfile,
+        readOwnPreferences: communityService.readOwnPreferences,
+        saveOwnPreferences: communityService.saveOwnPreferences,
+        readDetails: communityService.readDetails,
+        saveDetails: communityService.saveDetails,
+        readSettings: communityService.readSettings,
+        saveSettings: communityService.saveSettings,
+        readCopy: communityService.readCopy,
+        saveCopy: communityService.saveCopy,
+        deleteCopy: communityService.deleteCopy,
+      },
+    })
 
     registerAccountHistory(routes, db)
     registerAccountRecords(routes, db)
     registerCommunityDirectory(routes, db, cursors)
 
     routes.register(userAccountRoutes, { service: userAccountService })
-    registerCommunityConfiguration(routes, db)
 
   })
   return app

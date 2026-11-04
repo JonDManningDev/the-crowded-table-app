@@ -1,6 +1,6 @@
 import type { FromSchema } from 'json-schema-to-ts'
 import { errorResponse } from '../http-errors.ts'
-import { copySlots } from '../../../shared/community-configuration.ts'
+import { copySlots, settingFields } from '../../../shared/community-configuration.ts'
 import { staffFlags, type CommunityCommand } from '../../../shared/community-commands.ts'
 import { communityPreferenceFields, profileInputSchema } from '../../../shared/self-service.ts'
 
@@ -28,22 +28,39 @@ const configSchemas = (() => {
   const text = (maxLength: number, minLength = 1) => ({ type: 'string', maxLength, minLength })
   const object = (properties: Record<string, unknown>, required = Object.keys(properties)) =>
     ({ type: 'object', properties, required, additionalProperties: false })
+  const attribution = {
+    created_at: { type: 'string', format: 'date-time' }, updated_at: { type: 'string', format: 'date-time' },
+    created_by: { type: ['string', 'null'], format: 'uuid' }, updated_by: { type: ['string', 'null'], format: 'uuid' }
+  }
   const detailInput = {
     name: text(120), country_code: { type: 'string', pattern: '^[A-Z]{2}$' },
     state_province: { type: ['string', 'null'], maxLength: 120 }, city: { type: ['string', 'null'], maxLength: 120 }, timezone: text(128)
   }
+  const detailsSchema = object({ id: uuid, slug: text(63), ...detailInput, operational_status: { type: 'string', enum: ['active', 'archived'] }, ...attribution })
+  const settingsInput = Object.fromEntries(settingFields.map(key => [key, { type: 'boolean' }]))
+  const settingsSchema = object({ tenant_id: uuid, ...settingsInput, ...attribution })
   const copyKey = { type: 'string', enum: Object.keys(copySlots) }
   const publicCopy = { tenant_id: uuid, content_key: copyKey, text_value: text(2000) }
+  const copySchema = object({ ...publicCopy, ...attribution })
   const landingSchema = object({
     id: uuid, slug: text(63), ...detailInput, auto_approve_users: { type: 'boolean' },
     allow_public_chat_visibility: { type: 'boolean' }, allow_public_activity_visibility: { type: 'boolean' },
     allow_public_directory_visibility: { type: 'boolean' }, overrides: { type: 'array', items: object(publicCopy) }
   })
+  const params = object({ tenantId: uuid }), errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse }
+  const copyResponse = object({ rows: { type: 'array', items: copySchema } })
   return {
     readLanding: {
       params: object({ slug: { type: 'string', minLength: 3, maxLength: 63, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$' } }), querystring: object({}),
       response: { 200: landingSchema, 400: errorResponse, 401: errorResponse, 404: errorResponse },
-    }
+    },
+    readDetails: { params, querystring: object({}), response: { 200: detailsSchema, ...errors } },
+    saveDetails: { params, querystring: object({}), body: { ...object(detailInput, []), minProperties: 1 }, response: { 200: detailsSchema, ...errors } },
+    readSettings: { params, querystring: object({}), response: { 200: settingsSchema, ...errors } },
+    saveSettings: { params, querystring: object({}), body: { ...object(settingsInput, []), minProperties: 1 }, response: { 200: settingsSchema, ...errors } },
+    readCopy: { params, querystring: object({}), response: { 200: copyResponse, ...errors } },
+    saveCopy: { params: object({ tenantId: uuid, contentKey: copyKey }), querystring: object({}), body: object({ text_value: text(2000) }), response: { 200: copyResponse, ...errors } },
+    deleteCopy: { params: object({ tenantId: uuid, contentKey: copyKey }), querystring: object({}), response: { 200: copyResponse, ...errors } }
   }
 })()
 
@@ -170,5 +187,14 @@ export const readProfileSchema = profileSchemas.readProfile
 export const saveOwnProfileSchema = selfSchemas.saveOwnProfile
 export const readOwnPreferencesSchema = selfSchemas.readOwnPreferences
 export const saveOwnPreferencesSchema = selfSchemas.saveOwnPreferences
+
+// Configuration and copy
+export const readDetailsSchema = configSchemas.readDetails
+export const saveDetailsSchema = configSchemas.saveDetails
+export const readSettingsSchema = configSchemas.readSettings
+export const saveSettingsSchema = configSchemas.saveSettings
+export const readCopySchema = configSchemas.readCopy
+export const saveCopySchema = configSchemas.saveCopy
+export const deleteCopySchema = configSchemas.deleteCopy
 
 export type CommunityProfileInput = FromSchema<typeof profileInputSchema>

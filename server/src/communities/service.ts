@@ -4,7 +4,7 @@ import type { ApiTables, AppDatabase } from '../database.ts'
 import { withEligibleActorTransaction, type AuthenticatedContext } from '../actor-transaction.ts'
 import { ApplicationError } from '../application-errors.ts'
 import type { DirectoryCursors } from '../directory-cursors.ts'
-import { type CommunityLanding } from '../../../shared/community-configuration.ts'
+import { copySlots, settingFields, type CopyKey, type CommunityCopy, type CommunityDetails, type CommunityDetailsInput, type CommunityLanding, type CommunitySettings, type CommunitySettingsRecord } from '../../../shared/community-configuration.ts'
 import { type DirectoryPage, type DirectoryQuery, type PublicDirectoryRow } from '../../../shared/community-directory.ts'
 import { staffFlags, type CommunityCommand, type CommandResult, type CreateCommunityInput, type CuratedProfile, type StaffPermissions } from '../../../shared/community-commands.ts'
 import { type AccountReview, type CommunityRequest, type OwnCommunityRequestResponse, type StaffCandidate } from '../../../shared/community-reads.ts'
@@ -57,6 +57,28 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
     },
     saveOwnPreferences(context: AuthenticatedContext, params: { tenantId: string }, input: Partial<CommunityPreferences>) {
       return run(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId, input))
+    },
+    // Configuration and copy
+    readDetails(context: AuthenticatedContext, params: { tenantId: string }) {
+      return run(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId))
+    },
+    saveDetails(context: AuthenticatedContext, params: { tenantId: string }, input: Partial<CommunityDetailsInput>) {
+      return run(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId, input))
+    },
+    readSettings(context: AuthenticatedContext, params: { tenantId: string }) {
+      return run(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId))
+    },
+    saveSettings(context: AuthenticatedContext, params: { tenantId: string }, input: Partial<CommunitySettings>) {
+      return run(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId, input))
+    },
+    readCopy(context: AuthenticatedContext, params: { tenantId: string }) {
+      return run(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId))
+    },
+    saveCopy(context: AuthenticatedContext, params: { tenantId: string; contentKey: CopyKey }, input: { text_value: string }) {
+      return run(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey, text: input.text_value }))
+    },
+    deleteCopy(context: AuthenticatedContext, params: { tenantId: string; contentKey: CopyKey }) {
+      return run(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey }))
     }
   }
 }
@@ -380,6 +402,61 @@ export async function ownCommunityPreferences(tx: Transaction<ApiTables>, actor:
         and (app_private.active_tenant(tenant_id) or app_private.is_approved_owner(tenant_id))`.execute(tx)
   if (!result.rows[0]) throw new ApplicationError(404, 'missing')
   return result.rows[0]
+}
+
+// Configuration and copy
+type ConfigurationKind = 'details' | 'settings' | 'copy'
+const detailFields = sql`id,slug,name,country_code,state_province,city,timezone,operational_status,created_at,updated_at,created_by,updated_by`
+const settingsFields = sql`tenant_id,${sql.join(settingFields.map(key => sql.id(key)))},created_at,updated_at,created_by,updated_by`
+const copyFields = sql`tenant_id,content_key,text_value,created_at,updated_at,created_by,updated_by`
+async function authorizeConfiguration(tx: Tx, actor: string, tenant: string, kind: ConfigurationKind, write: boolean) {
+  await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+  // Management reads share the same root so their current authority cannot be
+  // revoked between the check and the full-row projection.
+  const site = (await sql`select id from public.tenants where id=${tenant} ${write ? sql`for update` : sql`for share`}`.execute(tx)).rows[0]
+  if (!site) throw new ApplicationError(404, 'missing')
+  const allowed = (await sql<{ allowed: boolean }>`select ${write
+    ? sql`app_private.can_edit_configuration(${tenant},${kind})`
+    : sql`app_private.is_approved_owner(${tenant}) or (app_private.active_tenant(${tenant}) and exists(
+        select from public.community_accounts c where c.tenant_id=${tenant} and c.user_id=${actor} and c.standing in ('approved','suspended')))`
+    } as allowed`.execute(tx)).rows[0]?.allowed
+  if (!allowed) throw new ApplicationError(write ? 403 : 404, write ? 'forbidden' : 'missing')
+}
+export async function configurationDetails(tx: Tx, actor: string, tenant: string, input?: Partial<CommunityDetailsInput>) {
+  await authorizeConfiguration(tx, actor, tenant, 'details', Boolean(input))
+  if (input) {
+    if (['name', 'country_code', 'timezone'].some(key => key in input && !String(input[key as keyof CommunityDetailsInput]).trim())) {
+      throw new ApplicationError(400, 'invalid_details')
+    }
+    const entries = Object.entries(input).map(([key, value]) => [key, typeof value === 'string' ? value.trim() || null : value] as const)
+    await sql`update public.tenants set ${sql.join(entries.map(([key, value]) => sql`${sql.id(key)}=${value}`))}
+      where id=${tenant} and (${sql.join(entries.map(([key, value]) => sql`${sql.id(key)} is distinct from ${value}`), sql` or `)})`.execute(tx)
+  }
+  return (await sql<CommunityDetails>`select ${detailFields} from public.tenants where id=${tenant}`.execute(tx)).rows[0]
+}
+export async function configurationSettings(tx: Tx, actor: string, tenant: string, input?: Partial<CommunitySettings>) {
+  await authorizeConfiguration(tx, actor, tenant, 'settings', Boolean(input))
+  if (input) {
+    const entries = Object.entries(input)
+    await sql`update public.tenant_settings set ${sql.join(entries.map(([key, value]) => sql`${sql.id(key)}=${value}`))}
+      where tenant_id=${tenant} and (${sql.join(entries.map(([key, value]) => sql`${sql.id(key)} is distinct from ${value}`), sql` or `)})`.execute(tx)
+  }
+  return (await sql<CommunitySettingsRecord>`select ${settingsFields} from public.tenant_settings where tenant_id=${tenant}`.execute(tx)).rows[0]
+}
+export async function configurationCopy(tx: Tx, actor: string, tenant: string, change?: { key: CopyKey; text?: string }) {
+  await authorizeConfiguration(tx, actor, tenant, 'copy', Boolean(change))
+  if (change) {
+    if (change.text === undefined) {
+      const deleted = await sql`delete from public.tenant_website_content_overrides where tenant_id=${tenant} and content_key=${change.key} returning content_key`.execute(tx)
+      if (!deleted.rows.length) throw new ApplicationError(404, 'missing')
+    } else {
+      if (!change.text.trim() || Array.from(change.text).length > copySlots[change.key]) throw new ApplicationError(400, 'invalid_copy')
+      await sql`insert into public.tenant_website_content_overrides(tenant_id,content_key,text_value) values(${tenant},${change.key},${change.text})
+        on conflict(tenant_id,content_key) do update set text_value=excluded.text_value
+        where tenant_website_content_overrides.text_value is distinct from excluded.text_value`.execute(tx)
+    }
+  }
+  return { rows: (await sql<CommunityCopy>`select ${copyFields} from public.tenant_website_content_overrides where tenant_id=${tenant} order by content_key`.execute(tx)).rows }
 }
 
 // Internal helpers

@@ -43,3 +43,13 @@ Exact profile and independent community profile/preferences edits retain archive
 Preservation review passed: 110 SQL templates (with input-binding/format normalization), unchanged HTTP fixture, client/shared contracts, migrations, lockfile, runtime privilege manifest, startup/actor/cursor facilities. No required gate remains blocked. Next: checkpoint 5; later groups remain untouched.
 
 Checkpoint 4 also verifies exact-profile compiled SELECT fields and bound parameters with the actual service. An initial typecheck caught an unnecessary `params.target` extraction caused by matching a SQL alias/comment; it was removed before runtime checks. No assertion changed. A transient Windows write error during test inventory regeneration was retried; the final complete 50-case gate passed.
+
+## Checkpoint 5 — Configuration and copy
+
+20 community operations migrated cumulatively. All 50 backend cases, server TypeScript and root lint passed. Required local suites passed sequentially: `configuration-local`, `directory-local`. Existing assertions, transaction barriers and lock observations were retained.
+
+Details, settings and copy retain separate authority checks, tenant locks, field-specific copy validation, no-op/retry/reset and audit attribution. Configuration authorization is named independently from record authorization; the superseded configuration module is deleted.
+
+Preservation review passed: 110 SQL templates (with input-binding/format normalization), unchanged HTTP fixture, client/shared contracts, migrations, lockfile, runtime privilege manifest, startup/actor/cursor facilities. No required gate remains blocked. Next: checkpoint 6; later groups remain untouched.
+
+Checkpoint 5 additionally compared parsed bodies of all 24 migrated query/authorization helpers with the starting revision, allowing only the documented authorization-helper renaming and ignoring formatting/comments. Their statement structure, literal values and order match.

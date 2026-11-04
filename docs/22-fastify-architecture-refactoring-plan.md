@@ -263,7 +263,7 @@ The unchanged Phase 1 fixture, all 43 backend HTTP/shared/startup/adapter cases,
 
 ### Phase 4 — Community feature, one operation group at a time
 
-**Phase 4 checkpoint 4/8 — verified 2026-11-04.** 13 of 29 community operations now belong to the triad, through profiles and preferences. One centrally constructed service supplies explicit public/protected operation subsets; only the public plugin receives the verifier. All 50 backend cases, server TypeScript, root lint and this checkpoint's required local suites passed. The HTTP fixture and database/security contracts remain unchanged. Later groups remain in their existing modules until their checkpoints. See [Phase 4 evidence](evidence/fastify-phase-4-2026-11-04/README.md).
+**Phase 4 checkpoint 5/8 — verified 2026-11-04.** 20 of 29 community operations now belong to the triad, through configuration and copy. One centrally constructed service supplies explicit public/protected operation subsets; only the public plugin receives the verifier. All 50 backend cases, server TypeScript, root lint and this checkpoint's required local suites passed. The HTTP fixture and database/security contracts remain unchanged. Later groups remain in their existing modules until their checkpoints. See [Phase 4 evidence](evidence/fastify-phase-4-2026-11-04/README.md).
 
 **Do not consolidate all 29 operations in one rewrite.**
 
