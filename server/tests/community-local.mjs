@@ -1,13 +1,14 @@
+import { directoryCursors } from '../src/directory-cursors.ts'
 import assert from 'node:assert/strict'
 import { randomUUID, randomBytes } from 'node:crypto'
 import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
-import { withVerifiedActor } from '../src/actor-transaction.ts'
+import { withEligibleActorTransaction } from '../src/actor-transaction.ts'
 import { communityCommand } from '../src/communities/commands.ts'
 import { buildApi } from '../src/app.ts'
 import { connectDatabase } from '../src/database.ts'
-import { verifyBearer } from '../src/auth.ts'
+import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
 
 const local = localStack()
@@ -15,7 +16,7 @@ const endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
-const app = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), randomBytes(32).toString('hex'))
+const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -222,7 +223,7 @@ try {
   let releaseWriter, signalReady
   const ready = new Promise(resolve=>{signalReady=resolve})
   const release = new Promise(resolve=>{releaseWriter=resolve})
-  const writer = withVerifiedActor(db, waitingMember.id, randomUUID(), async tx => {
+  const writer = withEligibleActorTransaction(db, { actorId: waitingMember.id, requestId: randomUUID() }, async tx => {
     await communityCommand(tx,waitingMember.id,tenant,{kind:'withdraw',requestId:older.requestId})
     const fresh = await communityCommand(tx,waitingMember.id,tenant,{kind:'reactivate'})
     signalReady((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
@@ -239,11 +240,13 @@ try {
       await new Promise(resolve=>setTimeout(resolve,10))
     }
   } finally { releaseWriter() }
-  const fresh = await writer
+  const written = await writer
+  assert.equal(written.eligible, true)
+  const fresh = written.value
   await approval
   assert.equal((await review(waitingMember,waitingMember.id)).request_id,fresh.requestId)
   const operation = randomUUID()
-  await assert.rejects(withVerifiedActor(db,waitingMember.id,operation,async tx=>{
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: waitingMember.id, requestId: operation },async tx=>{
     await communityCommand(tx,waitingMember.id,tenant,{kind:'withdraw',requestId:fresh.requestId})
     throw Error('injected rollback')
   }),/injected rollback/)

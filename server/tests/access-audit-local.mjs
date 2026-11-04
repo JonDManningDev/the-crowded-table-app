@@ -1,3 +1,4 @@
+import { directoryCursors } from '../src/directory-cursors.ts'
 import assert from 'node:assert/strict'
 import { randomUUID, randomBytes } from 'node:crypto'
 import pg from 'pg'
@@ -7,7 +8,7 @@ import { readFileSync } from 'node:fs'
 import { accessCatalog } from '../../supabase/tests/access-catalog.mjs'
 import { buildApi } from '../src/app.ts'
 import { connectDatabase } from '../src/database.ts'
-import { verifyBearer } from '../src/auth.ts'
+import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
 
 const local = localStack()
@@ -15,7 +16,7 @@ const endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
-const app = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), randomBytes(32).toString('hex'))
+const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin

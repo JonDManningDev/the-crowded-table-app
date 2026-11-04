@@ -1,3 +1,4 @@
+import { ApplicationError } from '../application-errors.ts'
 import { randomUUID } from 'node:crypto'
 import { sql, type Transaction } from 'kysely'
 import { staffFlags, type CommunityCommand, type CommandResult, type CreateCommunityInput, type CuratedProfile, type StaffPermissions } from '../../../shared/community-commands.ts'
@@ -8,12 +9,9 @@ type Staff = StaffPermissions & { role: 'owner' | 'admin'; status: 'active' | 'p
 type Account = { standing: 'approved' | 'pending' | 'suspended' | 'inactive'; revision: string; approved: boolean; restricted: boolean }
 type Pending = { id: string; user_id: string; kind: 'join' | 'reactivation' }
 type Context = { tx: Tx; tenant: string; actor: string }
-export class CommunityError extends Error {
-  statusCode: number
-  constructor(status: number, code: string) { super(code); this.statusCode = status }
-}
-function deny(): never { throw new CommunityError(403, 'forbidden') }
-function stale(): never { throw new CommunityError(409, 'stale_state') }
+
+function deny(): never { throw new ApplicationError(403, 'forbidden') }
+function stale(): never { throw new ApplicationError(409, 'stale_state') }
 async function scope(tx: Tx, tenant: string) {
   await sql`select set_config('ct.tenant_id', ${tenant}, true)`.execute(tx)
 }
@@ -149,7 +147,7 @@ export async function communityCommand(tx: Tx, actor: string, tenant: string, cm
   const c = { tx, actor, tenant }
   await scope(tx, tenant)
   const site = (await sql<{ operational_status: string }>`select operational_status from public.tenants where id=${tenant} for update`.execute(tx)).rows[0]
-  if (!site) throw new CommunityError(404, 'missing')
+  if (!site) throw new ApplicationError(404, 'missing')
   const me = await staff(c, actor)
   // The deferred active-assignment FK also requires approved community standing.
   const effective = me?.status === 'active' ? me : undefined
@@ -161,7 +159,7 @@ export async function communityCommand(tx: Tx, actor: string, tenant: string, cm
     await sql`update public.tenants set operational_status=${status} where id=${tenant}`.execute(tx)
     return result(c, status)
   }
-  if (site.operational_status !== 'active') throw new CommunityError(404, 'missing')
+  if (site.operational_status !== 'active') throw new ApplicationError(404, 'missing')
   if (cmd.kind === 'approve' && !effective?.can_approve_users) deny()
   if (['suspend','remove','clear'].includes(cmd.kind) && !effective?.can_discipline_users) deny()
   if (['grant','resume','permissions'].includes(cmd.kind) && !effective?.can_grant_staff) deny()

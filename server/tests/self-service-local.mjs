@@ -1,15 +1,16 @@
+import { directoryCursors } from '../src/directory-cursors.ts'
 import assert from 'node:assert/strict'
 import { randomUUID, randomBytes } from 'node:crypto'
 
 import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
-import { withVerifiedActor } from '../src/actor-transaction.ts'
+import { withEligibleActorTransaction } from '../src/actor-transaction.ts'
 import { ownProfile, ownCommunityProfile, ownCommunityPreferences } from '../src/accounts/self-service.ts'
 import { communityCommand } from '../src/communities/commands.ts'
 import { buildApi } from '../src/app.ts'
 import { connectDatabase } from '../src/database.ts'
-import { verifyBearer } from '../src/auth.ts'
+import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
 
 const local = localStack()
@@ -17,7 +18,7 @@ const endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
-const app = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), randomBytes(32).toString('hex'))
+const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -120,7 +121,7 @@ try {
   for(const query of [{filter:'everyone'},{user_id:owner.id},{limit:'0'},{limit:'101'},{cursor:'bad'}]) await summaries(member,query,400)
 
   // Native role checks omit the application's self predicates deliberately.
-  await withVerifiedActor(db,member.id,randomUUID(),async tx=>{
+  assert.equal((await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     // Global discovery has its own peer audience; the self operation stays exact.
     assert.equal((await ownProfile(tx,member.id)).profile.user_id,member.id)
     assert.ok((await sql`select user_id from public.community_account_preferences`.execute(tx)).rows.every(r=>r.user_id===member.id))
@@ -128,9 +129,9 @@ try {
     assert.ok(changed.rows.length && changed.rows.every(r=>r.user_id===member.id))
     const raw=await sql`select id from public.tenants`.execute(tx)
     assert.deepEqual(raw.rows,[{id:tenant}])
-  })
-  await assert.rejects(withVerifiedActor(db,member.id,randomUUID(),tx=>sql`update public.user_account_profiles set updated_by=${other.id}`.execute(tx)),error=>error.code==='42501')
-  await assert.rejects(withVerifiedActor(db,member.id,randomUUID(),async tx=>{
+  })).eligible, true)
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },tx=>sql`update public.user_account_profiles set updated_by=${other.id}`.execute(tx)),error=>error.code==='42501')
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     await ownProfile(tx,member.id,{display_name:'Rollback',bio:null})
     throw Error('injected rollback')
   }),/injected rollback/)
@@ -178,10 +179,10 @@ try {
   await profile(owner,{display_name:'Archived owner',bio:null},404)
   await prefs(owner,{show_global_profile:true},404)
   await global(member,{display_name:'Global still editable',bio:null})
-  await withVerifiedActor(db,member.id,randomUUID(),async tx=>{
+  assert.equal((await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     assert.deepEqual((await sql`select user_id,show_global_profile from public.community_account_preferences`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select * from public.community_account_profiles where tenant_id=${tenant}`.execute(tx)).rows,[])
-  })
+  })).eligible, true)
   await command(owner,{kind:'archive',archived:false})
   await admin.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1",[member.id])
   await global(member,undefined,403)
@@ -191,7 +192,7 @@ try {
   async function held(viewer,work) {
     let release,ready
     const gate=new Promise(resolve=>{release=resolve}), started=new Promise(resolve=>{ready=resolve})
-    const done=withVerifiedActor(db,viewer.id,randomUUID(),async tx=>{
+    const done=withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
       await work(tx)
       ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
       await gate

@@ -54,7 +54,7 @@ npm run preview
 
 Root `test` runs the client tests. Root `build` checks the server and type-checks/builds the client into `client/dist/`. Root `lint` checks repository TypeScript with React rules scoped to the client. `preview` serves the built frontend for asset inspection; use the dev server and API for application flows with API forwarding.
 
-Run `npm run test:local -w server` for the local API suites and client access audit. Set the forwarded port environment variables when required. Database and hosted verification commands are documented in the runbook; hosted suites require explicit opt-in and create disposable fixtures.
+Run `npm run test:http -w server` for the HTTP preservation, shared-facility and startup/cleanup tests; these require no Supabase stack or environment file. Run `npm run test:local -w server` for the real local API suites and client access audit. Set the forwarded port environment variables when required. Database and hosted verification commands are documented in the runbook; hosted suites require explicit opt-in and create disposable fixtures.
 
 ## Application boundaries
 

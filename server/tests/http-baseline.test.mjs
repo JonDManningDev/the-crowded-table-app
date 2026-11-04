@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { CommunityError } from '../src/communities/commands.ts'
+import { ApplicationError } from '../src/application-errors.ts'
 import { actorId, authorization, createHttpHarness, targetId, tenantId } from './helpers/http-harness.mjs'
 
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/http-contract.json', import.meta.url), 'utf8'))
@@ -266,7 +266,7 @@ test('root error translation preserves application, PostgreSQL, 4xx and unexpect
   t.mock.method(console, 'error', (...args) => logs.push(args))
   const cases = [
     ...[[400, 'invalid_command'], [403, 'forbidden'], [404, 'missing'], [409, 'stale_state']]
-      .map(([status, code]) => [new CommunityError(status, code), status, code]),
+      .map(([status, code]) => [new ApplicationError(status, code), status, code]),
     ...['23514', '22023'].flatMap(code => [
       [Object.assign(new Error('invalid_timezone'), { code }), 400, 'invalid_timezone'],
       [Object.assign(new Error('private database detail'), { code }), 400, 'invalid_details'],

@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-export function verifyBearer(projectUrl: string, publishableKey: string, issuer = new URL('/auth/v1', projectUrl).href) {
+export type BearerVerifier = (authorization?: string) => Promise<string | null>
+
+export function verifyBearer(projectUrl: string, publishableKey: string, issuer = new URL('/auth/v1', projectUrl).href): BearerVerifier {
   const auth = createClient(projectUrl, publishableKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   }).auth

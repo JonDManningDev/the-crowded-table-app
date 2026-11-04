@@ -1,9 +1,10 @@
-import { withVerifiedActor } from '../actor-transaction.ts'
+import { withEligibleActorTransaction, type AuthenticatedContext } from '../actor-transaction.ts'
 import type { AppDatabase } from '../database.ts'
 import { preferencesSchema, type AccountPreferences } from '../../../shared/account-preferences.ts'
 
-export async function accountPreferences(db: AppDatabase, actor: string, requestId: string, input?: AccountPreferences) {
-  return withVerifiedActor(db, actor, requestId, async tx => {
+export async function accountPreferences(db: AppDatabase, context: AuthenticatedContext, input?: AccountPreferences) {
+  const actor = context.actorId
+  return withEligibleActorTransaction(db, context, async tx => {
     const fields = preferencesSchema.required
     const row = input
       ? await tx.updateTable('user_accounts').set(input).where('user_id', '=', actor).returning(fields).executeTakeFirst()

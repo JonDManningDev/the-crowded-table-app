@@ -1,11 +1,12 @@
+import { getAuthenticatedContext } from '../http-authentication.ts'
 import type { FastifyInstance } from 'fastify'
 import { sql, type Transaction } from 'kysely'
 import type { BlockInput, DiscoveryQuery, GlobalProfile, OutgoingBlock, ProfilePage } from '../../../shared/global-profiles.ts'
 import type { ApiTables, AppDatabase } from '../database.ts'
-import { withVerifiedActor } from '../actor-transaction.ts'
-import { CommunityError } from '../communities/commands.ts'
-import type { DirectoryCursors } from '../communities/directory-cursor.ts'
-import { errorResponse } from '../http.ts'
+import { withEligibleActorTransaction, type AuthenticatedContext } from '../actor-transaction.ts'
+import { ApplicationError } from '../application-errors.ts'
+import type { DirectoryCursors } from '../directory-cursors.ts'
+import { errorResponse } from '../http-errors.ts'
 
 type Tx = Transaction<ApiTables>
 const uuid = { type: 'string', format: 'uuid' }
@@ -21,7 +22,7 @@ const blockFields = sql`blocker_user_id,blocked_user_id,created_at,created_by`
 
 export async function inspectGlobalProfile(tx: Tx, target: string): Promise<GlobalProfile> {
   const row = (await sql<GlobalProfile>`select ${fields} from app_private.inspect_global_profile(${target})`.execute(tx)).rows[0]
-  if (!row) throw new CommunityError(404,'missing')
+  if (!row) throw new ApplicationError(404,'missing')
   return row
 }
 export async function discoverProfiles(tx: Tx, actor: string, query: DiscoveryQuery, cursors: DirectoryCursors): Promise<ProfilePage<GlobalProfile>> {
@@ -43,7 +44,7 @@ export async function listOwnBlocks(tx: Tx, actor: string, query: DiscoveryQuery
   return {rows:visible,next:rows.length>limit && last?cursors.encode(scope,last.blocked_user_id):null}
 }
 export async function setOwnBlock(tx: Tx, actor: string, target: string, input?: BlockInput) {
-  if (actor===target) throw new CommunityError(400,'invalid_target')
+  if (actor===target) throw new ApplicationError(400,'invalid_target')
   // Serialize one caller's retries/unblocks so conflict readback cannot lose
   // its row to another command between INSERT and SELECT.
   await sql`select pg_advisory_xact_lock(hashtextextended('ct.profile-block:' || ${actor}::text,0))`.execute(tx)
@@ -59,31 +60,31 @@ export async function setOwnBlock(tx: Tx, actor: string, target: string, input?:
     on conflict(blocker_user_id,blocked_user_id) do nothing returning ${blockFields}`.execute(tx)).rows
   const row=rows[0]??(await sql<OutgoingBlock>`select ${blockFields} from public.user_account_blocks
     where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)).rows[0]
-  if (!row) throw new CommunityError(404,'missing')
+  if (!row) throw new ApplicationError(404,'missing')
   return {blocked:true}
 }
 export function registerGlobalProfiles(routes: FastifyInstance, db: AppDatabase, cursors: DirectoryCursors) {
   const errors={400:errorResponse,401:errorResponse,403:errorResponse,404:errorResponse},params=object({userId:uuid})
-  async function run<T>(actor:string,id:string,work:(tx:Tx)=>Promise<T>) {
-    const result=await withVerifiedActor(db,actor,id,work)
-    if(result && typeof result==='object' && 'status' in result) throw new CommunityError(403,'ineligible')
-    return result
+  async function run<T>(context: AuthenticatedContext, work:(tx:Tx)=>Promise<T>) {
+    const result=await withEligibleActorTransaction(db,context,work)
+    if (!result.eligible) throw new ApplicationError(403,'ineligible')
+    return result.value
   }
   routes.get<{Querystring:DiscoveryQuery}>('/api/profiles',{
     schema:{querystring:object({...paging,q:{type:'string',maxLength:120}},[]),response:{200:page(profileSchema),...errors}},
-  },req=>run(req.getDecorator<string>('actor'),req.id,tx=>discoverProfiles(tx,req.getDecorator<string>('actor'),req.query,cursors)))
+  },req=>run(getAuthenticatedContext(req),tx=>discoverProfiles(tx,getAuthenticatedContext(req).actorId,req.query,cursors)))
   routes.get<{Params:{userId:string}}>('/api/profiles/:userId',{
     schema:{params,querystring:object({}),response:{200:profileSchema,...errors}},
-  },req=>run(req.getDecorator<string>('actor'),req.id,tx=>inspectGlobalProfile(tx,req.params.userId)))
+  },req=>run(getAuthenticatedContext(req),tx=>inspectGlobalProfile(tx,req.params.userId)))
   routes.get<{Querystring:DiscoveryQuery}>('/api/me/blocks',{
     schema:{querystring:object(paging,[]),response:{200:page(blockSchema),...errors}},
-  },req=>run(req.getDecorator<string>('actor'),req.id,tx=>listOwnBlocks(tx,req.getDecorator<string>('actor'),req.query,cursors)))
+  },req=>run(getAuthenticatedContext(req),tx=>listOwnBlocks(tx,getAuthenticatedContext(req).actorId,req.query,cursors)))
   routes.put<{Params:{userId:string};Body:BlockInput}>('/api/me/blocks/:userId',{
     schema:{params,querystring:object({}),body:object({confirmed:{const:true,type:'boolean'},source:{oneOf:[
       object({kind:{const:'global_profile',type:'string'}}),object({kind:{const:'community_profile',type:'string'},tenantId:uuid}),
     ]}}),response:{200:object({blocked:{type:'boolean'}}),...errors}},
-  },req=>run(req.getDecorator<string>('actor'),req.id,tx=>setOwnBlock(tx,req.getDecorator<string>('actor'),req.params.userId,req.body)))
+  },req=>run(getAuthenticatedContext(req),tx=>setOwnBlock(tx,getAuthenticatedContext(req).actorId,req.params.userId,req.body)))
   routes.delete<{Params:{userId:string}}>('/api/me/blocks/:userId',{
     schema:{params,querystring:object({}),response:{200:object({blocked:{type:'boolean'}}),...errors}},
-  },req=>run(req.getDecorator<string>('actor'),req.id,tx=>setOwnBlock(tx,req.getDecorator<string>('actor'),req.params.userId)))
+  },req=>run(getAuthenticatedContext(req),tx=>setOwnBlock(tx,getAuthenticatedContext(req).actorId,req.params.userId)))
 }

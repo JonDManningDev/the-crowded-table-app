@@ -1,14 +1,15 @@
+import { directoryCursors } from '../src/directory-cursors.ts'
 import assert from 'node:assert/strict'
 import { randomUUID, randomBytes } from 'node:crypto'
 import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
-import { withVerifiedActor } from '../src/actor-transaction.ts'
+import { withEligibleActorTransaction } from '../src/actor-transaction.ts'
 import { readAccountRecord, setParticipantPermission } from '../src/communities/records.ts'
 import { staffFlags } from '../../shared/community-commands.ts'
 import { buildApi } from '../src/app.ts'
 import { connectDatabase } from '../src/database.ts'
-import { verifyBearer } from '../src/auth.ts'
+import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
 
 const local = localStack()
@@ -16,7 +17,7 @@ const endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
-const app = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), randomBytes(32).toString('hex'))
+const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -137,21 +138,21 @@ try {
   assert.equal(audit[0].target_user_id,grant.id);assert.equal(audit[0].reason,null);assert.ok(audit[0].operation_id)
   assert.equal((await http(grant,path+'/history?eventId='+audit[0].id)).rows.length,0)
   assert.equal((await http(manager,path+'/history?eventId='+audit[0].id)).rows.length,1)
-  await assert.rejects(withVerifiedActor(db,manager.id,randomUUID(),async tx=>{
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: manager.id, requestId: randomUUID() },async tx=>{
     await setParticipantPermission(tx,manager.id,tenant,grant.id,false);throw Error('injected rollback')
   }),/injected rollback/)
   assert.deepEqual(await permissions(manager,grant.id),changed)
   assert.equal((await admin.query("select count(*)::int n from public.tenant_admin_actions where tenant_id=$1 and action='community_permissions_changed'",[tenant])).rows[0].n,1)
-  await withVerifiedActor(db,member.id,randomUUID(),async tx=>{
+  assert.equal((await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     assert.deepEqual((await sql`select user_id from public.community_account_permissions order by user_id`.execute(tx)).rows,[{user_id:member.id}])
     assert.equal((await sql`update public.community_account_permissions set can_post_public_events=true where tenant_id=${tenant}`.execute(tx)).numAffectedRows,0n)
-  })
-  for(const field of ['user_id','tenant_id','created_by','updated_by']) await assert.rejects(withVerifiedActor(db,manager.id,randomUUID(),async tx=>{
+  })).eligible, true)
+  for(const field of ['user_id','tenant_id','created_by','updated_by']) await assert.rejects(withEligibleActorTransaction(db, { actorId: manager.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     await sql`update public.community_account_permissions set ${sql.id(field)}=${member.id} where tenant_id=${tenant}`.execute(tx)
   }),error=>error.code==='42501')
-  await assert.rejects(withVerifiedActor(db,manager.id,randomUUID(),async tx=>{
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: manager.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     await sql`insert into public.tenant_admin_actions(tenant_id,target_user_id,action,details,reason)
       values(${tenant},${member.id},'community_permissions_changed','{"before":false,"after":true}', 'private text')`.execute(tx)
@@ -227,18 +228,18 @@ try {
   assert.equal((await list(owner,'staff')).rows.length,3)
   assert.equal((await list(owner,'participant-permissions')).rows.length,5)
   assert.equal((await permissions(owner,member.id,true)).can_post_public_events,true)
-  await withVerifiedActor(db,manager.id,randomUUID(),async tx=>{
+  assert.equal((await withEligibleActorTransaction(db, { actorId: manager.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     for(const relation of ['public.tenant_staff_assignments','public.community_account_permissions']) {
       assert.deepEqual((await sql`select user_id from ${sql.table(relation)}`.execute(tx)).rows,[])
     }
-  })
+  })).eligible, true)
   await cmd(owner,{kind:'archive',archived:false})
   // A checked read holds its tenant snapshot until it finishes; revocation waits.
   async function admittedOperation(work,compete) {
     let release,ready
     const gate=new Promise(resolve=>{release=resolve}),started=new Promise(resolve=>{ready=resolve})
-    const operation=withVerifiedActor(db,manager.id,randomUUID(),async tx=>{
+    const operation=withEligibleActorTransaction(db, { actorId: manager.id, requestId: randomUUID() },async tx=>{
       const result=await work(tx)
       ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
       await gate;return result
@@ -252,7 +253,9 @@ try {
         await new Promise(resolve=>setTimeout(resolve,10))
       }
     } finally {release()}
-    const result=await operation;await response;return result
+    const result=await operation;await response
+    assert.equal(result.eligible,true)
+    return result.value
   }
   assert.equal((await admittedOperation(tx=>readAccountRecord(tx,manager.id,tenant,'participant',member.id),
     ()=>cmd(owner,{kind:'permissions',target:manager.id,permissions:{can_manage_community_permissions:false}}))).can_post_public_events,true)

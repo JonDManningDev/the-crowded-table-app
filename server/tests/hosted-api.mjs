@@ -1,3 +1,4 @@
+import { directoryCursors } from '../src/directory-cursors.ts'
 // Opted-in hosted development verification. The HTTP server runs on loopback.
 import assert from 'node:assert/strict'
 import { randomUUID, randomBytes } from 'node:crypto'
@@ -7,7 +8,7 @@ import { sql } from 'kysely'
 import { hostedTools, projectRef } from '../../supabase/tests/hosted-tools.mjs'
 import { accessCatalog } from '../../supabase/tests/access-catalog.mjs'
 import { buildApi } from '../src/app.ts'
-import { verifyBearer } from '../src/auth.ts'
+import { verifyBearer } from '../src/token-verifier.ts'
 import { connectDatabase, checkRuntime } from '../src/database.ts'
 
 const {cli,query}=hostedTools()
@@ -21,7 +22,7 @@ const anonKey=keys.find(k=>k.name==='anon').api_key,serviceKey=keys.find(k=>k.na
 const options={auth:{persistSession:false,autoRefreshToken:false}}
 const authAdmin=createClient(projectUrl,serviceKey,options).auth.admin
 const db=connectDatabase(endpoint.href)
-const app=buildApi(db,verifyBearer(projectUrl,anonKey),randomBytes(32).toString('hex'))
+const app=buildApi({ db, verify: verifyBearer(projectUrl,anonKey), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const users=[],tenants=[]
 let base,checks=0
 const evidence=new URL('../../docs/evidence/hosted-api-cutover-2026-11-03/',import.meta.url)

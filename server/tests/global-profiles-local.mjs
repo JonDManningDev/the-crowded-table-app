@@ -1,13 +1,14 @@
+import { directoryCursors } from '../src/directory-cursors.ts'
 import assert from 'node:assert/strict'
 import { randomUUID, randomBytes } from 'node:crypto'
 import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
-import { withVerifiedActor } from '../src/actor-transaction.ts'
+import { withEligibleActorTransaction } from '../src/actor-transaction.ts'
 import { inspectGlobalProfile, setOwnBlock } from '../src/accounts/global-profiles.ts'
 import { buildApi } from '../src/app.ts'
 import { connectDatabase } from '../src/database.ts'
-import { verifyBearer } from '../src/auth.ts'
+import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
 
 const local = localStack()
@@ -16,7 +17,7 @@ assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
 const cursorKey=randomBytes(32).toString('hex')
-const app = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursorKey)
+const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(cursorKey), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -109,11 +110,11 @@ try {
   await cmd(pending,second,{kind:'join',profile:{displayName:'Pending',bio:null}})
   await inspect(pending,target.id,404)
   // Other users' preferences and context-only profiles are not raw runtime rows.
-  await withVerifiedActor(db,viewer.id,randomUUID(),async tx=>{
+  assert.equal((await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     assert.deepEqual((await sql`select user_id from public.user_accounts where user_id=${target.id}`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select user_id from public.community_account_preferences where user_id=${target.id}`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select user_id from public.user_account_profiles where user_id=${target.id}`.execute(tx)).rows,[])
-  })
+  })).eligible, true)
   const source={kind:'community_profile',tenantId:second}
   await prefs(viewer,true)
   assert.equal((await inspect(target,viewer.id)).user_id,viewer.id)
@@ -166,28 +167,28 @@ try {
   await prefs(target,true)
   await block(target,viewer.id,source)
   assert.ok(!(await search(viewer)).rows.some(row=>row.user_id===target.id))
-  await withVerifiedActor(db,viewer.id,randomUUID(),async tx=>{
+  assert.equal((await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     assert.deepEqual((await sql`select user_id from public.user_account_profiles where user_id=${target.id}`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select blocked_user_id from public.user_account_blocks`.execute(tx)).rows,[])
     assert.equal((await sql`delete from public.user_account_blocks where blocker_user_id=${target.id}`.execute(tx)).numAffectedRows,0n)
-  })
+  })).eligible, true)
   await unblock(target,viewer.id)
-  await assert.rejects(withVerifiedActor(db,viewer.id,randomUUID(),async tx=>{
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     await setOwnBlock(tx,viewer.id,target.id,{confirmed:true,source});throw Error('injected rollback')
   }),/injected rollback/)
   assert.equal((await inspect(viewer,target.id)).user_id,target.id)
-  await assert.rejects(withVerifiedActor(db,viewer.id,randomUUID(),async tx=>{
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     await sql`insert into public.user_account_blocks(blocked_user_id) values(${target.id})`.execute(tx)
   }),error=>error.code==='42501')
-  await assert.rejects(withVerifiedActor(db,viewer.id,randomUUID(),async tx=>{
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     await sql`insert into public.user_account_blocks(blocker_user_id,blocked_user_id) values(${stranger.id},${target.id})`.execute(tx)
   }),error=>error.code==='42501')
-  await withVerifiedActor(db,viewer.id,randomUUID(),async tx=>{
+  assert.equal((await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     assert.equal((await sql`update public.user_account_profiles set bio='Bypass' where user_id=${target.id}`.execute(tx)).numAffectedRows,0n)
-  })
+  })).eligible, true)
   // The insert policy rechecks a stale source selector at the mutation statement.
   await prefs(target,false);await sharing(target,second,false)
-  await assert.rejects(withVerifiedActor(db,viewer.id,randomUUID(),async tx=>{
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.block_source','global_profile',true)`.execute(tx)
     await sql`insert into public.user_account_blocks(blocked_user_id) values(${target.id})`.execute(tx)
   }),error=>error.code==='42501')
@@ -195,12 +196,14 @@ try {
   // A read already admitted by its statement may finish; the next read is denied.
   let release,ready
   const gate=new Promise(resolve=>{release=resolve}),started=new Promise(resolve=>{ready=resolve})
-  const read=withVerifiedActor(db,viewer.id,randomUUID(),async tx=>{
+  const read=withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     const profile=await inspectGlobalProfile(tx,target.id);ready();await gate;return profile
   })
   await Promise.race([started,read.then(()=>{throw Error('read ended before barrier')})])
   try {await block(target,viewer.id,source)} finally {release()}
-  assert.equal((await read).user_id,target.id)
+  const readResult=await read
+  assert.equal(readResult.eligible,true)
+  assert.equal(readResult.value.user_id,target.id)
   await inspect(viewer,target.id,404);await unblock(target,viewer.id)
   await prefs(target,false);await sharing(target,second,true)
   await sharing(target,second,false);await inspect(viewer,target.id,404)

@@ -1,14 +1,15 @@
+import { directoryCursors } from '../src/directory-cursors.ts'
 import assert from 'node:assert/strict'
 import { randomUUID, randomBytes } from 'node:crypto'
 import { staffFlags } from '../../shared/community-commands.ts'
 import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
-import { withVerifiedActor } from '../src/actor-transaction.ts'
+import { withEligibleActorTransaction } from '../src/actor-transaction.ts'
 import { accountHistory } from '../src/communities/history.ts'
 import { buildApi } from '../src/app.ts'
 import { connectDatabase } from '../src/database.ts'
-import { verifyBearer } from '../src/auth.ts'
+import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
 
 const local = localStack()
@@ -16,7 +17,7 @@ const endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
-const app = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), randomBytes(32).toString('hex'))
+const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -184,7 +185,7 @@ try {
   assert.ok((await raw(cr)).some(r=>r.id===suspension.id&&r.reason===secret))
   assert.ok((await raw(owner)).some(r=>r.id===legacy[2].id))
   assert.ok(!(await raw(owner)).some(r=>r.tenant_id===otherTenant))
-  await assert.rejects(withVerifiedActor(db,owner.id,randomUUID(),async tx=>{
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     await sql`insert into public.tenant_admin_actions(tenant_id,target_user_id,action,details)
       values(${tenant},${target.id},'staff_revoked',
@@ -272,7 +273,7 @@ try {
   let releaseRead, signalReady
   const release=new Promise(resolve=>{releaseRead=resolve})
   const ready=new Promise(resolve=>{signalReady=resolve})
-  const reader=withVerifiedActor(db,sr.id,randomUUID(),async tx=>{
+  const reader=withEligibleActorTransaction(db, { actorId: sr.id, requestId: randomUUID() },async tx=>{
     const result=await accountHistory(tx,sr.id,tenant,exact(linked.id))
     signalReady((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
     await release
@@ -288,7 +289,9 @@ try {
       await new Promise(resolve=>setTimeout(resolve,10))
     }
   } finally { releaseRead() }
-  assert.deepEqual((await reader).rows,[linked])
+  const readResult=await reader
+  assert.equal(readResult.eligible,true)
+  assert.deepEqual(readResult.value.rows,[linked])
   await writer
   assert.deepEqual(await history(sr,exact(linked.id)),empty)
   console.log('PASS history categories, exact lookup and disciplinary reason isolation; legacy preservation, pagination, current eligibility, browser/GraphQL/runtime bypasses and both serialization orders')

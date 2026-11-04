@@ -1,11 +1,13 @@
+import { getAuthenticatedContext, optionalAuthentication } from '../http-authentication.ts'
 import type { FastifyInstance } from 'fastify'
+import type { BearerVerifier } from '../token-verifier.ts'
 import { sql, type Transaction } from 'kysely'
 import type { AccountFacts, DirectoryPage, DirectoryQuery, MemberDirectoryRow, PublicDirectoryRow } from '../../../shared/community-directory.ts'
 import type { ApiTables, AppDatabase } from '../database.ts'
-import { withVerifiedActor } from '../actor-transaction.ts'
-import { errorResponse } from '../http.ts'
-import { CommunityError } from './commands.ts'
-import type { DirectoryCursors } from './directory-cursor.ts'
+import { withEligibleActorTransaction, type AuthenticatedContext } from '../actor-transaction.ts'
+import { errorResponse } from '../http-errors.ts'
+import { ApplicationError } from '../application-errors.ts'
+import type { DirectoryCursors } from '../directory-cursors.ts'
 
 type Tx = Transaction<ApiTables>
 const uuid = { type: 'string', format: 'uuid' }
@@ -28,7 +30,7 @@ const jsonProjection = (alias: string, fields: string[]) => sql`jsonb_build_obje
 
 async function lockTenant(tx: Tx, actor: string, tenant: string) {
   await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
-  if (!(await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows[0]) throw new CommunityError(404,'missing')
+  if (!(await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows[0]) throw new ApplicationError(404,'missing')
   // Recheck after waiting on any configuration/lifecycle writer, not in its old snapshot.
   return (await sql<{ active: boolean; owner: boolean; member: boolean }>`select app_private.active_tenant(${tenant}) as active,
     app_private.is_approved_owner(${tenant}) as owner, exists(select from public.community_accounts where tenant_id=${tenant}
@@ -37,16 +39,16 @@ async function lockTenant(tx: Tx, actor: string, tenant: string) {
 
 export async function readAccountFacts(tx: Tx, actor: string, tenant: string, target: string): Promise<AccountFacts> {
   const access = await lockTenant(tx,actor,tenant)
-  if (!access.owner && (!access.active || (target !== actor && !access.member))) throw new CommunityError(404,'missing')
+  if (!access.owner && (!access.active || (target !== actor && !access.member))) throw new ApplicationError(404,'missing')
   const row = (await sql<AccountFacts>`select ${sql.join(factsFields.map(key=>sql.id(key)))} from public.community_accounts
     where tenant_id=${tenant} and user_id=${target} and (${access.owner || target === actor} or standing in ('approved','suspended','inactive'))`.execute(tx)).rows[0]
-  if (!row) throw new CommunityError(404,'missing')
+  if (!row) throw new ApplicationError(404,'missing')
   return row
 }
 
 export async function readMemberDirectory(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<MemberDirectoryRow>> {
   const access = await lockTenant(tx,actor,tenant)
-  if (!access.active || !access.member) throw new CommunityError(404,'missing')
+  if (!access.active || !access.member) throw new ApplicationError(404,'missing')
   const scope = ['member-directory',actor,tenant], after = cursors.decode(scope,query.cursor), limit = Number(query.limit ?? 50)
   const rows = (await sql<MemberDirectoryRow>`select ${jsonProjection('c',factsFields)} as account,
     case when p.user_id is not null then ${jsonProjection('p',profileFields)} end as profile,
@@ -61,7 +63,7 @@ export async function readMemberDirectory(tx: Tx, actor: string, tenant: string,
 
 export async function listOwnerAccounts(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<AccountFacts>> {
   const access = await lockTenant(tx,actor,tenant)
-  if (!access.owner) throw new CommunityError(404,'missing')
+  if (!access.owner) throw new ApplicationError(404,'missing')
   const scope = ['owner-accounts',actor,tenant], after = cursors.decode(scope,query.cursor), limit = Number(query.limit ?? 50)
   const rows = (await sql<AccountFacts>`select ${sql.join(factsFields.map(key=>sql.id(key)))} from public.community_accounts
     where tenant_id=${tenant} and (${after}::uuid is null or user_id>${after}::uuid) order by user_id limit ${limit+1}`.execute(tx)).rows
@@ -73,35 +75,32 @@ export async function readPublicDirectory(tx: Tx, slug: string, query: Directory
   const scope = ['public-directory',slug], after = cursors.decode(scope,query.cursor), limit = Number(query.limit ?? 50)
   type InternalRow = PublicDirectoryRow & { user_id: string }
   const result = (await sql<{ rows: InternalRow[] | null }>`select app_private.public_community_directory(${slug},${after}::uuid,${limit}) as rows`.execute(tx)).rows[0]
-  if (result.rows === null) throw new CommunityError(404,'missing')
+  if (result.rows === null) throw new ApplicationError(404,'missing')
   const visible = result.rows.slice(0,limit), last = visible.at(-1)
   return { rows: visible.map(({ display_name,staff_role })=>({ display_name,staff_role })),
     next: result.rows.length>limit && last ? cursors.encode(scope,last.user_id) : null }
 }
 
-export function registerPublicDirectory(app: FastifyInstance, db: AppDatabase, verify: (header?: string)=>Promise<string|null>, cursors: DirectoryCursors) {
+export function registerPublicDirectory(app: FastifyInstance, db: AppDatabase, verify: BearerVerifier, cursors: DirectoryCursors) {
   app.get<{Params:{slug:string};Querystring:DirectoryQuery}>('/api/public/communities/:slug/directory',{
-    onRequest:async(req,reply)=>{
-      reply.header('Cache-Control','no-store')
-      if (req.headers.authorization !== undefined && !await verify(req.headers.authorization)) return reply.code(401).send({code:'unauthenticated',requestId:req.id})
-    },schema:{params:object({slug:{type:'string',minLength:3,maxLength:63,pattern:'^[a-z0-9]+(-[a-z0-9]+)*$'}}),querystring:querySchema,response:{200:page(publicRow),...errors}},
+    onRequest:optionalAuthentication(verify),schema:{params:object({slug:{type:'string',minLength:3,maxLength:63,pattern:'^[a-z0-9]+(-[a-z0-9]+)*$'}}),querystring:querySchema,response:{200:page(publicRow),...errors}},
   },req=>db.transaction().execute(tx=>readPublicDirectory(tx,req.params.slug,req.query,cursors)))
 }
 
 export function registerCommunityDirectory(routes: FastifyInstance, db: AppDatabase, cursors: DirectoryCursors) {
-  async function run<T>(actor: string, id: string, work: (tx:Tx)=>Promise<T>) {
-    const result = await withVerifiedActor(db,actor,id,work)
-    if (result && typeof result === 'object' && 'status' in result) throw new CommunityError(403,'ineligible')
-    return result
+  async function run<T>(context: AuthenticatedContext, work: (tx:Tx)=>Promise<T>) {
+    const result = await withEligibleActorTransaction(db,context,work)
+    if (!result.eligible) throw new ApplicationError(403,'ineligible')
+    return result.value
   }
   const params = object({tenantId:uuid})
   routes.get<{Params:{tenantId:string;userId:string}}>('/api/communities/:tenantId/accounts/:userId',{
     schema:{params:object({tenantId:uuid,userId:uuid}),querystring:object({}),response:{200:object(facts),...errors}},
-  },req=>run(req.getDecorator<string>('actor'),req.id,tx=>readAccountFacts(tx,req.getDecorator<string>('actor'),req.params.tenantId,req.params.userId)))
+  },req=>run(getAuthenticatedContext(req),tx=>readAccountFacts(tx,getAuthenticatedContext(req).actorId,req.params.tenantId,req.params.userId)))
   routes.get<{Params:{tenantId:string};Querystring:DirectoryQuery}>('/api/communities/:tenantId/directory',{
     schema:{params,querystring:querySchema,response:{200:page(memberRow),...errors}},
-  },req=>run(req.getDecorator<string>('actor'),req.id,tx=>readMemberDirectory(tx,req.getDecorator<string>('actor'),req.params.tenantId,req.query,cursors)))
+  },req=>run(getAuthenticatedContext(req),tx=>readMemberDirectory(tx,getAuthenticatedContext(req).actorId,req.params.tenantId,req.query,cursors)))
   routes.get<{Params:{tenantId:string};Querystring:DirectoryQuery}>('/api/communities/:tenantId/accounts',{
     schema:{params,querystring:querySchema,response:{200:page(object(facts)),...errors}},
-  },req=>run(req.getDecorator<string>('actor'),req.id,tx=>listOwnerAccounts(tx,req.getDecorator<string>('actor'),req.params.tenantId,req.query,cursors)))
+  },req=>run(getAuthenticatedContext(req),tx=>listOwnerAccounts(tx,getAuthenticatedContext(req).actorId,req.params.tenantId,req.query,cursors)))
 }

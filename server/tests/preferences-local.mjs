@@ -1,3 +1,4 @@
+import { directoryCursors } from '../src/directory-cursors.ts'
 // This suite creates only synthetic users on the configured local Supabase stack.
 import assert from 'node:assert/strict'
 import { createHmac, randomUUID, randomBytes } from 'node:crypto'
@@ -5,7 +6,7 @@ import { localStack } from '../../supabase/tests/local-stack.mjs'
 import { createClient } from '@supabase/supabase-js'
 import pg from 'pg'
 import { buildApi } from '../src/app.ts'
-import { verifyBearer } from '../src/auth.ts'
+import { verifyBearer } from '../src/token-verifier.ts'
 import { checkRuntime, connectDatabase } from '../src/database.ts'
 import { preferencesPath } from '../../shared/account-preferences.ts'
 import { sql } from 'kysely'
@@ -22,7 +23,7 @@ const options = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, options).auth.admin
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const db = connectDatabase(runtimeUrl.href, 1)
-const api = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), randomBytes(32).toString('hex'))
+const api = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const created = []
 const allOn = { user_is_discoverable: true, enable_matchmaking: true, allow_direct_messages: true }
 async function makeUser() {

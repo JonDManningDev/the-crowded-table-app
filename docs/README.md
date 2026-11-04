@@ -4,7 +4,7 @@ Status: revised from the user-supplied product handoff and subsequent explicit d
 
 ## Source and precedence
 
-**Fastify architecture refactoring plan — finalized 2026-11-04.** The [implementation plan](22-fastify-architecture-refactoring-plan.md) establishes frontend-aligned backend features, mandatory routes/service/schema files, explicit dependencies, and verification gates between community operation groups. Phase 1 is complete: HTTP baseline, 14 injection cases, permanent guidance, server TypeScript, root lint and both real-runtime baseline runs passed. Production source restructuring remains awaiting Phases 2–5. See [Phase 1 evidence](evidence/fastify-phase-1-2026-11-04/README.md).
+**Fastify architecture refactoring plan — finalized 2026-11-04.** The [implementation plan](22-fastify-architecture-refactoring-plan.md) establishes frontend-aligned features, mandatory routes/service/schema files, explicit dependencies and staged verification. Phases 1–2 are complete: the HTTP fixture is unchanged; shared authentication/error/transaction/cursor facilities and explicit startup/cleanup ownership are implemented. All 36 HTTP/shared-facility/startup cases, server TypeScript, root lint, nine real-runtime suites and client boundary scan passed. Feature triads and service factories remain for Phases 3–5. See [Phase 1 evidence](evidence/fastify-phase-1-2026-11-04/README.md) and [Phase 2 evidence](evidence/fastify-phase-2-2026-11-04/README.md).
 
 **Client/server workspaces — approved 2026-11-03.** The frontend is the `client/` npm workspace beside `server/`. Root commands delegate to the appropriate workspace, and one root lockfile owns installation. Browser environment files move into `client/`; database types are shared infrastructure. See [the approved structure](07-file-structure.md#approved-clientserver-workspace-restructuring--2026-11-03) and the root setup instructions.
 
@@ -50,7 +50,7 @@ The 2026-10-12 decisions also settle per-person event/table records, atomic grou
 | [Vision and concept](01-vision-and-concept.md) | Community-first vision, brand, functionality, navigation, and MVP |
 | [Decisions and open questions](08-decisions-and-open-questions.md) | Established direction, proposed choices, and unresolved rules |
 | [Architecture](02-architecture.md) | System boundaries, public/private data, and commercial deferral |
-| [Fastify architecture refactoring plan](22-fastify-architecture-refactoring-plan.md) | Final target structure, ownership and staged gates; Phase 1 baseline verified, production restructuring pending |
+| [Fastify architecture refactoring plan](22-fastify-architecture-refactoring-plan.md) | Final target structure, ownership and staged gates; Phases 1–2 verified, feature triads pending |
 | [Database schema plan](03-database-schema.md) | Entities, relationships, constraints, and migration sequence |
 | [Database flag inventory](17-database-flag-inventory.md) | Existing and proposed boolean flags by table, latest names/renames, purposes and implementation status |
 | [Final local access audit](21-final-local-access-audit.md) | Findings, corrections, runtime privilege manifest, alternate-surface verification and remaining hosted/domain gates |

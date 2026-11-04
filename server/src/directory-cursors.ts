@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
-import { CommunityError } from './commands.ts'
+import { ApplicationError } from './application-errors.ts'
 
 // Public positions must not reveal a user UUID, even after base64 decoding.
 // Authentication binds each cursor to its endpoint/audience; rotation fails closed.
@@ -24,7 +24,7 @@ export function directoryCursors(keyHex: string) {
         const position = Buffer.concat([decipher.update(data.subarray(28)),decipher.final()]).toString('utf8')
         if (!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(position)) throw new Error()
         return position
-      } catch { throw new CommunityError(400,'invalid_cursor') }
+      } catch { throw new ApplicationError(400,'invalid_cursor') }
     },
   }
 }

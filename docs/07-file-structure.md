@@ -2,7 +2,7 @@
 
 ## Approved Fastify target — 2026-11-04
 
-The [refactoring plan](22-fastify-architecture-refactoring-plan.md#1-scope-and-target-structure) owns the exact backend target: root composition/authentication/transaction/error facilities and `user-accounts`, `communities`, and `health` features, each with `routes.ts`, `service.ts`, and `schema.ts`. Its ownership tables and matching section order are mandatory. Phase 1 records the current source's HTTP contract; production source remains in its existing layout until Phases 2–5. This is an approved target awaiting restructuring, not a claim that the directories have migrated. No frontend reorganization is included.
+The [refactoring plan](22-fastify-architecture-refactoring-plan.md#1-scope-and-target-structure) owns the exact backend target: root composition/authentication/transaction/error facilities and `user-accounts`, `communities`, and `health` features, each with `routes.ts`, `service.ts`, and `schema.ts`. Its ownership tables and matching section order are mandatory. Phases 1–2 are locally verified: the HTTP baseline and root shared facilities are implemented, including `token-verifier.ts`, `http-authentication.ts`, `application-errors.ts`, `http-errors.ts`, `actor-transaction.ts` and `directory-cursors.ts`. `app.ts` accepts explicit construction inputs; `index.ts` constructs resources and handles startup/cleanup ownership. Feature triads/service factories remain awaiting Phases 3–5; existing `accounts` and mixed community modules still own their registrations. No frontend reorganization is included.
 
 ## Approved client/server workspace restructuring — 2026-11-03
 

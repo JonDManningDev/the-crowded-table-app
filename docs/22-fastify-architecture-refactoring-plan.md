@@ -1,6 +1,6 @@
 # Final Fastify architecture refactoring plan
 
-**Status: finalized architecture plan, 2026-11-04; Phase 1 complete and locally verified.** Phase 1 adds documentation, a reviewed HTTP contract fixture and injection tests. Production source restructuring remains deferred to Phases 2–5. See [Phase 1 evidence](evidence/fastify-phase-1-2026-11-04/README.md) for the starting revision, local environment, behavior inventory and verification results.
+**Status: finalized architecture plan, 2026-11-04; Phases 1–2 complete and locally verified.** Phase 1 establishes the reviewed HTTP contract and injection tests; Phase 2 implements shared facilities and explicit resource ownership. Feature triads and service factories remain for Phases 3–5. See [Phase 1 evidence](evidence/fastify-phase-1-2026-11-04/README.md) and [Phase 2 evidence](evidence/fastify-phase-2-2026-11-04/README.md) for starting revisions, local environments and verification results.
 
 This plan governs the structural refactor of the existing persistent API. The [approved API transition](20-persistent-api-transition-proposal.md), [intended access matrix](16-intended-access-matrix.md), and [final access audit](21-final-local-access-audit.md) remain the behavior and security context. It supersedes earlier proposed target structures from the architecture-planning discussion, not accepted product or database requirements.
 
@@ -8,7 +8,7 @@ This plan governs the structural refactor of the existing persistent API. The [a
 
 Refactor the existing API into frontend-aligned features with mandatory `routes.ts`, `service.ts`, and `schema.ts` files. Preserve all 41 explicit HTTP operations, 28 automatic HEAD operations, and existing security/database behavior.
 
-Phase 1 changes tests and documentation only. No production application source, shared contract, database migration or runtime privilege change is included.
+Phase 1 changed tests and documentation only. Phase 2 changes shared production facilities and their callers while preserving the HTTP contract. No shared browser contract, database migration, runtime privilege or frontend change is included.
 
 ```text
 server/src/
@@ -184,9 +184,9 @@ No direct dependency between the two feature services is needed for current oper
 - **`AuthenticatedContext`**: readonly `{ actorId: string; requestId: string }`. Represents verified identity and correlation, not current eligibility or authorization.
 - **`withEligibleActorTransaction(db, context, work)`**: ordinary function replacing `withVerifiedActor`; preserves its transaction and SQL sequence.
 - **`EligibleActorTransactionResult<T>`**: `{ eligible: false } | { eligible: true; value: T }`, local to the transaction facility. Prevents collisions with application results containing `status`; it is not a universal service result envelope.
-- **`BuildApiOptions`**: application construction inputs only—database, verifier, cursor codec and explicit cleanup callback. Never passed wholesale to features.
+- **`BuildApiOptions`**: required `{ db, verify, cursors, cleanup }` application construction inputs only—database, verifier, cursor codec and explicit asynchronous cleanup callback. Never passed wholesale to features. The old positional construction signature is removed.
 
-Normal cleanup belongs to `app.close()` after successful construction. Startup cleans up resources when construction fails before ownership transfers. Preserve cleanup exactly once.
+Normal cleanup belongs to `app.close()` after `buildApi` successfully returns. Startup cleans up allocated resources when construction fails before ownership transfers; later boot/readiness/listener failures close the returned app. Startup supplies one memoized cleanup promise and shares one close request across shutdown signals. Preserve cleanup exactly once, await failed-startup cleanup, retain the original startup failure if cleanup also rejects, and remove installed signal handlers on close. Shutdown failures use a generic diagnostic and nonzero exit status. No new timeout or force-close policy is introduced.
 
 ### Three-file dependency rules
 
@@ -233,7 +233,7 @@ Schema relocation must not tighten inputs, add header validation, change error p
 
 Record existing failures separately; do not weaken assertions to establish a passing baseline.
 
-Phase 1 is complete: all 14 injection cases, server TypeScript and root lint passed; the original nine real Auth/HTTP suites and client boundary scan passed both before and after additions. The checked-in [HTTP contract fixture](../server/tests/fixtures/http-contract.json) captures all 69 registrations, full schemas (shared by GET/HEAD), declared response statuses, effective body limits and authentication categories. `npm run test:http -w server` runs the environment-independent injection gate. [Baseline evidence](evidence/fastify-phase-1-2026-11-04/README.md) records actual handler/error mappings, cache and cursor contracts, lifecycle exceptions, integration coverage and test results. Do not refresh the fixture merely to pass a structural refactor; investigate any drift against the preserved contract. Permanent architecture guidance is now in `AGENTS.md`; its source-layout requirements apply as each later phase migrates its responsibilities. No Phase 1 gate remains blocked; Phase 2 has not started.
+Phase 1 is complete at checkpoint `a5cb9d1`: all 14 injection cases, server TypeScript and root lint passed; the original nine real Auth/HTTP suites and client boundary scan passed both before and after additions. The checked-in [HTTP contract fixture](../server/tests/fixtures/http-contract.json) captures all 69 registrations, full schemas (shared by GET/HEAD), declared response statuses, effective body limits and authentication categories. `npm run test:http -w server` runs the environment-independent HTTP gate. [Baseline evidence](evidence/fastify-phase-1-2026-11-04/README.md) records actual handler/error mappings, cache and cursor contracts, lifecycle exceptions, integration coverage and test results. Do not refresh the fixture merely to pass a structural refactor; investigate any drift against the preserved contract. Permanent architecture guidance is now in `AGENTS.md`; its source-layout requirements apply as each later phase migrates its responsibilities. No Phase 1 gate remains blocked.
 
 ### Phase 2 — Shared facilities and ownership
 
@@ -244,6 +244,10 @@ Phase 1 is complete: all 14 injection cases, server TypeScript and root lint pas
 - Update internal imports directly; add no compatibility aliases.
 
 Verify typechecking, error mappings, eligibility handling, construction/startup failures and cleanup. Run affected real-runtime eligibility tests before proceeding.
+
+Phase 2 is complete and locally verified. The designated root modules now own token verification, HTTP identity/cache integration, application errors, root HTTP error translation, encrypted cursors and actor transactions. Protected requests receive fresh `authenticatedContext` objects; all callers distinguish the `eligible` tag from their inner operation result. Existing feature registrations and SQL remain in place. `buildApi` takes `BuildApiOptions`; the import-safe `startApi`/`readApiConfig` functions in `index.ts` own resource construction and startup failure handling. Narrow constructor/check dependencies permit lifecycle verification without a DI container. All superseded imports/modules and positional construction calls are removed, including in the unexecuted hosted verification script.
+
+The unchanged Phase 1 fixture, all 36 HTTP/shared-facility/startup cases, server TypeScript, root lint, all nine real Auth/HTTP suites and the 130-file client boundary scan passed. The source comparison retained all 110 SQL templates; frontend/shared contracts, migrations, dependency lockfile and runtime privilege manifest remain unchanged. [Phase 2 evidence](evidence/fastify-phase-2-2026-11-04/README.md) records lifecycle cases, cursor-vector preservation, API changes, local ports and remaining verification boundaries. No Phase 2 gate remains blocked. Phase 3 has not started; preference SQL projection cleanup and feature service construction remain with their feature phases.
 
 ### Phase 3 — User-account feature
 

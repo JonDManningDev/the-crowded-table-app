@@ -16,7 +16,7 @@
 
 # Persistent API architecture
 
-- Follow the approved target in `docs/22-fastify-architecture-refactoring-plan.md`. Phase 1 establishes documentation and HTTP regression coverage; the existing source layout remains until its scheduled migration. Apply these rules to migrated features without pulling later phases into the current checkpoint.
+- Follow the approved target in `docs/22-fastify-architecture-refactoring-plan.md`. Phases 1–2 establish the HTTP baseline and shared facilities. Keep existing feature registrations until their scheduled migration in Phases 3–5; apply the feature rules as each group migrates without pulling later phases into the current checkpoint.
 - Match backend HTTP feature names to frontend feature ownership by default. Assign each operation one authoritative owner and document functional exceptions. Do not reorganize the frontend for symmetry.
 - Every HTTP feature has `routes.ts`, `service.ts`, and `schema.ts`, regardless of size. Maintain identical operation section names and ordering across the three files.
 - Routes own HTTP integration; services own operations and database orchestration; schemas own transport validation and serialization. Keep runtime HTTP schemas out of service logic and SQL projections. Preserve justified shared DTO contracts without conflating transport, domain and database types.

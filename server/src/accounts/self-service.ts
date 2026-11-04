@@ -1,12 +1,13 @@
+import { getAuthenticatedContext } from '../http-authentication.ts'
 import type { FastifyInstance } from 'fastify'
 import { sql, type Transaction } from 'kysely'
 import type { ApiTables, AppDatabase } from '../database.ts'
-import { withVerifiedActor } from '../actor-transaction.ts'
-import { errorResponse } from '../http.ts'
+import { withEligibleActorTransaction, type AuthenticatedContext } from '../actor-transaction.ts'
+import { errorResponse } from '../http-errors.ts'
 import { communityPreferenceFields, myCommunitiesPath, ownProfilePath, profileInputSchema,
   type CommunityPreferences, type CommunitySummary, type CommunitySummaryPage, type CommunitySummaryQuery,
   type OwnProfile, type ProfileInput } from '../../../shared/self-service.ts'
-import { CommunityError } from '../communities/commands.ts'
+import { ApplicationError } from '../application-errors.ts'
 
 const uuid = { type: 'string', format: 'uuid' }
 const nullableUuid = { type: ['string','null'], format: 'uuid' }
@@ -45,7 +46,7 @@ export async function ownCommunityProfile(tx: Transaction<ApiTables>, actor: str
       and exists(select from public.community_accounts c join public.community_standing s using(standing)
         where c.tenant_id=p.tenant_id and c.user_id=p.user_id and s.enable_own_profile_management)
     returning p.tenant_id`.execute(tx)
-  if (!result.rows.length) throw new CommunityError(404,'missing')
+  if (!result.rows.length) throw new ApplicationError(404,'missing')
   return { tenantId: tenant }
 }
 
@@ -56,7 +57,7 @@ export async function ownCommunityPreferences(tx: Transaction<ApiTables>, actor:
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     const account = (await sql<{ standing: string }>`select standing from public.community_accounts
       where tenant_id=${tenant} and user_id=${actor} for update`.execute(tx)).rows[0]
-    if (!account || !['pending','approved'].includes(account.standing)) throw new CommunityError(404,'missing')
+    if (!account || !['pending','approved'].includes(account.standing)) throw new ApplicationError(404,'missing')
   }
   const fields = sql.join(communityPreferenceFields.map(field => sql.id(field)))
   const result = input
@@ -64,7 +65,7 @@ export async function ownCommunityPreferences(tx: Transaction<ApiTables>, actor:
         where tenant_id=${tenant} and user_id=${actor} and app_private.active_tenant(tenant_id) returning ${fields}`.execute(tx)
     : await sql<CommunityPreferences>`select ${fields} from public.community_account_preferences where tenant_id=${tenant} and user_id=${actor}
         and (app_private.active_tenant(tenant_id) or app_private.is_approved_owner(tenant_id))`.execute(tx)
-  if (!result.rows[0]) throw new CommunityError(404,'missing')
+  if (!result.rows[0]) throw new ApplicationError(404,'missing')
   return result.rows[0]
 }
 
@@ -80,7 +81,7 @@ export async function myCommunities(tx: Transaction<ApiTables>, actor: string, q
         || new Date(value[2]).toISOString().slice(0,19) !== value[2].slice(0,19)
         || typeof value[3] !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value[3])) throw Error('cursor')
       position = { time: value[2], id: value[3] }
-    } catch { throw new CommunityError(400,'invalid_cursor') }
+    } catch { throw new ApplicationError(400,'invalid_cursor') }
   }
   const limit = Number(query.limit ?? 50)
   const result = await sql<CommunitySummary>`select t.id,t.name,t.city,t.state_province,t.country_code,t.operational_status,
@@ -96,29 +97,29 @@ export async function myCommunities(tx: Transaction<ApiTables>, actor: string, q
 
 export function registerSelfService(routes: FastifyInstance, db: AppDatabase) {
   const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse }
-  async function run<T>(actor: string, requestId: string, work: (tx: Transaction<ApiTables>) => Promise<T>) {
-    const result = await withVerifiedActor(db,actor,requestId,work)
-    if (result && typeof result === 'object' && 'status' in result) throw new CommunityError(403,'ineligible')
-    return result
+  async function run<T>(context: AuthenticatedContext, work: (tx: Transaction<ApiTables>) => Promise<T>) {
+    const result = await withEligibleActorTransaction(db,context,work)
+    if (!result.eligible) throw new ApplicationError(403,'ineligible')
+    return result.value
   }
   routes.get(ownProfilePath,{ schema: { querystring: noQuery, response: { 200: profileResponse, ...errors } } },request =>
-    run(request.getDecorator<string>('actor'),request.id,tx => ownProfile(tx,request.getDecorator<string>('actor'))))
+    run(getAuthenticatedContext(request),tx => ownProfile(tx,getAuthenticatedContext(request).actorId)))
   routes.put<{ Body: ProfileInput }>(ownProfilePath,{ schema: { querystring: noQuery, body: profileInputSchema, response: { 200: profileResponse, ...errors } } },request =>
-    run(request.getDecorator<string>('actor'),request.id,tx => ownProfile(tx,request.getDecorator<string>('actor'),request.body)))
+    run(getAuthenticatedContext(request),tx => ownProfile(tx,getAuthenticatedContext(request).actorId,request.body)))
   routes.get<{ Querystring: CommunitySummaryQuery }>(myCommunitiesPath,{ schema: { querystring: {
     type: 'object', additionalProperties: false, properties: { filter: { type: 'string', enum: ['all','managed','owned'] },
       cursor: { type: 'string', maxLength: 1024 }, limit: { type: 'string', pattern: '^([1-9]|[1-9][0-9]|100)$' } },
   }, response: { 200: summaryResponse, ...errors } } },request =>
-    run(request.getDecorator<string>('actor'),request.id,tx => myCommunities(tx,request.getDecorator<string>('actor'),request.query)))
+    run(getAuthenticatedContext(request),tx => myCommunities(tx,getAuthenticatedContext(request).actorId,request.query)))
   routes.patch<{ Params: { tenantId: string }; Body: ProfileInput }>('/api/communities/:tenantId/me/profile',{
     schema: { params: tenantParams, querystring: noQuery, body: profileInputSchema, response: {
       200: { type: 'object', required: ['tenantId'], additionalProperties: false, properties: { tenantId: uuid } }, ...errors,
     } },
-  },request => run(request.getDecorator<string>('actor'),request.id,tx => ownCommunityProfile(tx,request.getDecorator<string>('actor'),request.params.tenantId,request.body)))
+  },request => run(getAuthenticatedContext(request),tx => ownCommunityProfile(tx,getAuthenticatedContext(request).actorId,request.params.tenantId,request.body)))
   routes.get<{ Params: { tenantId: string } }>('/api/communities/:tenantId/me/preferences',{
     schema: { params: tenantParams, querystring: noQuery, response: { 200: preferenceResponse, ...errors } },
-  },request => run(request.getDecorator<string>('actor'),request.id,tx => ownCommunityPreferences(tx,request.getDecorator<string>('actor'),request.params.tenantId)))
+  },request => run(getAuthenticatedContext(request),tx => ownCommunityPreferences(tx,getAuthenticatedContext(request).actorId,request.params.tenantId)))
   routes.patch<{ Params: { tenantId: string }; Body: Partial<CommunityPreferences> }>('/api/communities/:tenantId/me/preferences',{
     schema: { params: tenantParams, querystring: noQuery, body: preferencePatch, response: { 200: preferenceResponse, ...errors } },
-  },request => run(request.getDecorator<string>('actor'),request.id,tx => ownCommunityPreferences(tx,request.getDecorator<string>('actor'),request.params.tenantId,request.body)))
+  },request => run(getAuthenticatedContext(request),tx => ownCommunityPreferences(tx,getAuthenticatedContext(request).actorId,request.params.tenantId,request.body)))
 }

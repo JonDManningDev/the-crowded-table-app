@@ -1,11 +1,12 @@
+import { getAuthenticatedContext } from '../http-authentication.ts'
 import type { FastifyInstance } from 'fastify'
 import { sql, type Transaction } from 'kysely'
 import { staffFlags } from '../../../shared/community-commands.ts'
 import type { ParticipantPermissions, RecordPage, RecordQuery, StaffRecord } from '../../../shared/community-records.ts'
 import type { ApiTables, AppDatabase } from '../database.ts'
-import { withVerifiedActor } from '../actor-transaction.ts'
-import { errorResponse } from '../http.ts'
-import { CommunityError } from './commands.ts'
+import { withEligibleActorTransaction, type AuthenticatedContext } from '../actor-transaction.ts'
+import { errorResponse } from '../http-errors.ts'
+import { ApplicationError } from '../application-errors.ts'
 
 type Tx = Transaction<ApiTables>
 type Kind = 'staff' | 'participant'
@@ -31,17 +32,17 @@ const columns = {
 async function authorize(tx: Tx, actor: string, tenant: string, kind: Kind, target?: string, write = false) {
   await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
   const site = (await sql`select id from public.tenants where id=${tenant} ${write ? sql`for update` : sql`for share`}`.execute(tx)).rows[0]
-  if (!site) throw new CommunityError(404,'missing')
+  if (!site) throw new ApplicationError(404,'missing')
   const allowed = (await sql<{ allowed: boolean }>`select app_private.can_manage_account_records(${tenant},${kind})
     or (${!write && target === actor} and app_private.active_tenant(${tenant})) as allowed`.execute(tx)).rows[0]?.allowed
-  if (!allowed) throw new CommunityError(write ? 403 : 404,write ? 'forbidden' : 'missing')
+  if (!allowed) throw new ApplicationError(write ? 403 : 404,write ? 'forbidden' : 'missing')
 }
 
 export async function readAccountRecord<K extends Kind>(tx: Tx, actor: string, tenant: string, kind: K, target: string): Promise<Records[K]> {
   await authorize(tx,actor,tenant,kind,target)
   const row = (await sql<Records[K]>`select ${sql.join(columns[kind].map(key=>sql.id(key)))} from ${sql.table(table[kind])}
     where tenant_id=${tenant} and user_id=${target}`.execute(tx)).rows[0]
-  if (!row) throw new CommunityError(404,'missing')
+  if (!row) throw new ApplicationError(404,'missing')
   return row
 }
 
@@ -55,7 +56,7 @@ export async function listAccountRecords<K extends Kind>(tx: Tx, actor: string, 
       if (!Array.isArray(value) || value.length !== 4 || JSON.stringify(value.slice(0,3)) !== JSON.stringify(scope)
         || typeof value[3] !== 'string' || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value[3])) throw new Error()
       position = value[3]
-    } catch { throw new CommunityError(400,'invalid_cursor') }
+    } catch { throw new ApplicationError(400,'invalid_cursor') }
   }
   const limit = query.limit ? Number(query.limit) : 50
   const rows = (await sql<Records[K]>`select ${sql.join(columns[kind].map(key=>sql.id(key)))} from ${sql.table(table[kind])}
@@ -69,7 +70,7 @@ export async function setParticipantPermission(tx: Tx, actor: string, tenant: st
   await authorize(tx,actor,tenant,'participant',target,true)
   const before = (await sql<{ can_post_public_events: boolean }>`select can_post_public_events from public.community_account_permissions
     where tenant_id=${tenant} and user_id=${target} for update`.execute(tx)).rows[0]
-  if (!before) throw new CommunityError(404,'missing')
+  if (!before) throw new ApplicationError(404,'missing')
   if (before.can_post_public_events !== enabled) {
     await sql`update public.community_account_permissions set can_post_public_events=${enabled} where tenant_id=${tenant} and user_id=${target}`.execute(tx)
     await sql`insert into public.tenant_admin_actions(tenant_id,target_user_id,action,details)
@@ -80,23 +81,23 @@ export async function setParticipantPermission(tx: Tx, actor: string, tenant: st
 
 export function registerAccountRecords(routes: FastifyInstance, db: AppDatabase) {
   const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse }
-  async function run<T>(actor: string, id: string, work: (tx: Tx)=>Promise<T>) {
-    const result = await withVerifiedActor(db,actor,id,work)
-    if (result && typeof result === 'object' && 'status' in result && result.status === 403) throw new CommunityError(403,'ineligible')
-    return result
+  async function run<T>(context: AuthenticatedContext, work: (tx: Tx)=>Promise<T>) {
+    const result = await withEligibleActorTransaction(db,context,work)
+    if (!result.eligible) throw new ApplicationError(403,'ineligible')
+    return result.value
   }
   for (const kind of ['staff','participant'] as const) {
     const path = '/api/communities/:tenantId/' + (kind === 'staff' ? 'staff' : 'participant-permissions')
     const exact = kind === 'staff' ? path+'/:userId' : '/api/communities/:tenantId/accounts/:userId/permissions'
     routes.get<{Params:{tenantId:string;userId:string}}>(exact,{
       schema:{params:object({tenantId:uuid,userId:uuid}),querystring:object({}),response:{200:schemas[kind],...errors}},
-    },req=>run(req.getDecorator<string>('actor'),req.id,tx=>readAccountRecord(tx,req.getDecorator<string>('actor'),req.params.tenantId,kind,req.params.userId)))
+    },req=>run(getAuthenticatedContext(req),tx=>readAccountRecord(tx,getAuthenticatedContext(req).actorId,req.params.tenantId,kind,req.params.userId)))
     routes.get<{Params:{tenantId:string};Querystring:RecordQuery}>(path,{
       schema:{params:object({tenantId:uuid}),querystring:object({cursor:{type:'string',minLength:1,maxLength:1024},
         limit:{type:'string',pattern:'^(100|[1-9][0-9]?)$'}},[]),response:{200:object({rows:{type:'array',items:schemas[kind]},next:{type:['string','null']}}),...errors}},
-    },req=>run(req.getDecorator<string>('actor'),req.id,tx=>listAccountRecords(tx,req.getDecorator<string>('actor'),req.params.tenantId,kind,req.query)))
+    },req=>run(getAuthenticatedContext(req),tx=>listAccountRecords(tx,getAuthenticatedContext(req).actorId,req.params.tenantId,kind,req.query)))
   }
   routes.patch<{Params:{tenantId:string;userId:string};Body:{can_post_public_events:boolean}}>('/api/communities/:tenantId/accounts/:userId/permissions',{
     schema:{params:object({tenantId:uuid,userId:uuid}),querystring:object({}),body:object({can_post_public_events:{type:'boolean'}}),response:{200:schemas.participant,...errors}},
-  },req=>run(req.getDecorator<string>('actor'),req.id,tx=>setParticipantPermission(tx,req.getDecorator<string>('actor'),req.params.tenantId,req.params.userId,req.body.can_post_public_events)))
+  },req=>run(getAuthenticatedContext(req),tx=>setParticipantPermission(tx,getAuthenticatedContext(req).actorId,req.params.tenantId,req.params.userId,req.body.can_post_public_events)))
 }

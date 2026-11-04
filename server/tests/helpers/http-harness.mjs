@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { channel } from 'node:diagnostics_channel'
 import { DummyDriver, Kysely, PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler } from 'kysely'
 import { buildApi } from '../../src/app.ts'
+import { directoryCursors } from '../../src/directory-cursors.ts'
 
 export const actorId = '11111111-1111-4111-8111-111111111111'
 export const tenantId = '22222222-2222-4222-8222-222222222222'
@@ -67,7 +68,7 @@ export function createHttpHarness(t) {
   const init = channel('fastify.initialization')
   const capture = ({ fastify }) => {
     fastify.addHook('onRoute', function (route) {
-      const authentication = this.hasRequestDecorator('actor') ? 'required-onRequest'
+      const authentication = this.hasRequestDecorator('authenticatedContext') ? 'required-onRequest'
         : route.onRequest ? 'optional-onRequest'
           : route.url === '/api/community-standings' ? 'optional-handler' : 'none'
       for (const method of Array.isArray(route.method) ? route.method : [route.method]) {
@@ -81,10 +82,10 @@ export function createHttpHarness(t) {
   let app
   init.subscribe(capture)
   try {
-    app = buildApi(db, async header => {
+    app = buildApi({ db, verify: async header => {
       verifications.push(header)
       return header === authorization.authorization ? actorId : null
-    }, '01'.repeat(32))
+    }, cursors: directoryCursors('01'.repeat(32)), cleanup: () => db.destroy() })
   } finally { init.unsubscribe(capture) }
   t.after(async () => {
     try { await app.close() } finally {

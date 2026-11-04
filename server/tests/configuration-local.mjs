@@ -1,14 +1,15 @@
+import { directoryCursors } from '../src/directory-cursors.ts'
 import assert from 'node:assert/strict'
 import { randomUUID, randomBytes } from 'node:crypto'
 import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
-import { withVerifiedActor } from '../src/actor-transaction.ts'
+import { withEligibleActorTransaction } from '../src/actor-transaction.ts'
 import { configurationDetails, configurationSettings, configurationCopy } from '../src/communities/configuration.ts'
 import { copySlots } from '../../shared/community-configuration.ts'
 import { buildApi } from '../src/app.ts'
 import { connectDatabase } from '../src/database.ts'
-import { verifyBearer } from '../src/auth.ts'
+import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
 
 const local = localStack()
@@ -16,7 +17,7 @@ const endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
-const app = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), randomBytes(32).toString('hex'))
+const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -143,7 +144,7 @@ try {
   assert.ok(audit.every(r=>r.created_by===editor.id&&r.operation_id&&r.reason===null&&JSON.stringify(r.details)==='{}'))
   assert.equal(audit.at(-1).action,'tenant_website_content_overrides.delete')
   assert.ok(!JSON.stringify(audit).includes('literal text'))
-  await assert.rejects(withVerifiedActor(db,owner.id,randomUUID(),async tx=>{
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },async tx=>{
     await configurationDetails(tx,owner.id,tenant,{name:'Rollback'})
     await configurationSettings(tx,owner.id,tenant,{pause_community_events:false})
     await configurationCopy(tx,owner.id,tenant,{key:'community.hero.heading',text:'Rollback copy'})
@@ -153,16 +154,16 @@ try {
   assert.equal(await count(),before+1)
 
   // Real runtime-role bypass probes omit service-level write authorization.
-  await assert.rejects(withVerifiedActor(db,member.id,randomUUID(),async tx=>{
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     await sql`update public.tenants set name='Bypass' where id=${tenant}`.execute(tx)
   }),error=>error.code==='42501')
-  await withVerifiedActor(db,member.id,randomUUID(),async tx=>{
+  assert.equal((await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     assert.equal((await sql`update public.tenant_settings set pause_community_events=false where tenant_id=${tenant}`.execute(tx)).numAffectedRows,0n)
     assert.equal((await sql`delete from public.tenant_website_content_overrides where tenant_id=${tenant}`.execute(tx)).numAffectedRows,0n)
-  })
-  await assert.rejects(withVerifiedActor(db,editor.id,randomUUID(),async tx=>{
+  })).eligible, true)
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: editor.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     await sql`update public.tenant_website_content_overrides set content_key='community.hero.heading' where tenant_id=${tenant}`.execute(tx)
   }),error=>error.code==='42501')
@@ -227,11 +228,11 @@ try {
   await details(owner,{name:'Archived owner detail'})
   await config(owner,{auto_approve_users:false,pause_community_events:false})
   await copy(owner,'community.hero.heading','Archived owner copy')
-  await withVerifiedActor(db,editor.id,randomUUID(),async tx=>{
+  assert.equal((await withEligibleActorTransaction(db, { actorId: editor.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     assert.deepEqual((await sql`select tenant_id from public.tenant_settings where tenant_id=${tenant}`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select tenant_id from public.tenant_website_content_overrides where tenant_id=${tenant}`.execute(tx)).rows,[])
-  })
+  })).eligible, true)
   await cmd(owner,{kind:'archive',archived:false})
   assert.equal((await landing()).name,'Archived owner detail')
   assert.equal((await landing()).overrides.find(r=>r.content_key==='community.hero.heading').text_value,'Archived owner copy')
@@ -239,7 +240,7 @@ try {
   // Opposite ordering: an admitted settings edit holds its authority to commit.
   let release,ready
   const gate=new Promise(resolve=>{release=resolve}),started=new Promise(resolve=>{ready=resolve})
-  const write=withVerifiedActor(db,settings.id,randomUUID(),async tx=>{
+  const write=withEligibleActorTransaction(db, { actorId: settings.id, requestId: randomUUID() },async tx=>{
     await configurationSettings(tx,settings.id,tenant,{pause_community_events:true})
     ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
     await gate

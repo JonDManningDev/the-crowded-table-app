@@ -1,11 +1,13 @@
-import { errorResponse } from '../http.ts'
+import { getAuthenticatedContext } from '../http-authentication.ts'
+import { errorResponse } from '../http-errors.ts'
 import type { AccountReview, CommunityRequest, OwnCommunityRequestResponse, StaffCandidate } from '../../../shared/community-reads.ts'
 import type { FastifyInstance } from 'fastify'
 import { sql } from 'kysely'
 import { staffFlags, type CommunityCommand, type CreateCommunityInput } from '../../../shared/community-commands.ts'
-import { withVerifiedActor } from '../actor-transaction.ts'
+import { withEligibleActorTransaction } from '../actor-transaction.ts'
 import type { AppDatabase } from '../database.ts'
-import { CommunityError, communityCommand, createCommunity } from './commands.ts'
+import { communityCommand, createCommunity } from './commands.ts'
+import { ApplicationError } from '../application-errors.ts'
 
 const uuid = { type: 'string', format: 'uuid' }
 const string = (maxLength: number, minLength = 0) => ({ type: 'string', minLength, maxLength })
@@ -42,28 +44,28 @@ const pageSchema = (items:object) => object({rows:{type:'array',items},next:null
 
 export function registerCommunityCommands(routes: FastifyInstance, db: AppDatabase) {
   routes.post<{ Body: CreateCommunityInput }>('/api/communities', { bodyLimit: 32768, schema: { body: createSchema, querystring: object({}), response:{201:commandResponse,...errors} } }, async (req, reply) => {
-    const actor = req.getDecorator<string>('actor')
+    const actor = getAuthenticatedContext(req).actorId
     let result
-    try { result = await withVerifiedActor(db, actor, req.id, tx => createCommunity(tx, actor, req.body)) }
+    try { result = await withEligibleActorTransaction(db, getAuthenticatedContext(req), tx => createCommunity(tx, actor, req.body)) }
     catch (e) {
-      if (e instanceof Error && 'code' in e && e.code === '23505') throw new CommunityError(409, 'handle_taken')
+      if (e instanceof Error && 'code' in e && e.code === '23505') throw new ApplicationError(409, 'handle_taken')
       throw e
     }
-    if ('status' in result) return reply.code(403).send({ code: 'ineligible', requestId: req.id })
-    return reply.code(201).send(result)
+    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: req.id })
+    return reply.code(201).send(result.value)
   })
   routes.post<{ Params: { tenantId: string }; Body: CommunityCommand }>('/api/communities/:tenantId/commands',
     { bodyLimit: 32768, schema: { params, body: commandSchema, querystring: object({}), response:{200:commandResponse,...errors} } }, async (req, reply) => {
-      const actor = req.getDecorator<string>('actor')
-      const result = await withVerifiedActor(db, actor, req.id, tx => communityCommand(tx, actor, req.params.tenantId, req.body))
-      if ('status' in result) return reply.code(403).send({ code: 'ineligible', requestId: req.id })
-      return result
+      const actor = getAuthenticatedContext(req).actorId
+      const result = await withEligibleActorTransaction(db, getAuthenticatedContext(req), tx => communityCommand(tx, actor, req.params.tenantId, req.body))
+      if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: req.id })
+      return result.value
     })
   routes.get<{Params:{tenantId:string}}>('/api/communities/:tenantId/me/request',{
     schema:{params,querystring:object({}),response:{200:ownRequestSchema,...errors}},
   },async(req,reply)=>{
-    const actor=req.getDecorator<string>('actor'),tenant=req.params.tenantId
-    const result=await withVerifiedActor(db,actor,req.id,async tx=>{
+    const actor=getAuthenticatedContext(req).actorId,tenant=req.params.tenantId
+    const result=await withEligibleActorTransaction<OwnCommunityRequestResponse | { status: 404 }>(db, getAuthenticatedContext(req),async tx=>{
       await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
       const row=(await sql<OwnCommunityRequestResponse>`select case when r.id is not null then
         jsonb_build_object('request_id',r.id,'kind',r.kind,'requested_at',r.requested_at) end as request
@@ -72,15 +74,16 @@ export function registerCommunityCommands(routes: FastifyInstance, db: AppDataba
         where c.tenant_id=${tenant} and c.user_id=${actor} and t.operational_status='active'`.execute(tx)).rows[0]
       return row??{status:404 as const}
     })
-    if('status' in result) return reply.code(result.status).send({code:result.status===403?'ineligible':'missing',requestId:req.id})
-    return result
+    if(!result.eligible) return reply.code(403).send({code:'ineligible',requestId:req.id})
+    if('status' in result.value) return reply.code(result.value.status).send({code:'missing',requestId:req.id})
+    return result.value
   })
   // Read exact revision tokens for self or an authorized target review. A
   // single statement resolves the current authority and target in one snapshot.
   routes.get<{ Params: { tenantId: string; target: string } }>('/api/communities/:tenantId/accounts/:target/review',
     { schema: { params: object({ tenantId: uuid, target: uuid }), querystring: object({}), response:{200:reviewSchema,...errors} } }, async (req, reply) => {
-      const actor = req.getDecorator<string>('actor'), { tenantId, target } = req.params
-      const result = await withVerifiedActor(db, actor, req.id, async tx => {
+      const actor = getAuthenticatedContext(req).actorId, { tenantId, target } = req.params
+      const result = await withEligibleActorTransaction(db, getAuthenticatedContext(req), async tx => {
         await sql`select set_config('ct.tenant_id',${tenantId},true)`.execute(tx)
         const row = (await sql<AccountReview>`select c.standing,c.revision,case when c.user_id=${actor} then r.id end as request_id
           from public.community_accounts c join public.tenants t on t.id=c.tenant_id
@@ -91,13 +94,14 @@ export function registerCommunityCommands(routes: FastifyInstance, db: AppDataba
           `.execute(tx)).rows[0]
         return row ? { row } : { status: 404 as const }
       })
-      if ('status' in result) return reply.code(result.status!).send({ code: 'unavailable', requestId: req.id })
-      return result.row
+      if (!result.eligible) return reply.code(403).send({ code: 'unavailable', requestId: req.id })
+      if (result.value.status !== undefined) return reply.code(result.value.status).send({ code: 'unavailable', requestId: req.id })
+      return result.value.row
     })
   routes.get<{ Params: { tenantId: string }; Querystring: { after?: string } }>('/api/communities/:tenantId/staff-candidates',
     { schema: { params, querystring: object({ after: uuid }, []), response:{200:pageSchema(candidateSchema),...errors} } }, async (req, reply) => {
-      const actor = req.getDecorator<string>('actor'), { tenantId } = req.params
-      const result = await withVerifiedActor(db, actor, req.id, async tx => {
+      const { tenantId } = req.params
+      const result = await withEligibleActorTransaction(db, getAuthenticatedContext(req), async tx => {
         await sql`select set_config('ct.tenant_id',${tenantId},true)`.execute(tx)
         const rows = (await sql<StaffCandidate>`select c.tenant_id,c.user_id,c.standing,p.display_name,s.status as staff_status,s.role as staff_role
           from public.community_accounts c left join public.community_account_profiles p using(tenant_id,user_id)
@@ -107,13 +111,13 @@ export function registerCommunityCommands(routes: FastifyInstance, db: AppDataba
           order by c.user_id limit 51`.execute(tx)).rows
         return { rows: rows.slice(0,50), next: rows.length > 50 ? rows[49].user_id : null }
       })
-      if ('status' in result) return reply.code(403).send({ code: 'ineligible', requestId: req.id })
-      return result
+      if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: req.id })
+      return result.value
     })
   routes.get<{ Params: { tenantId: string }; Querystring: { after?: string } }>('/api/communities/:tenantId/requests',
     { schema: { params, querystring: object({ after: uuid }, []), response:{200:pageSchema(requestSchema),...errors} } }, async (req, reply) => {
-      const actor = req.getDecorator<string>('actor'), { tenantId } = req.params
-      const result = await withVerifiedActor(db, actor, req.id, async tx => {
+      const actor = getAuthenticatedContext(req).actorId, { tenantId } = req.params
+      const result = await withEligibleActorTransaction(db, getAuthenticatedContext(req), async tx => {
         await sql`select set_config('ct.tenant_id',${tenantId},true)`.execute(tx)
         const rows = (await sql<CommunityRequest>`select r.id,r.kind,r.user_id,r.requested_at,c.revision,c.standing,c.first_approved_at,
           c.has_disciplinary_restriction,p.display_name from app_private.community_account_requests r
@@ -125,7 +129,7 @@ export function registerCommunityCommands(routes: FastifyInstance, db: AppDataba
           order by r.id limit 51`.execute(tx)).rows
         return { rows: rows.slice(0,50), next: rows.length > 50 ? rows[49].id : null }
       })
-      if ('status' in result) return reply.code(403).send({ code: 'ineligible', requestId: req.id })
-      return result
+      if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: req.id })
+      return result.value
     })
 }

@@ -1,10 +1,11 @@
+import { getAuthenticatedContext } from '../http-authentication.ts'
 import type { FastifyInstance } from 'fastify'
 import { sql, type Transaction } from 'kysely'
 import type { HistoryEntry, HistoryPage, HistoryQuery } from '../../../shared/account-history.ts'
-import { withVerifiedActor } from '../actor-transaction.ts'
+import { withEligibleActorTransaction } from '../actor-transaction.ts'
 import type { ApiTables, AppDatabase } from '../database.ts'
-import { errorResponse } from '../http.ts'
-import { CommunityError } from './commands.ts'
+import { errorResponse } from '../http-errors.ts'
+import { ApplicationError } from '../application-errors.ts'
 
 const uuid = { type: 'string', format: 'uuid' } as const
 const nullableUuid = { type: ['string','null'], format: 'uuid' } as const
@@ -33,7 +34,7 @@ function decodeCursor(actor: string, tenant: string, query: HistoryQuery): Posit
       throw new Error('Invalid cursor')
     }
     return { time: value[4], id: value[5] }
-  } catch { throw new CommunityError(400, 'invalid_cursor') }
+  } catch { throw new ApplicationError(400, 'invalid_cursor') }
 }
 export async function accountHistory(tx: Transaction<ApiTables>, actor: string, tenant: string, query: HistoryQuery): Promise<HistoryPage> {
   const position = decodeCursor(actor, tenant, query)
@@ -89,9 +90,9 @@ export function registerAccountHistory(routes: FastifyInstance, db: AppDatabase)
       } }, 400: errorResponse, 401: errorResponse, 403: errorResponse },
     },
   }, async (request, reply) => {
-    const actor = request.getDecorator<string>('actor')
-    const result = await withVerifiedActor(db,actor,request.id,tx => accountHistory(tx,actor,request.params.tenantId,request.query))
-    if ('status' in result) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
-    return result
+    const actor = getAuthenticatedContext(request).actorId
+    const result = await withEligibleActorTransaction(db, getAuthenticatedContext(request),tx => accountHistory(tx,actor,request.params.tenantId,request.query))
+    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
+    return result.value
   })
 }

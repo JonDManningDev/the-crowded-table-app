@@ -1,8 +1,9 @@
+import { getAuthenticatedContext } from '../http-authentication.ts'
 import { sql } from 'kysely'
 import type { FastifyInstance } from 'fastify'
-import { withVerifiedActor } from '../actor-transaction.ts'
+import { withEligibleActorTransaction } from '../actor-transaction.ts'
 import type { AppDatabase } from '../database.ts'
-import { errorResponse } from '../http.ts'
+import { errorResponse } from '../http-errors.ts'
 
 const uuid = { type: 'string', format: 'uuid' }
 const fields = ['tenant_id', 'user_id', 'display_name', 'bio', 'created_at', 'updated_at', 'created_by', 'updated_by'] as const
@@ -24,8 +25,8 @@ export function registerCommunityProfile(routes: FastifyInstance, db: AppDatabas
     },
   }, async (request, reply) => {
     const { tenantId, userId } = request.params
-    const actor = request.getDecorator<string>('actor')
-    const result = await withVerifiedActor(db, actor, request.id, async tx => {
+    const actor = getAuthenticatedContext(request).actorId
+    const result = await withEligibleActorTransaction(db, getAuthenticatedContext(request), async tx => {
       // Resolve viewer, target and curated profile in the same snapshot.
       const profile = await tx.selectFrom('community_account_profiles as p')
         .innerJoin('community_accounts as target', join => join
@@ -44,7 +45,8 @@ export function registerCommunityProfile(routes: FastifyInstance, db: AppDatabas
         .select(fields.map(field => `p.${field}` as const)).executeTakeFirst()
       return profile ? { status: 200 as const, profile } : { status: 404 as const }
     })
-    if (result.status === 200) return result.profile
-    return reply.code(result.status).send({ code: result.status === 403 ? 'ineligible' : 'missing', requestId: request.id })
+    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
+    if (result.value.status === 200) return result.value.profile
+    return reply.code(result.value.status).send({ code: 'missing', requestId: request.id })
   })
 }

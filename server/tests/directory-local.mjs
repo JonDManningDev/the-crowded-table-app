@@ -3,12 +3,12 @@ import { randomUUID, randomBytes } from 'node:crypto'
 import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
-import { withVerifiedActor } from '../src/actor-transaction.ts'
+import { withEligibleActorTransaction } from '../src/actor-transaction.ts'
 import { readMemberDirectory, readPublicDirectory } from '../src/communities/directory.ts'
-import { directoryCursors } from '../src/communities/directory-cursor.ts'
+import { directoryCursors } from '../src/directory-cursors.ts'
 import { buildApi } from '../src/app.ts'
 import { connectDatabase } from '../src/database.ts'
-import { verifyBearer } from '../src/auth.ts'
+import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
 
 const local = localStack()
@@ -17,7 +17,7 @@ assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
 const cursorKey=randomBytes(32).toString('hex'), cursors=directoryCursors(cursorKey)
-const app = buildApi(db, verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursorKey)
+const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(cursorKey), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -241,11 +241,11 @@ try {
   assert.equal((await accounts(owner)).rows.length,9)
   assert.equal((await facts(owner,inactive.id)).standing,'inactive')
   assert.equal((await http(owner,path+'/accounts/'+inactive.id+'/profile')).user_id,inactive.id)
-  await withVerifiedActor(db,member.id,randomUUID(),async tx=>{
+  assert.equal((await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     assert.deepEqual((await sql`select user_id from public.community_accounts where tenant_id=${tenant}`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select user_id from public.community_account_profiles where tenant_id=${tenant}`.execute(tx)).rows,[])
-  })
+  })).eligible, true)
   await cmd(owner,{kind:'archive',archived:false})
   // Once admitted, a page finishes before a gate/standing change can commit.
   async function admittedRead(read,compete,actor) {
@@ -256,7 +256,7 @@ try {
       ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
       await gate;return result
     }
-    const operation=actor?withVerifiedActor(db,actor.id,randomUUID(),work):db.transaction().execute(work)
+    const operation=actor?withEligibleActorTransaction(db, { actorId: actor.id, requestId: randomUUID() },work):db.transaction().execute(work)
     const holder=await Promise.race([started,operation.then(()=>{throw Error('read exited before barrier')})])
     const change=compete();change.catch(()=>{})
     try {
@@ -266,7 +266,9 @@ try {
         await new Promise(resolve=>setTimeout(resolve,10))
       }
     } finally {release()}
-    const result=await operation;await change;return result
+    const result=await operation;await change
+    if (actor) { assert.equal(result.eligible,true);return result.value }
+    return result
   }
   assert.equal((await admittedRead(tx=>readPublicDirectory(tx,slug,{},cursors),
     ()=>config({allow_public_directory_visibility:false}))).rows.length,6)
