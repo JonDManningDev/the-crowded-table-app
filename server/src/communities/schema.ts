@@ -182,6 +182,43 @@ const selfSchemas = (() => {
   }
 })()
 
+const recordsSchemas = (() => {
+  const uuid = { type: 'string', format: 'uuid' }
+  const object = (properties: Record<string, unknown>, required = Object.keys(properties)) =>
+    ({ type: 'object', properties, required, additionalProperties: false })
+  const metadata = {
+    tenant_id: uuid, user_id: uuid, created_at: { type: 'string', format: 'date-time' },
+    updated_at: { type: 'string', format: 'date-time' }, created_by: { type: ['string', 'null'], format: 'uuid' },
+    updated_by: { type: ['string', 'null'], format: 'uuid' }
+  }
+  const schemas = {
+    staff: object({
+      ...metadata, role: { type: 'string', enum: ['owner', 'admin'] },
+      status: { type: 'string', enum: ['active', 'paused', 'revoked'] },
+      ...Object.fromEntries(staffFlags.map(key => [key, { type: 'boolean' }]))
+    }),
+    participant: object({ ...metadata, can_post_public_events: { type: 'boolean' } }),
+  }
+  const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse }
+  return {
+    listStaff: {
+      params: object({ tenantId: uuid }), querystring: object({
+        cursor: { type: 'string', minLength: 1, maxLength: 1024 },
+        limit: { type: 'string', pattern: '^(100|[1-9][0-9]?)$' }
+      }, []), response: { 200: object({ rows: { type: 'array', items: schemas["staff"] }, next: { type: ['string', 'null'] } }), ...errors }
+    },
+    readStaff: { params: object({ tenantId: uuid, userId: uuid }), querystring: object({}), response: { 200: schemas["staff"], ...errors } },
+    listParticipantPermissions: {
+      params: object({ tenantId: uuid }), querystring: object({
+        cursor: { type: 'string', minLength: 1, maxLength: 1024 },
+        limit: { type: 'string', pattern: '^(100|[1-9][0-9]?)$' }
+      }, []), response: { 200: object({ rows: { type: 'array', items: schemas["participant"] }, next: { type: ['string', 'null'] } }), ...errors }
+    },
+    readParticipantPermissions: { params: object({ tenantId: uuid, userId: uuid }), querystring: object({}), response: { 200: schemas["participant"], ...errors } },
+    saveParticipantPermissions: { params: object({ tenantId: uuid, userId: uuid }), querystring: object({}), body: object({ can_post_public_events: { type: 'boolean' } }), response: { 200: schemas.participant, ...errors } }
+  }
+})()
+
 // Public access and standing
 export const listStandingsSchema = standingSchemas.listStandings
 export const readLandingSchema = configSchemas.readLanding
@@ -216,5 +253,12 @@ export const deleteCopySchema = configSchemas.deleteCopy
 export const memberDirectorySchema = directorySchemas.memberDirectory
 export const ownerAccountsSchema = directorySchemas.ownerAccounts
 export const accountFactsSchema = directorySchemas.accountFacts
+
+// Staff and participant permissions
+export const listStaffSchema = recordsSchemas.listStaff
+export const readStaffSchema = recordsSchemas.readStaff
+export const listParticipantPermissionsSchema = recordsSchemas.listParticipantPermissions
+export const readParticipantPermissionsSchema = recordsSchemas.readParticipantPermissions
+export const saveParticipantPermissionsSchema = recordsSchemas.saveParticipantPermissions
 
 export type CommunityProfileInput = FromSchema<typeof profileInputSchema>

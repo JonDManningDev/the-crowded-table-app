@@ -7,6 +7,7 @@ import * as plugins from '../src/communities/routes.ts'
 import { registerRequiredAuthentication, getAuthenticatedContext } from '../src/http-authentication.ts'
 import { registerHttpErrors } from '../src/http-errors.ts'
 import { ApplicationError } from '../src/application-errors.ts'
+import { staffFlags } from '../../shared/community-commands.ts'
 import { actorId, targetId, tenantId, authorization, createHttpHarness } from './helpers/http-harness.mjs'
 
 const operations = [
@@ -262,6 +263,61 @@ const operations = [
     "body": false,
     "tagged": false,
     "public": false
+  },
+  {
+    "group": 7,
+    "name": "listStaff",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/staff",
+    "params": true,
+    "query": true,
+    "body": false,
+    "tagged": false,
+    "public": false
+  },
+  {
+    "group": 7,
+    "name": "readStaff",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/staff/:userId",
+    "params": true,
+    "query": false,
+    "body": false,
+    "tagged": false,
+    "public": false
+  },
+  {
+    "group": 7,
+    "name": "listParticipantPermissions",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/participant-permissions",
+    "params": true,
+    "query": true,
+    "body": false,
+    "tagged": false,
+    "public": false
+  },
+  {
+    "group": 7,
+    "name": "readParticipantPermissions",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/accounts/:userId/permissions",
+    "params": true,
+    "query": false,
+    "body": false,
+    "tagged": false,
+    "public": false
+  },
+  {
+    "group": 7,
+    "name": "saveParticipantPermissions",
+    "method": "PATCH",
+    "path": "/api/communities/:tenantId/accounts/:userId/permissions",
+    "params": true,
+    "query": false,
+    "body": true,
+    "tagged": false,
+    "public": false
   }
 ];
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/http-contract.json', import.meta.url), 'utf8'))
@@ -501,5 +557,24 @@ test('directory and exact/owner facts retain ordered projections and bound param
       assert.equal(/^select (.*?) from /.exec(query.sql)?.[1], facts.map(key => `"${key}"`).join(', '))
       assert.deepEqual(query.parameters, name === 'accountFacts' ? [tenantId, targetId, true] : [tenantId, null, null, 51])
     }
+  }
+})
+
+test('staff and participant services retain distinct projections and read/write denial mappings', async t => {
+  const h = createHttpHarness(t)
+  const metadata = ['tenant_id', 'user_id', 'created_at', 'updated_at', 'created_by', 'updated_by']
+  for (const name of ['listStaff', 'readStaff', 'listParticipantPermissions', 'readParticipantPermissions']) {
+    const operation = operations.find(operation => operation.name === name), dto = response(operation).dto
+    const list = name.startsWith('list'), staff = name.endsWith('Staff')
+    h.eligible([], [{ id: tenantId }], [{ allowed: true }], list ? dto.rows : [dto])
+    assert.equal((await h.app.inject(input(operation))).statusCode, 200)
+    const query = h.queries.at(-1), fields = [...metadata, ...(staff ? ['role', 'status', ...staffFlags] : ['can_post_public_events'])]
+    assert.equal(/^select (.*?) from /.exec(query.sql)?.[1], fields.map(key => `"${key}"`).join(', '))
+    assert.deepEqual(query.parameters, list ? [tenantId, null, null, 51] : [tenantId, targetId])
+  }
+  for (const [name, status, code] of [['readStaff', 404, 'missing'], ['saveParticipantPermissions', 403, 'forbidden']]) {
+    const operation = operations.find(operation => operation.name === name)
+    h.eligible([], [{ id: tenantId }], [{ allowed: false }])
+    error(h, operation, await h.app.inject(input(operation)), status, code)
   }
 })

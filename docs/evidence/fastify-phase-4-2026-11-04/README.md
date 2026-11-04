@@ -63,3 +63,13 @@ Member, public and owner/exact audiences remain distinct; encrypted scopes and b
 Preservation review passed: 110 SQL templates (with input-binding/format normalization), unchanged HTTP fixture, client/shared contracts, migrations, lockfile, runtime privilege manifest, startup/actor/cursor facilities. No required gate remains blocked. Next: checkpoint 7; later groups remain untouched.
 
 Checkpoint 6 compiled-query checks confirm all nine facts fields and eight profile fields, JSON projection key order, and exact bound parameter order for member directory, owner enumeration and exact account facts. All 28 moved query/authorization helper bodies match the starting revision after descriptive-name and formatting normalization.
+
+## Checkpoint 7 — Staff and participant permissions
+
+28 community operations migrated cumulatively. All 52 backend cases, server TypeScript and root lint passed. Required local suites passed sequentially: `records-local`, `community-local`. Existing assertions, transaction barriers and lock observations were retained.
+
+Staff and participant operations retain distinct audiences and schemas, read/write denial mappings, no-op updates, attribution and audit categories. Record metadata uses an independent ordered column list; the superseded records module is deleted.
+
+Preservation review passed: 110 SQL templates (with input-binding/format normalization), unchanged HTTP fixture, client/shared contracts, migrations, lockfile, runtime privilege manifest, startup/actor/cursor facilities. No required gate remains blocked. Next: checkpoint 8; later groups remain untouched.
+
+Checkpoint 7 checks all four actual staff/participant SELECT projections and bound parameters using the real service, plus unauthorized read → 404/missing and unauthorized write → 403/forbidden. All 32 moved query/authorization helper bodies retain their parsed statement structure.

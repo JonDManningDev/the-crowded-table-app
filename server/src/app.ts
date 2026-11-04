@@ -1,7 +1,6 @@
 import type { DirectoryCursors } from './directory-cursors.ts'
 import { publicCommunityRoutes, communityRoutes } from './communities/routes.ts'
 import { createCommunityService } from './communities/service.ts'
-import { registerAccountRecords } from './communities/records.ts'
 import { registerAccountHistory } from './communities/history.ts'
 import { registerHttpErrors } from './http-errors.ts'
 import { registerRequiredAuthentication } from './http-authentication.ts'
@@ -60,11 +59,15 @@ export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
         memberDirectory: communityService.memberDirectory,
         ownerAccounts: communityService.ownerAccounts,
         accountFacts: communityService.accountFacts,
+        listStaff: communityService.listStaff,
+        readStaff: communityService.readStaff,
+        listParticipantPermissions: communityService.listParticipantPermissions,
+        readParticipantPermissions: communityService.readParticipantPermissions,
+        saveParticipantPermissions: communityService.saveParticipantPermissions,
       },
     })
 
     registerAccountHistory(routes, db)
-    registerAccountRecords(routes, db)
 
     routes.register(userAccountRoutes, { service: userAccountService })
 

@@ -9,6 +9,7 @@ import { type AccountFacts, type DirectoryPage, type DirectoryQuery, type Member
 import { staffFlags, type CommunityCommand, type CommandResult, type CreateCommunityInput, type CuratedProfile, type StaffPermissions } from '../../../shared/community-commands.ts'
 import { type AccountReview, type CommunityRequest, type OwnCommunityRequestResponse, type StaffCandidate } from '../../../shared/community-reads.ts'
 import { communityPreferenceFields, type CommunityPreferences, type ProfileInput } from '../../../shared/self-service.ts'
+import { type ParticipantPermissions, type RecordPage, type RecordQuery, type StaffRecord } from '../../../shared/community-records.ts'
 
 type Tx = Transaction<ApiTables>
 interface CommunityDependencies { db: AppDatabase; cursors: DirectoryCursors }
@@ -89,6 +90,22 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
     },
     accountFacts(context: AuthenticatedContext, params: { tenantId: string; userId: string }) {
       return run(db, context, tx => readAccountFacts(tx, context.actorId, params.tenantId, params.userId))
+    },
+    // Staff and participant permissions
+    listStaff(context: AuthenticatedContext, params: { tenantId: string }, query: RecordQuery) {
+      return run(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'staff', query))
+    },
+    readStaff(context: AuthenticatedContext, params: { tenantId: string; userId: string }) {
+      return run(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'staff', params.userId))
+    },
+    listParticipantPermissions(context: AuthenticatedContext, params: { tenantId: string }, query: RecordQuery) {
+      return run(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'participant', query))
+    },
+    readParticipantPermissions(context: AuthenticatedContext, params: { tenantId: string; userId: string }) {
+      return run(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'participant', params.userId))
+    },
+    saveParticipantPermissions(context: AuthenticatedContext, params: { tenantId: string; userId: string }, input: { can_post_public_events: boolean }) {
+      return run(db, context, tx => setParticipantPermission(tx, context.actorId, params.tenantId, params.userId, input.can_post_public_events))
     }
   }
 }
@@ -511,6 +528,62 @@ export async function readAccountFacts(tx: Tx, actor: string, tenant: string, ta
     where tenant_id=${tenant} and user_id=${target} and (${access.owner || target === actor} or standing in ('approved','suspended','inactive'))`.execute(tx)).rows[0]
   if (!row) throw new ApplicationError(404, 'missing')
   return row
+}
+
+// Staff and participant permissions
+type RecordKind = 'staff' | 'participant'
+type Records = { staff: StaffRecord; participant: ParticipantPermissions }
+const recordMetadataColumns = ['tenant_id', 'user_id', 'created_at', 'updated_at', 'created_by', 'updated_by']
+const table = { staff: 'public.tenant_staff_assignments', participant: 'public.community_account_permissions' }
+const columns = {
+  staff: [...recordMetadataColumns, 'role', 'status', ...staffFlags],
+  participant: [...recordMetadataColumns, 'can_post_public_events'],
+}
+async function authorizeRecords(tx: Tx, actor: string, tenant: string, kind: RecordKind, target?: string, write = false) {
+  await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+  const site = (await sql`select id from public.tenants where id=${tenant} ${write ? sql`for update` : sql`for share`}`.execute(tx)).rows[0]
+  if (!site) throw new ApplicationError(404, 'missing')
+  const allowed = (await sql<{ allowed: boolean }>`select app_private.can_manage_account_records(${tenant},${kind})
+    or (${!write && target === actor} and app_private.active_tenant(${tenant})) as allowed`.execute(tx)).rows[0]?.allowed
+  if (!allowed) throw new ApplicationError(write ? 403 : 404, write ? 'forbidden' : 'missing')
+}
+export async function readAccountRecord<K extends RecordKind>(tx: Tx, actor: string, tenant: string, kind: K, target: string): Promise<Records[K]> {
+  await authorizeRecords(tx, actor, tenant, kind, target)
+  const row = (await sql<Records[K]>`select ${sql.join(columns[kind].map(key => sql.id(key)))} from ${sql.table(table[kind])}
+    where tenant_id=${tenant} and user_id=${target}`.execute(tx)).rows[0]
+  if (!row) throw new ApplicationError(404, 'missing')
+  return row
+}
+export async function listAccountRecords<K extends RecordKind>(tx: Tx, actor: string, tenant: string, kind: K, query: RecordQuery): Promise<RecordPage<Records[K]>> {
+  await authorizeRecords(tx, actor, tenant, kind)
+  const scope = [actor, tenant, kind]
+  let position: string | null = null
+  if (query.cursor) {
+    try {
+      const value: unknown = JSON.parse(Buffer.from(query.cursor, 'base64url').toString('utf8'))
+      if (!Array.isArray(value) || value.length !== 4 || JSON.stringify(value.slice(0, 3)) !== JSON.stringify(scope)
+        || typeof value[3] !== 'string' || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value[3])) throw new Error()
+      position = value[3]
+    } catch { throw new ApplicationError(400, 'invalid_cursor') }
+  }
+  const limit = query.limit ? Number(query.limit) : 50
+  const rows = (await sql<Records[K]>`select ${sql.join(columns[kind].map(key => sql.id(key)))} from ${sql.table(table[kind])}
+    where tenant_id=${tenant} and (${position}::uuid is null or user_id>${position}::uuid)
+    order by user_id limit ${limit + 1}`.execute(tx)).rows
+  const visible = rows.slice(0, limit), last = visible.at(-1)
+  return { rows: visible, next: rows.length > limit && last ? Buffer.from(JSON.stringify([...scope, last.user_id])).toString('base64url') : null }
+}
+export async function setParticipantPermission(tx: Tx, actor: string, tenant: string, target: string, enabled: boolean) {
+  await authorizeRecords(tx, actor, tenant, 'participant', target, true)
+  const before = (await sql<{ can_post_public_events: boolean }>`select can_post_public_events from public.community_account_permissions
+    where tenant_id=${tenant} and user_id=${target} for update`.execute(tx)).rows[0]
+  if (!before) throw new ApplicationError(404, 'missing')
+  if (before.can_post_public_events !== enabled) {
+    await sql`update public.community_account_permissions set can_post_public_events=${enabled} where tenant_id=${tenant} and user_id=${target}`.execute(tx)
+    await sql`insert into public.tenant_admin_actions(tenant_id,target_user_id,action,details)
+      values(${tenant},${target},'community_permissions_changed',${JSON.stringify({ before: before.can_post_public_events, after: enabled })}::jsonb)`.execute(tx)
+  }
+  return readAccountRecord(tx, actor, tenant, 'participant', target)
 }
 
 // Internal helpers
