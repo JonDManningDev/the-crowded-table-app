@@ -4,6 +4,8 @@ Status: revised from the user-supplied product handoff and subsequent explicit d
 
 ## Source and precedence
 
+**Fastify architecture refactoring plan — finalized 2026-11-04.** The [implementation plan](22-fastify-architecture-refactoring-plan.md) establishes frontend-aligned backend features, mandatory routes/service/schema files, explicit dependencies, and verification gates between community operation groups. Implementation is deferred to a new session; this milestone changes documentation only.
+
 **Client/server workspaces — approved 2026-11-03.** The frontend is the `client/` npm workspace beside `server/`. Root commands delegate to the appropriate workspace, and one root lockfile owns installation. Browser environment files move into `client/`; database types are shared infrastructure. See [the approved structure](07-file-structure.md#approved-clientserver-workspace-restructuring--2026-11-03) and the root setup instructions.
 
 **Hosted database cutover authorized and applied 2026-11-03.** All 25 migrations through `20261103001700` now match the selected hosted development database. The frontend and API remain local, using hosted Auth/PostgreSQL; `npm run dev` and `npm run dev:api` start that target. The independent local Supabase target uses `dev:local` and `dev:api:local`. See [current cutover verification](12-implementation-status.md#hosted-development-database-cutover) and [run instructions](../supabase/README.md#hosted-development-database-local-application--2026-11-03). Earlier local-only/hosted-pending statements below are historical milestones.
@@ -48,6 +50,7 @@ The 2026-10-12 decisions also settle per-person event/table records, atomic grou
 | [Vision and concept](01-vision-and-concept.md) | Community-first vision, brand, functionality, navigation, and MVP |
 | [Decisions and open questions](08-decisions-and-open-questions.md) | Established direction, proposed choices, and unresolved rules |
 | [Architecture](02-architecture.md) | System boundaries, public/private data, and commercial deferral |
+| [Fastify architecture refactoring plan](22-fastify-architecture-refactoring-plan.md) | Final target structure, operation ownership, dependency rules, staged verification and agent guidance; implementation deferred |
 | [Database schema plan](03-database-schema.md) | Entities, relationships, constraints, and migration sequence |
 | [Database flag inventory](17-database-flag-inventory.md) | Existing and proposed boolean flags by table, latest names/renames, purposes and implementation status |
 | [Final local access audit](21-final-local-access-audit.md) | Findings, corrections, runtime privilege manifest, alternate-surface verification and remaining hosted/domain gates |
