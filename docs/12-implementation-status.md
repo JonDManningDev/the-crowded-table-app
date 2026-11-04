@@ -1,12 +1,18 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Fastify refactor Phase 4 — 2026-11-04
+
+**Phase 4 checkpoint 1/8 — verified 2026-11-04.** 3 of 29 community operations now belong to the triad, through public access and standing. One centrally constructed service supplies explicit public/protected operation subsets; only the public plugin receives the verifier. All 49 backend cases, server TypeScript, root lint and this checkpoint's required local suites passed. The HTTP fixture and database/security contracts remain unchanged. Later groups remain in their existing modules until their checkpoints. See [Phase 4 evidence](evidence/fastify-phase-4-2026-11-04/README.md).
+
+Checkpoint 1 moved public access and standing and removed each previous registration exactly once. The temporary three-operation community self-service module remains until checkpoint 4. Prior evidence below remains historical. No hosted execution, migrations, dependency changes, product-policy changes or frontend implementation occurred.
+
 ## Fastify refactor Phase 3 — 2026-11-04
 
 The user-account feature now follows the [approved triad](22-fastify-architecture-refactoring-plan.md#phase-3--user-account-feature): ten operations and six automatic HEAD routes in `user-accounts/routes.ts`, `service.ts` and `schema.ts`, with matching section order. Application composition constructs its database/cursor-backed service once and registers the service-only plugin under the existing authentication parent. SQL, transactions and authorization remain in the service, separate from transport schemas/types; the preference column allowlist is explicit. Real transaction helpers remain available to rollback/snapshot tests through direct updated imports, without aliases or nested transactions.
 
 All 43 backend HTTP/shared/startup/adapter cases, server TypeScript, root lint, all nine local real Auth/HTTP suites and the 130-file client boundary scan passed. Relevant frontend tests passed all 74 cases in 11 files. The initial sandbox frontend invocation failed to read shared transform temporary files; the exact command passed with host access, without frontend/test changes. The HTTP fixture, all 110 SQL template expressions, eight query-helper bodies, frontend/shared contracts, migrations, dependency lockfile and runtime privilege manifest are unchanged. See [Phase 3 evidence](evidence/fastify-phase-3-2026-11-04/README.md).
 
-Obsolete account preference/global-profile modules, inline account routes and superseded registrations are removed. Only three community self-service operations remain in `accounts/self-service.ts` under `registerCommunitySelfService`, until the Phase 4 profiles/preferences group. No community migration, hosted execution, deployment or frontend reorganization occurred. Phase 3 is complete with no blocked gate; Phase 4 has not started.
+Obsolete account preference/global-profile modules, inline account routes and superseded registrations are removed. Only three community self-service operations remain in `accounts/self-service.ts` under `registerCommunitySelfService`, until the Phase 4 profiles/preferences group. No community migration, hosted execution, deployment or frontend reorganization occurred. Phase 3 completed at `aeb1ff6` with no blocked gate; Phase 4 had not started at that checkpoint.
 
 ## Fastify refactor Phase 2 — 2026-11-04
 

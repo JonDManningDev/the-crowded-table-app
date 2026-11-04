@@ -1,35 +1,45 @@
-import { getAuthenticatedContext, optionalAuthentication } from '../http-authentication.ts'
+import { getAuthenticatedContext } from '../http-authentication.ts'
 import type { FastifyInstance } from 'fastify'
-import type { BearerVerifier } from '../token-verifier.ts'
 import { sql, type Transaction } from 'kysely'
 import type { ApiTables, AppDatabase } from '../database.ts'
 import { withEligibleActorTransaction, type AuthenticatedContext } from '../actor-transaction.ts'
 import { errorResponse } from '../http-errors.ts'
 import { ApplicationError } from '../application-errors.ts'
-import { copySlots, settingFields, type CopyKey, type CommunityCopy, type CommunityDetails, type CommunityDetailsInput,
-  type CommunityLanding, type CommunitySettings, type CommunitySettingsRecord } from '../../../shared/community-configuration.ts'
+import { copySlots, settingFields, type CopyKey, type CommunityCopy, type CommunityDetails, type CommunityDetailsInput, type CommunitySettings, type CommunitySettingsRecord } from '../../../shared/community-configuration.ts'
 
 type Tx = Transaction<ApiTables>
+
 type Kind = 'details' | 'settings' | 'copy'
+
 const uuid = { type: 'string', format: 'uuid' }
+
 const text = (maxLength: number, minLength = 1) => ({ type: 'string', maxLength, minLength })
+
 const object = (properties: Record<string,unknown>, required = Object.keys(properties)) =>
   ({ type: 'object', properties, required, additionalProperties: false })
+
 const attribution = { created_at: { type: 'string', format: 'date-time' }, updated_at: { type: 'string', format: 'date-time' },
   created_by: { type: ['string','null'], format: 'uuid' }, updated_by: { type: ['string','null'], format: 'uuid' } }
+
 const detailInput = { name: text(120), country_code: { type: 'string', pattern: '^[A-Z]{2}$' },
   state_province: { type: ['string','null'], maxLength: 120 }, city: { type: ['string','null'], maxLength: 120 }, timezone: text(128) }
+
 const detailsSchema = object({ id: uuid, slug: text(63), ...detailInput, operational_status: { type: 'string', enum: ['active','archived'] }, ...attribution })
+
 const settingsInput = Object.fromEntries(settingFields.map(key => [key,{ type: 'boolean' }]))
+
 const settingsSchema = object({ tenant_id: uuid, ...settingsInput, ...attribution })
+
 const copyKey = { type: 'string', enum: Object.keys(copySlots) }
+
 const publicCopy = { tenant_id: uuid, content_key: copyKey, text_value: text(2000) }
+
 const copySchema = object({ ...publicCopy, ...attribution })
-const landingSchema = object({ id: uuid, slug: text(63), ...detailInput, auto_approve_users: { type: 'boolean' },
-  allow_public_chat_visibility: { type: 'boolean' }, allow_public_activity_visibility: { type: 'boolean' },
-  allow_public_directory_visibility: { type: 'boolean' }, overrides: { type: 'array', items: object(publicCopy) } })
+
 const detailFields = sql`id,slug,name,country_code,state_province,city,timezone,operational_status,created_at,updated_at,created_by,updated_by`
+
 const settingsFields = sql`tenant_id,${sql.join(settingFields.map(key=>sql.id(key)))},created_at,updated_at,created_by,updated_by`
+
 const copyFields = sql`tenant_id,content_key,text_value,created_at,updated_at,created_by,updated_by`
 
 async function authorize(tx: Tx, actor: string, tenant: string, kind: Kind, write: boolean) {
@@ -83,17 +93,6 @@ export async function configurationCopy(tx: Tx, actor: string, tenant: string, c
     }
   }
   return { rows: (await sql<CommunityCopy>`select ${copyFields} from public.tenant_website_content_overrides where tenant_id=${tenant} order by content_key`.execute(tx)).rows }
-}
-
-export function registerCommunityLanding(app: FastifyInstance, db: AppDatabase, verify: BearerVerifier) {
-  app.get<{ Params: { slug: string } }>('/api/public/communities/:slug',{
-    onRequest: optionalAuthentication(verify), schema: {
-    params: object({ slug: { type: 'string', minLength: 3, maxLength: 63, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$' } }), querystring: object({}),
-    response: { 200: landingSchema, 400: errorResponse, 401: errorResponse, 404: errorResponse },
-  } },async (request,reply)=>{
-    const row = (await sql<CommunityLanding>`select * from app_private.community_landing(${request.params.slug})`.execute(db)).rows[0]
-    return row ?? reply.code(404).send({code:'missing',requestId:request.id})
-  })
 }
 
 export function registerCommunityConfiguration(routes: FastifyInstance, db: AppDatabase) {

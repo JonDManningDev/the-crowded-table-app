@@ -677,6 +677,8 @@ App dialogs/preview actions implementation checkpoint (2026-10-27): approved Mem
 
 App dialogs/preview actions completion accepted (2026-10-27): user requested committing the verified slice. Preserve documented behavior, evidence and remaining-work boundaries; no new implementation or deployment scope is authorized.
 
+**Phase 4 checkpoint 1/8 — verified 2026-11-04.** 3 of 29 community operations now belong to the triad, through public access and standing. One centrally constructed service supplies explicit public/protected operation subsets; only the public plugin receives the verifier. All 49 backend cases, server TypeScript, root lint and this checkpoint's required local suites passed. The HTTP fixture and database/security contracts remain unchanged. Later groups remain in their existing modules until their checkpoints. See [Phase 4 evidence](evidence/fastify-phase-4-2026-11-04/README.md).
+
 ## Client/server npm workspaces — accepted 2026-11-03
 
 The user approved a dedicated `@crowded-table/client` workspace beside `server/`. Frontend source/assets/configuration/browser environments live under `client/`, generated database types and HTTP contracts under `shared/`, and Supabase tooling remains top-level. Keep one root npm lockfile and familiar root command orchestration; preserve versions and behavior. No old frontend forwarding files or aliases. See [the implementation contract](07-file-structure.md#approved-clientserver-workspace-restructuring--2026-11-03).

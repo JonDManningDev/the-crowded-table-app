@@ -1,8 +1,7 @@
-import { getAuthenticatedContext, optionalAuthentication } from '../http-authentication.ts'
+import { getAuthenticatedContext } from '../http-authentication.ts'
 import type { FastifyInstance } from 'fastify'
-import type { BearerVerifier } from '../token-verifier.ts'
 import { sql, type Transaction } from 'kysely'
-import type { AccountFacts, DirectoryPage, DirectoryQuery, MemberDirectoryRow, PublicDirectoryRow } from '../../../shared/community-directory.ts'
+import type { AccountFacts, DirectoryPage, DirectoryQuery, MemberDirectoryRow } from '../../../shared/community-directory.ts'
 import type { ApiTables, AppDatabase } from '../database.ts'
 import { withEligibleActorTransaction, type AuthenticatedContext } from '../actor-transaction.ts'
 import { errorResponse } from '../http-errors.ts'
@@ -10,22 +9,34 @@ import { ApplicationError } from '../application-errors.ts'
 import type { DirectoryCursors } from '../directory-cursors.ts'
 
 type Tx = Transaction<ApiTables>
+
 const uuid = { type: 'string', format: 'uuid' }
+
 const object = (properties: Record<string,unknown>, required = Object.keys(properties)) =>
   ({ type: 'object', properties, required, additionalProperties: false })
+
 const audit = { created_at: { type: 'string', format: 'date-time' }, updated_at: { type: 'string', format: 'date-time' },
   created_by: { type: ['string','null'], format: 'uuid' }, updated_by: { type: ['string','null'], format: 'uuid' } }
+
 const facts = { tenant_id: uuid, user_id: uuid, standing: { type: 'string', enum: ['pending','approved','suspended','inactive'] },
   first_approved_at: { type: ['string','null'], format: 'date-time' }, has_disciplinary_restriction: { type: 'boolean' }, ...audit }
+
 const profile = { tenant_id: uuid, user_id: uuid, display_name: { type: 'string' }, bio: { type: ['string','null'] }, ...audit }
+
 const role = { type: ['string','null'], enum: ['owner','admin',null] }
+
 const memberRow = object({ account: object(facts), profile: { ...object(profile), type: ['object','null'] }, staff_role: role })
-const publicRow = object({ display_name: { type: 'string' }, staff_role: role })
+
 const page = (items: object) => object({ rows: { type: 'array', items }, next: { type: ['string','null'] } })
+
 const querySchema = object({ limit: { type: 'string', pattern: '^(100|[1-9][0-9]?)$' }, cursor: { type: 'string', minLength: 1, maxLength: 1024 } },[])
+
 const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse }
+
 const factsFields = Object.keys(facts)
+
 const profileFields = Object.keys(profile)
+
 const jsonProjection = (alias: string, fields: string[]) => sql`jsonb_build_object(${sql.join(fields.flatMap(key=>[sql`${key}::text`,sql.ref(alias+'.'+key)]))})`
 
 async function lockTenant(tx: Tx, actor: string, tenant: string) {
@@ -69,22 +80,6 @@ export async function listOwnerAccounts(tx: Tx, actor: string, tenant: string, q
     where tenant_id=${tenant} and (${after}::uuid is null or user_id>${after}::uuid) order by user_id limit ${limit+1}`.execute(tx)).rows
   const visible = rows.slice(0,limit), last = visible.at(-1)
   return { rows: visible, next: rows.length>limit && last ? cursors.encode(scope,last.user_id) : null }
-}
-
-export async function readPublicDirectory(tx: Tx, slug: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<PublicDirectoryRow>> {
-  const scope = ['public-directory',slug], after = cursors.decode(scope,query.cursor), limit = Number(query.limit ?? 50)
-  type InternalRow = PublicDirectoryRow & { user_id: string }
-  const result = (await sql<{ rows: InternalRow[] | null }>`select app_private.public_community_directory(${slug},${after}::uuid,${limit}) as rows`.execute(tx)).rows[0]
-  if (result.rows === null) throw new ApplicationError(404,'missing')
-  const visible = result.rows.slice(0,limit), last = visible.at(-1)
-  return { rows: visible.map(({ display_name,staff_role })=>({ display_name,staff_role })),
-    next: result.rows.length>limit && last ? cursors.encode(scope,last.user_id) : null }
-}
-
-export function registerPublicDirectory(app: FastifyInstance, db: AppDatabase, verify: BearerVerifier, cursors: DirectoryCursors) {
-  app.get<{Params:{slug:string};Querystring:DirectoryQuery}>('/api/public/communities/:slug/directory',{
-    onRequest:optionalAuthentication(verify),schema:{params:object({slug:{type:'string',minLength:3,maxLength:63,pattern:'^[a-z0-9]+(-[a-z0-9]+)*$'}}),querystring:querySchema,response:{200:page(publicRow),...errors}},
-  },req=>db.transaction().execute(tx=>readPublicDirectory(tx,req.params.slug,req.query,cursors)))
 }
 
 export function registerCommunityDirectory(routes: FastifyInstance, db: AppDatabase, cursors: DirectoryCursors) {
