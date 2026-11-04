@@ -23,7 +23,7 @@ export const publicCommunityRoutes: FastifyPluginAsync<{ service: PublicCommunit
   routes.get<{ Params: { slug: string }; Querystring: DirectoryQuery }>("/api/public/communities/:slug/directory", { onRequest: optionalAuthentication(verify), schema: schemas.publicDirectorySchema }, request => service.publicDirectory(request.params, request.query))
 }
 
-type ProtectedCommunityOperations = Pick<CommunityService, "createCommunity" | "executeCommand" | "ownRequest" | "reviewAccount" | "staffCandidates" | "pendingRequests" | "readProfile" | "saveOwnProfile" | "readOwnPreferences" | "saveOwnPreferences" | "readDetails" | "saveDetails" | "readSettings" | "saveSettings" | "readCopy" | "saveCopy" | "deleteCopy">
+type ProtectedCommunityOperations = Pick<CommunityService, "createCommunity" | "executeCommand" | "ownRequest" | "reviewAccount" | "staffCandidates" | "pendingRequests" | "readProfile" | "saveOwnProfile" | "readOwnPreferences" | "saveOwnPreferences" | "readDetails" | "saveDetails" | "readSettings" | "saveSettings" | "readCopy" | "saveCopy" | "deleteCopy" | "memberDirectory" | "ownerAccounts" | "accountFacts">
 export const communityRoutes: FastifyPluginAsync<{ service: ProtectedCommunityOperations }> = async (routes, { service }) => {
   // Creation and lifecycle
   routes.post<{ Body: CreateCommunityInput }>("/api/communities", { bodyLimit: 32768, schema: schemas.createCommunitySchema }, async (request, reply) => {
@@ -88,4 +88,9 @@ export const communityRoutes: FastifyPluginAsync<{ service: ProtectedCommunityOp
   routes.get<{ Params: { tenantId: string } }>("/api/communities/:tenantId/copy", { schema: schemas.readCopySchema }, request => service.readCopy(getAuthenticatedContext(request), request.params))
   routes.put<{ Params: { tenantId: string; contentKey: CopyKey }; Body: { text_value: string } }>("/api/communities/:tenantId/copy/:contentKey", { schema: schemas.saveCopySchema }, request => service.saveCopy(getAuthenticatedContext(request), request.params, request.body))
   routes.delete<{ Params: { tenantId: string; contentKey: CopyKey } }>("/api/communities/:tenantId/copy/:contentKey", { schema: schemas.deleteCopySchema }, request => service.deleteCopy(getAuthenticatedContext(request), request.params))
+
+  // Directories and account facts
+  routes.get<{ Params: { tenantId: string }; Querystring: DirectoryQuery }>("/api/communities/:tenantId/directory", { schema: schemas.memberDirectorySchema }, request => service.memberDirectory(getAuthenticatedContext(request), request.params, request.query))
+  routes.get<{ Params: { tenantId: string }; Querystring: DirectoryQuery }>("/api/communities/:tenantId/accounts", { schema: schemas.ownerAccountsSchema }, request => service.ownerAccounts(getAuthenticatedContext(request), request.params, request.query))
+  routes.get<{ Params: { tenantId: string; userId: string } }>("/api/communities/:tenantId/accounts/:userId", { schema: schemas.accountFactsSchema }, request => service.accountFacts(getAuthenticatedContext(request), request.params))
 }

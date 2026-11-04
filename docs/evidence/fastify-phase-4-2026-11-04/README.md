@@ -53,3 +53,13 @@ Details, settings and copy retain separate authority checks, tenant locks, field
 Preservation review passed: 110 SQL templates (with input-binding/format normalization), unchanged HTTP fixture, client/shared contracts, migrations, lockfile, runtime privilege manifest, startup/actor/cursor facilities. No required gate remains blocked. Next: checkpoint 6; later groups remain untouched.
 
 Checkpoint 5 additionally compared parsed bodies of all 24 migrated query/authorization helpers with the starting revision, allowing only the documented authorization-helper renaming and ignoring formatting/comments. Their statement structure, literal values and order match.
+
+## Checkpoint 6 — Directories and account facts
+
+23 community operations migrated cumulatively. All 51 backend cases, server TypeScript and root lint passed. Required local suites passed sequentially: `directory-local`. Existing assertions, transaction barriers and lock observations were retained.
+
+Member, public and owner/exact audiences remain distinct; encrypted scopes and both read/change serialization orders pass. Directory/fact projections use independent ordered column lists. Public directory remains the checkpoint 1 implementation; the superseded directory module is deleted.
+
+Preservation review passed: 110 SQL templates (with input-binding/format normalization), unchanged HTTP fixture, client/shared contracts, migrations, lockfile, runtime privilege manifest, startup/actor/cursor facilities. No required gate remains blocked. Next: checkpoint 7; later groups remain untouched.
+
+Checkpoint 6 compiled-query checks confirm all nine facts fields and eight profile fields, JSON projection key order, and exact bound parameter order for member directory, owner enumeration and exact account facts. All 28 moved query/authorization helper bodies match the starting revision after descriptive-name and formatting normalization.

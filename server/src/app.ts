@@ -1,5 +1,4 @@
 import type { DirectoryCursors } from './directory-cursors.ts'
-import { registerCommunityDirectory } from './communities/directory.ts'
 import { publicCommunityRoutes, communityRoutes } from './communities/routes.ts'
 import { createCommunityService } from './communities/service.ts'
 import { registerAccountRecords } from './communities/records.ts'
@@ -58,12 +57,14 @@ export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
         readCopy: communityService.readCopy,
         saveCopy: communityService.saveCopy,
         deleteCopy: communityService.deleteCopy,
+        memberDirectory: communityService.memberDirectory,
+        ownerAccounts: communityService.ownerAccounts,
+        accountFacts: communityService.accountFacts,
       },
     })
 
     registerAccountHistory(routes, db)
     registerAccountRecords(routes, db)
-    registerCommunityDirectory(routes, db, cursors)
 
     routes.register(userAccountRoutes, { service: userAccountService })
 

@@ -65,15 +65,30 @@ const configSchemas = (() => {
 })()
 
 const directorySchemas = (() => {
+  const uuid = { type: 'string', format: 'uuid' }
   const object = (properties: Record<string, unknown>, required = Object.keys(properties)) =>
     ({ type: 'object', properties, required, additionalProperties: false })
+  const audit = {
+    created_at: { type: 'string', format: 'date-time' }, updated_at: { type: 'string', format: 'date-time' },
+    created_by: { type: ['string', 'null'], format: 'uuid' }, updated_by: { type: ['string', 'null'], format: 'uuid' }
+  }
+  const facts = {
+    tenant_id: uuid, user_id: uuid, standing: { type: 'string', enum: ['pending', 'approved', 'suspended', 'inactive'] },
+    first_approved_at: { type: ['string', 'null'], format: 'date-time' }, has_disciplinary_restriction: { type: 'boolean' }, ...audit
+  }
+  const profile = { tenant_id: uuid, user_id: uuid, display_name: { type: 'string' }, bio: { type: ['string', 'null'] }, ...audit }
   const role = { type: ['string', 'null'], enum: ['owner', 'admin', null] }
+  const memberRow = object({ account: object(facts), profile: { ...object(profile), type: ['object', 'null'] }, staff_role: role })
   const publicRow = object({ display_name: { type: 'string' }, staff_role: role })
   const page = (items: object) => object({ rows: { type: 'array', items }, next: { type: ['string', 'null'] } })
   const querySchema = object({ limit: { type: 'string', pattern: '^(100|[1-9][0-9]?)$' }, cursor: { type: 'string', minLength: 1, maxLength: 1024 } }, [])
   const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse }
+  const params = object({ tenantId: uuid })
   return {
-    publicDirectory: { params: object({ slug: { type: 'string', minLength: 3, maxLength: 63, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$' } }), querystring: querySchema, response: { 200: page(publicRow), ...errors } }
+    publicDirectory: { params: object({ slug: { type: 'string', minLength: 3, maxLength: 63, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$' } }), querystring: querySchema, response: { 200: page(publicRow), ...errors } },
+    memberDirectory: { params, querystring: querySchema, response: { 200: page(memberRow), ...errors } },
+    ownerAccounts: { params, querystring: querySchema, response: { 200: page(object(facts)), ...errors } },
+    accountFacts: { params: object({ tenantId: uuid, userId: uuid }), querystring: object({}), response: { 200: object(facts), ...errors } }
   }
 })()
 
@@ -196,5 +211,10 @@ export const saveSettingsSchema = configSchemas.saveSettings
 export const readCopySchema = configSchemas.readCopy
 export const saveCopySchema = configSchemas.saveCopy
 export const deleteCopySchema = configSchemas.deleteCopy
+
+// Directories and account facts
+export const memberDirectorySchema = directorySchemas.memberDirectory
+export const ownerAccountsSchema = directorySchemas.ownerAccounts
+export const accountFactsSchema = directorySchemas.accountFacts
 
 export type CommunityProfileInput = FromSchema<typeof profileInputSchema>

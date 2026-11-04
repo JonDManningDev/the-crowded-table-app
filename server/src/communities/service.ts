@@ -5,7 +5,7 @@ import { withEligibleActorTransaction, type AuthenticatedContext } from '../acto
 import { ApplicationError } from '../application-errors.ts'
 import type { DirectoryCursors } from '../directory-cursors.ts'
 import { copySlots, settingFields, type CopyKey, type CommunityCopy, type CommunityDetails, type CommunityDetailsInput, type CommunityLanding, type CommunitySettings, type CommunitySettingsRecord } from '../../../shared/community-configuration.ts'
-import { type DirectoryPage, type DirectoryQuery, type PublicDirectoryRow } from '../../../shared/community-directory.ts'
+import { type AccountFacts, type DirectoryPage, type DirectoryQuery, type MemberDirectoryRow, type PublicDirectoryRow } from '../../../shared/community-directory.ts'
 import { staffFlags, type CommunityCommand, type CommandResult, type CreateCommunityInput, type CuratedProfile, type StaffPermissions } from '../../../shared/community-commands.ts'
 import { type AccountReview, type CommunityRequest, type OwnCommunityRequestResponse, type StaffCandidate } from '../../../shared/community-reads.ts'
 import { communityPreferenceFields, type CommunityPreferences, type ProfileInput } from '../../../shared/self-service.ts'
@@ -79,6 +79,16 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
     },
     deleteCopy(context: AuthenticatedContext, params: { tenantId: string; contentKey: CopyKey }) {
       return run(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey }))
+    },
+    // Directories and account facts
+    memberDirectory(context: AuthenticatedContext, params: { tenantId: string }, query: DirectoryQuery) {
+      return run(db, context, tx => readMemberDirectory(tx, context.actorId, params.tenantId, query, cursors))
+    },
+    ownerAccounts(context: AuthenticatedContext, params: { tenantId: string }, query: DirectoryQuery) {
+      return run(db, context, tx => listOwnerAccounts(tx, context.actorId, params.tenantId, query, cursors))
+    },
+    accountFacts(context: AuthenticatedContext, params: { tenantId: string; userId: string }) {
+      return run(db, context, tx => readAccountFacts(tx, context.actorId, params.tenantId, params.userId))
     }
   }
 }
@@ -457,6 +467,50 @@ export async function configurationCopy(tx: Tx, actor: string, tenant: string, c
     }
   }
   return { rows: (await sql<CommunityCopy>`select ${copyFields} from public.tenant_website_content_overrides where tenant_id=${tenant} order by content_key`.execute(tx)).rows }
+}
+
+// Directories and account facts
+const factsFields = ['tenant_id', 'user_id', 'standing', 'first_approved_at', 'has_disciplinary_restriction', 'created_at', 'updated_at', 'created_by', 'updated_by']
+const profileFields = ['tenant_id', 'user_id', 'display_name', 'bio', 'created_at', 'updated_at', 'created_by', 'updated_by']
+const jsonProjection = (alias: string, fields: string[]) => sql`jsonb_build_object(${sql.join(fields.flatMap(key => [sql`${key}::text`, sql.ref(alias + '.' + key)]))})`
+async function lockDirectoryTenant(tx: Tx, actor: string, tenant: string) {
+  await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+  if (!(await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows[0]) throw new ApplicationError(404, 'missing')
+  // Recheck after waiting on any configuration/lifecycle writer, not in its old snapshot.
+  return (await sql<{ active: boolean; owner: boolean; member: boolean }>`select app_private.active_tenant(${tenant}) as active,
+    app_private.is_approved_owner(${tenant}) as owner, exists(select from public.community_accounts where tenant_id=${tenant}
+      and user_id=${actor} and standing in ('approved','suspended')) as member`.execute(tx)).rows[0]
+}
+export async function readMemberDirectory(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<MemberDirectoryRow>> {
+  const access = await lockDirectoryTenant(tx, actor, tenant)
+  if (!access.active || !access.member) throw new ApplicationError(404, 'missing')
+  const scope = ['member-directory', actor, tenant], after = cursors.decode(scope, query.cursor), limit = Number(query.limit ?? 50)
+  const rows = (await sql<MemberDirectoryRow>`select ${jsonProjection('c', factsFields)} as account,
+    case when p.user_id is not null then ${jsonProjection('p', profileFields)} end as profile,
+    case when c.standing='approved' and s.status='active' then s.role end as staff_role
+    from public.community_accounts c left join public.community_account_profiles p using(tenant_id,user_id)
+    left join public.tenant_staff_assignments s using(tenant_id,user_id)
+    where c.tenant_id=${tenant} and c.standing in ('approved','suspended') and (${after}::uuid is null or c.user_id>${after}::uuid)
+    order by c.user_id limit ${limit + 1}`.execute(tx)).rows
+  const visible = rows.slice(0, limit), last = visible.at(-1)
+  return { rows: visible, next: rows.length > limit && last ? cursors.encode(scope, last.account.user_id) : null }
+}
+export async function listOwnerAccounts(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<AccountFacts>> {
+  const access = await lockDirectoryTenant(tx, actor, tenant)
+  if (!access.owner) throw new ApplicationError(404, 'missing')
+  const scope = ['owner-accounts', actor, tenant], after = cursors.decode(scope, query.cursor), limit = Number(query.limit ?? 50)
+  const rows = (await sql<AccountFacts>`select ${sql.join(factsFields.map(key => sql.id(key)))} from public.community_accounts
+    where tenant_id=${tenant} and (${after}::uuid is null or user_id>${after}::uuid) order by user_id limit ${limit + 1}`.execute(tx)).rows
+  const visible = rows.slice(0, limit), last = visible.at(-1)
+  return { rows: visible, next: rows.length > limit && last ? cursors.encode(scope, last.user_id) : null }
+}
+export async function readAccountFacts(tx: Tx, actor: string, tenant: string, target: string): Promise<AccountFacts> {
+  const access = await lockDirectoryTenant(tx, actor, tenant)
+  if (!access.owner && (!access.active || (target !== actor && !access.member))) throw new ApplicationError(404, 'missing')
+  const row = (await sql<AccountFacts>`select ${sql.join(factsFields.map(key => sql.id(key)))} from public.community_accounts
+    where tenant_id=${tenant} and user_id=${target} and (${access.owner || target === actor} or standing in ('approved','suspended','inactive'))`.execute(tx)).rows[0]
+  if (!row) throw new ApplicationError(404, 'missing')
+  return row
 }
 
 // Internal helpers
