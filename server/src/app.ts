@@ -1,7 +1,6 @@
 import type { DirectoryCursors } from './directory-cursors.ts'
 import { publicCommunityRoutes, communityRoutes } from './communities/routes.ts'
 import { createCommunityService } from './communities/service.ts'
-import { registerAccountHistory } from './communities/history.ts'
 import { registerHttpErrors } from './http-errors.ts'
 import { registerRequiredAuthentication } from './http-authentication.ts'
 import type { BearerVerifier } from './token-verifier.ts'
@@ -23,7 +22,7 @@ export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
     ajv: { customOptions: { removeAdditional: false, coerceTypes: false, useDefaults: false } } })
   app.addHook('onClose', cleanup)
   registerHttpErrors(app)
-  const communityService = createCommunityService({db,cursors})
+  const communityService = createCommunityService({ db, cursors })
   const userAccountService = createUserAccountService({ db, cursors })
   app.get('/health/live', async () => ({ live: true }))
   app.get('/health/ready', async () => { await checkRuntime(db); return { ready: true } })
@@ -64,13 +63,11 @@ export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
         listParticipantPermissions: communityService.listParticipantPermissions,
         readParticipantPermissions: communityService.readParticipantPermissions,
         saveParticipantPermissions: communityService.saveParticipantPermissions,
+        history: communityService.history,
       },
     })
 
-    registerAccountHistory(routes, db)
-
     routes.register(userAccountRoutes, { service: userAccountService })
-
   })
   return app
 }

@@ -11,316 +11,36 @@ import { staffFlags } from '../../shared/community-commands.ts'
 import { actorId, targetId, tenantId, authorization, createHttpHarness } from './helpers/http-harness.mjs'
 
 const operations = [
-  {
-    "group": 1,
-    "name": "listStandings",
-    "method": "GET",
-    "path": "/api/community-standings",
-    "params": false,
-    "query": false,
-    "body": false,
-    "tagged": false,
-    "public": true
-  },
-  {
-    "group": 1,
-    "name": "readLanding",
-    "method": "GET",
-    "path": "/api/public/communities/:slug",
-    "params": true,
-    "query": false,
-    "body": false,
-    "tagged": false,
-    "public": true
-  },
-  {
-    "group": 1,
-    "name": "publicDirectory",
-    "method": "GET",
-    "path": "/api/public/communities/:slug/directory",
-    "params": true,
-    "query": true,
-    "body": false,
-    "tagged": false,
-    "public": true
-  },
-  {
-    "group": 2,
-    "name": "createCommunity",
-    "method": "POST",
-    "path": "/api/communities",
-    "params": false,
-    "query": false,
-    "body": true,
-    "tagged": true,
-    "public": false
-  },
-  {
-    "group": 2,
-    "name": "executeCommand",
-    "method": "POST",
-    "path": "/api/communities/:tenantId/commands",
-    "params": true,
-    "query": false,
-    "body": true,
-    "tagged": true,
-    "public": false
-  },
-  {
-    "group": 3,
-    "name": "ownRequest",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/me/request",
-    "params": true,
-    "query": false,
-    "body": false,
-    "tagged": true,
-    "public": false
-  },
-  {
-    "group": 3,
-    "name": "reviewAccount",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/accounts/:target/review",
-    "params": true,
-    "query": false,
-    "body": false,
-    "tagged": true,
-    "public": false
-  },
-  {
-    "group": 3,
-    "name": "staffCandidates",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/staff-candidates",
-    "params": true,
-    "query": true,
-    "body": false,
-    "tagged": true,
-    "public": false
-  },
-  {
-    "group": 3,
-    "name": "pendingRequests",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/requests",
-    "params": true,
-    "query": true,
-    "body": false,
-    "tagged": true,
-    "public": false
-  },
-  {
-    "group": 4,
-    "name": "readProfile",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/accounts/:userId/profile",
-    "params": true,
-    "query": false,
-    "body": false,
-    "tagged": true,
-    "public": false
-  },
-  {
-    "group": 4,
-    "name": "saveOwnProfile",
-    "method": "PATCH",
-    "path": "/api/communities/:tenantId/me/profile",
-    "params": true,
-    "query": false,
-    "body": true,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 4,
-    "name": "readOwnPreferences",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/me/preferences",
-    "params": true,
-    "query": false,
-    "body": false,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 4,
-    "name": "saveOwnPreferences",
-    "method": "PATCH",
-    "path": "/api/communities/:tenantId/me/preferences",
-    "params": true,
-    "query": false,
-    "body": true,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 5,
-    "name": "readDetails",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/details",
-    "params": true,
-    "query": false,
-    "body": false,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 5,
-    "name": "saveDetails",
-    "method": "PATCH",
-    "path": "/api/communities/:tenantId/details",
-    "params": true,
-    "query": false,
-    "body": true,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 5,
-    "name": "readSettings",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/settings",
-    "params": true,
-    "query": false,
-    "body": false,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 5,
-    "name": "saveSettings",
-    "method": "PATCH",
-    "path": "/api/communities/:tenantId/settings",
-    "params": true,
-    "query": false,
-    "body": true,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 5,
-    "name": "readCopy",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/copy",
-    "params": true,
-    "query": false,
-    "body": false,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 5,
-    "name": "saveCopy",
-    "method": "PUT",
-    "path": "/api/communities/:tenantId/copy/:contentKey",
-    "params": true,
-    "query": false,
-    "body": true,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 5,
-    "name": "deleteCopy",
-    "method": "DELETE",
-    "path": "/api/communities/:tenantId/copy/:contentKey",
-    "params": true,
-    "query": false,
-    "body": false,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 6,
-    "name": "memberDirectory",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/directory",
-    "params": true,
-    "query": true,
-    "body": false,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 6,
-    "name": "ownerAccounts",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/accounts",
-    "params": true,
-    "query": true,
-    "body": false,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 6,
-    "name": "accountFacts",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/accounts/:userId",
-    "params": true,
-    "query": false,
-    "body": false,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 7,
-    "name": "listStaff",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/staff",
-    "params": true,
-    "query": true,
-    "body": false,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 7,
-    "name": "readStaff",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/staff/:userId",
-    "params": true,
-    "query": false,
-    "body": false,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 7,
-    "name": "listParticipantPermissions",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/participant-permissions",
-    "params": true,
-    "query": true,
-    "body": false,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 7,
-    "name": "readParticipantPermissions",
-    "method": "GET",
-    "path": "/api/communities/:tenantId/accounts/:userId/permissions",
-    "params": true,
-    "query": false,
-    "body": false,
-    "tagged": false,
-    "public": false
-  },
-  {
-    "group": 7,
-    "name": "saveParticipantPermissions",
-    "method": "PATCH",
-    "path": "/api/communities/:tenantId/accounts/:userId/permissions",
-    "params": true,
-    "query": false,
-    "body": true,
-    "tagged": false,
-    "public": false
-  }
-];
-const baseline = JSON.parse(readFileSync(new URL('./fixtures/http-contract.json', import.meta.url), 'utf8'))
+  {"group":1,"name":"listStandings","method":"GET","path":"/api/community-standings","params":false,"query":false,"body":false,"tagged":false,"public":true},
+  {"group":1,"name":"readLanding","method":"GET","path":"/api/public/communities/:slug","params":true,"query":false,"body":false,"tagged":false,"public":true},
+  {"group":1,"name":"publicDirectory","method":"GET","path":"/api/public/communities/:slug/directory","params":true,"query":true,"body":false,"tagged":false,"public":true},
+  {"group":2,"name":"createCommunity","method":"POST","path":"/api/communities","params":false,"query":false,"body":true,"tagged":true,"public":false},
+  {"group":2,"name":"executeCommand","method":"POST","path":"/api/communities/:tenantId/commands","params":true,"query":false,"body":true,"tagged":true,"public":false},
+  {"group":3,"name":"ownRequest","method":"GET","path":"/api/communities/:tenantId/me/request","params":true,"query":false,"body":false,"tagged":true,"public":false},
+  {"group":3,"name":"reviewAccount","method":"GET","path":"/api/communities/:tenantId/accounts/:target/review","params":true,"query":false,"body":false,"tagged":true,"public":false},
+  {"group":3,"name":"staffCandidates","method":"GET","path":"/api/communities/:tenantId/staff-candidates","params":true,"query":true,"body":false,"tagged":true,"public":false},
+  {"group":3,"name":"pendingRequests","method":"GET","path":"/api/communities/:tenantId/requests","params":true,"query":true,"body":false,"tagged":true,"public":false},
+  {"group":4,"name":"readProfile","method":"GET","path":"/api/communities/:tenantId/accounts/:userId/profile","params":true,"query":false,"body":false,"tagged":true,"public":false},
+  {"group":4,"name":"saveOwnProfile","method":"PATCH","path":"/api/communities/:tenantId/me/profile","params":true,"query":false,"body":true,"tagged":false,"public":false},
+  {"group":4,"name":"readOwnPreferences","method":"GET","path":"/api/communities/:tenantId/me/preferences","params":true,"query":false,"body":false,"tagged":false,"public":false},
+  {"group":4,"name":"saveOwnPreferences","method":"PATCH","path":"/api/communities/:tenantId/me/preferences","params":true,"query":false,"body":true,"tagged":false,"public":false},
+  {"group":5,"name":"readDetails","method":"GET","path":"/api/communities/:tenantId/details","params":true,"query":false,"body":false,"tagged":false,"public":false},
+  {"group":5,"name":"saveDetails","method":"PATCH","path":"/api/communities/:tenantId/details","params":true,"query":false,"body":true,"tagged":false,"public":false},
+  {"group":5,"name":"readSettings","method":"GET","path":"/api/communities/:tenantId/settings","params":true,"query":false,"body":false,"tagged":false,"public":false},
+  {"group":5,"name":"saveSettings","method":"PATCH","path":"/api/communities/:tenantId/settings","params":true,"query":false,"body":true,"tagged":false,"public":false},
+  {"group":5,"name":"readCopy","method":"GET","path":"/api/communities/:tenantId/copy","params":true,"query":false,"body":false,"tagged":false,"public":false},
+  {"group":5,"name":"saveCopy","method":"PUT","path":"/api/communities/:tenantId/copy/:contentKey","params":true,"query":false,"body":true,"tagged":false,"public":false},
+  {"group":5,"name":"deleteCopy","method":"DELETE","path":"/api/communities/:tenantId/copy/:contentKey","params":true,"query":false,"body":false,"tagged":false,"public":false},
+  {"group":6,"name":"memberDirectory","method":"GET","path":"/api/communities/:tenantId/directory","params":true,"query":true,"body":false,"tagged":false,"public":false},
+  {"group":6,"name":"ownerAccounts","method":"GET","path":"/api/communities/:tenantId/accounts","params":true,"query":true,"body":false,"tagged":false,"public":false},
+  {"group":6,"name":"accountFacts","method":"GET","path":"/api/communities/:tenantId/accounts/:userId","params":true,"query":false,"body":false,"tagged":false,"public":false},
+  {"group":7,"name":"listStaff","method":"GET","path":"/api/communities/:tenantId/staff","params":true,"query":true,"body":false,"tagged":false,"public":false},
+  {"group":7,"name":"readStaff","method":"GET","path":"/api/communities/:tenantId/staff/:userId","params":true,"query":false,"body":false,"tagged":false,"public":false},
+  {"group":7,"name":"listParticipantPermissions","method":"GET","path":"/api/communities/:tenantId/participant-permissions","params":true,"query":true,"body":false,"tagged":false,"public":false},
+  {"group":7,"name":"readParticipantPermissions","method":"GET","path":"/api/communities/:tenantId/accounts/:userId/permissions","params":true,"query":false,"body":false,"tagged":false,"public":false},
+  {"group":7,"name":"saveParticipantPermissions","method":"PATCH","path":"/api/communities/:tenantId/accounts/:userId/permissions","params":true,"query":false,"body":true,"tagged":false,"public":false},
+  {"group":8,"name":"history","method":"GET","path":"/api/communities/:tenantId/history","params":true,"query":true,"body":false,"tagged":true,"public":false},
+];const baseline = JSON.parse(readFileSync(new URL('./fixtures/http-contract.json', import.meta.url), 'utf8'))
 function contract(operation) { return baseline.schemas[`${operation.method} ${operation.path}`] }
 function sample(schema, key = '') {
   if ('const' in schema) return schema.const
@@ -389,13 +109,13 @@ function harness(t) {
   t.after(async () => { try { await app.close() } finally { assert.deepEqual(unexpected, []); assert.equal(pending.length, 0) } })
   return { app, calls, verified, requests, registered, hits, queue: (name, value) => pending.push({ name, value }) }
 }
-function checkCall(h, operation, request) {
+function checkCall(h, operation, request, query = {}) {
   const call = h.calls.at(-1), args = []
   assert.equal(call.name, operation.name)
   if (!operation.public) args.push({ actorId, requestId: h.requests.at(-1).id })
   const schema = contract(operation)
   if (operation.params) args.push(sample(schema.params))
-  if (operation.query) args.push({})
+  if (operation.query) args.push(query)
   if (operation.body) args.push(request.payload)
   assert.deepEqual(JSON.parse(JSON.stringify(call.args)), args)
 }
@@ -407,6 +127,10 @@ function error(h, operation, response, status, code, head = false) {
 }
 
 test('community plugins register each migrated operation exactly once and dispatch only service inputs', async t => {
+  assert.equal(operations.length, 29)
+  assert.equal(operations.filter(operation => operation.public).length, 3)
+  assert.equal(operations.filter(operation => !operation.public).length, 26)
+  assert.equal(operations.filter(operation => operation.method === 'GET').length, 20)
   const h = harness(t)
   await h.app.ready()
   const expected = operations.flatMap(operation => [`${operation.method} ${operation.path}`,
@@ -577,4 +301,36 @@ test('staff and participant services retain distinct projections and read/write 
     h.eligible([], [{ id: tenantId }], [{ allowed: false }])
     error(h, operation, await h.app.inject(input(operation)), status, code)
   }
+})
+
+test('all paged/selective community operations forward validated nonempty query inputs unchanged', async t => {
+  const h = harness(t)
+  for (const operation of operations.filter(operation => operation.query)) {
+    const query = Object.fromEntries(Object.keys(contract(operation).querystring.properties).map(key => [key,
+      key === 'limit' ? '2' : key === 'category' ? 'community_account' : ['after', 'target', 'eventId'].includes(key) ? targetId : 'opaque-cursor']))
+    const request = input(operation)
+    request.url += '?' + new URLSearchParams(query)
+    h.queue(operation.name, result(operation, response(operation).dto))
+    assert.equal((await h.app.inject(request)).statusCode, 200, operation.name)
+    checkCall(h, operation, request, query)
+  }
+})
+
+test('history keeps open details and empty unauthorized pages; own requests keep null distinct from missing', async t => {
+  const h = harness(t), history = operations.find(operation => operation.name === 'history')
+  const dto = response(history).dto
+  dto.rows[0].details = { future: [{ subject: 'kept', count: 1 }], flag: true }
+  h.queue(history.name, result(history, dto))
+  assert.deepEqual((await h.app.inject(input(history))).json(), dto)
+  const own = operations.find(operation => operation.name === 'ownRequest')
+  h.queue(own.name, { eligible: true, value: { request: null } })
+  const ownResponse = await h.app.inject(input(own))
+  assert.equal(ownResponse.statusCode, 200)
+  assert.deepEqual(ownResponse.json(), { request: null })
+  const actual = createHttpHarness(t)
+  actual.eligible([], [{ operational_status: 'active' }], [])
+  const empty = await actual.app.inject(input(history))
+  assert.equal(empty.statusCode, 200)
+  assert.deepEqual(empty.json(), { rows: [], next: null })
+  assert.equal(actual.queries.length, 5)
 })

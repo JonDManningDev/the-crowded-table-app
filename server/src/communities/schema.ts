@@ -219,6 +219,37 @@ const recordsSchemas = (() => {
   }
 })()
 
+const historySchemas = (() => {
+  const uuid = { type: 'string', format: 'uuid' } as const
+  const nullableUuid = { type: ['string', 'null'], format: 'uuid' } as const
+  const category = { type: 'string', enum: ['community_account', 'staff_account'] } as const
+  const fields = {
+    id: uuid, tenant_id: uuid, action: { type: 'string' }, target_user_id: nullableUuid,
+    content_key: { type: ['string', 'null'] }, created_at: { type: 'string', format: 'date-time' },
+    created_by: nullableUuid, operation_id: uuid, reason: { type: ['string', 'null'] },
+    details: { type: 'object', additionalProperties: true }, categories: { type: 'array', items: category },
+  }
+  return {
+    history: {
+      params: { type: 'object', required: ['tenantId'], additionalProperties: false, properties: { tenantId: uuid } },
+      querystring: {
+        type: 'object', additionalProperties: false, properties: {
+          target: uuid, category, eventId: uuid, cursor: { type: 'string', maxLength: 1024 },
+          limit: { type: 'string', pattern: '^([1-9]|[1-9][0-9]|100)$' },
+        }
+      },
+      response: {
+        200: {
+          type: 'object', required: ['rows', 'next'], additionalProperties: false, properties: {
+            rows: { type: 'array', items: { type: 'object', required: Object.keys(fields), additionalProperties: false, properties: fields } },
+            next: { type: ['string', 'null'] },
+          }
+        }, 400: errorResponse, 401: errorResponse, 403: errorResponse
+      },
+    }
+  }
+})()
+
 // Public access and standing
 export const listStandingsSchema = standingSchemas.listStandings
 export const readLandingSchema = configSchemas.readLanding
@@ -260,5 +291,8 @@ export const readStaffSchema = recordsSchemas.readStaff
 export const listParticipantPermissionsSchema = recordsSchemas.listParticipantPermissions
 export const readParticipantPermissionsSchema = recordsSchemas.readParticipantPermissions
 export const saveParticipantPermissionsSchema = recordsSchemas.saveParticipantPermissions
+
+// Audit history
+export const historySchema = historySchemas.history
 
 export type CommunityProfileInput = FromSchema<typeof profileInputSchema>

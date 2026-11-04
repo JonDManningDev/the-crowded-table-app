@@ -9,6 +9,7 @@ import { type DirectoryQuery } from '../../../shared/community-directory.ts'
 import { type CommunityCommand, type CreateCommunityInput } from '../../../shared/community-commands.ts'
 import { type CommunityPreferences } from '../../../shared/self-service.ts'
 import { type RecordQuery } from '../../../shared/community-records.ts'
+import { type HistoryQuery } from '../../../shared/account-history.ts'
 
 type PublicCommunityOperations = Pick<CommunityService, "listStandings" | "readLanding" | "publicDirectory">
 export const publicCommunityRoutes: FastifyPluginAsync<{ service: PublicCommunityOperations; verify: BearerVerifier }> = async (routes, { service, verify }) => {
@@ -24,7 +25,7 @@ export const publicCommunityRoutes: FastifyPluginAsync<{ service: PublicCommunit
   routes.get<{ Params: { slug: string }; Querystring: DirectoryQuery }>("/api/public/communities/:slug/directory", { onRequest: optionalAuthentication(verify), schema: schemas.publicDirectorySchema }, request => service.publicDirectory(request.params, request.query))
 }
 
-type ProtectedCommunityOperations = Pick<CommunityService, "createCommunity" | "executeCommand" | "ownRequest" | "reviewAccount" | "staffCandidates" | "pendingRequests" | "readProfile" | "saveOwnProfile" | "readOwnPreferences" | "saveOwnPreferences" | "readDetails" | "saveDetails" | "readSettings" | "saveSettings" | "readCopy" | "saveCopy" | "deleteCopy" | "memberDirectory" | "ownerAccounts" | "accountFacts" | "listStaff" | "readStaff" | "listParticipantPermissions" | "readParticipantPermissions" | "saveParticipantPermissions">
+type ProtectedCommunityOperations = Pick<CommunityService, "createCommunity" | "executeCommand" | "ownRequest" | "reviewAccount" | "staffCandidates" | "pendingRequests" | "readProfile" | "saveOwnProfile" | "readOwnPreferences" | "saveOwnPreferences" | "readDetails" | "saveDetails" | "readSettings" | "saveSettings" | "readCopy" | "saveCopy" | "deleteCopy" | "memberDirectory" | "ownerAccounts" | "accountFacts" | "listStaff" | "readStaff" | "listParticipantPermissions" | "readParticipantPermissions" | "saveParticipantPermissions" | "history">
 export const communityRoutes: FastifyPluginAsync<{ service: ProtectedCommunityOperations }> = async (routes, { service }) => {
   // Creation and lifecycle
   routes.post<{ Body: CreateCommunityInput }>("/api/communities", { bodyLimit: 32768, schema: schemas.createCommunitySchema }, async (request, reply) => {
@@ -101,4 +102,12 @@ export const communityRoutes: FastifyPluginAsync<{ service: ProtectedCommunityOp
   routes.get<{ Params: { tenantId: string }; Querystring: RecordQuery }>("/api/communities/:tenantId/participant-permissions", { schema: schemas.listParticipantPermissionsSchema }, request => service.listParticipantPermissions(getAuthenticatedContext(request), request.params, request.query))
   routes.get<{ Params: { tenantId: string; userId: string } }>("/api/communities/:tenantId/accounts/:userId/permissions", { schema: schemas.readParticipantPermissionsSchema }, request => service.readParticipantPermissions(getAuthenticatedContext(request), request.params))
   routes.patch<{ Params: { tenantId: string; userId: string }; Body: { can_post_public_events: boolean } }>("/api/communities/:tenantId/accounts/:userId/permissions", { schema: schemas.saveParticipantPermissionsSchema }, request => service.saveParticipantPermissions(getAuthenticatedContext(request), request.params, request.body))
+
+  // Audit history
+  routes.get<{ Params: { tenantId: string }; Querystring: HistoryQuery }>("/api/communities/:tenantId/history", { schema: schemas.historySchema }, async (request, reply) => {
+    const result = await service.history(getAuthenticatedContext(request), request.params, request.query);
+
+    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
+    return result.value
+  })
 }
