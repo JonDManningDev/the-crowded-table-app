@@ -1,4 +1,5 @@
-import type { Database } from '../../lib/database.types'
+import type { CommunityFilter, CommunitySummary } from '../../../shared/self-service'
+export type { CommunityFilter, CommunitySummary }
 import type { GameArtVariant } from '../../components/GameArt'
 
 export type DiscoveryPreferences = {
@@ -52,8 +53,6 @@ export type AccountSummary = {
   saveProfile?: (name: string, bio: string) => Promise<void>
 }
 
-export type CommunityFilter = 'all' | 'managed' | 'owned'
-export type CommunitySummary = Database['public']['Views']['my_community_summaries']['Row']
 export type CommunityCardData = {
   id: string
   name: string

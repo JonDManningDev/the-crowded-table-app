@@ -1,35 +1,42 @@
-import { beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { readCommunityPreviewIdentity, readMembershipPreviewContent, switchMockCommunityPreview, saveCommunityAccountPreferences, saveCommunityProfile } from './api'
 
-const db = vi.hoisted(() => ({ from: vi.fn(), update: vi.fn(), upsert: vi.fn(), eq: vi.fn(), select: vi.fn(), single: vi.fn() }))
+const db = vi.hoisted(() => ({ from: vi.fn(), auth: { getSession: vi.fn() } }))
 vi.mock('../../lib/supabase', () => ({ supabase: db }))
+const fetcher = vi.fn()
 beforeEach(() => {
   vi.resetAllMocks()
-  db.from.mockReturnValue(db); db.update.mockReturnValue(db); db.upsert.mockReturnValue(db)
-  db.eq.mockReturnValue(db); db.select.mockReturnValue(db)
-  db.single.mockResolvedValue({ data: { tenant_id: 'community' }, error: null })
+  vi.stubGlobal('fetch',fetcher)
+  db.auth.getSession.mockResolvedValue({data:{session:{user:{id:'actor'},access_token:'token'}},error:null})
+  fetcher.mockResolvedValue(new Response(JSON.stringify({show_global_profile:false,allow_direct_messages:true,allow_private_invitations:true})))
 })
+afterEach(() => { vi.unstubAllGlobals(); expect(db.from).not.toHaveBeenCalled() })
 
 it('saves all supported community preferences in one scoped update without forwarding protected fields', async () => {
   const input = { show_global_profile: false, standing: 'approved', user_id: 'someone-else' }
-  await saveCommunityAccountPreferences('community', input)
-  expect(db.from).toHaveBeenCalledExactlyOnceWith('community_account_preferences')
-  expect(db.update).toHaveBeenCalledExactlyOnceWith({ show_global_profile: false })
-  expect(db.eq).toHaveBeenCalledExactlyOnceWith('tenant_id', 'community')
-  expect(db.single).toHaveBeenCalledOnce()
+  await saveCommunityAccountPreferences('actor','community', input)
+  expect(fetcher).toHaveBeenCalledExactlyOnceWith('/api/communities/community/me/preferences',expect.objectContaining({
+    method:'PATCH',body:JSON.stringify({show_global_profile:false}),cache:'no-store',redirect:'error',
+  }))
 })
 
 it('propagates denied or missing-row preference saves instead of claiming success', async () => {
-  const failure = { code: 'PGRST116', message: 'No eligible row' }
-  db.single.mockResolvedValue({ data: null, error: failure })
-  await expect(saveCommunityAccountPreferences('community', { show_global_profile: true })).rejects.toEqual(failure)
+  fetcher.mockResolvedValue(new Response('{}',{status:404}))
+  await expect(saveCommunityAccountPreferences('actor','community', { show_global_profile: true })).rejects.toThrow('Account operation failed')
 })
 
 it('saves a separate community profile with database-derived user identity and an explicitly cleared bio', async () => {
-  await saveCommunityProfile('community', ' Name ', '  ')
-  expect(db.from).toHaveBeenCalledExactlyOnceWith('community_account_profiles')
-  expect(db.update).toHaveBeenCalledExactlyOnceWith({ display_name: 'Name', bio: null })
-  expect(db.eq).toHaveBeenCalledExactlyOnceWith('tenant_id', 'community')
+  fetcher.mockResolvedValue(new Response(JSON.stringify({tenantId:'community'})))
+  await saveCommunityProfile('actor','community', ' Name ', '  ')
+  expect(fetcher).toHaveBeenCalledExactlyOnceWith('/api/communities/community/me/profile',expect.objectContaining({
+    method:'PATCH',body:JSON.stringify({display_name:'Name',bio:null}),headers:{Authorization:'Bearer token','Content-Type':'application/json'},
+  }))
+})
+
+it('rejects a changed identity before writing a community draft', async () => {
+  await expect(saveCommunityProfile('previous','community','Name','')).rejects.toThrow('session changed')
+  await expect(saveCommunityAccountPreferences('previous','community',{show_global_profile:true})).rejects.toThrow('session changed')
+  expect(fetcher).not.toHaveBeenCalled()
 })
 
 

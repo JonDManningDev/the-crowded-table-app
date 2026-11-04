@@ -40,6 +40,9 @@ export async function checkRuntime(db: AppDatabase) {
       and to_regprocedure('public.join_community(uuid)') is null
       and has_function_privilege(current_user,'app_private.is_staff_candidate(uuid,uuid,boolean)','EXECUTE')
       and has_column_privilege(current_user,'public.tenant_admin_actions','reason','SELECT')
+      and has_column_privilege(current_user,'public.user_account_profiles','display_name','UPDATE')
+      and to_regclass('public.my_community_summaries') is null
+      and not has_any_column_privilege('authenticated','public.user_account_profiles','SELECT,INSERT,UPDATE')
       and not has_table_privilege('authenticated','public.tenant_admin_actions','SELECT') as ready
     from pg_roles where rolname = current_user
   `.execute(db)

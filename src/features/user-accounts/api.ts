@@ -1,4 +1,6 @@
 import { preferencesPath, preferencesSchema } from '../../../shared/account-preferences'
+import { myCommunitiesPath, ownProfilePath, type CommunitySummaryPage, type OwnProfileResponse } from '../../../shared/self-service'
+import { currentApiUser, selfServiceRequest } from '../../lib/api-client'
 import { previewCommunity } from '../../mock/data'
 import { supabase } from '../../lib/supabase'
 import type { CommunityFilter, CommunitySummary, CommunityCardData, AccountPreferences, AccountProfilePlaceholders, AccountProfileInsight, PremiumFeaturePlaceholder } from './types'
@@ -44,24 +46,19 @@ export function readPremiumFeaturePlaceholders(): PremiumFeaturePlaceholder[] {
 }
 
 export async function readOwnProfile(userId: string) {
-  if (!supabase) throw new Error('Account services are not configured.')
-  const result = await supabase
-    .from('user_account_profiles')
-    .select('display_name,bio')
-    .eq('user_id', userId)
-    .maybeSingle()
-  if (result.error) throw result.error
-  return result.data
+  const result = await selfServiceRequest<OwnProfileResponse>(userId,ownProfilePath)
+  if (result.profile !== null && (typeof result.profile?.display_name !== 'string' ||
+    result.profile.bio !== null && typeof result.profile.bio !== 'string')) throw new Error('Invalid profile response.')
+  return result.profile
 }
 
-export async function saveOwnProfile(name: string, bio: string) {
-  if (!supabase) throw new Error('Account services are not configured.')
-  // user_id defaults to the authenticated caller in Postgres; RLS verifies it.
-  const result = await supabase.from('user_account_profiles').upsert({
-    display_name: name.trim(),
-    bio: bio.trim() || null,
-  }, { onConflict: 'user_id' }).select('user_id').single()
-  if (result.error) throw new Error('Your profile could not be saved. Please try again.')
+export async function saveOwnProfile(userId: string, name: string, bio: string) {
+  try {
+    const result = await selfServiceRequest<OwnProfileResponse>(userId,ownProfilePath,'PUT',{
+      display_name: name.trim(), bio: bio.trim() || null,
+    })
+    if (!result.profile || result.profile.user_id !== userId) throw new Error('Invalid profile response.')
+  } catch { throw new Error('Your profile could not be saved. Please try again.') }
 }
 
 async function requestPreferences(expectedUserId: string, preferences?: AccountPreferences) {
@@ -107,20 +104,21 @@ export function toCommunityCards(rows: CommunitySummary[]): CommunityCardData[] 
 }
 
 export async function readMyCommunities(filter: CommunityFilter): Promise<CommunitySummary[]> {
-  if (!supabase) throw new Error('Community services are not configured.')
-  const rows: CommunitySummary[] = []
-  // Respect the API row cap without silently dropping communities beyond page one.
-  for (let offset = 0; ; offset += 1000) {
-    let query = supabase.from('my_community_summaries')
-      .select('id,name,city,state_province,country_code,operational_status,created_at,is_owned,is_managed,is_member')
-    if (filter === 'all') query = query.or('is_owned.eq.true,is_member.eq.true')
-    else query = query.eq(filter === 'managed' ? 'is_managed' : 'is_owned', true)
-    const { data, error } = await query.order('created_at', { ascending: false })
-      .order('id', { ascending: true }).range(offset, offset + 999)
-    if (error) throw new Error('We couldn’t load your communities. Please try again.')
-    rows.push(...(data || []))
-    if (!data || data.length < 1000) return rows
-  }
+  try {
+    const userId = (await currentApiUser()).user.id
+    const rows: CommunitySummary[] = [], seen = new Set<string>()
+    let cursor: string | null = null
+    do {
+      const query = new URLSearchParams({ filter, limit: '100', ...(cursor ? { cursor } : {}) })
+      const page: CommunitySummaryPage = await selfServiceRequest(userId,myCommunitiesPath + '?' + query)
+      if (!Array.isArray(page.rows) || page.next !== null && typeof page.next !== 'string'
+        || page.next !== null && seen.has(page.next)) throw new Error('Invalid summary response.')
+      rows.push(...page.rows)
+      cursor = page.next
+      if (cursor) seen.add(cursor)
+    } while (cursor)
+    return rows
+  } catch { throw new Error('We couldn’t load your communities. Please try again.') }
 }
 
 // Account-list fixture only; real summaries never fall back to this record.

@@ -40,7 +40,7 @@ export function useUserAccount(userId?: string) {
   async function saveProfile(name: string, bio: string) {
     const request = lifecycle.current
     if (!userId || !request?.active || request.userId !== userId) throw new Error('Sign in to save your account profile.')
-    await saveOwnProfile(name, bio)
+    await saveOwnProfile(userId, name, bio)
     if (request.active) {
       request.revision += 1
       setProfile(previous => ({ ...previous, displayName: name.trim(), bio: bio.trim(), profileError: '' }))

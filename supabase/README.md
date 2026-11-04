@@ -59,6 +59,16 @@ Effective staff require the corresponding audit flag; either flag admits a dual-
 
 The read transaction holds the tenant against concurrent lifecycle changes before checking current authority. Runtime RLS independently applies the tenant/category/archive boundary even if a query omits its service predicate. The history suite in `npm run test:local -w server` verifies real Auth/HTTP, pagination, reasons, exact lookup, legacy records, REST/GraphQL bypasses, the restricted runtime role and both read/write serialization orders. Current pgTAP adds raw-grant and immutable-category checks. No history UI or hosted rollout is included in this local endpoint milestone.
 
+## Local self-service profiles, preferences and summaries
+
+Migration `20261103001200` revokes browser reads/writes on global profiles, curated community profiles and private community preferences, and drops `my_community_summaries`. It grants the restricted runtime the corresponding self operations. Existing exact community-profile HTTP reads remain available. The [shared self-service types](../shared/self-service.ts) replace the summary view's generated transport type; public schema types are regenerated after the view removal.
+
+GET/PUT `/api/me/profile` returns `{ profile }`, with a null profile only when the caller has not created one. PUT accepts `display_name` and nullable `bio`; actor, timestamps and audit IDs remain trusted. GET `/api/me/communities` returns `{ rows, next }`, with `filter=all|managed|owned`, optional cursor and limit (50 default, 100 maximum). It preserves pending and archived cards, timestamp-descending/UUID-ascending ordering and the ten original card fields. The runtime-only relationship accessor exposes only the caller's tenant IDs and membership/management/ownership booleans; it is the narrow archived-card exception to account-content RLS.
+
+PATCH `/api/communities/:tenantId/me/profile` accepts the name/bio pair and returns `{ tenantId }`. Pending, approved and suspended members may edit their own existing profile in an active community. GET/PATCH `/api/communities/:tenantId/me/preferences` returns the three private preference flags; PATCH accepts a nonempty subset. Reads permit inactive self and archived owner; edits require pending/approved self and an active tenant. Profile writes retain statement-time lifecycle checks without a tenant lock. Preference writes lock the account before the preference row, matching inactivity's lock order. The browser adapter still submits only its supported sharing flag; mock community controls remain simulations.
+
+All operations use verified Auth and `private, no-store`. Feature adapters bind writes to the initiating user and summaries to one identity across every page. The four-suite `npm run test:local -w server` command includes self-service HTTP authorization, normalization/attribution, pagination, removed REST/GraphQL paths, runtime omission tests, rollback, independent edits and both sharing/inactivity orders. The retained direct Data API suite now expects self-service access to fail. Hosted deployment still requires a matched schema/API/frontend release and separate authorization.
+
 ## Local development
 
 From the repository root, with Docker running and the Supabase CLI available:

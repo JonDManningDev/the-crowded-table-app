@@ -129,12 +129,6 @@ isOneToOne: false
       foreignKeyName: "community_accounts_tenant_id_fkey"
       columns: ["tenant_id"]
 isOneToOne: false
-      referencedRelation: "my_community_summaries"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "community_accounts_tenant_id_fkey"
-      columns: ["tenant_id"]
-isOneToOne: false
       referencedRelation: "tenants"
       referencedColumns: ["id"]
     },{
@@ -205,12 +199,6 @@ isOneToOne: false
       foreignKeyName: "tenant_admin_actions_tenant_id_fkey"
       columns: ["tenant_id"]
 isOneToOne: false
-      referencedRelation: "my_community_summaries"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "tenant_admin_actions_tenant_id_fkey"
-      columns: ["tenant_id"]
-isOneToOne: false
       referencedRelation: "tenants"
       referencedColumns: ["id"]
     }
@@ -233,12 +221,6 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "user_accounts"
       referencedColumns: ["user_id"]
-    },{
-      foreignKeyName: "tenant_settings_tenant_id_fkey"
-      columns: ["tenant_id"]
-isOneToOne: true
-      referencedRelation: "my_community_summaries"
-      referencedColumns: ["id"]
     },{
       foreignKeyName: "tenant_settings_tenant_id_fkey"
       columns: ["tenant_id"]
@@ -271,12 +253,6 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "user_accounts"
       referencedColumns: ["user_id"]
-    },{
-      foreignKeyName: "tenant_staff_assignments_tenant_id_fkey"
-      columns: ["tenant_id"]
-isOneToOne: false
-      referencedRelation: "my_community_summaries"
-      referencedColumns: ["id"]
     },{
       foreignKeyName: "tenant_staff_assignments_tenant_id_fkey"
       columns: ["tenant_id"]
@@ -321,12 +297,6 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "user_accounts"
       referencedColumns: ["user_id"]
-    },{
-      foreignKeyName: "tenant_website_content_overrides_tenant_id_fkey"
-      columns: ["tenant_id"]
-isOneToOne: false
-      referencedRelation: "my_community_summaries"
-      referencedColumns: ["id"]
     },{
       foreignKeyName: "tenant_website_content_overrides_tenant_id_fkey"
       columns: ["tenant_id"]
@@ -428,15 +398,7 @@ isOneToOne: false
                 }
           }
           Views: {
-            "my_community_summaries": {
-                  Row: {
-                    "city": string | null,"country_code": string,"created_at": string,"id": string,"is_managed": boolean | null,"is_member": boolean | null,"is_owned": boolean | null,"name": string,"operational_status": string,"state_province": string | null
-                  }
-                  ComputedFields: never
-                  Relationships: [
-
-                  ]
-                }
+            [_ in never]: never
           }
           Functions: {
             "lookup_tenant":

@@ -1,4 +1,6 @@
 import { submitCommunity } from './command-client'
+import { selfServiceRequest } from '../../lib/api-client'
+import type { CommunityPreferences } from '../../../shared/self-service'
 import type { CommunityPreviewIdentity, MembershipPreviewContent } from './types'
 import { interests, previewCommunity } from '../../mock/data'
 import type { Activity, Profile, SeatStatus } from '../../mock/data'
@@ -44,23 +46,19 @@ export type CommunityAccountPreferences = {
   show_global_profile: boolean
 }
 
-export async function saveCommunityAccountPreferences(tenantId: string, preferences: CommunityAccountPreferences) {
-  if (!supabase) throw new Error('Community services are not configured.')
-  // One update for the complete supported preference object. RLS scopes the
-  // caller; explicit fields exclude identity, standing and unimplemented mocks.
-  const result = await supabase.from('community_account_preferences').update({
-    show_global_profile: preferences.show_global_profile,
-  }).eq('tenant_id', tenantId).select('tenant_id').single()
-  if (result.error) throw result.error
+export async function saveCommunityAccountPreferences(userId: string, tenantId: string, preferences: CommunityAccountPreferences) {
+  const showGlobalProfile = preferences.show_global_profile
+  const result = await selfServiceRequest<CommunityPreferences>(userId,'/api/communities/'+encodeURIComponent(tenantId)+'/me/preferences','PATCH',{
+    show_global_profile: showGlobalProfile,
+  })
+  if (result.show_global_profile !== showGlobalProfile) throw new Error('Invalid preference response.')
 }
 
-export async function saveCommunityProfile(tenantId: string, name: string, bio: string) {
-  if (!supabase) throw new Error('Community services are not configured.')
-  const result = await supabase.from('community_account_profiles').update({
-    display_name: name.trim(),
-    bio: bio.trim() || null,
-  }).eq('tenant_id', tenantId).select('tenant_id').single()
-  if (result.error) throw result.error
+export async function saveCommunityProfile(userId: string, tenantId: string, name: string, bio: string) {
+  const result = await selfServiceRequest<{ tenantId: string }>(userId,'/api/communities/'+encodeURIComponent(tenantId)+'/me/profile','PATCH',{
+    display_name: name.trim(), bio: bio.trim() || null,
+  })
+  if (result.tenantId !== tenantId) throw new Error('Invalid profile response.')
 }
 
 // Sample content only; no community feed, entitlement or payment API is implied.

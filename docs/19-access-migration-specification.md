@@ -21,6 +21,14 @@ The [coordinated community write cutover](12-implementation-status.md#community-
 
 ## Review summary
 
+### Self-service HTTP cutover — authorized 2026-11-03
+
+The [local self-service cutover](12-implementation-status.md#self-service-through-the-typescript-api) replaces the remaining self-service browser calls together: global own-profile read/upsert, My Communities summaries, and community own-profile/preference edits. GET/PUT `/api/me/profile` derives identity from the verified actor and accepts only display name and bio on writes. GET `/api/me/communities` preserves the ten card fields, All/Managed/Owned filters, pending and archived relationships, and timestamp-descending/UUID-ascending keyset pagination (50 default, 100 maximum). Every page checks current identity and relationships; cursors bind actor and filter. The adapter keeps the existing complete-list UI and rejects a session switch between pages.
+
+PATCH `/api/communities/:tenantId/me/profile` updates the existing curated profile for pending/approved/suspended self in an active community. GET/PATCH `/api/communities/:tenantId/me/preferences` returns the holder's three private flags and accepts a nonempty subset of those flags; reads allow inactive self and archived owner, while edits require pending/approved self and an active tenant. Existing preview switches remain mocks. Independent profile writes retain statement-time lifecycle checks without a tenant lock. Preference writes lock the caller's account before the preference row to serialize against inactivity and its sharing reset, without serializing unrelated members.
+
+Revoke browser access to the migrated profile/preference relations and remove `my_community_summaries`. Global profile RLS remains self-only in this slice; other audiences need the separate consent/block work. A runtime-only private relationship accessor returns only the caller's tenant IDs and three card booleans, preserving the deliberate archived-card exception without opening protected community-account rows. The API owns card projection/filtering/pagination. Existing exact community-profile HTTP reads remain available. Keep trusted audit stamping, identity immutability, owner invariants and archive RLS. Verify real HTTP and runtime-role allows/denials, old REST/GraphQL surfaces, both sharing/inactivity orders, independent edit concurrency, cursor and session changes, normalization, rollback and current UI behavior before marking completion. Hosted release remains separate.
+
 Recommend a coordinated foundation migration that:
 
 1. Installs the standing capability lookup, first approval, disciplinary restriction, paused staff and accepted settings/permission flags.

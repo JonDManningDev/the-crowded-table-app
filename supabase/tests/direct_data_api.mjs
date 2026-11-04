@@ -6,7 +6,7 @@ import { createCommunity, communityCommand } from '../../server/src/communities/
 import assert from 'node:assert/strict';
 import { localStack } from './local-stack.mjs';
 import { execFileSync } from 'node:child_process';
-import { holdLocalTransaction } from './hold-local-transaction.mjs';
+
 import { createHmac, randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
@@ -23,7 +23,6 @@ function sql(statement) {
   return execFileSync('docker', ['exec', '-i', container, 'psql', '-X', '-qAt', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1'],
     { input: statement, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
 }
-const asUser = (id, statement) => `set role authenticated; set request.jwt.claim.sub='${id}'; ${statement}`;
 function client(id) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const payload = Buffer.from(JSON.stringify({ sub: id, role: 'authenticated', aud: 'authenticated', exp: Math.floor(Date.now() / 1000) + 600 })).toString('base64url');
@@ -53,7 +52,6 @@ const db = connectDatabase(endpoint.href);
 const create = (actor, name) => withVerifiedActor(db,actor,randomUUID(),tx => createCommunity(tx,actor,{
   name: 'API fixture',slug: name,country:'HN',region:'',city:'',timezone:'UTC',profile:{displayName:'Owner',bio:null}}));
 const command = (actor, body) => withVerifiedActor(db,actor,randomUUID(),tx => communityCommand(tx,actor,tenant,body));
-const hold = statement => holdLocalTransaction(container, 'postgres', statement);
 
 try {
   sql(`insert into auth.users(id,email,email_confirmed_at) values ${identities.map(id => `('${id}','${id}@example.test',${id === unverified ? 'null' : 'now()'})`).join(',')};`);
@@ -65,37 +63,14 @@ try {
 
   await denied(b.from('user_accounts').select('allow_direct_messages'), '42501');
   await denied(b.from('user_accounts').update({ allow_direct_messages: false }).eq('user_id', member), '42501');
-  for (const display_name of ['First name', 'Changed name']) {
-    const row = await success(b.from('user_account_profiles').upsert({ display_name, bio: ' ' }, { onConflict: 'user_id' }).select('user_id,display_name,bio,created_by,updated_by').single());
-    assert.deepEqual(row, { user_id: member, display_name, bio: null, created_by: member, updated_by: member });
+  // Migrated self-service tables are closed even to their original holder.
+  for (const table of ['user_account_profiles','community_account_profiles','community_account_preferences']) {
+    await denied(b.from(table).select('*'), '42501');
+    await denied(b.from(table).update(table.endsWith('preferences') ? {show_global_profile:true} : {display_name:'Bypass'}).eq(table==='user_account_profiles'?'user_id':'tenant_id',table==='user_account_profiles'?member:tenant), '42501');
   }
-  await denied(b.from('user_account_profiles').update({ updated_by: owner }).eq('user_id', member), '42501');
-  await denied(b.from('user_account_profiles').upsert({ user_id: owner, display_name: 'Spoofed' }), '42501');
-  await denied(u.from('user_account_profiles').upsert({ display_name: 'Unverified' }), '42501');
-  await denied(u.from('user_accounts').update({ enable_matchmaking: false }).eq('user_id', unverified).select('user_id').single(), '42501');
-
-  for (const display_name of ['Community name', 'Community updated']) {
-    const row = await success(b.from('community_account_profiles').update({ display_name, bio: '' }).eq('tenant_id',tenant).select('user_id,display_name,bio').single());
-    assert.deepEqual(row, { user_id: member, display_name, bio: null });
-  }
-  await success(c.from('community_account_profiles').update({ display_name: 'Other member' }).eq('tenant_id',tenant).select('user_id').single());
-  await success(b.from('community_account_preferences').update({ show_global_profile: true }).eq('tenant_id', tenant).select('tenant_id').single());
-  await denied(b.from('community_account_preferences').update({ show_global_profile: true }).eq('tenant_id', secondTenant).select('tenant_id').single(), 'PGRST116');
-  await denied(b.from('community_accounts').update({ standing: 'approved' }).eq('tenant_id', tenant), '42501');
-  await denied(b.from('community_account_profiles').update({ tenant_id: secondTenant }).eq('tenant_id', tenant), '42501');
-
-  // Hold both edits for one member. Another member can still update both rows.
-  const releaseMember = await hold(asUser(member, `update public.community_account_profiles set bio='Held' where tenant_id='${tenant}'; update public.community_account_preferences set show_global_profile=false where tenant_id='${tenant}'`));
-  try {
-    await success(c.from('community_account_profiles').update({ bio: 'Concurrent' }).eq('tenant_id', tenant).select('user_id').single().abortSignal(AbortSignal.timeout(2000)));
-    await success(c.from('community_account_preferences').update({ show_global_profile: true }).eq('tenant_id', tenant).select('tenant_id').single().abortSignal(AbortSignal.timeout(2000)));
-  } finally { await releaseMember(); }
-  // A profile edit also has no explicit lock on the tenant itself.
-  const releaseTenant = await hold(`select id from public.tenants where id='${tenant}' for update`);
-  try {
-    await success(b.from('community_account_profiles').update({ bio: 'No tenant lock' }).eq('tenant_id', tenant).select('user_id').single().abortSignal(AbortSignal.timeout(2000)));
-  } finally { await releaseTenant(); }
-
+  await denied(b.from('user_account_profiles').upsert({display_name:'Bypass'}), '42501');
+  await denied(b.from('my_community_summaries').select('*'), 'PGRST205');
+  await denied(b.from('community_accounts').update({standing:'approved'}).eq('tenant_id',tenant), '42501');
   await command(owner,{kind:'grant',target:member});
   await command(owner,{kind:'permissions',target:member,permissions:{can_modify_content:true}});
   const copy = { tenant_id: tenant, content_key: 'community.hero.heading', text_value: 'First content' };
@@ -118,23 +93,19 @@ try {
   await denied(a.from('tenant_admin_candidates').select('*'),'PGRST205');
   await command(owner,{kind:'archive',archived:true});
   assert.deepEqual(await success(b.from('community_accounts').select('*').eq('tenant_id', tenant)), []);
-  assert.deepEqual(await success(b.from('community_account_profiles').select('*').eq('tenant_id', tenant).eq('user_id', member)), []);
-  assert.deepEqual(await success(c.from('community_account_profiles').select('*').eq('tenant_id', tenant)), []);
-  assert.deepEqual(await success(b.from('community_account_preferences').select('show_global_profile').eq('tenant_id',tenant)),[]);
-  const card = await success(b.from('my_community_summaries').select('id,operational_status').eq('id', tenant).single());
-  assert.equal(card.operational_status, 'archived');
-  await denied(b.from('community_account_profiles').upsert({ tenant_id: tenant, display_name: 'Archived' }, { onConflict: 'tenant_id,user_id' }), '42501');
-  await denied(b.from('community_account_preferences').update({ show_global_profile: false }).eq('tenant_id', tenant).select('tenant_id').single(), 'PGRST116');
+  await denied(b.from('community_account_profiles').select('*'), '42501');
+  await denied(b.from('community_account_preferences').select('show_global_profile'), '42501');
+  await denied(b.from('my_community_summaries').select('*'), 'PGRST205');
   await denied(b.from('tenant_website_content_overrides').delete().eq('tenant_id', tenant).select('content_key').single(), 'PGRST116');
   await success(a.from('tenant_website_content_overrides').update({ text_value: 'Archived owner' }).eq('tenant_id', tenant).select('content_key').single());
-  await success(b.from('user_account_profiles').update({ bio: 'Global still editable' }).eq('user_id', member).select('user_id').single());
+  await denied(b.from('user_account_profiles').update({ bio: 'Bypass' }).eq('user_id', member), '42501');
   sql(`update auth.users set banned_until=now()+interval '1 day' where id='${member}';`);
   await denied(b.from('user_accounts').update({ enable_matchmaking: false }).eq('user_id', member).select('user_id').single(), '42501');
   await denied(b.from('user_account_profiles').upsert({ display_name: 'Banned' }), '42501');
   const creations = await Promise.allSettled([owner,other].map(actor => create(actor,slug+'-race')));
   assert.equal(creations.filter(r => r.status==='fulfilled').length,1);
   assert.equal(creations.filter(r => r.status==='rejected' && r.reason.code==='23505').length,1);
-  console.log(`PASS ${checks} real PostgREST checks, independent member edits, retired commands and concurrent slug claims`);
+  console.log(`PASS ${checks} real PostgREST checks, retained copy/detail edits, retired self-service/command paths and concurrent slug claims`);
 } finally {
   await db.destroy();
   // Only our random identities/tenants, only the hardcoded local Docker DB.
