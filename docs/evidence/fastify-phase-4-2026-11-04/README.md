@@ -33,3 +33,13 @@ During checkpoint 2 verification, the first typecheck and two baseline HTTP case
 Own request, review, staff candidates and queue retain their statement boundaries and exact projections. Null requests differ from missing accounts; review retains 403/404 unavailable. The final legacy registration and inline request SQL/schemas are removed.
 
 Preservation review passed: 110 SQL templates (with input-binding/format normalization), unchanged HTTP fixture, client/shared contracts, migrations, lockfile, runtime privilege manifest, startup/actor/cursor facilities. No required gate remains blocked. Next: checkpoint 4; later groups remain untouched.
+
+## Checkpoint 4 — Profiles and preferences
+
+13 community operations migrated cumulatively. All 50 backend cases, server TypeScript and root lint passed. Required local suites passed sequentially: `self-service-local`, `community-local`, `directory-local`, `global-profiles-local`. Existing assertions, transaction barriers and lock observations were retained.
+
+Exact profile and independent community profile/preferences edits retain archive/inactive exceptions, sharing gates and account/preference lock order. The temporary accounts/self-service.ts module is deleted; real tests import its implementations directly from the community service.
+
+Preservation review passed: 110 SQL templates (with input-binding/format normalization), unchanged HTTP fixture, client/shared contracts, migrations, lockfile, runtime privilege manifest, startup/actor/cursor facilities. No required gate remains blocked. Next: checkpoint 5; later groups remain untouched.
+
+Checkpoint 4 also verifies exact-profile compiled SELECT fields and bound parameters with the actual service. An initial typecheck caught an unnecessary `params.target` extraction caused by matching a SQL alias/comment; it was removed before runtime checks. No assertion changed. A transient Windows write error during test inventory regeneration was retried; the final complete 50-case gate passed.

@@ -8,6 +8,7 @@ import { type CommunityLanding } from '../../../shared/community-configuration.t
 import { type DirectoryPage, type DirectoryQuery, type PublicDirectoryRow } from '../../../shared/community-directory.ts'
 import { staffFlags, type CommunityCommand, type CommandResult, type CreateCommunityInput, type CuratedProfile, type StaffPermissions } from '../../../shared/community-commands.ts'
 import { type AccountReview, type CommunityRequest, type OwnCommunityRequestResponse, type StaffCandidate } from '../../../shared/community-reads.ts'
+import { communityPreferenceFields, type CommunityPreferences, type ProfileInput } from '../../../shared/self-service.ts'
 
 type Tx = Transaction<ApiTables>
 interface CommunityDependencies { db: AppDatabase; cursors: DirectoryCursors }
@@ -43,6 +44,19 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
     },
     pendingRequests(context: AuthenticatedContext, params: { tenantId: string }, query: { after?: string }) {
       return pendingRequests(db, context, params, query)
+    },
+    // Profiles and preferences
+    readProfile(context: AuthenticatedContext, params: { tenantId: string; userId: string }) {
+      return readProfile(db, context, params)
+    },
+    saveOwnProfile(context: AuthenticatedContext, params: { tenantId: string }, input: ProfileInput) {
+      return run(db, context, tx => ownCommunityProfile(tx, context.actorId, params.tenantId, input))
+    },
+    readOwnPreferences(context: AuthenticatedContext, params: { tenantId: string }) {
+      return run(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId))
+    },
+    saveOwnPreferences(context: AuthenticatedContext, params: { tenantId: string }, input: Partial<CommunityPreferences>) {
+      return run(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId, input))
     }
   }
 }
@@ -311,4 +325,66 @@ function pendingRequests(db: AppDatabase, context: AuthenticatedContext, params:
           order by r.id limit 51`.execute(tx)).rows
     return { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].id : null }
   })
+}
+
+// Profiles and preferences
+const communityProfileColumns = ['tenant_id', 'user_id', 'display_name', 'bio', 'created_at', 'updated_at', 'created_by', 'updated_by'] as const
+function readProfile(db: AppDatabase, context: AuthenticatedContext, params: { tenantId: string; userId: string }) {
+  const actor = context.actorId;
+  const tenantId = params.tenantId;
+  const userId = params.userId;
+  return withEligibleActorTransaction(db, context, async tx => {
+    // Resolve viewer, target and curated profile in the same snapshot.
+    const profile = await tx.selectFrom('community_account_profiles as p')
+      .innerJoin('community_accounts as target', join => join
+        .onRef('target.tenant_id', '=', 'p.tenant_id').onRef('target.user_id', '=', 'p.user_id'))
+      .innerJoin('community_accounts as viewer', join => join
+        .onRef('viewer.tenant_id', '=', 'p.tenant_id').on('viewer.user_id', '=', actor))
+      .where('p.tenant_id', '=', tenantId).where('p.user_id', '=', userId)
+      .where(eb => eb.or([
+        eb.and([sql<boolean>`app_private.active_tenant(p.tenant_id)`, eb.or([
+          eb.and([eb('p.user_id', '=', actor), eb('viewer.standing', '=', 'pending')]),
+          eb.and([eb('viewer.standing', 'in', ['approved', 'suspended']),
+          eb('target.standing', 'in', ['approved', 'suspended', 'inactive'])]),
+        ])]),
+        eb.and([sql<boolean>`not app_private.active_tenant(p.tenant_id)`, sql<boolean>`app_private.is_approved_owner(p.tenant_id)`]),
+      ]))
+      .select(communityProfileColumns.map(field => `p.${field}` as const)).executeTakeFirst()
+    return profile ? { status: 200 as const, profile } : { status: 404 as const }
+  })
+}
+export async function ownCommunityProfile(tx: Transaction<ApiTables>, actor: string, tenant: string, input: ProfileInput) {
+  // Independent self edits have statement-time lifecycle checks and no tenant lock.
+  const result = await sql`update public.community_account_profiles p set display_name=${input.display_name.trim()},bio=${input.bio?.trim() || null}
+    where p.tenant_id=${tenant} and p.user_id=${actor} and app_private.active_tenant(p.tenant_id)
+      and exists(select from public.community_accounts c join public.community_standing s using(standing)
+        where c.tenant_id=p.tenant_id and c.user_id=p.user_id and s.enable_own_profile_management)
+    returning p.tenant_id`.execute(tx)
+  if (!result.rows.length) throw new ApplicationError(404, 'missing')
+  return { tenantId: tenant }
+}
+export async function ownCommunityPreferences(tx: Transaction<ApiTables>, actor: string, tenant: string, input?: Partial<CommunityPreferences>) {
+  if (input) {
+    // Account then preference is also the lifecycle writer's order. Do not take
+    // a tenant lock: other members' independent saves must remain concurrent.
+    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+    const account = (await sql<{ standing: string }>`select standing from public.community_accounts
+      where tenant_id=${tenant} and user_id=${actor} for update`.execute(tx)).rows[0]
+    if (!account || !['pending', 'approved'].includes(account.standing)) throw new ApplicationError(404, 'missing')
+  }
+  const fields = sql.join(communityPreferenceFields.map(field => sql.id(field)))
+  const result = input
+    ? await sql<CommunityPreferences>`update public.community_account_preferences set ${sql.join(Object.entries(input).map(([key, value]) => sql`${sql.id(key)}=${value}`))}
+        where tenant_id=${tenant} and user_id=${actor} and app_private.active_tenant(tenant_id) returning ${fields}`.execute(tx)
+    : await sql<CommunityPreferences>`select ${fields} from public.community_account_preferences where tenant_id=${tenant} and user_id=${actor}
+        and (app_private.active_tenant(tenant_id) or app_private.is_approved_owner(tenant_id))`.execute(tx)
+  if (!result.rows[0]) throw new ApplicationError(404, 'missing')
+  return result.rows[0]
+}
+
+// Internal helpers
+async function run<T>(db: AppDatabase, context: AuthenticatedContext, work: (tx: Tx) => Promise<T>) {
+  const result = await withEligibleActorTransaction(db, context, work)
+  if (!result.eligible) throw new ApplicationError(403, 'ineligible')
+  return result.value
 }

@@ -2,9 +2,9 @@
 
 ## Fastify refactor Phase 4 — 2026-11-04
 
-**Phase 4 checkpoint 3/8 — verified 2026-11-04.** 9 of 29 community operations now belong to the triad, through requests and reviews. One centrally constructed service supplies explicit public/protected operation subsets; only the public plugin receives the verifier. All 49 backend cases, server TypeScript, root lint and this checkpoint's required local suites passed. The HTTP fixture and database/security contracts remain unchanged. Later groups remain in their existing modules until their checkpoints. See [Phase 4 evidence](evidence/fastify-phase-4-2026-11-04/README.md).
+**Phase 4 checkpoint 4/8 — verified 2026-11-04.** 13 of 29 community operations now belong to the triad, through profiles and preferences. One centrally constructed service supplies explicit public/protected operation subsets; only the public plugin receives the verifier. All 50 backend cases, server TypeScript, root lint and this checkpoint's required local suites passed. The HTTP fixture and database/security contracts remain unchanged. Later groups remain in their existing modules until their checkpoints. See [Phase 4 evidence](evidence/fastify-phase-4-2026-11-04/README.md).
 
-Checkpoint 3 moved requests and reviews and removed each previous registration exactly once. The temporary three-operation community self-service module remains until checkpoint 4. Prior evidence below remains historical. No hosted execution, migrations, dependency changes, product-policy changes or frontend implementation occurred.
+Checkpoint 4 moved profiles and preferences and removed each previous registration exactly once. The temporary account self-service module is removed; its transaction-taking implementations now live in the community service. Prior evidence below remains historical. No hosted execution, migrations, dependency changes, product-policy changes or frontend implementation occurred.
 
 ## Fastify refactor Phase 3 — 2026-11-04
 

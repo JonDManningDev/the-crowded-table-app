@@ -1,6 +1,8 @@
+import type { FromSchema } from 'json-schema-to-ts'
 import { errorResponse } from '../http-errors.ts'
 import { copySlots } from '../../../shared/community-configuration.ts'
 import { staffFlags, type CommunityCommand } from '../../../shared/community-commands.ts'
+import { communityPreferenceFields, profileInputSchema } from '../../../shared/self-service.ts'
 
 const standingSchemas = (() => {
   const fields = ['standing', 'enable_standard_chat_visibility', 'enable_standard_activity_visibility',
@@ -109,6 +111,45 @@ const routesSchemas = (() => {
   }
 })()
 
+const profileSchemas = (() => {
+  const uuid = { type: 'string', format: 'uuid' }
+  const fields = ['tenant_id', 'user_id', 'display_name', 'bio', 'created_at', 'updated_at', 'created_by', 'updated_by'] as const
+  const profileSchema = {
+    type: 'object', required: fields, additionalProperties: false,
+    properties: {
+      tenant_id: uuid, user_id: uuid, display_name: { type: 'string' }, bio: { type: ['string', 'null'] },
+      created_at: { type: 'string', format: 'date-time' }, updated_at: { type: 'string', format: 'date-time' },
+      created_by: { type: ['string', 'null'], format: 'uuid' }, updated_by: { type: ['string', 'null'], format: 'uuid' },
+    },
+  }
+  return {
+    readProfile: {
+      params: { type: 'object', required: ['tenantId', 'userId'], properties: { tenantId: uuid, userId: uuid } },
+      querystring: { type: 'object', additionalProperties: false, properties: {} },
+      response: { 200: profileSchema, 403: errorResponse, 404: errorResponse },
+    }
+  }
+})()
+
+const selfSchemas = (() => {
+  const uuid = { type: 'string', format: 'uuid' }
+  const noQuery = { type: 'object', additionalProperties: false, properties: {} }
+  const tenantParams = { type: 'object', required: ['tenantId'], additionalProperties: false, properties: { tenantId: uuid } }
+  const preferenceProperties = Object.fromEntries(communityPreferenceFields.map(key => [key, { type: 'boolean' }]))
+  const preferenceResponse = { type: 'object', required: communityPreferenceFields, additionalProperties: false, properties: preferenceProperties }
+  const preferencePatch = { type: 'object', minProperties: 1, additionalProperties: false, properties: preferenceProperties }
+  const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse }
+  return {
+    saveOwnProfile: {
+      params: tenantParams, querystring: noQuery, body: profileInputSchema, response: {
+        200: { type: 'object', required: ['tenantId'], additionalProperties: false, properties: { tenantId: uuid } }, ...errors,
+      }
+    },
+    readOwnPreferences: { params: tenantParams, querystring: noQuery, response: { 200: preferenceResponse, ...errors } },
+    saveOwnPreferences: { params: tenantParams, querystring: noQuery, body: preferencePatch, response: { 200: preferenceResponse, ...errors } }
+  }
+})()
+
 // Public access and standing
 export const listStandingsSchema = standingSchemas.listStandings
 export const readLandingSchema = configSchemas.readLanding
@@ -123,3 +164,11 @@ export const ownRequestSchema = routesSchemas.ownRequest
 export const reviewAccountSchema = routesSchemas.reviewAccount
 export const staffCandidatesSchema = routesSchemas.staffCandidates
 export const pendingRequestsSchema = routesSchemas.pendingRequests
+
+// Profiles and preferences
+export const readProfileSchema = profileSchemas.readProfile
+export const saveOwnProfileSchema = selfSchemas.saveOwnProfile
+export const readOwnPreferencesSchema = selfSchemas.readOwnPreferences
+export const saveOwnPreferencesSchema = selfSchemas.saveOwnPreferences
+
+export type CommunityProfileInput = FromSchema<typeof profileInputSchema>

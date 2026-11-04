@@ -6,6 +6,7 @@ import type { BearerVerifier } from '../token-verifier.ts'
 import { ApplicationError } from '../application-errors.ts'
 import { type DirectoryQuery } from '../../../shared/community-directory.ts'
 import { type CommunityCommand, type CreateCommunityInput } from '../../../shared/community-commands.ts'
+import { type CommunityPreferences } from '../../../shared/self-service.ts'
 
 type PublicCommunityOperations = Pick<CommunityService, "listStandings" | "readLanding" | "publicDirectory">
 export const publicCommunityRoutes: FastifyPluginAsync<{ service: PublicCommunityOperations; verify: BearerVerifier }> = async (routes, { service, verify }) => {
@@ -21,7 +22,7 @@ export const publicCommunityRoutes: FastifyPluginAsync<{ service: PublicCommunit
   routes.get<{ Params: { slug: string }; Querystring: DirectoryQuery }>("/api/public/communities/:slug/directory", { onRequest: optionalAuthentication(verify), schema: schemas.publicDirectorySchema }, request => service.publicDirectory(request.params, request.query))
 }
 
-type ProtectedCommunityOperations = Pick<CommunityService, "createCommunity" | "executeCommand" | "ownRequest" | "reviewAccount" | "staffCandidates" | "pendingRequests">
+type ProtectedCommunityOperations = Pick<CommunityService, "createCommunity" | "executeCommand" | "ownRequest" | "reviewAccount" | "staffCandidates" | "pendingRequests" | "readProfile" | "saveOwnProfile" | "readOwnPreferences" | "saveOwnPreferences">
 export const communityRoutes: FastifyPluginAsync<{ service: ProtectedCommunityOperations }> = async (routes, { service }) => {
   // Creation and lifecycle
   routes.post<{ Body: CreateCommunityInput }>("/api/communities", { bodyLimit: 32768, schema: schemas.createCommunitySchema }, async (request, reply) => {
@@ -65,4 +66,16 @@ export const communityRoutes: FastifyPluginAsync<{ service: ProtectedCommunityOp
     if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
     return result.value
   })
+
+  // Profiles and preferences
+  routes.get<{ Params: { tenantId: string; userId: string } }>("/api/communities/:tenantId/accounts/:userId/profile", { schema: schemas.readProfileSchema }, async (request, reply) => {
+    const result = await service.readProfile(getAuthenticatedContext(request), request.params);
+
+    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
+    if (result.value.status === 200) return result.value.profile
+    return reply.code(result.value.status).send({ code: 'missing', requestId: request.id })
+  })
+  routes.patch<{ Params: { tenantId: string }; Body: schemas.CommunityProfileInput }>("/api/communities/:tenantId/me/profile", { schema: schemas.saveOwnProfileSchema }, request => service.saveOwnProfile(getAuthenticatedContext(request), request.params, request.body))
+  routes.get<{ Params: { tenantId: string } }>("/api/communities/:tenantId/me/preferences", { schema: schemas.readOwnPreferencesSchema }, request => service.readOwnPreferences(getAuthenticatedContext(request), request.params))
+  routes.patch<{ Params: { tenantId: string }; Body: Partial<CommunityPreferences> }>("/api/communities/:tenantId/me/preferences", { schema: schemas.saveOwnPreferencesSchema }, request => service.saveOwnPreferences(getAuthenticatedContext(request), request.params, request.body))
 }

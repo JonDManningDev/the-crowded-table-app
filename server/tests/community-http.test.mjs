@@ -108,6 +108,50 @@ const operations = [
     "body": false,
     "tagged": true,
     "public": false
+  },
+  {
+    "group": 4,
+    "name": "readProfile",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/accounts/:userId/profile",
+    "params": true,
+    "query": false,
+    "body": false,
+    "tagged": true,
+    "public": false
+  },
+  {
+    "group": 4,
+    "name": "saveOwnProfile",
+    "method": "PATCH",
+    "path": "/api/communities/:tenantId/me/profile",
+    "params": true,
+    "query": false,
+    "body": true,
+    "tagged": false,
+    "public": false
+  },
+  {
+    "group": 4,
+    "name": "readOwnPreferences",
+    "method": "GET",
+    "path": "/api/communities/:tenantId/me/preferences",
+    "params": true,
+    "query": false,
+    "body": false,
+    "tagged": false,
+    "public": false
+  },
+  {
+    "group": 4,
+    "name": "saveOwnPreferences",
+    "method": "PATCH",
+    "path": "/api/communities/:tenantId/me/preferences",
+    "params": true,
+    "query": false,
+    "body": true,
+    "tagged": false,
+    "public": false
   }
 ];
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/http-contract.json', import.meta.url), 'utf8'))
@@ -238,6 +282,9 @@ test('migrated routes validate before service calls and preserve public/protecte
     error(h, operation, await h.app.inject({ ...request, url: request.url + '?forged_identity=1' }), 400, 'invalid_request')
     assert.equal(h.verified.length - before, operation.public ? 0 : 1)
     error(h, operation, await h.app.inject({ ...request, headers: { authorization: 'Bearer invalid' } }), 401, 'unauthenticated')
+    if (operation.body) {
+      error(h, operation, await h.app.inject({ ...request, payload: { ...request.payload, actorId } }), 400, 'invalid_request')
+    }
   }
   const standing = operations.find(operation => operation.name === 'listStandings'), before = h.verified.length
   error(h, standing, await h.app.inject({ url: '/api/community-standings?forged_identity=1', headers: { authorization: 'Bearer invalid' } }), 400, 'invalid_request')
@@ -254,6 +301,10 @@ test('service denials retain operation-specific eligibility, missing and unavail
   for (const operation of operations.filter(operation => ['ownRequest', 'reviewAccount', 'readProfile'].includes(operation.name))) {
     h.queue(operation.name, { eligible: true, value: { status: 404 } })
     error(h, operation, await h.app.inject(input(operation)), 404, operation.name === 'reviewAccount' ? 'unavailable' : 'missing')
+  }
+  for (const operation of operations.filter(operation => !operation.public && !operation.tagged)) {
+    h.queue(operation.name, new ApplicationError(404, 'missing'))
+    error(h, operation, await h.app.inject(input(operation)), 404, 'missing')
   }
   const landing = operations.find(operation => operation.name === 'readLanding')
   h.queue(landing.name, undefined)
@@ -311,4 +362,13 @@ test('public service retains its projections, single-query bindings and absence 
   assert.equal(h.queries.length, 3)
   assert.equal(h.queries[2].sql, 'select app_private.public_community_directory($1,$2::uuid,$3) as rows')
   assert.deepEqual(h.queries[2].parameters, ['test-community', null, 50])
+})
+
+test('exact profile service projects the same eight columns independently of HTTP schemas', async t => {
+  const h = createHttpHarness(t), operation = operations.find(operation => operation.name === 'readProfile')
+  h.eligible([response(operation).dto])
+  assert.equal((await h.app.inject(input(operation))).statusCode, 200)
+  assert.equal(/^select (.*?) from /.exec(h.queries.at(-1).sql)?.[1],
+    '"p"."tenant_id", "p"."user_id", "p"."display_name", "p"."bio", "p"."created_at", "p"."updated_at", "p"."created_by", "p"."updated_by"')
+  assert.deepEqual(h.queries.at(-1).parameters, [actorId, tenantId, targetId, actorId, 'pending', 'approved', 'suspended', 'approved', 'suspended', 'inactive'])
 })
