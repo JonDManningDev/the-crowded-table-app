@@ -18,7 +18,7 @@ const shapes: Record<CommunityCommand['kind'], Record<string, unknown>> = {
   clear: { target: uuid, revision: uuid, reason: string(2000) }, grant: { target: uuid }, resume: { target: uuid },
   revoke: { target: uuid, reason: string(2000) }, reappoint: { target: uuid, permissions: object(flags) },
   permissions: { target: uuid, permissions: { ...object(flags, []), minProperties: 1 } },
-  archive: { archived: bool }, 'auto-approval': { enabled: bool },
+  archive: { archived: bool },
 }
 const commandSchema = { oneOf: Object.entries(shapes).map(([kind, props]) =>
   object({ kind: { const: kind }, ...props }, ['kind', ...Object.keys(props).filter(key => key !== 'reason')])) }

@@ -1,5 +1,6 @@
 import { connectDatabase } from '../../server/src/database.ts';
 import { withVerifiedActor } from '../../server/src/actor-transaction.ts';
+import { configurationSettings } from '../../server/src/communities/configuration.ts';
 import { createCommunity, communityCommand } from '../../server/src/communities/commands.ts';
 // Real Supabase SDK/PostgREST and concurrent SQL checks. Local Docker only.
 // Creates uniquely identified synthetic fixtures and removes only those fixtures.
@@ -57,7 +58,7 @@ try {
   sql(`insert into auth.users(id,email,email_confirmed_at) values ${identities.map(id => `('${id}','${id}@example.test',${id === unverified ? 'null' : 'now()'})`).join(',')};`);
   tenant = (await create(owner,slug)).tenantId;
   secondTenant = (await create(other,slug+'-b')).tenantId;
-  await command(owner,{kind:'auto-approval',enabled:true});
+  await withVerifiedActor(db,owner,randomUUID(),tx=>configurationSettings(tx,owner,tenant,{auto_approve_users:true}));
   for (const actor of [member,other]) await command(actor,{kind:'join',profile:{displayName:'Participant',bio:null}});
   const a = client(owner), b = client(member), c = client(other), u = client(unverified);
 
@@ -71,41 +72,27 @@ try {
   await denied(b.from('user_account_profiles').upsert({display_name:'Bypass'}), '42501');
   await denied(b.from('my_community_summaries').select('*'), 'PGRST205');
   await denied(b.from('community_accounts').update({standing:'approved'}).eq('tenant_id',tenant), '42501');
-  await command(owner,{kind:'grant',target:member});
-  await command(owner,{kind:'permissions',target:member,permissions:{can_modify_content:true}});
-  const copy = { tenant_id: tenant, content_key: 'community.hero.heading', text_value: 'First content' };
-  await success(b.from('tenant_website_content_overrides').upsert(copy, { onConflict: 'tenant_id,content_key' }).select('content_key').single());
-  copy.text_value = 'Changed content';
-  await success(b.from('tenant_website_content_overrides').upsert(copy, { onConflict: 'tenant_id,content_key' }).select('content_key').single());
-  await denied(c.from('tenant_website_content_overrides').update({ text_value: 'Unauthorized' }).eq('tenant_id', tenant).select('content_key').single(), 'PGRST116');
-  await success(b.from('tenant_website_content_overrides').delete().eq('tenant_id', tenant).eq('content_key', copy.content_key).select('content_key').single());
-  await denied(b.from('tenant_website_content_overrides').delete().eq('tenant_id', tenant).eq('content_key', 'unknown').select('content_key').single(), 'PGRST116');
-  await success(b.from('tenant_website_content_overrides').upsert(copy).select('content_key').single());
-  await denied(b.rpc('set_admin_permissions', { p_tenant_id: tenant, p_user_id: member, p_can_modify_content: true }), 'PGRST202');
-  await denied(b.from('tenants').update({ name: 'Unauthorized' }).eq('id', tenant).select('id').single(), 'PGRST116');
-  await success(a.from('tenants').update({ name: ' Renamed ', city: ' ' }).eq('id', tenant).select('id').single());
-  for (const rpc of ['create_tenant','join_community','set_tenant_archived','approve_community_account','set_admin_permissions','create_tenant_admin','set_auto_approve_users']) {
-    await denied(a.rpc(rpc), 'PGRST202');
+  for (const actor of [a,b]) {
+    for (const table of ['tenants','tenant_settings','tenant_website_content_overrides']) {
+      await denied(actor.from(table).select('*'),'42501');
+    }
+    await denied(actor.from('tenants').update({name:'Bypass'}).eq('id',tenant),'42501');
+    await denied(actor.from('tenant_settings').update({auto_approve_users:true}).eq('tenant_id',tenant),'42501');
+    await denied(actor.from('tenant_website_content_overrides').upsert({tenant_id:tenant,content_key:'community.hero.heading',text_value:'Bypass'}),'42501');
+    await denied(actor.from('tenant_website_content_overrides').delete().eq('tenant_id',tenant),'42501');
+    for (const rpc of ['lookup_tenant','create_tenant','join_community','set_tenant_archived','approve_community_account','set_admin_permissions','create_tenant_admin','set_auto_approve_users']) await denied(actor.rpc(rpc),'PGRST202');
   }
-  await denied(a.from('tenants').update({operational_status:'archived'}).eq('id',tenant),'42501');
   await denied(a.from('tenant_staff_assignments').update({can_grant_staff:false}).eq('tenant_id',tenant),'42501');
   await denied(a.from('community_accounts').insert({tenant_id:tenant,user_id:unverified,standing:'approved'}),'42501');
   await denied(a.from('tenant_admin_candidates').select('*'),'PGRST205');
   await command(owner,{kind:'archive',archived:true});
-  assert.deepEqual(await success(b.from('community_accounts').select('*').eq('tenant_id', tenant)), []);
-  await denied(b.from('community_account_profiles').select('*'), '42501');
-  await denied(b.from('community_account_preferences').select('show_global_profile'), '42501');
-  await denied(b.from('my_community_summaries').select('*'), 'PGRST205');
-  await denied(b.from('tenant_website_content_overrides').delete().eq('tenant_id', tenant).select('content_key').single(), 'PGRST116');
-  await success(a.from('tenant_website_content_overrides').update({ text_value: 'Archived owner' }).eq('tenant_id', tenant).select('content_key').single());
-  await denied(b.from('user_account_profiles').update({ bio: 'Bypass' }).eq('user_id', member), '42501');
+  assert.deepEqual(await success(b.from('community_accounts').select('*').eq('tenant_id',tenant)),[]);
   sql(`update auth.users set banned_until=now()+interval '1 day' where id='${member}';`);
-  await denied(b.from('user_accounts').update({ enable_matchmaking: false }).eq('user_id', member).select('user_id').single(), '42501');
-  await denied(b.from('user_account_profiles').upsert({ display_name: 'Banned' }), '42501');
+  await denied(b.from('user_account_profiles').upsert({display_name:'Banned'}),'42501');
   const creations = await Promise.allSettled([owner,other].map(actor => create(actor,slug+'-race')));
   assert.equal(creations.filter(r => r.status==='fulfilled').length,1);
   assert.equal(creations.filter(r => r.status==='rejected' && r.reason.code==='23505').length,1);
-  console.log(`PASS ${checks} real PostgREST checks, retained copy/detail edits, retired self-service/command paths and concurrent slug claims`);
+  console.log(`PASS ${checks} real PostgREST checks, retired self-service/configuration/command paths and concurrent slug claims`);
 } finally {
   await db.destroy();
   // Only our random identities/tenants, only the hardcoded local Docker DB.

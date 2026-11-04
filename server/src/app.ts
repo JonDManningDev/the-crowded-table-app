@@ -2,6 +2,7 @@ import { CommunityError } from './communities/commands.ts'
 import { registerCommunityCommands } from './communities/routes.ts'
 import { registerAccountHistory } from './communities/history.ts'
 import { registerSelfService } from './accounts/self-service.ts'
+import { registerCommunityConfiguration, registerCommunityLanding } from './communities/configuration.ts'
 import { registerCommunityProfile } from './communities/profile.ts'
 import { registerStandingReference } from './communities/standing.ts'
 import { errorResponse } from './http.ts'
@@ -28,6 +29,7 @@ export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<s
   app.get('/health/live', async () => ({ live: true }))
   app.get('/health/ready', async () => { await checkRuntime(db); return { ready: true } })
   registerStandingReference(app, db, verify)
+  registerCommunityLanding(app, db, verify)
   app.register(async routes => {
     routes.decorateRequest('actor', '')
     routes.addHook('onRequest', async (request, reply) => {
@@ -39,6 +41,7 @@ export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<s
     registerCommunityCommands(routes, db)
     registerAccountHistory(routes, db)
     registerSelfService(routes, db)
+    registerCommunityConfiguration(routes, db)
     registerCommunityProfile(routes, db)
     const querystring = { type: 'object', additionalProperties: false, properties: {} }
     const response = { 200: preferencesSchema, 403: errorResponse, 404: errorResponse }

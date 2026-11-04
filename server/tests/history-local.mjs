@@ -32,8 +32,8 @@ async function user() {
   return { id: data.user.id, token: data.session.access_token, client }
 }
 let base
-async function send(viewer, path, body, expected = 200) {
-  const response = await fetch(base + path, { method: body ? 'POST' : 'GET',
+async function send(viewer, path, body, expected = 200, method = body ? 'POST' : 'GET') {
+  const response = await fetch(base + path, { method,
     headers: { Authorization: 'Bearer ' + viewer.token, 'Content-Type': 'application/json' },
     ...(body && { body: JSON.stringify(body) }) })
   const data = await response.json()
@@ -57,7 +57,7 @@ try {
   const empty={rows:[],next:null}, exact=eventId=>({eventId})
   const noPermissions=Object.fromEntries(staffFlags.map(flag=>[flag,false]))
   const review=viewer=>send(owner,'/api/communities/'+tenant+'/accounts/'+viewer.id+'/review')
-  await cmd(owner,{kind:'auto-approval',enabled:true})
+  await send(owner,'/api/communities/'+tenant+'/settings',{auto_approve_users:true},200,'PATCH')
   for(const viewer of [cr,sr,both,manager,target]) {
     await cmd(viewer,{kind:'join',profile:{displayName:'History fixture',bio:null}})
     await cmd(owner,{kind:'grant',target:viewer.id})
@@ -207,7 +207,7 @@ try {
     await admin.query('set local role authenticated')
     await admin.query("select set_config('request.jwt.claim.sub',$1,true)",[owner.id])
     const resolve=async q=>(await admin.query('select graphql.resolve($1) as result',[q])).rows[0].result
-    assert.equal((await resolve('{ tenantsCollection(filter:{id:{eq:"'+tenant+'"}}){edges{node{id}}}}')).data.tenantsCollection.edges[0].node.id,tenant)
+    assert.equal((await resolve('{ community_accountsCollection(filter:{tenant_id:{eq:"'+tenant+'"}}){edges{node{tenant_id}}}}')).data.community_accountsCollection.edges[0].node.tenant_id,tenant)
     const denied=await resolve('{ tenant_admin_actionsCollection { edges { node { id reason } } } }')
     assert.ok(denied.errors?.length&&!denied.data?.tenant_admin_actionsCollection)
   } finally { await admin.query('rollback') }

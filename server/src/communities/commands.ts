@@ -162,11 +162,6 @@ export async function communityCommand(tx: Tx, actor: string, tenant: string, cm
     return result(c, status)
   }
   if (site.operational_status !== 'active') throw new CommunityError(404, 'missing')
-  if (cmd.kind === 'auto-approval') {
-    if (!effective?.can_manage_settings) deny()
-    await sql`update public.tenant_settings set auto_approve_users=${cmd.enabled} where tenant_id=${tenant} and auto_approve_users is distinct from ${cmd.enabled}`.execute(tx)
-    return result(c, 'saved')
-  }
   if (cmd.kind === 'approve' && !effective?.can_approve_users) deny()
   if (['suspend','remove','clear'].includes(cmd.kind) && !effective?.can_discipline_users) deny()
   if (['grant','resume','permissions'].includes(cmd.kind) && !effective?.can_grant_staff) deny()

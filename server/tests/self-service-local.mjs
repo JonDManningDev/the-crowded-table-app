@@ -33,8 +33,8 @@ async function user() {
   return { id: data.user.id, token: data.session.access_token, client }
 }
 let base
-async function send(viewer, path, body, expected = 200) {
-  const response = await fetch(base + path, { method: body ? 'POST' : 'GET',
+async function send(viewer, path, body, expected = 200, method = body ? 'POST' : 'GET') {
+  const response = await fetch(base + path, { method,
     headers: { Authorization: 'Bearer ' + viewer.token, 'Content-Type': 'application/json' },
     ...(body && { body: JSON.stringify(body) }) })
   const data = await response.json()
@@ -68,7 +68,7 @@ try {
   const review=actor=>send(owner,'/api/communities/'+tenant+'/accounts/'+actor.id+'/review')
   const join={kind:'join',profile:{displayName:'Initial curated',bio:null}}
   await command(pending,join)
-  await command(owner,{kind:'auto-approval',enabled:true})
+  await send(owner,'/api/communities/'+tenant+'/settings',{auto_approve_users:true},200,'PATCH')
   await command(member,join)
   await command(other,join)
   assert.deepEqual(await global(member),{profile:null})
@@ -149,7 +149,7 @@ try {
     await admin.query('set local role authenticated')
     await admin.query("select set_config('request.jwt.claim.sub',$1,true)",[owner.id])
     const resolve=async q=>(await admin.query('select graphql.resolve($1) as result',[q])).rows[0].result
-    assert.equal((await resolve('{ tenantsCollection(filter:{id:{eq:"'+tenant+'"}}){edges{node{id}}}}')).data.tenantsCollection.edges[0].node.id,tenant)
+    assert.equal((await resolve('{ community_accountsCollection(filter:{tenant_id:{eq:"'+tenant+'"}}){edges{node{tenant_id}}}}')).data.community_accountsCollection.edges[0].node.tenant_id,tenant)
     for(const table of ['user_account_profiles','community_account_profiles','community_account_preferences','my_community_summaries']) {
       const result=await resolve('{ '+table+'Collection { edges { node { '+(table==='my_community_summaries'?'id':'user_id')+' } } } }')
       assert.ok(result.errors?.length)

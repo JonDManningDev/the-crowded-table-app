@@ -34,5 +34,4 @@ export type CommunityCommand =
   | { kind: 'reappoint'; target: string; permissions: StaffPermissions }
   | { kind: 'permissions'; target: string; permissions: Partial<StaffPermissions> }
   | { kind: 'archive'; archived: boolean }
-  | { kind: 'auto-approval'; enabled: boolean }
 export type CommandResult = { outcome: string; tenantId: string; revision?: string; requestId?: string }

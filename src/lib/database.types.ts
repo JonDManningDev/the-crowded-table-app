@@ -401,11 +401,7 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "lookup_tenant":
-{ Args: { "p_slug": string }; Returns: {
-              "city": string,"country_code": string,"id": string,"name": string,"slug": string,"state_province": string,"timezone": string
-            }[]
-                           }
+            [_ in never]: never
           }
           Enums: {
             [_ in never]: never

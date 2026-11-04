@@ -31,8 +31,8 @@ async function user() {
   return { id: data.user.id, token: data.session.access_token, client }
 }
 let base
-async function send(viewer, path, body, expected = 200) {
-  const response = await fetch(base + path, { method: body ? 'POST' : 'GET',
+async function send(viewer, path, body, expected = 200, method = body ? 'POST' : 'GET') {
+  const response = await fetch(base + path, { method,
     headers: { Authorization: 'Bearer ' + viewer.token, 'Content-Type': 'application/json' },
     ...(body && { body: JSON.stringify(body) }) })
   const data = await response.json()
@@ -75,7 +75,7 @@ try {
       body:JSON.stringify({query})})
     return response.json()
   }
-  const graphRead = `{ tenantsCollection(filter:{id:{eq:"${tenant}"}}){ edges { node { id } } } }`
+  const graphRead = `{ community_accountsCollection(filter:{tenant_id:{eq:"${tenant}"}}){ edges { node { tenant_id } } } }`
   const graphChange = field => `mutation { updatetenantsCollection(set:{${field}},
     filter:{id:{eq:"${tenant}"}},atMost:1){affectedCount} }`
   const deniedGraph = await graph(graphChange('operational_status:"archived"'))
@@ -89,9 +89,9 @@ try {
     await admin.query("select set_config('request.jwt.claim.sub',$1,true)",[owner.id])
     const resolve = async q => (await admin.query('select graphql.resolve($1) as result',[q])).rows[0].result
     const allowed = await resolve(graphRead)
-    assert.equal(allowed.data?.tenantsCollection?.edges[0]?.node.id,tenant,JSON.stringify(allowed.errors))
+    assert.equal(allowed.data?.community_accountsCollection?.edges[0]?.node.tenant_id,tenant,JSON.stringify(allowed.errors))
     const change = await resolve(graphChange('name:"GraphQL fixture"'))
-    assert.equal(change.data?.updatetenantsCollection?.affectedCount,1,JSON.stringify(change.errors))
+    assert.ok(change.errors?.length && !change.data?.updatetenantsCollection)
     const denied = await resolve(graphChange('operational_status:"archived"'))
     assert.ok(denied.errors?.length && !denied.data?.updatetenantsCollection)
   } finally { await admin.query('rollback') }
@@ -187,7 +187,7 @@ try {
   assert.equal((await cmd(member,{kind:'reactivate'})).outcome,'approved')
   await cmd(owner,{kind:'deactivate'},403)
   await cmd(owner,{kind:'grant',target:member.id,permissions},400)
-  await cmd(owner,{kind:'auto-approval',enabled:true})
+  await send(owner,'/api/communities/'+tenant+'/settings',{auto_approve_users:true},200,'PATCH')
   const applicant = await user()
   assert.equal((await cmd(applicant,join)).outcome,'approved')
 
@@ -213,7 +213,7 @@ try {
     return response
   }
   const waitingMember = await user()
-  await cmd(owner,{kind:'auto-approval',enabled:false})
+  await send(owner,'/api/communities/'+tenant+'/settings',{auto_approve_users:false},200,'PATCH')
   const older = await cmd(waitingMember,join)
   const previousRevision = (await review(waitingMember,waitingMember.id)).revision
   // Run the real withdrawal and reapplication through the service on a held
