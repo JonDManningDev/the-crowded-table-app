@@ -121,7 +121,8 @@ try {
 
   // Native role checks omit the application's self predicates deliberately.
   await withVerifiedActor(db,member.id,randomUUID(),async tx=>{
-    assert.deepEqual((await sql`select user_id from public.user_account_profiles`.execute(tx)).rows,[{user_id:member.id}])
+    // Global discovery has its own peer audience; the self operation stays exact.
+    assert.equal((await ownProfile(tx,member.id)).profile.user_id,member.id)
     assert.ok((await sql`select user_id from public.community_account_preferences`.execute(tx)).rows.every(r=>r.user_id===member.id))
     const changed=await sql`update public.community_account_profiles set bio='Own only' returning user_id`.execute(tx)
     assert.ok(changed.rows.length && changed.rows.every(r=>r.user_id===member.id))

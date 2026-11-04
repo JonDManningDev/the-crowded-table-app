@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env.local src/index.ts",
     "check": "tsc --noEmit -p tsconfig.json",
-    "test:local": "node --env-file=.env.local tests/preferences-local.mjs && node --env-file=.env.local tests/community-local.mjs && node --env-file=.env.local tests/history-local.mjs && node --env-file=.env.local tests/self-service-local.mjs && node --env-file=.env.local tests/configuration-local.mjs && node --env-file=.env.local tests/records-local.mjs && node --env-file=.env.local tests/directory-local.mjs",
+    "test:local": "node --env-file=.env.local tests/preferences-local.mjs && node --env-file=.env.local tests/community-local.mjs && node --env-file=.env.local tests/history-local.mjs && node --env-file=.env.local tests/self-service-local.mjs && node --env-file=.env.local tests/configuration-local.mjs && node --env-file=.env.local tests/records-local.mjs && node --env-file=.env.local tests/directory-local.mjs && node --env-file=.env.local tests/global-profiles-local.mjs",
     "setup:local": "node scripts/setup-local.mjs"
   },
   "dependencies": {

@@ -337,6 +337,38 @@ isOneToOne: false
       referencedColumns: ["user_id"]
     }
                   ]
+                },"user_account_blocks": {
+                  Row: {
+                    "blocked_user_id": string,"blocker_user_id": string,"created_at": string,"created_by": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "blocked_user_id": string,"blocker_user_id"?: string,"created_at"?: string,"created_by"?: string
+                  }
+                  Update: {
+                    "blocked_user_id"?: string,"blocker_user_id"?: string,"created_at"?: string,"created_by"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "user_account_blocks_blocked_user_id_fkey"
+      columns: ["blocked_user_id"]
+isOneToOne: false
+      referencedRelation: "user_accounts"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "user_account_blocks_blocker_user_id_fkey"
+      columns: ["blocker_user_id"]
+isOneToOne: false
+      referencedRelation: "user_accounts"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "user_account_blocks_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "user_accounts"
+      referencedColumns: ["user_id"]
+    }
+                  ]
                 },"user_account_profiles": {
                   Row: {
                     "bio": string | null,"created_at": string,"created_by": string | null,"display_name": string,"updated_at": string,"updated_by": string | null,"user_id": string

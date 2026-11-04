@@ -67,7 +67,7 @@ GET/PUT `/api/me/profile` returns `{ profile }`, with a null profile only when t
 
 PATCH `/api/communities/:tenantId/me/profile` accepts the name/bio pair and returns `{ tenantId }`. Pending, approved and suspended members may edit their own existing profile in an active community. GET/PATCH `/api/communities/:tenantId/me/preferences` returns the three private preference flags; PATCH accepts a nonempty subset. Reads permit inactive self and archived owner; edits require pending/approved self and an active tenant. Profile writes retain statement-time lifecycle checks without a tenant lock. Preference writes lock the account before the preference row, matching inactivity's lock order. The browser adapter still submits only its supported sharing flag; mock community controls remain simulations.
 
-All operations use verified Auth and `private, no-store`. Feature adapters bind writes to the initiating user and summaries to one identity across every page. The seven-suite `npm run test:local -w server` command includes self-service HTTP authorization, normalization/attribution, pagination, removed REST/GraphQL paths, runtime omission tests, rollback, independent edits and both sharing/inactivity orders. The retained direct Data API suite now expects self-service access to fail. Hosted deployment still requires a matched schema/API/frontend release and separate authorization.
+All operations use verified Auth and `private, no-store`. Feature adapters bind writes to the initiating user and summaries to one identity across every page. The eight-suite `npm run test:local -w server` command includes self-service HTTP authorization, normalization/attribution, pagination, removed REST/GraphQL paths, runtime omission tests, rollback, independent edits and both sharing/inactivity orders. The retained direct Data API suite now expects self-service access to fail. Hosted deployment still requires a matched schema/API/frontend release and separate authorization.
 
 ## Local community landing and configuration
 
@@ -123,6 +123,24 @@ All lists return `{ rows, next }`, with optional `limit` (50 default, 100 maximu
 Protected reads lock the tenant before checking current authority. The private public accessor locks the tenant first, then rechecks activity and directory visibility using a fresh statement snapshot. Visibility, standing and archive changes therefore serialize with admitted reads. Existing account/profile archive RLS remains enforced. Runtime command grants retain their existing broader internal reads; fixed HTTP projections and service checks enforce the endpoint audiences.
 
 The seventh API suite checks exact/list distinctions, all standings, badge states, missing profiles, public field privacy, 103-account page boundaries, cursor secrecy/integrity/key stability, REST/GraphQL/helper denials and both read/change serialization orders. Local setup and configured service startup/readiness were also checked. No directory UI or hosted release is included.
+
+## Local global profiles and profile-encounter blocks
+
+Migration `20261103001600` adds directed `user_account_blocks`, discoverable-profile RLS and private exact-target/source predicates. Browser grants remain closed. The runtime may list self/discoverable profiles under RLS, but contextual profiles are available only through the checked exact projection. Other users' preference values, qualifying community IDs and incoming block rows remain private.
+
+| HTTP operation | Current contract |
+| --- | --- |
+| GET `/api/profiles` | Verified actor; discoverable, bilaterally unblocked profiles only, including self only if discoverable. Optional `q` is a trimmed literal case-insensitive name substring. |
+| GET `/api/profiles/:userId` | Seven global-profile fields for self or an unblocked target admitted by discovery or at least one qualifying shared active community with target sharing enabled. Both community accounts must be approved/suspended. |
+| GET `/api/me/blocks` | Own outgoing edges only: blocker/target UUIDs, created time and creator. No target profile or incoming edges. |
+| PUT `/api/me/blocks/:userId` | `confirmed:true` and `source:{kind:'global_profile'}` or `source:{kind:'community_profile',tenantId}`. Validate a currently readable real profile; selectors alone are not proof. Returns `{blocked:true}`. |
+| DELETE `/api/me/blocks/:userId` | Remove only the caller's edge, idempotently. Returns `{blocked:false}` for that outgoing edge; a counterpart's block may still deny access. |
+
+Search and outgoing-block lists use optional `cursor` and `limit` (50 default, 100 maximum), UUID ordering and encrypted cursors bound to actor/search/operation. Exact missing/inaccessible profiles have the same 404. Self-blocks return 400. Repeating an existing own edge preserves attribution/time. A per-caller transaction lock serializes block retries/unblocks; row creation rechecks source authorization in RLS. Caller/creator/timestamps cannot be supplied by clients. Removing a block never restores participation or deletes the reverse edge.
+
+Consent combines across all qualifying shared communities by OR. Discovery opt-out and matchmaking are independent; matchmaking alone grants no profile access. Archive, inactivity or sharing withdrawal removes only that community's contribution. Either block direction denies every non-self global-profile path; community profiles/directories continue under their existing audience rules. No owner/staff bypass is added. Profile responses evaluate current authorization and fields in one statement snapshot. An admitted snapshot can finish while a later change commits; the next statement/page rechecks. Responses use `private, no-store`.
+
+The existing application has no persisted activity/conversation/invitation/match/competition domains. Their real source checks, block previews/mandatory transactional effects and accepted UI confirmation flow remain G-05a/G-05c gates when those packages are built. This endpoint slice adds no UI or fabricated resource effects. The eighth suite covers the current profile/block domain, including source validation, literal search, 102-profile/block pagination, reciprocal edges, rollback, statement ordering and direct bypass attempts. No hosted deployment is included.
 
 ## Local development
 

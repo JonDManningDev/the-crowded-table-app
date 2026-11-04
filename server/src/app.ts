@@ -1,3 +1,4 @@
+import { registerGlobalProfiles } from './accounts/global-profiles.ts'
 import { directoryCursors } from './communities/directory-cursor.ts'
 import { registerCommunityDirectory, registerPublicDirectory } from './communities/directory.ts'
 import { CommunityError } from './communities/commands.ts'
@@ -48,6 +49,7 @@ export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<s
     registerAccountRecords(routes, db)
     registerCommunityDirectory(routes, db, cursors)
     registerSelfService(routes, db)
+    registerGlobalProfiles(routes, db, cursors)
     registerCommunityConfiguration(routes, db)
     registerCommunityProfile(routes, db)
     const querystring = { type: 'object', additionalProperties: false, properties: {} }
