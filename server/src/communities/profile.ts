@@ -26,8 +26,7 @@ export function registerCommunityProfile(routes: FastifyInstance, db: AppDatabas
     const { tenantId, userId } = request.params
     const actor = request.getDecorator<string>('actor')
     const result = await withVerifiedActor(db, actor, request.id, async tx => {
-      // Resolve viewer, target and profile in one snapshot. Legacy 'removed'
-      // supplies the inactive exact-target case until the standing conversion.
+      // Resolve viewer, target and curated profile in the same snapshot.
       const profile = await tx.selectFrom('community_account_profiles as p')
         .innerJoin('community_accounts as target', join => join
           .onRef('target.tenant_id', '=', 'p.tenant_id').onRef('target.user_id', '=', 'p.user_id'))
@@ -38,7 +37,7 @@ export function registerCommunityProfile(routes: FastifyInstance, db: AppDatabas
           eb.and([sql<boolean>`app_private.active_tenant(p.tenant_id)`, eb.or([
             eb.and([eb('p.user_id', '=', actor), eb('viewer.standing', '=', 'pending')]),
             eb.and([eb('viewer.standing', 'in', ['approved','suspended']),
-              eb('target.standing', 'in', ['approved','suspended','removed'])]),
+              eb('target.standing', 'in', ['approved','suspended','inactive'])]),
           ])]),
           eb.and([sql<boolean>`not app_private.active_tenant(p.tenant_id)`, sql<boolean>`app_private.is_approved_owner(p.tenant_id)`]),
         ]))

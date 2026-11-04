@@ -96,18 +96,15 @@ export function CommunityCreationForm({ draft, options, isCreating, error, error
         <p id="timezone-help" className={`muted ${styles.help}`}>
           Starts with your device’s time zone. Choose the zone where your community meets.
         </p>
-        <div className={styles.participation}>
-          <label className="check-label">
-            <input
-              name="join"
-              type="checkbox"
-              checked={draft.join}
-              onChange={event => onDraftChange('join', event.target.checked)}
-            />
-            Would you also like to join this community as a participant?
-          </label>
-          <p>You can manage this community either way. You can join later.</p>
-        </div>
+        <label>
+          Your community display name
+          <input name="displayName" required maxLength={80} value={draft.displayName}
+            onChange={event => onDraftChange('displayName', event.target.value)} />
+        </label>
+        <label>
+          Your community bio (optional)
+          <textarea name="bio" maxLength={2000} value={draft.bio} onChange={event => onDraftChange('bio', event.target.value)} />
+        </label>
         <Button appearance="primary" full className="button full" type="submit" loading={isCreating}>
           {isCreating ? 'Creating your community…' : 'Create community'}
         </Button>

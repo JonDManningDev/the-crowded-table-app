@@ -3,10 +3,10 @@ import { createCommunity, readCommunityCreationOptions } from './api'
 import { getCommunityCreationError, validateCommunityCreation } from './creation'
 import type { CommunityCreationDraft, CommunityCreationSummary } from './types'
 
-export function useCommunityCreation(onBusyChange: (busy: boolean) => void) {
+export function useCommunityCreation(userId: string, onBusyChange: (busy: boolean) => void) {
   const [options] = useState(readCommunityCreationOptions)
   const [draft, setDraft] = useState<CommunityCreationDraft>(() => ({
-    name: '', slug: '', country: '', region: '', city: '', timezone: options.initialTimezone, join: false,
+    name: '', slug: '', country: '', region: '', city: '', timezone: options.initialTimezone, displayName: '', bio: '',
   }))
   const [savedCommunity, setSavedCommunity] = useState<CommunityCreationSummary | null>(null)
   const [isCreating, setIsCreating] = useState(false)
@@ -47,7 +47,7 @@ export function useCommunityCreation(onBusyChange: (busy: boolean) => void) {
     request.notifyBusy(true)
     setError('')
     try {
-      const summary = await createCommunity({ ...draft })
+      const summary = await createCommunity(userId, { ...draft })
       if (!lifetime.active || pendingRef.current !== request) return false
       setSavedCommunity(summary)
       return true

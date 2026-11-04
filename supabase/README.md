@@ -31,19 +31,25 @@ The repository is linked to this project. A fresh verification after reauthentic
 
 Use Node 22.18 or later. From the repository root install dependencies with `npm ci`. Start the local Supabase stack, apply pending migrations with `npx supabase migration up --local`, then run `npm run setup:local -w server`. Setup configures an initially credential-less local `ct_api` login and writes ignored server and browser environment files. For an already-provisioned login supply its credential separately. Keep runtime secrets out of Vite variables. The frontend and API must use the same Auth project. The default development mode reads the local browser configuration and refuses a hosted Auth URL.
 
-Run `npm run dev:api` and `npm run dev` in separate terminals. Vite proxies `/api` to the local Fastify listener on port 3001. Settings uses GET/PUT `/api/me/preferences`. The remaining feature adapters use the existing Supabase interfaces. Production needs same-origin forwarding and a separately authorized paired API, schema and frontend release. Running a new frontend against an old hosted stack is unsupported.
+Run `npm run dev:api` and `npm run dev` in separate terminals. Vite proxies `/api` to the local Fastify listener on port 3001. Settings uses GET/PUT `/api/me/preferences`. Community creation uses POST `/api/communities`. Membership, staff, auto-approval and archive commands use POST `/api/communities/:tenantId/commands`. The browser uses Supabase Auth for the bearer token. The shared [command types](../shared/community-commands.ts) define the payloads. A join requires a submitted community profile. Staff can read authorized current requests at GET `/api/communities/:tenantId/requests`; the response includes the request UUID and account revision used for approval. Grant managers use GET `/api/communities/:tenantId/staff-candidates` for the eligible candidate projection. Other direct reads and independent edits retain their documented grants. Production needs same-origin forwarding and a separately authorized paired API, schema and frontend release. Running a new frontend against an old hosted stack is unsupported.
 
 Run `npm run test:local -w server` for the real Auth/HTTP/SQL suite. It creates and removes only synthetic local users. If local services are forwarded to alternative **loopback** ports, set `CT_LOCAL_API_PORT` and `CT_LOCAL_DB_PORT` for setup and tests. Keep `SUPABASE_JWT_ISSUER` bound to the issuing project's canonical Auth URL. Run pgTAP, populated upgrade, direct HTTP, frontend tests, build and lint as well. The historical hosted test script targets the previous hosted schema and requires revision at coordinated cutover.
 
 ## Community foundation preflight
 
-Run the [aggregate preflight](preflight/community_foundation.sql) on local Docker before preparing the coordinated writer switch. Resolve any blockers and repeat under the migration locks.
+Run the [aggregate preflight](preflight/community_foundation.sql) only on a database still at the pre-cutover schema. Migration `20261103000600` repeats it under table locks and aborts on blockers. Local databases at or after that version use the new relations.
 
 ```powershell
 Get-Content -Raw supabase/preflight/community_foundation.sql | docker exec -i supabase_db_the-crowded-table-app psql -X -qAt -U postgres -v ON_ERROR_STOP=1
 ```
 
 The local API test command also checks the public standing reference and the authenticated exact-target community profile route. The latter returns only the eight curated profile fields. It enforces the community owner boundary on archived profiles. Its six capabilities describe a baseline. Resource-specific private activity, archived history and disciplinary exceptions still require their own authorization.
+
+## Local community command verification
+
+Run `npm run test:local -w server` for command authorization, rollback and concurrency through Fastify with real Supabase Auth tokens. Run `node supabase/tests/direct_data_api.mjs` for the retained browser edits and denial of direct lifecycle writes. That script uses the local server environment to create fixtures through the TypeScript commands. Run `node supabase/tests/direct_data_api_upgrade.mjs` for clean replay, historical pgTAP, populated conversion, injected rollback and the two-session sharing test. Run the current pgTAP suite against the local stack after migration.
+
+Community profiles now use a scoped update. Membership and creation establish the initial profile. Self preferences live in `community_account_preferences`. The personal community card projection remains available. The former staff-candidate and pending-account views and all seven legacy lifecycle/settings RPCs have been dropped locally. Hosted testing remains on its earlier ledger.
 
 ## Local development
 
@@ -65,7 +71,7 @@ npx --yes supabase gen types typescript --local --schema public | Set-Content -E
 
 Apply these files in timestamp order through the Supabase migration workflow. Once deployed, change behavior with a new migration rather than editing an applied file. No remote deployment is performed by these files or the tests. Review `supabase db push --dry-run` against the intended linked project before a separately authorized deployment. Do not roll back by dropping account/tenant tables containing user data; use forward repairs and backups.
 
-## Data and access
+## Pre-cutover data and access (historical)
 
 The [intended access matrix](../docs/16-intended-access-matrix.md) now distinguishes target field/audience/operation rules from the deployed behavior below. AM-01's mandatory intra-community profile visibility is accepted; global-profile sharing remains separately user-managed per community account. AM-02 also settles authenticated global search with discovery opt-out, independent global activity visibility through the shared matchmaking/competition flag, and community-activity isolation from global profiles. Other applicable AM questions still require discussion; do not interpret current self/owner-only policies or the earlier three-RPC proposal as a substitute for those answers. No schema change accompanies the matrix.
 
@@ -126,9 +132,9 @@ Deployment boundary: `20261024000200` is applied locally and to hosted testing (
 
 Hosted verification on 2026-10-24: `node supabase/tests/hosted_direct_data_api.mjs --allow-hosted-testing` passed 48 actual PostgREST checks. This separate, explicitly opted-in script pins the testing project and verifies linkage before using CLI-provided keys in memory. It creates real password sessions for random synthetic users, checks profile/preference/content-permission paths, and removes its application fixtures and Auth users, verifying zero fixture users/tenants remain. Normal Auth audit events may remain. It does not test email delivery, visual UI flows, or hosted concurrency races. Local scripts remain local-only. See implementation status for the detailed hosted coverage and credential resolution.
 
-`tests/identity_tenant.test.sql` uses pgTAP and real anonymous/authenticated roles against Supabase's Auth schema. Fixtures roll back. It covers two-tenant isolation, verification gates, owner invariants, protected writes, explicit admin permissions, public lookup, copy validation, archival, audit attribution, and restrictive deletion.
+`upgrade-fixtures/pre-community-api/identity_tenant.test.sql` uses pgTAP and real anonymous/authenticated roles against Supabase's Auth schema. Fixtures roll back. It covers two-tenant isolation, verification gates, owner invariants, protected writes, explicit admin permissions, public lookup, copy validation, archival, audit attribution, and restrictive deletion.
 
-`tests/concurrency.mjs` exercises simultaneous database connections for archive versus join, permission revocation versus approval, and duplicate slug creation. It targets only the dedicated Docker container `crowded-table-migration-test` and leaves fixtures there. Do not point it at development/production data. Prepare that disposable container with Supabase PostgreSQL, apply the matching GoTrue Auth migrations, and then apply both application migrations before running `node supabase/tests/concurrency.mjs`. Remove the disposable container after the run.
+The pre-cutover `upgrade-fixtures/pre-community-api/concurrency.mjs` exercises simultaneous database connections for archive versus join, permission revocation versus approval, and duplicate slug creation. It targets only the dedicated Docker container `crowded-table-migration-test` and leaves fixtures there. Do not point it at development/production data. Prepare that disposable container with Supabase PostgreSQL, apply the matching GoTrue Auth migrations, and then apply the original two application migrations before running `node supabase/upgrade-fixtures/pre-community-api/concurrency.mjs`. Remove the disposable container after the run.
 
 Frontend account flows and user-assisted hosted delivery/recovery results are tracked in the Auth operations record. My Account → My Communities integrates `create_tenant` and the caller-scoped All/Managed/Owned summary list; the auth bar has been removed. Creation submits no user ID, role, permission, or audit fields; the database derives these from the authenticated actor. Optional participation defaults off; opting in creates an approved community account in the same transaction. The five preview sections still use mock data; joining existing communities, curated profile UI, and management UI remain separate work; global profile editing is implemented. A database test of verified state is not an end-to-end email verification test.
 

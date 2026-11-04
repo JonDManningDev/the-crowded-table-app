@@ -4,64 +4,49 @@ import { createCommunity, readCommunityCreationOptions } from './api'
 import { validateCommunityCreation } from './creation'
 import type { CommunityCreationDraft } from './types'
 
-const db = vi.hoisted(() => ({ configured: true, rpc: vi.fn(), from: vi.fn() }))
+const db = vi.hoisted(() => ({ configured: true, auth: { getSession: vi.fn() } }))
 vi.mock('../../lib/supabase', () => ({ get supabase() { return db.configured ? db : null } }))
 const draft = (): CommunityCreationDraft => ({ name: '  Fictional game club  ', slug: 'fictional-game-club', country: 'HN',
-  region: '  Francisco Morazan  ', city: '  Tegucigalpa  ', timezone: ' America/Tegucigalpa ', join: true })
+  region: '  Francisco Morazan  ', city: '  Tegucigalpa  ', timezone: ' America/Tegucigalpa ', displayName: ' Player ', bio: ' ' })
+const send = vi.fn()
 beforeEach(() => {
   vi.resetAllMocks()
   db.configured = true
-  db.rpc.mockResolvedValue({ data: '00000000-0000-4000-8000-000000000001', error: null })
+  db.auth.getSession.mockResolvedValue({ data: { session: { access_token: 'fixture', user: { id: 'viewer' } } } })
+  vi.stubGlobal('fetch', send)
 })
-afterEach(() => vi.restoreAllMocks())
-it('uses one exact transactional payload and preserves the submitted summary across caller edits', async () => {
-  let finish!: (value: unknown) => void
-  db.rpc.mockReturnValue(new Promise(resolve => { finish = resolve }))
-  const input = { ...draft(), actor_id: 'untrusted', role: 'owner', bio: 'Not in this command' }
-  const request = createCommunity(input)
-  input.name = 'Changed after submit'
-  input.city = 'Another place'
-  input.join = false
-  finish({ data: '00000000-0000-4000-8000-000000000001', error: null })
-  expect(db.rpc).toHaveBeenCalledExactlyOnceWith('create_tenant', {
-    p_name: 'Fictional game club', p_slug: 'fictional-game-club', p_country_code: 'HN', p_timezone: 'America/Tegucigalpa',
-    p_state_province: 'Francisco Morazan', p_city: 'Tegucigalpa', p_join_community: true,
-  })
-  expect(await request).toEqual({ id: '00000000-0000-4000-8000-000000000001', name: 'Fictional game club',
-    slug: 'fictional-game-club', locationLabel: 'Tegucigalpa, Francisco Morazan, Honduras', timezone: 'America/Tegucigalpa', join: true })
-  expect(db.from).not.toHaveBeenCalled()
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
+it('posts the exact submitted owner profile and tenant fields with the session bearer', async () => {
+  send.mockResolvedValue(Response.json({ tenantId: 'tenant', outcome: 'created' }, { status: 201 }))
+  const input = { ...draft(), actor: 'forged' }
+  const pending = createCommunity('viewer', input)
+  input.city = 'Changed'
+  expect(await pending).toMatchObject({ id: 'tenant', locationLabel: 'Tegucigalpa, Francisco Morazan, Honduras' })
+  expect(send).toHaveBeenCalledOnce()
+  const [url, init] = send.mock.calls[0]
+  expect(url).toBe('/api/communities')
+  expect(init.headers.Authorization).toBe('Bearer fixture')
+  expect(JSON.parse(init.body)).toEqual({ name: 'Fictional game club', slug: 'fictional-game-club', country: 'HN', region: 'Francisco Morazan',
+    city: 'Tegucigalpa', timezone: 'America/Tegucigalpa', profile: { displayName: 'Player', bio: null } })
 })
-it('omits empty optional locations and preserves explicit no-participation', async () => {
-  const result = await createCommunity({ ...draft(), city: ' ', region: '', join: false })
-  expect(db.rpc.mock.calls[0][1]).toMatchObject({ p_city: undefined, p_state_province: undefined, p_join_community: false })
-  expect(result).toMatchObject({ locationLabel: 'Honduras', join: false })
+it('does not submit a previous viewer’s form after an account switch', async () => {
+  db.auth.getSession.mockResolvedValue({ data: { session: { access_token: 'changed', user: { id: 'someone-else' } } } })
+  await expect(createCommunity('viewer',draft())).rejects.toThrow('verified account')
+  expect(send).not.toHaveBeenCalled()
 })
-it('reports unavailable configuration without making a request or fabricating success', async () => {
+it('rejects missing configuration and empty responses', async () => {
   db.configured = false
-  expect(readCommunityCreationOptions().isConfigured).toBe(false)
-  await expect(createCommunity(draft())).rejects.toThrow('Account services are not configured yet.')
-  expect(db.rpc).not.toHaveBeenCalled()
+  await expect(createCommunity('viewer', draft())).rejects.toThrow('not configured')
+  db.configured = true
+  send.mockResolvedValue(Response.json({}))
+  await expect(createCommunity('viewer', draft())).rejects.toThrow('Check Your communities')
 })
-it.each(['empty', 'rejection'])('retains uncertain-outcome recovery for %s without retry', async mode => {
-  if (mode === 'empty') db.rpc.mockResolvedValue({ data: null, error: null })
-  else db.rpc.mockRejectedValue(new Error('Fictional network failure'))
-  await expect(createCommunity(draft())).rejects.toThrow('Check Your communities before trying again')
-  expect(db.rpc).toHaveBeenCalledOnce()
-})
-it.each([
-  [{ code: '23505' }, 'already in use'],
-  [{ code: '23514', message: 'invalid_timezone' }, 'recognized time zone'],
-  [{ code: '42501' }, 'verified account'],
-  [{ code: 'PGRST301' }, 'verified account'],
-  [{ code: 'PGRST303' }, 'verified account'],
-  [{ code: '23514' }, 'check the community details'],
-  [{ code: '22023' }, 'check the community details'],
-  [{ code: 'unexpected' }, 'Check Your communities before trying again'],
-])('preserves recovery for response %j', async (failure, message) => {
-  db.rpc.mockResolvedValue({ data: null, error: failure })
-  await expect(createCommunity(draft())).rejects.toThrow(message as string)
-  expect(db.rpc).toHaveBeenCalledOnce()
-})
+it.each([['handle_taken','already in use'],['unauthenticated','verified account'],['invalid_details','check the community details']])(
+  'preserves recovery for %s', async (code,message) => {
+    send.mockResolvedValue(Response.json({ code }, { status: 400 }))
+    await expect(createCommunity('viewer', draft())).rejects.toThrow(message)
+    expect(send).toHaveBeenCalledOnce()
+  })
 it('supplies isolated English country labels, sorted zones and a device-based initial zone', () => {
   const options = readCommunityCreationOptions()
   expect(options.countries.find(country => country.code === 'HN')?.name).toBe('Honduras')
@@ -73,13 +58,13 @@ it('supplies isolated English country labels, sorted zones and a device-based in
   options.timezones.length = 0
   expect(readCommunityCreationOptions().countries[0].name).not.toBe('Changed')
   expect(readCommunityCreationOptions().timezones.length).toBeGreaterThan(0)
-  expect(db.rpc).not.toHaveBeenCalled()
+  expect(send).not.toHaveBeenCalled()
 })
 it('preserves browser timezone and zone-list fallbacks without a service request', () => {
   vi.spyOn(Intl, 'DateTimeFormat').mockImplementation(() => { throw new Error('Unavailable') })
   vi.spyOn(Intl, 'supportedValuesOf').mockImplementation(() => { throw new Error('Unavailable') })
   expect(readCommunityCreationOptions()).toMatchObject({ initialTimezone: 'UTC', timezones: ['UTC', 'UTC', 'America/Tegucigalpa'] })
-  expect(db.rpc).not.toHaveBeenCalled()
+  expect(send).not.toHaveBeenCalled()
 })
 it('retains local validation bounds without pretending to validate recognized timezones', () => {
   expect(validateCommunityCreation({ ...draft(), name: ' ', slug: 'valid' })).toContain('community name')

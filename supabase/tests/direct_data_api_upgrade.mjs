@@ -12,7 +12,8 @@ const database = `crowded_table_api_test_${randomUUID().replaceAll('-', '')}`;
 assert.match(database, /^crowded_table_api_test_[0-9a-f]{32}$/);
 const migrations = new URL('../migrations/', import.meta.url);
 const files = readdirSync(migrations).filter(name => name.endsWith('.sql')).sort();
-assert.equal(files.at(-1), '20261103000500_exact_community_profile_api.sql', 'update this test when the migration set changes');
+const cutover = '20261103000600_community_write_cutover.sql';
+const legacy = files.filter(file => file < cutover);
 const owner = '30000000-0000-0000-0000-000000000001';
 const admin = '30000000-0000-0000-0000-000000000002';
 function sql(statement) {
@@ -22,7 +23,7 @@ function sql(statement) {
 const asUser = (id, statement) => `set role authenticated; set request.jwt.claim.sub='${id}'; ${statement}`;
 function init() {
   execFileSync('docker', ['exec', container, 'createdb', '-U', 'postgres', database]);
-  sql(`create schema auth;
+  sql(`create schema if not exists extensions; grant usage on schema extensions to public; create schema auth;
     create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,is_anonymous boolean default false,banned_until timestamptz);
     create function auth.uid() returns uuid language sql stable as $fn$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $fn$;
     grant usage on schema auth to authenticated,anon;`);
@@ -31,12 +32,10 @@ function cleanup() {
   execFileSync('docker', ['exec', container, 'dropdb', '-U', 'postgres', '--if-exists', '--force', database]);
 }
 const preflight = readFileSync(new URL('../preflight/community_foundation.sql', import.meta.url), 'utf8');
-const communityBackfill = readFileSync(new URL('../cutovers/community-write-backfill.sql', import.meta.url), 'utf8');
 function runCommunityCutover(extraSql = '') {
-  sql(`create temporary view community_cutover_preflight(result) as ${preflight}
-    ${communityBackfill}
-    ${extraSql}
-    commit;`);
+  const migration = readFileSync(new URL(cutover, migrations), 'utf8');
+  assert.match(migration, /commit;\s*$/);
+  sql(migration.replace(/commit;\s*$/, extraSql + '\ncommit;'));
 }
 function checkCommunityUpgradeInputs(tenant) {
   const pending = randomUUID(), suspended = randomUUID(), removed = randomUUID();
@@ -69,9 +68,9 @@ function verifyCommunityBackfill(tenant) {
   assert.equal(sql("select jsonb_agg(to_jsonb(a) order by user_id) from public.community_accounts a"), oldAccounts);
   assert.equal(sql("select to_regclass('app_private.community_account_requests') is null"), 't');
   runCommunityCutover();
-  assert.equal(sql(`select bool_and(c.relrowsecurity and not has_any_column_privilege(r.name,c.oid,'SELECT,INSERT,UPDATE,REFERENCES')
+  assert.equal(sql(`select bool_and(c.relrowsecurity and not has_any_column_privilege(r.name,c.oid,'INSERT,REFERENCES')
     and not has_table_privilege(r.name,c.oid,'DELETE,TRUNCATE,TRIGGER'))
-    from pg_class c cross join (values ('anon'),('authenticated'),('service_role'),('ct_api')) r(name)
+    from pg_class c cross join (values ('anon'),('authenticated'),('service_role')) r(name)
     where c.oid in ('public.community_account_preferences'::regclass,'public.community_account_permissions'::regclass,
       'app_private.community_account_requests'::regclass,'app_private.tenant_admin_action_categories'::regclass)`), 't');
   const previous = JSON.parse(oldAccounts);
@@ -109,7 +108,7 @@ function verifyCommunityBackfill(tenant) {
   assert.equal(sql(`select display_name from public.community_account_profiles where tenant_id='${tenant}' and user_id='${owner}'`), 'Owner');
   assert.throws(() => sql(`delete from public.community_account_permissions where tenant_id='${tenant}' and user_id='${admin}'`), /foreign key constraint/);
   assert.throws(() => sql("set role authenticated; select * from public.community_account_preferences"), /permission denied/);
-  assert.throws(() => sql("set role ct_api; select * from app_private.community_account_requests"), /permission denied/);
+  assert.equal(sql("select has_table_privilege('ct_api','app_private.community_account_requests','SELECT') and (select relrowsecurity from pg_class where oid='app_private.community_account_requests'::regclass)"), 't');
   const flags = ['can_discipline_users','can_discipline_staff','can_manage_community_activities',
     'can_manage_official_activities','can_manage_community_permissions','can_see_private_events',
     'can_manage_settings','can_moderate_all_chats','can_audit_community_accounts','can_audit_staff_accounts'];
@@ -172,9 +171,15 @@ function apply(...names) {
 }
 try {
   init();
-  apply(...files);
+  apply(...legacy);
+  const fixtures = new URL('../upgrade-fixtures/pre-community-api/', import.meta.url);
+  for (const name of readdirSync(fixtures).filter(file => file.endsWith('.test.sql'))) {
+    const results = sql(readFileSync(new URL(name, fixtures), 'utf8'));
+    assert.doesNotMatch(results, /^not ok /m, name);
+  }
   assert.equal(sql(`select count(*) from pg_policies where schemaname='public' and cmd<>'SELECT';`), '10');
   runCommunityCutover();
+  apply(...files.filter(file => file > cutover));
   assert.equal(sql('select count(*) from public.community_account_preferences'), '0');
   cleanup();
   init();
@@ -184,7 +189,7 @@ try {
   sql(asUser(admin, `select public.join_community('${tenant}'); select public.save_user_account_profile('Original name','Original bio'); select public.save_community_profile('${tenant}','Community name','Community bio'); select public.set_user_account_preferences(false,true);`));
   sql(asUser(owner, `select public.create_tenant_admin('${tenant}','${admin}'); select public.set_admin_permissions('${tenant}','${admin}',true,false); select public.set_website_content_override('${tenant}','community.hero.heading','Original copy'); select public.set_tenant_archived('${tenant}',true);`));
   sql(`insert into public.user_account_profiles(user_id,display_name,bio) values ('${owner}','Owner','  Original bio  ')`);
-  apply(...files.filter(file => file >= '20261024000200_direct_data_api.sql'));
+  apply(...legacy.filter(file => file >= '20261024000200_direct_data_api.sql'));
   assert.equal(sql(`select has_column_privilege('authenticated','public.user_accounts','enable_matchmaking','UPDATE');`), 'f');
   assert.equal(sql(`select bool_and(allow_direct_messages) from public.user_accounts;`), 't');
   assert.equal(sql(`select can_modify_content from public.tenant_staff_assignments where role='owner';`), 't');
@@ -203,6 +208,7 @@ try {
     rollback;`)), 't');
   checkCommunityUpgradeInputs(tenant);
   verifyCommunityBackfill(tenant);
+  apply(...files.filter(file => file > cutover));
   await verifySharingRace();
   console.log('PASS two-session deactivation and profile-sharing race in both lock orders');
   console.log('PASS clean migration replay and populated upgrade: owner backfill, preserved data/grants, legacy permission callers, new owner invariants');

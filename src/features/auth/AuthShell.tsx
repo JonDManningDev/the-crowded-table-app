@@ -33,7 +33,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
     {!auth.view && <AuthFeedback error={auth.error} notice={auth.notice} placement="shell"/>}
     {auth.view === 'create-community' ? (
       !auth.ready ? <main className={styles.gate}><p role="status">Checking your session…</p></main>
-        : auth.verified && auth.session ? <LazyContent key={auth.session.user.id}><CreateCommunityPage onBusyChange={setIsCommunityCreating}/></LazyContent>
+        : auth.verified && auth.session ? <LazyContent key={auth.session.user.id}><CreateCommunityPage userId={auth.session.user.id} onBusyChange={setIsCommunityCreating}/></LazyContent>
         : <main className={styles.gate}><p>Please sign in with a verified account to continue.</p><Link to={authPaths.signin}>Sign in</Link></main>
     ) : auth.view ? <AuthPage view={auth.view} email={email} ready={auth.ready} configured={auth.configured}
       busy={auth.busy} error={auth.error} notice={auth.notice} cooldown={auth.cooldown}

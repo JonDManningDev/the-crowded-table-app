@@ -4,8 +4,8 @@ import { CommunityCreationForm } from '../components/CommunityCreationForm'
 import { CommunityCreatedPanel } from '../components/CommunityCreatedPanel'
 import styles from './CreateCommunityPage.module.css'
 
-export function CreateCommunityPage({ onBusyChange }: { onBusyChange: (busy: boolean) => void }) {
-  const creation = useCommunityCreation(onBusyChange)
+export function CreateCommunityPage({ userId, onBusyChange }: { userId: string; onBusyChange: (busy: boolean) => void }) {
+  const creation = useCommunityCreation(userId, onBusyChange)
   const errorRef = useRef<HTMLParagraphElement>(null)
   useEffect(() => {
     if (creation.error) errorRef.current?.focus()

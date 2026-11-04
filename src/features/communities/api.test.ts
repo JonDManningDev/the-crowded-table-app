@@ -13,7 +13,7 @@ beforeEach(() => {
 it('saves all supported community preferences in one scoped update without forwarding protected fields', async () => {
   const input = { show_global_profile: false, standing: 'approved', user_id: 'someone-else' }
   await saveCommunityAccountPreferences('community', input)
-  expect(db.from).toHaveBeenCalledExactlyOnceWith('community_accounts')
+  expect(db.from).toHaveBeenCalledExactlyOnceWith('community_account_preferences')
   expect(db.update).toHaveBeenCalledExactlyOnceWith({ show_global_profile: false })
   expect(db.eq).toHaveBeenCalledExactlyOnceWith('tenant_id', 'community')
   expect(db.single).toHaveBeenCalledOnce()
@@ -28,8 +28,8 @@ it('propagates denied or missing-row preference saves instead of claiming succes
 it('saves a separate community profile with database-derived user identity and an explicitly cleared bio', async () => {
   await saveCommunityProfile('community', ' Name ', '  ')
   expect(db.from).toHaveBeenCalledExactlyOnceWith('community_account_profiles')
-  expect(db.upsert).toHaveBeenCalledExactlyOnceWith({ tenant_id: 'community', display_name: 'Name', bio: null }, { onConflict: 'tenant_id,user_id' })
-  expect(db.update).not.toHaveBeenCalled()
+  expect(db.update).toHaveBeenCalledExactlyOnceWith({ display_name: 'Name', bio: null })
+  expect(db.eq).toHaveBeenCalledExactlyOnceWith('tenant_id', 'community')
 })
 
 

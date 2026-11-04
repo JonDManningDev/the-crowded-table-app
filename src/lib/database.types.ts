@@ -5,7 +5,71 @@ export type Database = {
 
   "public": {
           Tables: {
-            "community_account_profiles": {
+            "community_account_permissions": {
+                  Row: {
+                    "can_post_public_events": boolean,"created_at": string,"created_by": string | null,"tenant_id": string,"updated_at": string,"updated_by": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "can_post_public_events"?: boolean,"created_at"?: string,"created_by"?: string | null,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "can_post_public_events"?: boolean,"created_at"?: string,"created_by"?: string | null,"tenant_id"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "community_account_permissions_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "user_accounts"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "community_account_permissions_tenant_id_user_id_fkey"
+      columns: ["tenant_id","user_id"]
+isOneToOne: true
+      referencedRelation: "community_accounts"
+      referencedColumns: ["tenant_id","user_id"]
+    },{
+      foreignKeyName: "community_account_permissions_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "user_accounts"
+      referencedColumns: ["user_id"]
+    }
+                  ]
+                },"community_account_preferences": {
+                  Row: {
+                    "allow_direct_messages": boolean,"allow_private_invitations": boolean,"created_at": string,"created_by": string | null,"show_global_profile": boolean,"tenant_id": string,"updated_at": string,"updated_by": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "allow_direct_messages"?: boolean,"allow_private_invitations"?: boolean,"created_at"?: string,"created_by"?: string | null,"show_global_profile"?: boolean,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "allow_direct_messages"?: boolean,"allow_private_invitations"?: boolean,"created_at"?: string,"created_by"?: string | null,"show_global_profile"?: boolean,"tenant_id"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "community_account_preferences_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "user_accounts"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "community_account_preferences_tenant_id_user_id_fkey"
+      columns: ["tenant_id","user_id"]
+isOneToOne: true
+      referencedRelation: "community_accounts"
+      referencedColumns: ["tenant_id","user_id"]
+    },{
+      foreignKeyName: "community_account_preferences_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "user_accounts"
+      referencedColumns: ["user_id"]
+    }
+                  ]
+                },"community_account_profiles": {
                   Row: {
                     "bio": string | null,"created_at": string,"created_by": string | null,"display_name": string,"tenant_id": string,"updated_at": string,"updated_by": string | null,"user_id": string
                   }
@@ -30,18 +94,6 @@ isOneToOne: true
       referencedRelation: "community_accounts"
       referencedColumns: ["tenant_id","user_id"]
     },{
-      foreignKeyName: "community_account_profiles_tenant_id_user_id_fkey"
-      columns: ["tenant_id","user_id"]
-isOneToOne: true
-      referencedRelation: "tenant_admin_candidates"
-      referencedColumns: ["tenant_id","user_id"]
-    },{
-      foreignKeyName: "community_account_profiles_tenant_id_user_id_fkey"
-      columns: ["tenant_id","user_id"]
-isOneToOne: true
-      referencedRelation: "tenant_pending_community_accounts"
-      referencedColumns: ["tenant_id","user_id"]
-    },{
       foreignKeyName: "community_account_profiles_updated_by_fkey"
       columns: ["updated_by"]
 isOneToOne: false
@@ -51,14 +103,14 @@ isOneToOne: false
                   ]
                 },"community_accounts": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"show_global_profile": boolean,"standing": string,"tenant_id": string,"updated_at": string,"updated_by": string | null,"user_id": string
+                    "created_at": string,"created_by": string | null,"first_approved_at": string | null,"has_disciplinary_restriction": boolean,"revision": string,"standing": string,"tenant_id": string,"updated_at": string,"updated_by": string | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"show_global_profile"?: boolean,"standing"?: string,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
+                    "created_at"?: string,"created_by"?: string | null,"first_approved_at"?: string | null,"has_disciplinary_restriction"?: boolean,"revision"?: string,"standing"?: string,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"show_global_profile"?: boolean,"standing"?: string,"tenant_id"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
+                    "created_at"?: string,"created_by"?: string | null,"first_approved_at"?: string | null,"has_disciplinary_restriction"?: boolean,"revision"?: string,"standing"?: string,"tenant_id"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -67,6 +119,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "user_accounts"
       referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "community_accounts_standing_fkey"
+      columns: ["standing"]
+isOneToOne: false
+      referencedRelation: "community_standing"
+      referencedColumns: ["standing"]
     },{
       foreignKeyName: "community_accounts_tenant_id_fkey"
       columns: ["tenant_id"]
@@ -79,6 +137,18 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "tenants"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "community_accounts_tenant_id_user_id_fkey"
+      columns: ["tenant_id","user_id"]
+isOneToOne: true
+      referencedRelation: "community_account_preferences"
+      referencedColumns: ["tenant_id","user_id"]
+    },{
+      foreignKeyName: "community_accounts_tenant_id_user_id_fkey1"
+      columns: ["tenant_id","user_id"]
+isOneToOne: true
+      referencedRelation: "community_account_permissions"
+      referencedColumns: ["tenant_id","user_id"]
     },{
       foreignKeyName: "community_accounts_updated_by_fkey"
       columns: ["updated_by"]
@@ -109,14 +179,14 @@ isOneToOne: false
                   ]
                 },"tenant_admin_actions": {
                   Row: {
-                    "action": string,"content_key": string | null,"created_at": string,"created_by": string | null,"id": string,"target_user_id": string | null,"tenant_id": string
+                    "action": string,"content_key": string | null,"created_at": string,"created_by": string | null,"details": NonNullable<Json>,"id": string,"operation_id": string,"reason": string | null,"target_user_id": string | null,"tenant_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "action": string,"content_key"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"target_user_id"?: string | null,"tenant_id": string
+                    "action": string,"content_key"?: string | null,"created_at"?: string,"created_by"?: string | null,"details"?: NonNullable<Json>,"id"?: string,"operation_id"?: string,"reason"?: string | null,"target_user_id"?: string | null,"tenant_id": string
                   }
                   Update: {
-                    "action"?: string,"content_key"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"target_user_id"?: string | null,"tenant_id"?: string
+                    "action"?: string,"content_key"?: string | null,"created_at"?: string,"created_by"?: string | null,"details"?: NonNullable<Json>,"id"?: string,"operation_id"?: string,"reason"?: string | null,"target_user_id"?: string | null,"tenant_id"?: string
                   }
                   Relationships: [
                     {
@@ -147,14 +217,14 @@ isOneToOne: false
                   ]
                 },"tenant_settings": {
                   Row: {
-                    "auto_approve_users": boolean,"created_at": string,"created_by": string | null,"tenant_id": string,"updated_at": string,"updated_by": string | null
+                    "allow_public_activity_visibility": boolean,"allow_public_chat_visibility": boolean,"allow_public_directory_visibility": boolean,"auto_approve_users": boolean,"created_at": string,"created_by": string | null,"pause_community_events": boolean,"tenant_id": string,"updated_at": string,"updated_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "auto_approve_users"?: boolean,"created_at"?: string,"created_by"?: string | null,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null
+                    "allow_public_activity_visibility"?: boolean,"allow_public_chat_visibility"?: boolean,"allow_public_directory_visibility"?: boolean,"auto_approve_users"?: boolean,"created_at"?: string,"created_by"?: string | null,"pause_community_events"?: boolean,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Update: {
-                    "auto_approve_users"?: boolean,"created_at"?: string,"created_by"?: string | null,"tenant_id"?: string,"updated_at"?: string,"updated_by"?: string | null
+                    "allow_public_activity_visibility"?: boolean,"allow_public_chat_visibility"?: boolean,"allow_public_directory_visibility"?: boolean,"auto_approve_users"?: boolean,"created_at"?: string,"created_by"?: string | null,"pause_community_events"?: boolean,"tenant_id"?: string,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Relationships: [
                     {
@@ -185,14 +255,14 @@ isOneToOne: false
                   ]
                 },"tenant_staff_assignments": {
                   Row: {
-                    "can_approve_users": boolean,"can_create_admin": boolean,"can_modify_content": boolean,"created_at": string,"created_by": string | null,"role": string,"status": string,"tenant_id": string,"updated_at": string,"updated_by": string | null,"user_id": string
+                    "can_approve_users": boolean,"can_audit_community_accounts": boolean,"can_audit_staff_accounts": boolean,"can_discipline_staff": boolean,"can_discipline_users": boolean,"can_grant_staff": boolean,"can_manage_community_activities": boolean,"can_manage_community_permissions": boolean,"can_manage_official_activities": boolean,"can_manage_settings": boolean,"can_moderate_all_chats": boolean,"can_modify_content": boolean,"can_see_private_events": boolean,"created_at": string,"created_by": string | null,"required_account_standing": string | null,"role": string,"status": string,"tenant_id": string,"updated_at": string,"updated_by": string | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "can_approve_users"?: boolean,"can_create_admin"?: boolean,"can_modify_content"?: boolean,"created_at"?: string,"created_by"?: string | null,"role": string,"status"?: string,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
+                    "can_approve_users"?: boolean,"can_audit_community_accounts"?: boolean,"can_audit_staff_accounts"?: boolean,"can_discipline_staff"?: boolean,"can_discipline_users"?: boolean,"can_grant_staff"?: boolean,"can_manage_community_activities"?: boolean,"can_manage_community_permissions"?: boolean,"can_manage_official_activities"?: boolean,"can_manage_settings"?: boolean,"can_moderate_all_chats"?: boolean,"can_modify_content"?: boolean,"can_see_private_events"?: boolean,"created_at"?: string,"created_by"?: string | null,"required_account_standing"?: never,"role": string,"status"?: string,"tenant_id": string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
                   }
                   Update: {
-                    "can_approve_users"?: boolean,"can_create_admin"?: boolean,"can_modify_content"?: boolean,"created_at"?: string,"created_by"?: string | null,"role"?: string,"status"?: string,"tenant_id"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
+                    "can_approve_users"?: boolean,"can_audit_community_accounts"?: boolean,"can_audit_staff_accounts"?: boolean,"can_discipline_staff"?: boolean,"can_discipline_users"?: boolean,"can_grant_staff"?: boolean,"can_manage_community_activities"?: boolean,"can_manage_community_permissions"?: boolean,"can_manage_official_activities"?: boolean,"can_manage_settings"?: boolean,"can_moderate_all_chats"?: boolean,"can_modify_content"?: boolean,"can_see_private_events"?: boolean,"created_at"?: string,"created_by"?: string | null,"required_account_standing"?: never,"role"?: string,"status"?: string,"tenant_id"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -213,6 +283,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "tenants"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tenant_staff_assignments_tenant_id_user_id_required_accoun_fkey"
+      columns: ["tenant_id","user_id","required_account_standing"]
+isOneToOne: false
+      referencedRelation: "community_accounts"
+      referencedColumns: ["tenant_id","user_id","standing"]
     },{
       foreignKeyName: "tenant_staff_assignments_updated_by_fkey"
       columns: ["updated_by"]
@@ -360,86 +436,13 @@ isOneToOne: false
                   Relationships: [
 
                   ]
-                },"tenant_admin_candidates": {
-                  Row: {
-                    "display_name": string | null,"staff_role": string | null,"staff_status": string | null,"standing": string,"tenant_id": string,"user_id": string
-                  }
-                  ComputedFields: never
-                  Relationships: [
-                    {
-      foreignKeyName: "community_accounts_tenant_id_fkey"
-      columns: ["tenant_id"]
-isOneToOne: false
-      referencedRelation: "my_community_summaries"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "community_accounts_tenant_id_fkey"
-      columns: ["tenant_id"]
-isOneToOne: false
-      referencedRelation: "tenants"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "community_accounts_user_id_fkey"
-      columns: ["user_id"]
-isOneToOne: false
-      referencedRelation: "user_accounts"
-      referencedColumns: ["user_id"]
-    }
-                  ]
-                },"tenant_pending_community_accounts": {
-                  Row: {
-                    "display_name": string | null,"tenant_id": string,"user_id": string
-                  }
-                  ComputedFields: never
-                  Relationships: [
-                    {
-      foreignKeyName: "community_accounts_tenant_id_fkey"
-      columns: ["tenant_id"]
-isOneToOne: false
-      referencedRelation: "my_community_summaries"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "community_accounts_tenant_id_fkey"
-      columns: ["tenant_id"]
-isOneToOne: false
-      referencedRelation: "tenants"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "community_accounts_user_id_fkey"
-      columns: ["user_id"]
-isOneToOne: false
-      referencedRelation: "user_accounts"
-      referencedColumns: ["user_id"]
-    }
-                  ]
                 }
           }
           Functions: {
-            "approve_community_account":
-{ Args: { "p_tenant_id": string,"p_user_id": string }; Returns: undefined
-                           },
-"create_tenant":
-{ Args: { "p_city"?: string,"p_country_code": string,"p_join_community"?: boolean,"p_name": string,"p_slug": string,"p_state_province"?: string,"p_timezone": string }; Returns: string
-                           },
-"create_tenant_admin":
-{ Args: { "p_tenant_id": string,"p_user_id": string }; Returns: undefined
-                           },
-"join_community":
-{ Args: { "p_tenant_id": string }; Returns: string
-                           },
-"lookup_tenant":
+            "lookup_tenant":
 { Args: { "p_slug": string }; Returns: {
               "city": string,"country_code": string,"id": string,"name": string,"slug": string,"state_province": string,"timezone": string
             }[]
-                           },
-"set_admin_permissions":
-{ Args: { "p_can_approve_users"?: boolean,"p_can_create_admin"?: boolean,"p_can_modify_content"?: boolean,"p_tenant_id": string,"p_user_id": string }; Returns: undefined
-                           },
-"set_auto_approve_users":
-{ Args: { "p_enabled": boolean,"p_tenant_id": string }; Returns: undefined
-                           },
-"set_tenant_archived":
-{ Args: { "p_archived": boolean,"p_tenant_id": string }; Returns: undefined
                            }
           }
           Enums: {

@@ -41,20 +41,22 @@ export function validateCommunityCreation(draft: CommunityCreationDraft): string
     return 'Keep city and state/province names to 120 characters each.'
   }
   if (!draft.timezone.trim()) return 'Choose the community’s time zone.'
+  if (!draft.displayName.trim() || draft.displayName.trim().length > 80) return 'Enter a community display name of 1–80 characters.'
+  if (draft.bio.trim().length > 2000) return 'Keep your community bio to 2,000 characters.'
   return null
 }
 
 export function getCommunityCreationError(error: { code?: string; message?: string }) {
-  if (error.code === '23505') {
+  if (error.code === 'handle_taken') {
     return 'That community handle is already in use. Choose another, or check Your communities if you submitted this before.'
   }
-  if (error.message?.includes('invalid_timezone')) {
+  if (error.code === 'invalid_timezone') {
     return 'Choose a recognized time zone, such as America/Tegucigalpa.'
   }
-  if (error.code === '42501' || error.code === 'PGRST301' || error.code === 'PGRST303') {
+  if (error.code === 'ineligible' || error.code === 'unauthenticated') {
     return 'Please sign in with a verified account before creating a community.'
   }
-  if (error.code === '23514' || error.code === '22023') {
+  if (error.code === 'invalid_details' || error.code === 'invalid_request') {
     return 'Please check the community details and choose another handle if it is reserved.'
   }
   return 'We couldn’t confirm that your community was created. Check Your communities before trying again. Your form details are still here.'

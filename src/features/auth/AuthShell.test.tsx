@@ -12,9 +12,10 @@ const auth = vi.hoisted(() => ({
   getSession: vi.fn(), onAuthStateChange: vi.fn(), signUp: vi.fn(), signInWithPassword: vi.fn(),
   resend: vi.fn(), resetPasswordForEmail: vi.fn(), updateUser: vi.fn(), signOut: vi.fn(),
 }))
-const creationRpc = vi.hoisted(() => vi.fn())
+const creationCommand = vi.hoisted(() => vi.fn())
+vi.mock('../communities/command-client', () => ({ submitCommunity: creationCommand }))
 vi.mock('../../lib/supabase', () => ({
-  supabase: { auth, rpc: creationRpc },
+  supabase: { auth },
   authInitialization: Promise.resolve({ error: null }),
   get initialAuthRedirect() {
     const hash = new URLSearchParams(window.location.hash.slice(1))
@@ -246,7 +247,7 @@ it('ignores a departed creation result while a new Auth action remains busy', as
   window.history.replaceState(null, '', '/account/communities/new')
   auth.getSession.mockResolvedValue({ data: { session }, error: null })
   let finishCreation!: (value: unknown) => void, finishSignIn!: (value: unknown) => void
-  creationRpc.mockReturnValue(new Promise(resolve => { finishCreation = resolve }))
+  creationCommand.mockReturnValue(new Promise(resolve => { finishCreation = resolve }))
   auth.signInWithPassword.mockReturnValue(new Promise(resolve => { finishSignIn = resolve }))
   function BrowserHistoryControl() {
     const navigate = useNavigate()
@@ -254,14 +255,14 @@ it('ignores a departed creation result while a new Auth action remains busy', as
   }
   render(<BrowserRouter><BrowserHistoryControl/><AuthShell><AccountActions/></AuthShell></BrowserRouter>)
   await screen.findByLabelText('Community name')
-  fill('Community name', 'Fictional club'); fill('Community handle', 'fictional-club'); fill('Country', 'HN')
+  fill('Community name', 'Fictional club'); fill('Community handle', 'fictional-club'); fill('Country', 'HN'); fill('Your community display name', 'Player')
   submit()
-  await waitFor(() => expect(creationRpc).toHaveBeenCalledOnce())
+  await waitFor(() => expect(creationCommand).toHaveBeenCalledOnce())
   fireEvent.click(screen.getByRole('button', { name: 'Review sign in' }))
   await screen.findByRole('heading', { name: 'Welcome back.' })
   fill('Email address', 'person@example.com'); fill('Password', 'fictional-test-password'); submit()
   expect((screen.getByRole('button', { name: 'Please wait…' }) as HTMLButtonElement).disabled).toBe(true)
-  await act(async () => { finishCreation({ data: 'old-tenant', error: null }) })
+  await act(async () => { finishCreation({ tenantId: 'old-tenant', outcome: 'created' }) })
   expect(screen.queryByText('Your community is ready.')).toBeNull()
   expect((screen.getByRole('button', { name: 'Please wait…' }) as HTMLButtonElement).disabled).toBe(true)
   await act(async () => { listener('SIGNED_IN', session); finishSignIn({ error: null }) })
@@ -273,19 +274,19 @@ it('resets creation for another identity and ignores the old result while its re
   window.history.replaceState(null, '', '/account/communities/new')
   auth.getSession.mockResolvedValue({ data: { session }, error: null })
   let finishOld!: (value: unknown) => void, finishNew!: (value: unknown) => void
-  creationRpc.mockReturnValueOnce(new Promise(resolve => { finishOld = resolve }))
+  creationCommand.mockReturnValueOnce(new Promise(resolve => { finishOld = resolve }))
     .mockReturnValueOnce(new Promise(resolve => { finishNew = resolve }))
   render(<BrowserRouter><AuthShell><div>Home</div></AuthShell></BrowserRouter>)
   await screen.findByLabelText('Community name')
-  fill('Community name', 'Old club'); fill('Community handle', 'old-club'); fill('Country', 'HN'); submit()
+  fill('Community name', 'Old club'); fill('Community handle', 'old-club'); fill('Country', 'HN'); fill('Your community display name', 'Player'); submit()
   await act(async () => { listener('SIGNED_IN', { user: { ...session.user, id: 'second-user', email: 'second@example.test' } }) })
   expect((await screen.findByLabelText('Community name') as HTMLInputElement).value).toBe('')
-  fill('Community name', 'New club'); fill('Community handle', 'new-club'); fill('Country', 'HN'); submit()
-  expect(creationRpc).toHaveBeenCalledTimes(2)
-  await act(async () => { finishOld({ data: 'old-tenant', error: null }) })
+  fill('Community name', 'New club'); fill('Community handle', 'new-club'); fill('Country', 'HN'); fill('Your community display name', 'Player'); submit()
+  expect(creationCommand).toHaveBeenCalledTimes(2)
+  await act(async () => { finishOld({ tenantId: 'old-tenant', outcome: 'created' }) })
   expect(screen.queryByText('Your community is ready.')).toBeNull()
   expect((document.querySelector('fieldset') as HTMLFieldSetElement).disabled).toBe(true)
-  await act(async () => { finishNew({ data: 'new-tenant', error: null }) })
+  await act(async () => { finishNew({ tenantId: 'new-tenant', outcome: 'created' }) })
   expect((await screen.findByRole('status')).textContent).toContain('New club')
   expect(screen.queryByText('Old club')).toBeNull()
 })

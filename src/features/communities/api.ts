@@ -1,3 +1,4 @@
+import { submitCommunity } from './command-client'
 import type { CommunityPreviewIdentity, MembershipPreviewContent } from './types'
 import { interests, previewCommunity } from '../../mock/data'
 import type { Activity, Profile, SeatStatus } from '../../mock/data'
@@ -21,7 +22,7 @@ export function readCommunityCreationOptions(): CommunityCreationOptions {
     timezones, initialTimezone, isConfigured: Boolean(supabase) }
 }
 
-export async function createCommunity(draft: CommunityCreationDraft): Promise<CommunityCreationSummary> {
+export async function createCommunity(userId: string, draft: CommunityCreationDraft): Promise<CommunityCreationSummary> {
   if (!supabase) throw new Error('Account services are not configured yet. Please try again later.')
   // Capture submitted strings before awaiting; the confirmed summary must not
   // drift if a caller later changes its draft. No detail/profile read is added.
@@ -29,16 +30,14 @@ export async function createCommunity(draft: CommunityCreationDraft): Promise<Co
     region: draft.region.trim(), city: draft.city.trim() }
   const countryName = new Intl.DisplayNames(['en'], { type: 'region' }).of(submitted.country)
   const locationLabel = [submitted.city, submitted.region, countryName].filter(Boolean).join(', ')
-  let result
   try {
-    result = await supabase.rpc('create_tenant', {
-      p_name: submitted.name, p_slug: submitted.slug, p_country_code: submitted.country, p_timezone: submitted.timezone,
-      p_state_province: submitted.region || undefined, p_city: submitted.city || undefined, p_join_community: submitted.join,
-    })
-  } catch { throw new Error(getCommunityCreationError({})) }
-  if (result.error) throw new Error(getCommunityCreationError(result.error))
-  if (!result.data) throw new Error(getCommunityCreationError({}))
-  return { id: result.data, name: submitted.name, slug: submitted.slug, locationLabel, timezone: submitted.timezone, join: submitted.join }
+    const result = await submitCommunity(userId, { name: submitted.name, slug: submitted.slug, country: submitted.country,
+      region: submitted.region, city: submitted.city, timezone: submitted.timezone,
+      profile: { displayName: submitted.displayName.trim(), bio: submitted.bio.trim() || null } })
+    return { id: result.tenantId, name: submitted.name, slug: submitted.slug, locationLabel, timezone: submitted.timezone }
+  } catch (error) {
+    throw new Error(getCommunityCreationError({ code: error instanceof Error && 'code' in error ? String(error.code) : undefined }), { cause: error })
+  }
 }
 
 export type CommunityAccountPreferences = {
@@ -49,7 +48,7 @@ export async function saveCommunityAccountPreferences(tenantId: string, preferen
   if (!supabase) throw new Error('Community services are not configured.')
   // One update for the complete supported preference object. RLS scopes the
   // caller; explicit fields exclude identity, standing and unimplemented mocks.
-  const result = await supabase.from('community_accounts').update({
+  const result = await supabase.from('community_account_preferences').update({
     show_global_profile: preferences.show_global_profile,
   }).eq('tenant_id', tenantId).select('tenant_id').single()
   if (result.error) throw result.error
@@ -57,11 +56,10 @@ export async function saveCommunityAccountPreferences(tenantId: string, preferen
 
 export async function saveCommunityProfile(tenantId: string, name: string, bio: string) {
   if (!supabase) throw new Error('Community services are not configured.')
-  const result = await supabase.from('community_account_profiles').upsert({
-    tenant_id: tenantId,
+  const result = await supabase.from('community_account_profiles').update({
     display_name: name.trim(),
     bio: bio.trim() || null,
-  }, { onConflict: 'tenant_id,user_id' }).select('tenant_id').single()
+  }).eq('tenant_id', tenantId).select('tenant_id').single()
   if (result.error) throw result.error
 }
 

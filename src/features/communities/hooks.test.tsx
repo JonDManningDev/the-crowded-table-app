@@ -7,7 +7,7 @@ import type { CommunityCreationSummary } from './types'
 
 const api = vi.hoisted(() => ({ createCommunity: vi.fn(), readCommunityCreationOptions: vi.fn() }))
 vi.mock('./api', () => api)
-const summary = (name = 'Fictional club'): CommunityCreationSummary => ({ id: 'server-uuid', name, slug: 'fictional-club', locationLabel: 'Honduras', timezone: 'UTC', join: false })
+const summary = (name = 'Fictional club'): CommunityCreationSummary => ({ id: 'server-uuid', name, slug: 'fictional-club', locationLabel: 'Honduras', timezone: 'UTC' })
 function deferred<T>() {
   let resolve!: (value: T) => void, reject!: (reason: unknown) => void
   const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no })
@@ -24,28 +24,29 @@ function valid(result: { current: ReturnType<typeof useCommunityCreation> }) {
     result.current.changeDraft('name', 'Fictional club')
     result.current.changeDraft('slug', 'fictional-club')
     result.current.changeDraft('country', 'HN')
+    result.current.changeDraft('displayName', 'Player')
   })
 }
 it('initializes once, validates before requesting, and preserves draft through parent rerenders', async () => {
   const notify = vi.fn()
-  const { result, rerender } = renderHook(() => useCommunityCreation(notify))
-  expect(result.current.draft).toMatchObject({ timezone: 'UTC', join: false, name: '' })
+  const { result, rerender } = renderHook(() => useCommunityCreation('viewer', notify))
+  expect(result.current.draft).toMatchObject({ timezone: 'UTC', displayName: '', name: '' })
   await act(async () => { expect(await result.current.submitCommunity()).toBe(false) })
   expect(result.current.error).toContain('community name')
   expect(api.createCommunity).not.toHaveBeenCalled()
   expect(notify).not.toHaveBeenCalled()
   valid(result)
-  act(() => result.current.changeDraft('join', true))
+  act(() => result.current.changeDraft('displayName', 'Player'))
   rerender()
-  expect(result.current.draft).toMatchObject({ name: 'Fictional club', join: true })
+  expect(result.current.draft).toMatchObject({ name: 'Fictional club', displayName: 'Player' })
   expect(api.readCommunityCreationOptions).toHaveBeenCalledOnce()
 })
 it('blocks immediate duplicates, retains failed drafts and releases busy for an explicit retry', async () => {
   const request = deferred<CommunityCreationSummary>(), notify = vi.fn()
   api.createCommunity.mockReturnValueOnce(request.promise)
-  const { result } = renderHook(() => useCommunityCreation(notify))
+  const { result } = renderHook(() => useCommunityCreation('viewer', notify))
   valid(result)
-  act(() => result.current.changeDraft('join', true))
+  act(() => result.current.changeDraft('displayName', 'Player'))
   let first!: Promise<boolean>, duplicate!: Promise<boolean>
   act(() => { first = result.current.submitCommunity(); duplicate = result.current.submitCommunity() })
   expect(await duplicate).toBe(false)
@@ -54,7 +55,7 @@ it('blocks immediate duplicates, retains failed drafts and releases busy for an 
   expect(result.current.isCreating).toBe(true)
   await act(async () => { request.reject(new Error('Collision recovery')); expect(await first).toBe(false) })
   expect(result.current).toMatchObject({ isCreating: false, error: 'Collision recovery', savedCommunity: null })
-  expect(result.current.draft).toMatchObject({ name: 'Fictional club', join: true })
+  expect(result.current.draft).toMatchObject({ name: 'Fictional club', displayName: 'Player' })
   expect(notify.mock.calls).toEqual([[true], [false]])
   await act(async () => { expect(await result.current.submitCommunity()).toBe(true) })
   expect(result.current.error).toBe('')
@@ -65,7 +66,7 @@ it('blocks immediate duplicates, retains failed drafts and releases busy for an 
 })
 it('does not create or contribute busy state when configuration is unavailable', async () => {
   api.readCommunityCreationOptions.mockReturnValue({ countries: [], timezones: ['UTC'], initialTimezone: 'UTC', isConfigured: false })
-  const notify = vi.fn(), { result } = renderHook(() => useCommunityCreation(notify))
+  const notify = vi.fn(), { result } = renderHook(() => useCommunityCreation('viewer', notify))
   valid(result)
   await act(async () => { expect(await result.current.submitCommunity()).toBe(false) })
   expect(result.current.error).toContain('not configured')
@@ -75,13 +76,13 @@ it('does not create or contribute busy state when configuration is unavailable',
 it.each(['resolve', 'reject'] as const)('releases an unmounted owner once and ignores its late %s while a new owner is pending', async completion => {
   const old = deferred<CommunityCreationSummary>(), current = deferred<CommunityCreationSummary>(), notify = vi.fn()
   api.createCommunity.mockReturnValueOnce(old.promise).mockReturnValueOnce(current.promise)
-  const first = renderHook(() => useCommunityCreation(notify))
+  const first = renderHook(() => useCommunityCreation('viewer', notify))
   valid(first.result)
   let oldAction!: Promise<boolean>, newAction!: Promise<boolean>
   act(() => { oldAction = first.result.current.submitCommunity() })
   first.unmount()
   expect(notify.mock.calls).toEqual([[true], [false]])
-  const second = renderHook(() => useCommunityCreation(notify))
+  const second = renderHook(() => useCommunityCreation('viewer', notify))
   valid(second.result)
   act(() => { newAction = second.result.current.submitCommunity() })
   await act(async () => {
@@ -98,7 +99,7 @@ it.each(['resolve', 'reject'] as const)('releases an unmounted owner once and ig
 it('survives Strict Mode setup and retains the initiating busy callback across prop changes', async () => {
   const request = deferred<CommunityCreationSummary>(), original = vi.fn(), replacement = vi.fn()
   api.createCommunity.mockReturnValue(request.promise)
-  const { result, rerender } = renderHook(({ notify }) => useCommunityCreation(notify), {
+  const { result, rerender } = renderHook(({ notify }) => useCommunityCreation('viewer', notify), {
     initialProps: { notify: original }, wrapper: StrictMode,
   })
   valid(result)

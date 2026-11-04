@@ -1,16 +1,43 @@
--- First part of the coordinated write cutover. Rehearse only in the disposable
--- upgrade database until the replacement commands and caller grants are ready.
--- The harness supplies the preflight view and commits after its final checks.
--- Begin here so accidental standalone execution also rolls back on failure.
-begin isolation level read committed;
-do $scope$
-begin
-  if current_database() !~ '^crowded_table_api_test_[0-9a-f]{32}$' then
-    raise exception 'unreleased cutover requires an isolated upgrade database';
-  end if;
-end $scope$;
+begin;
 lock table public.tenants, public.tenant_settings, public.tenant_staff_assignments, public.community_accounts,
   public.user_account_profiles, public.community_account_profiles, public.tenant_admin_actions in access exclusive mode;
+create temporary view community_cutover_preflight(result) as
+with accounts as (
+  select c.standing, c.show_global_profile, p.user_id is null as missing_profile,
+    g.user_id is not null and g.display_name = btrim(g.display_name)
+      and char_length(g.display_name) between 1 and 80
+      and (g.bio is null or char_length(g.bio) <= 2000) as usable_global
+  from public.community_accounts c
+  left join public.community_account_profiles p using (tenant_id, user_id)
+  left join public.user_account_profiles g on g.user_id = c.user_id
+), staff as (
+  select s.role, s.status, c.standing
+  from public.tenant_staff_assignments s left join public.community_accounts c using (tenant_id, user_id)
+), blockers as (
+  select
+    (select count(*) from public.tenants t where not exists (
+      select from public.tenant_staff_assignments s join public.community_accounts c using (tenant_id,user_id)
+      where s.tenant_id=t.id and s.role='owner' and s.status='active' and c.standing='approved'
+    )) as owners_requiring_repair,
+    (select count(*) from staff where role <> 'owner' and status = 'active' and standing is distinct from 'approved') as ineligible_active_staff,
+    (select count(*) from accounts where missing_profile and not usable_global) as missing_profile_sources,
+    (select count(*) from accounts where standing not in ('pending','approved','suspended','removed')) as unknown_standings
+), backfills as (
+  select count(*) as accounts,
+    count(*) filter (where missing_profile and usable_global) as copy_global_profile_once,
+    count(*) filter (where not missing_profile) as preserve_curated_profile,
+    count(*) filter (where standing = 'pending') as adopt_pending_request,
+    count(*) filter (where standing in ('approved','suspended','removed')) as approximate_first_approval,
+    count(*) filter (where standing in ('suspended','removed')) as mark_restricted,
+    count(*) filter (where standing = 'removed') as convert_to_inactive,
+    count(*) filter (where standing = 'removed' and show_global_profile) as clear_inactive_sharing
+  from accounts
+)
+select jsonb_build_object(
+  'ready', owners_requiring_repair = 0 and ineligible_active_staff = 0 and missing_profile_sources = 0 and unknown_standings = 0,
+  'blockers', to_jsonb(blockers), 'backfills', to_jsonb(backfills)
+) from blockers cross join backfills;
+
 do $guard$
 begin
   if (select (result->>'ready')::boolean from pg_temp.community_cutover_preflight) is not true then
@@ -258,3 +285,112 @@ begin
 end $$;
 create trigger a_invariants before update or delete on public.tenant_staff_assignments
   for each row execute function app_private.protect_staff_assignment();
+
+
+-- Close the complete legacy lifecycle surface in the transaction that opens the API.
+drop view public.tenant_admin_candidates, public.tenant_pending_community_accounts;
+drop function public.create_tenant(text,text,text,text,text,text,boolean), public.join_community(uuid),
+  public.set_auto_approve_users(uuid,boolean), public.approve_community_account(uuid,uuid),
+  public.create_tenant_admin(uuid,uuid), public.set_admin_permissions(uuid,uuid,boolean,boolean,boolean),
+  public.set_tenant_archived(uuid,boolean);
+drop function app_private.lock_tenant(uuid,boolean,boolean), app_private.has_permission(uuid,text);
+drop policy own_community_preferences_update on public.community_accounts;
+drop policy own_community_profile_insert on public.community_account_profiles;
+revoke insert(tenant_id,display_name,bio),update(tenant_id) on public.community_account_profiles from authenticated;
+alter policy self_profile on public.community_account_profiles using (
+  user_id=app_private.verified_user() and exists(select from public.community_accounts c
+  where (c.tenant_id,c.user_id)=(community_account_profiles.tenant_id,community_account_profiles.user_id)
+  and c.standing in ('approved','pending','suspended')));
+alter policy own_community_profile_update on public.community_account_profiles using (
+  user_id=app_private.verified_user() and app_private.active_tenant(tenant_id) and exists(select from public.community_accounts c
+  where (c.tenant_id,c.user_id)=(community_account_profiles.tenant_id,community_account_profiles.user_id)
+  and c.standing in ('approved','pending','suspended'))) with check (user_id=app_private.verified_user());
+grant select(tenant_id,show_global_profile,allow_direct_messages,allow_private_invitations),
+  update(show_global_profile,allow_direct_messages,allow_private_invitations) on public.community_account_preferences to authenticated;
+create policy own_preferences on public.community_account_preferences for all to authenticated
+  using (user_id=app_private.verified_user() and exists(select from public.community_accounts c
+    where (c.tenant_id,c.user_id)=(community_account_preferences.tenant_id,community_account_preferences.user_id)
+    and c.standing in ('pending','approved','suspended')))
+  with check (user_id=app_private.verified_user() and app_private.active_tenant(tenant_id));
+
+alter table public.community_accounts add column revision uuid not null default gen_random_uuid();
+create function app_private.stamp_community_revision() returns trigger language plpgsql set search_path='' as $$
+begin new.revision := gen_random_uuid(); return new; end $$;
+create trigger b_revision before update on public.community_accounts for each row execute function app_private.stamp_community_revision();
+
+-- Only the server login uses this transaction-local tenant selector.
+create function app_private.command_scope() returns uuid language sql stable set search_path='' as $$
+  select case when app_private.verified_user() is not null then nullif(current_setting('ct.tenant_id',true),'')::uuid end
+$$;
+grant execute on function app_private.command_scope() to ct_api;
+create policy command_scope on public.tenants for all to ct_api
+  using (id=app_private.command_scope()) with check (id=app_private.command_scope());
+create policy command_scope on public.tenant_settings for all to ct_api
+  using (tenant_id=app_private.command_scope()) with check (tenant_id=app_private.command_scope());
+create policy command_scope on public.community_accounts for all to ct_api
+  using (tenant_id=app_private.command_scope()) with check (tenant_id=app_private.command_scope());
+create policy command_scope on public.community_account_profiles for all to ct_api
+  using (tenant_id=app_private.command_scope()) with check (tenant_id=app_private.command_scope());
+create policy command_scope on public.community_account_preferences for all to ct_api
+  using (tenant_id=app_private.command_scope()) with check (tenant_id=app_private.command_scope());
+create policy command_scope on public.community_account_permissions for all to ct_api
+  using (tenant_id=app_private.command_scope()) with check (tenant_id=app_private.command_scope());
+create policy command_scope on public.tenant_staff_assignments for all to ct_api
+  using (tenant_id=app_private.command_scope()) with check (tenant_id=app_private.command_scope());
+create policy command_scope on public.tenant_admin_actions for all to ct_api
+  using (tenant_id=app_private.command_scope()) with check (tenant_id=app_private.command_scope());
+create policy command_scope on app_private.community_account_requests for all to ct_api
+  using (tenant_id=app_private.command_scope()) with check (tenant_id=app_private.command_scope());
+grant select(id,operational_status), insert(id,name,slug,country_code,city,state_province,timezone),
+  update(operational_status) on public.tenants to ct_api;
+grant select(tenant_id,auto_approve_users), insert(tenant_id),update(auto_approve_users) on public.tenant_settings to ct_api;
+grant select(first_approved_at,has_disciplinary_restriction,revision), insert(tenant_id,user_id,standing),
+  update(standing,has_disciplinary_restriction) on public.community_accounts to ct_api;
+grant insert(tenant_id,user_id,display_name,bio) on public.community_account_profiles to ct_api;
+grant insert(tenant_id,user_id) on public.community_account_preferences,public.community_account_permissions to ct_api;
+grant select(tenant_id,user_id,role,status,can_approve_users, can_grant_staff, can_modify_content, can_discipline_users, can_discipline_staff, can_manage_community_activities, can_manage_official_activities, can_manage_community_permissions, can_see_private_events, can_manage_settings, can_moderate_all_chats, can_audit_community_accounts, can_audit_staff_accounts),
+  insert(tenant_id,user_id,role,can_approve_users, can_grant_staff, can_modify_content, can_discipline_users, can_discipline_staff, can_manage_community_activities, can_manage_official_activities, can_manage_community_permissions, can_see_private_events, can_manage_settings, can_moderate_all_chats, can_audit_community_accounts, can_audit_staff_accounts), update(status,can_approve_users, can_grant_staff, can_modify_content, can_discipline_users, can_discipline_staff, can_manage_community_activities, can_manage_official_activities, can_manage_community_permissions, can_see_private_events, can_manage_settings, can_moderate_all_chats, can_audit_community_accounts, can_audit_staff_accounts) on public.tenant_staff_assignments to ct_api;
+grant select,delete,insert(id,tenant_id,user_id,requested_by,kind) on app_private.community_account_requests to ct_api;
+grant insert(tenant_id,target_user_id,action,details,reason) on public.tenant_admin_actions to ct_api;
+
+-- Actor, time, correlation and history audience cannot be supplied by the HTTP caller.
+alter table public.tenant_admin_actions alter column operation_id set default gen_random_uuid();
+create table app_private.account_action_types(code text primary key, usage text not null check (usage in ('legacy','command','system')));
+insert into app_private.account_action_types
+  select t||'.'||op,'legacy' from unnest(array['community_accounts','tenant_staff_assignments']) t
+    cross join unnest(array['insert','update','delete']) op
+  union all select t||'.'||op,'system' from unnest(array['tenants','tenant_settings','tenant_website_content_overrides']) t
+    cross join unnest(array['insert','update','delete']) op;
+insert into app_private.account_action_types values ('community_join_request_adopted','legacy');
+insert into app_private.account_action_types select action,'command' from unnest(array[
+  'community_join_requested','community_join_withdrawn','community_approved','community_deactivated','community_suspended',
+  'community_removed','community_restriction_cleared','community_reactivation_requested','community_reactivation_withdrawn',
+  'community_reactivated','staff_created','staff_paused','staff_resumed','staff_revoked','staff_reappointed','staff_permissions_changed']) action;
+alter table public.tenant_admin_actions add foreign key(action) references app_private.account_action_types(code);
+create function app_private.attribute_command() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+  if session_user='ct_api' then
+    new.created_by := app_private.verified_user();
+    new.operation_id := nullif(current_setting('ct.operation_id',true),'')::uuid;
+    if new.created_by is null or new.operation_id is null or new.tenant_id is distinct from app_private.command_scope()
+      or exists(select from app_private.account_action_types where code=new.action and usage='legacy') then
+      raise exception 'invalid command attribution' using errcode='42501';
+    end if;
+  end if;
+  return new;
+end $$;
+create trigger attribute_command before insert on public.tenant_admin_actions for each row execute function app_private.attribute_command();
+create function app_private.classify_command() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+  if new.action like 'staff\_%' then
+    insert into app_private.tenant_admin_action_categories values(new.id,'staff_account');
+  end if;
+  if new.action like 'community\_%' or new.action in ('staff_created','staff_reappointed')
+      or (new.action='staff_revoked' and new.details->>'before_status'='active') then
+    insert into app_private.tenant_admin_action_categories values(new.id,'community_account');
+  end if;
+  return new;
+end $$;
+create trigger classify_command after insert on public.tenant_admin_actions for each row execute function app_private.classify_command();
+notify pgrst,'reload schema';
+commit;

@@ -1,3 +1,5 @@
+import { CommunityError } from './communities/commands.ts'
+import { registerCommunityCommands } from './communities/routes.ts'
 import { registerCommunityProfile } from './communities/profile.ts'
 import { registerStandingReference } from './communities/standing.ts'
 import { errorResponse } from './http.ts'
@@ -8,10 +10,14 @@ import { accountPreferences } from './accounts/preferences.ts'
 import { checkRuntime, type AppDatabase } from './database.ts'
 
 export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<string | null>) {
-  const app = Fastify({ bodyLimit: 8192, genReqId: () => randomUUID(),
+  const app = Fastify({ bodyLimit: 8192, requestIdHeader: false, genReqId: () => randomUUID(),
     ajv: { customOptions: { removeAdditional: false, coerceTypes: false, useDefaults: false } } })
   app.addHook('onClose', () => db.destroy())
   app.setErrorHandler((error, request, reply) => {
+    if (error instanceof CommunityError) return reply.code(error.statusCode).send({ code: error.message, requestId: request.id })
+    if (error instanceof Error && 'code' in error && ['23514','22023'].includes(String(error.code))) {
+      return reply.code(400).send({ code: error.message === 'invalid_timezone' ? 'invalid_timezone' : 'invalid_details', requestId: request.id })
+    }
     const status = error instanceof Error && 'statusCode' in error && typeof error.statusCode === 'number'
       && error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 503
     if (status === 503) console.error('API request failed', request.id, error instanceof Error && 'code' in error ? error.code : 'internal')
@@ -28,6 +34,7 @@ export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<s
       if (!actor) return reply.code(401).send({ code: 'unauthenticated', requestId: request.id })
       request.setDecorator('actor', actor)
     })
+    registerCommunityCommands(routes, db)
     registerCommunityProfile(routes, db)
     const querystring = { type: 'object', additionalProperties: false, properties: {} }
     const response = { 200: preferencesSchema, 403: errorResponse, 404: errorResponse }
