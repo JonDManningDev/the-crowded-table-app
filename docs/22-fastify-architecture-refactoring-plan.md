@@ -1,6 +1,6 @@
 # Final Fastify architecture refactoring plan
 
-**Status: finalized architecture plan, 2026-11-04; Phases 1–4 complete and locally verified.** Phase 1 establishes the HTTP baseline, Phase 2 implements shared facilities/resource ownership, and Phase 3 implements the user-account triad. Community migration is complete; health and final reconciliation remain for Phase 5. See [Phase 1 evidence](evidence/fastify-phase-1-2026-11-04/README.md), [Phase 2 evidence](evidence/fastify-phase-2-2026-11-04/README.md), [Phase 3 evidence](evidence/fastify-phase-3-2026-11-04/README.md) and [Phase 4 evidence](evidence/fastify-phase-4-2026-11-04/README.md) for starting revisions, environments and verification results.
+**Status: completed and locally verified, 2026-11-04; all five phases complete.** The HTTP baseline, shared facilities/resource ownership and all three feature triads are implemented. The eight community groups retain their independent commits. Phase 5 completes health, transport typing and final cleanup/verification. See [Phase 1 evidence](evidence/fastify-phase-1-2026-11-04/README.md), [Phase 2 evidence](evidence/fastify-phase-2-2026-11-04/README.md), [Phase 3 evidence](evidence/fastify-phase-3-2026-11-04/README.md), [Phase 4 evidence](evidence/fastify-phase-4-2026-11-04/README.md) and [Phase 5 evidence](evidence/fastify-phase-5-2026-11-04/README.md).
 
 This plan governs the structural refactor of the existing persistent API. The [approved API transition](20-persistent-api-transition-proposal.md), [intended access matrix](16-intended-access-matrix.md), and [final access audit](21-final-local-access-audit.md) remain the behavior and security context. It supersedes earlier proposed target structures from the architecture-planning discussion, not accepted product or database requirements.
 
@@ -8,7 +8,7 @@ This plan governs the structural refactor of the existing persistent API. The [a
 
 Refactor the existing API into frontend-aligned features with mandatory `routes.ts`, `service.ts`, and `schema.ts` files. Preserve all 41 explicit HTTP operations, 28 automatic HEAD operations, and existing security/database behavior.
 
-Phase 1 changed tests/documentation, Phase 2 changed shared facilities/callers, Phase 3 moved user-account operations into their triad, and Phase 4 migrated all eight community groups. All preserve the HTTP contract. No shared browser contract, database migration, runtime privilege or frontend change is included.
+Phase 1 changed tests/documentation, Phase 2 changed shared facilities/callers, Phase 3 moved user-account operations into their triad, Phase 4 migrated all eight community groups, and Phase 5 completed health, transport typing and final reconciliation. All preserve the HTTP contract. No shared browser contract, database migration, runtime privilege or frontend change is included.
 
 ```text
 server/src/
@@ -220,7 +220,7 @@ Specifically, replace `preferencesSchema.required` as the preference SQL project
 
 Keep frontend imports within shared contracts; do not introduce frontend imports into backend directories. Do not broaden this refactor into a shared-contract reorganization.
 
-Schema relocation must not tighten inputs, add header validation, change error precedence, close intentionally open fields, or alter serialization. Health may define its fixed success-response contracts without adding request restrictions.
+Schema relocation must not tighten inputs, add header validation, change error precedence, close intentionally open fields, or alter serialization. Health defines fixed success-body schemas for reply typing only; its routes preserve absent runtime schemas and unrestricted request inputs.
 
 ## 4. Incremental implementation and mandatory verification gates
 
@@ -301,6 +301,12 @@ Temporary coexistence of migrated and unmigrated source modules is permitted dur
 - Reconcile architecture, file-structure, implementation-status and agent guidance.
 
 Run the full local API suite, existing runtime-role/SQL/concurrency checks, frontend tests, build and lint. Verify that migrations and the runtime privilege manifest are unchanged.
+
+Phase 5 is complete from checkpoint `2a08e76`. The health triad uses matching Liveness/Readiness sections. `createHealthService({checkReadiness})` returns ordinary `readLiveness`/`readReadiness` operations; `healthRoutes` receives only their service and registers outside authentication. Composition supplies the existing `checkRuntime(db)` callback once; root startup/cleanup ownership and SQL remain unchanged. Health's schema file derives reply types without attaching runtime schemas, preserving the Phase 1 absence and accepting existing request inputs.
+
+Community routes now use schema-owned params/query/body types with literal-preserving schema composition. Shared discriminated commands and preference/settings DTOs remain explicit exceptions for dynamically assembled maps. The old Data API regression script now imports real service implementations and uses verified context plus explicit eligibility/result unwrapping; no compatibility interface remains. All triads and dependency/section boundaries are reconciled.
+
+All 60 backend cases, server TypeScript, root lint, nine local real Auth/HTTP suites, the 130-file client boundary scan, 265 pgTAP assertions, 51 retired Data API checks, replay/populated upgrade, SQL lint, all 279 frontend tests and the production build passed. All 110 SQL templates, existing account/community services, shared facilities and nine real integration suites are unchanged. The HTTP fixture, 41 explicit operations/28 HEADs, cursor formats, migrations, client/shared contracts, dependency lockfile and runtime privilege manifest are unchanged. No required gate remains blocked. [Phase 5 evidence](evidence/fastify-phase-5-2026-11-04/README.md) records commands, environment, the resolved lint issue and existing nonblocking notices. No hosted execution or deployment is included.
 
 Each phase and community group must be independently reviewable and reversible through its code commit. No database migration or deployment rollback is required.
 

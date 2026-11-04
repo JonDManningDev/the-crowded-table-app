@@ -1,7 +1,6 @@
 import { connectDatabase } from '../../server/src/database.ts';
-import { withVerifiedActor } from '../../server/src/actor-transaction.ts';
-import { configurationSettings } from '../../server/src/communities/configuration.ts';
-import { createCommunity, communityCommand } from '../../server/src/communities/commands.ts';
+import { withEligibleActorTransaction } from '../../server/src/actor-transaction.ts';
+import { configurationSettings, createCommunity, communityCommand } from '../../server/src/communities/service.ts';
 // Real Supabase SDK/PostgREST and concurrent SQL checks. Local Docker only.
 // Creates uniquely identified synthetic fixtures and removes only those fixtures.
 import assert from 'node:assert/strict';
@@ -50,15 +49,24 @@ const endpoint = new URL(process.env.DATABASE_URL);
 assert.equal(endpoint.host,new URL(config.DB_URL).host);
 assert.equal(endpoint.pathname,'/postgres');
 const db = connectDatabase(endpoint.href);
-const create = (actor, name) => withVerifiedActor(db,actor,randomUUID(),tx => createCommunity(tx,actor,{
-  name: 'API fixture',slug: name,country:'HN',region:'',city:'',timezone:'UTC',profile:{displayName:'Owner',bio:null}}));
-const command = (actor, body) => withVerifiedActor(db,actor,randomUUID(),tx => communityCommand(tx,actor,tenant,body));
+const create = async (actor, name) => {
+  const result = await withEligibleActorTransaction(db,{actorId:actor,requestId:randomUUID()},tx => createCommunity(tx,actor,{
+    name: 'API fixture',slug: name,country:'HN',region:'',city:'',timezone:'UTC',profile:{displayName:'Owner',bio:null}}));
+  assert.equal(result.eligible,true);
+  return result.value;
+};
+const command = async (actor, body) => {
+  const result = await withEligibleActorTransaction(db,{actorId:actor,requestId:randomUUID()},tx => communityCommand(tx,actor,tenant,body));
+  assert.equal(result.eligible,true);
+  return result.value;
+};
 
 try {
   sql(`insert into auth.users(id,email,email_confirmed_at) values ${identities.map(id => `('${id}','${id}@example.test',${id === unverified ? 'null' : 'now()'})`).join(',')};`);
   tenant = (await create(owner,slug)).tenantId;
   secondTenant = (await create(other,slug+'-b')).tenantId;
-  await withVerifiedActor(db,owner,randomUUID(),tx=>configurationSettings(tx,owner,tenant,{auto_approve_users:true}));
+  const settings = await withEligibleActorTransaction(db,{actorId:owner,requestId:randomUUID()},tx=>configurationSettings(tx,owner,tenant,{auto_approve_users:true}));
+  assert.equal(settings.eligible,true);
   for (const actor of [member,other]) await command(actor,{kind:'join',profile:{displayName:'Participant',bio:null}});
   const a = client(owner), b = client(member), c = client(other), u = client(unverified);
 

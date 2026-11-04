@@ -16,7 +16,7 @@
 
 # Persistent API architecture
 
-- Follow the approved target in `docs/22-fastify-architecture-refactoring-plan.md`. Phases 1–4 establish the baseline, shared facilities and user-account/community triads. The eight community groups are verified in independent checkpoints; superseded modules are removed. Health restructuring and broader final verification remain for Phase 5. Do not pull later work into an authorized checkpoint.
+- Follow the completed architecture in `docs/22-fastify-architecture-refactoring-plan.md`. All five phases are locally verified; user accounts, communities and health each use their routes/service/schema triad. Preserve the HTTP baseline and explicit service/plugin boundaries. Health remains outside authentication with no runtime schemas. Future structural work requires its own authorized scope; do not restart the completed migration.
 - Match backend HTTP feature names to frontend feature ownership by default. Assign each operation one authoritative owner and document functional exceptions. Do not reorganize the frontend for symmetry.
 - Every HTTP feature has `routes.ts`, `service.ts`, and `schema.ts`, regardless of size. Maintain identical operation section names and ordering across the three files.
 - Routes own HTTP integration; services own operations and database orchestration; schemas own transport validation and serialization. Keep runtime HTTP schemas out of service logic and SQL projections. Preserve justified shared DTO contracts without conflating transport, domain and database types.
@@ -24,7 +24,7 @@
 - Construct resources and service instances centrally and pass narrow explicit dependencies. Do not introduce a global service locator. Keep token verification, HTTP authentication, transaction eligibility and error translation under their designated owners.
 - Use request decorators for verified context; permit infrastructure decorators only for a concrete lifecycle or encapsulation benefit. Prefer cohesive feature files; supporting modules require a demonstrated responsibility, not a file-length threshold.
 - Preserve PostgreSQL authority and existing security/consistency behavior. Injection tests establish HTTP wiring, not database correctness. Keep the reviewed HTTP baseline intact; do not regenerate it merely to clear a refactor failure.
-- Follow the staged verification gates in document 22. Migrate community operation groups incrementally, in its section order; pass the relevant integration, authorization and concurrency checks, review the diff and checkpoint each group before proceeding. A failed or unavailable required check blocks progression until resolved or explicitly adjudicated by the user.
+- Follow the verification gates in document 22. Preserve its five-phase and eight-community-checkpoint history. Each authorized structural checkpoint must pass the relevant integration, authorization and concurrency checks, receive a diff review and be committed independently. A failed or unavailable required check blocks completion until resolved or explicitly adjudicated by the user.
 - Update documentation when ownership or boundaries change. Do not add compatibility aliases, duplicate registrations or parallel legacy interfaces during the transition.
 
 # Development-only compatibility policy

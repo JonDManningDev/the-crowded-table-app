@@ -1,5 +1,13 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Fastify refactor Phase 5 — 2026-11-04
+
+All five phases are complete and locally verified. User accounts, communities and health each use the approved routes/service/schema triad with matching section and operation order. The health service receives only the existing readiness-check callback; its service-only plugin registers outside authentication. Liveness has no database access, readiness awaits each check and propagates failures, and fixed success contracts provide reply types without attaching runtime schemas. Community transport typing now preserves schema literals while retaining justified shared command/DTO types. The retired Data API test imports the real community implementations and uses explicit eligible-result handling; no compatibility interface remains.
+
+All 60 backend cases, server TypeScript, root lint, nine local real Auth/HTTP suites, the 130-file client boundary scan, 265 pgTAP assertions, 51 retired Data API checks, replay/populated upgrade, SQL lint, all 279 frontend tests and the production build passed. All 110 SQL templates, existing account/community services, shared startup/authentication/error/transaction/cursor facilities and nine real integration suites are unchanged. The HTTP fixture still records 41 explicit operations and 28 HEADs, including health's absent schemas. Client/shared contracts, migrations, dependency lockfile and runtime privilege manifest are unchanged. See [Phase 5 evidence](evidence/fastify-phase-5-2026-11-04/README.md) for individual results, environment, the resolved lint issue and existing CLI/Vite notices.
+
+The approved structural plan is complete with no failed or unavailable required gate. Prior Phase 1–4 evidence remains historical. No product-policy change, frontend implementation, new migration, working-database reset, dependency change, hosted execution or deployment occurred. Future feature, browser/hosted/external-delivery and hosting work retain their separate scope and release gates.
+
 ## Fastify refactor Phase 4 — 2026-11-04
 
 **Phase 4 checkpoint 8/8 — verified 2026-11-04.** 29 of 29 community operations now belong to the triad, through audit history. One centrally constructed service supplies explicit public/protected operation subsets; only the public plugin receives the verifier. All 54 backend cases, server TypeScript, root lint and this checkpoint's required local suites passed. The HTTP fixture and database/security contracts remain unchanged. All superseded community modules are removed; health restructuring and Phase 5 final verification remain deferred. See [Phase 4 evidence](evidence/fastify-phase-4-2026-11-04/README.md).

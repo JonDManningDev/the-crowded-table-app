@@ -9,6 +9,8 @@ import { randomUUID } from 'node:crypto'
 import { createUserAccountService } from './user-accounts/service.ts'
 import { userAccountRoutes } from './user-accounts/routes.ts'
 import { checkRuntime, type AppDatabase } from './database.ts'
+import { createHealthService } from './health/service.ts'
+import { healthRoutes } from './health/routes.ts'
 
 export interface BuildApiOptions {
   db: AppDatabase
@@ -24,8 +26,8 @@ export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
   registerHttpErrors(app)
   const communityService = createCommunityService({ db, cursors })
   const userAccountService = createUserAccountService({ db, cursors })
-  app.get('/health/live', async () => ({ live: true }))
-  app.get('/health/ready', async () => { await checkRuntime(db); return { ready: true } })
+  const healthService = createHealthService({ checkReadiness: () => checkRuntime(db) })
+  app.register(healthRoutes, { service: healthService })
   app.register(publicCommunityRoutes, {
     service: {
       listStandings: communityService.listStandings,
