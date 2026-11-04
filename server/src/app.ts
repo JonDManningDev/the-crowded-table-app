@@ -1,5 +1,6 @@
 import { CommunityError } from './communities/commands.ts'
 import { registerCommunityCommands } from './communities/routes.ts'
+import { registerAccountHistory } from './communities/history.ts'
 import { registerCommunityProfile } from './communities/profile.ts'
 import { registerStandingReference } from './communities/standing.ts'
 import { errorResponse } from './http.ts'
@@ -35,6 +36,7 @@ export function buildApi(db: AppDatabase, verify: (header?: string) => Promise<s
       request.setDecorator('actor', actor)
     })
     registerCommunityCommands(routes, db)
+    registerAccountHistory(routes, db)
     registerCommunityProfile(routes, db)
     const querystring = { type: 'object', additionalProperties: false, properties: {} }
     const response = { 200: preferencesSchema, 403: errorResponse, 404: errorResponse }

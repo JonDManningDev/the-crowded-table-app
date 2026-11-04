@@ -38,7 +38,9 @@ export async function checkRuntime(db: AppDatabase) {
       and row_security_active('public.community_account_profiles')
       and has_column_privilege(current_user,'public.tenants','operational_status','UPDATE')
       and to_regprocedure('public.join_community(uuid)') is null
-      and has_function_privilege(current_user,'app_private.is_staff_candidate(uuid,uuid,boolean)','EXECUTE') as ready
+      and has_function_privilege(current_user,'app_private.is_staff_candidate(uuid,uuid,boolean)','EXECUTE')
+      and has_column_privilege(current_user,'public.tenant_admin_actions','reason','SELECT')
+      and not has_table_privilege('authenticated','public.tenant_admin_actions','SELECT') as ready
     from pg_roles where rolname = current_user
   `.execute(db)
   if (!rows[0]?.ready) throw new Error('Runtime role or schema is unavailable.')

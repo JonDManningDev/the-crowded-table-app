@@ -51,6 +51,14 @@ Run `npm run test:local -w server` for command authorization, rollback and concu
 
 Community profiles now use a scoped update. Membership and creation establish the initial profile. Self preferences live in `community_account_preferences`. The personal community card projection remains available. The former staff-candidate and pending-account views and all seven legacy lifecycle/settings RPCs have been dropped locally. Hosted testing remains on its earlier ledger.
 
+## Local account history
+
+Migration `20261103001100` closes all ordinary raw history/category reads, including authenticated owners. GET `/api/communities/:tenantId/history` returns `{ rows, next }` using the [shared history contract](../shared/account-history.ts). Optional `target`, `category` (`community_account` or `staff_account`), `eventId`, `cursor` and `limit` are the only query fields. Lists order by timestamp and event UUID descending, default to 50 rows and allow at most 100. Pass `next` as `cursor` with the same actor, tenant and filters; page size may change. Exact-event queries apply the same authorization and filters, ignore pagination and return an empty list for either an unavailable or inaccessible event. Responses use `private, no-store`.
+
+Effective staff require the corresponding audit flag; either flag admits a dual-category event. Owners can read all events, including while archived. Other readers lose access on archive, loss of approved standing, staff pause/revocation, flag removal or Auth ineligibility. Grant/discipline authority alone does not grant history access. Suspension reasons remain on community-only events; the separately authorized linked staff event carries no copy. Original legacy actions and immutable categories survive later role changes. Unclassified entries remain owner-only.
+
+The read transaction holds the tenant against concurrent lifecycle changes before checking current authority. Runtime RLS independently applies the tenant/category/archive boundary even if a query omits its service predicate. The history suite in `npm run test:local -w server` verifies real Auth/HTTP, pagination, reasons, exact lookup, legacy records, REST/GraphQL bypasses, the restricted runtime role and both read/write serialization orders. Current pgTAP adds raw-grant and immutable-category checks. No history UI or hosted rollout is included in this local endpoint milestone.
+
 ## Local development
 
 From the repository root, with Docker running and the Supabase CLI available:
