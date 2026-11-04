@@ -165,7 +165,7 @@ The existing application has no persisted activity/conversation/invitation/match
 
 ## Final local access audit
 
-The Fastify structural refactor also has a Supabase-independent gate: `npm run test:http -w server`. Its [Phase 1 evidence](../docs/evidence/fastify-phase-1-2026-11-04/README.md) records the existing route/schema, authentication, cache, error and cursor contracts. [Phase 2 evidence](../docs/evidence/fastify-phase-2-2026-11-04/README.md) adds context/transaction and startup ownership verification, including loopback listener/drain tests. These doubles and lifecycle tests do not replace the real-runtime suites below.
+The Fastify structural refactor also has a Supabase-independent gate: `npm run test:http -w server`. Its [Phase 1 evidence](../docs/evidence/fastify-phase-1-2026-11-04/README.md) records the existing route/schema, authentication, cache, error and cursor contracts. [Phase 2 evidence](../docs/evidence/fastify-phase-2-2026-11-04/README.md) adds context/transaction and startup ownership verification, including loopback listener/drain tests. [Phase 3 evidence](../docs/evidence/fastify-phase-3-2026-11-04/README.md) records the account triad and isolated service-only adapter checks. These doubles and lifecycle tests do not replace the real-runtime suites below.
 
 Migration `20261103001700` closes residual external application privileges, private helpers and postgres-created application-object defaults. Auth/Storage/Realtime platform privileges remain separate. The [final audit report](../docs/21-final-local-access-audit.md) and [metadata catalog](../docs/evidence/access-audit-2026-11-03/local-catalog.json) describe the verified local boundary. Hosted deployment is not included.
 

@@ -1,6 +1,6 @@
 # Final Fastify architecture refactoring plan
 
-**Status: finalized architecture plan, 2026-11-04; Phases 1–2 complete and locally verified.** Phase 1 establishes the reviewed HTTP contract and injection tests; Phase 2 implements shared facilities and explicit resource ownership. Feature triads and service factories remain for Phases 3–5. See [Phase 1 evidence](evidence/fastify-phase-1-2026-11-04/README.md) and [Phase 2 evidence](evidence/fastify-phase-2-2026-11-04/README.md) for starting revisions, local environments and verification results.
+**Status: finalized architecture plan, 2026-11-04; Phases 1–3 complete and locally verified.** Phase 1 establishes the HTTP baseline, Phase 2 implements shared facilities/resource ownership, and Phase 3 implements the user-account triad. Community and health migration remains for Phases 4–5. See [Phase 1 evidence](evidence/fastify-phase-1-2026-11-04/README.md), [Phase 2 evidence](evidence/fastify-phase-2-2026-11-04/README.md) and [Phase 3 evidence](evidence/fastify-phase-3-2026-11-04/README.md) for starting revisions, environments and verification results.
 
 This plan governs the structural refactor of the existing persistent API. The [approved API transition](20-persistent-api-transition-proposal.md), [intended access matrix](16-intended-access-matrix.md), and [final access audit](21-final-local-access-audit.md) remain the behavior and security context. It supersedes earlier proposed target structures from the architecture-planning discussion, not accepted product or database requirements.
 
@@ -8,7 +8,7 @@ This plan governs the structural refactor of the existing persistent API. The [a
 
 Refactor the existing API into frontend-aligned features with mandatory `routes.ts`, `service.ts`, and `schema.ts` files. Preserve all 41 explicit HTTP operations, 28 automatic HEAD operations, and existing security/database behavior.
 
-Phase 1 changed tests and documentation only. Phase 2 changes shared production facilities and their callers while preserving the HTTP contract. No shared browser contract, database migration, runtime privilege or frontend change is included.
+Phase 1 changed tests/documentation, Phase 2 changed shared facilities/callers, and Phase 3 moved user-account operations into their triad. All preserve the HTTP contract. No shared browser contract, database migration, runtime privilege or frontend change is included.
 
 ```text
 server/src/
@@ -247,13 +247,19 @@ Verify typechecking, error mappings, eligibility handling, construction/startup 
 
 Phase 2 is complete and locally verified. The designated root modules now own token verification, HTTP identity/cache integration, application errors, root HTTP error translation, encrypted cursors and actor transactions. Protected requests receive fresh `authenticatedContext` objects; all callers distinguish the `eligible` tag from their inner operation result. Existing feature registrations and SQL remain in place. `buildApi` takes `BuildApiOptions`; the import-safe `startApi`/`readApiConfig` functions in `index.ts` own resource construction and startup failure handling. Narrow constructor/check dependencies permit lifecycle verification without a DI container. All superseded imports/modules and positional construction calls are removed, including in the unexecuted hosted verification script.
 
-The unchanged Phase 1 fixture, all 36 HTTP/shared-facility/startup cases, server TypeScript, root lint, all nine real Auth/HTTP suites and the 130-file client boundary scan passed. The source comparison retained all 110 SQL templates; frontend/shared contracts, migrations, dependency lockfile and runtime privilege manifest remain unchanged. [Phase 2 evidence](evidence/fastify-phase-2-2026-11-04/README.md) records lifecycle cases, cursor-vector preservation, API changes, local ports and remaining verification boundaries. No Phase 2 gate remains blocked. Phase 3 has not started; preference SQL projection cleanup and feature service construction remain with their feature phases.
+The unchanged Phase 1 fixture, all 36 HTTP/shared-facility/startup cases, server TypeScript, root lint, all nine real Auth/HTTP suites and the 130-file client boundary scan passed. The source comparison retained all 110 SQL templates; frontend/shared contracts, migrations, dependency lockfile and runtime privilege manifest remain unchanged. [Phase 2 evidence](evidence/fastify-phase-2-2026-11-04/README.md) records lifecycle cases, cursor-vector preservation, API changes, local ports and remaining verification boundaries. No Phase 2 gate remained blocked at checkpoint `0c2266d`; preference SQL projection cleanup and feature service construction were deferred to their feature phases.
 
 ### Phase 3 — User-account feature
 
 Move operations into the standard triad in its prescribed section order. Register the resulting feature beneath the authenticated parent.
 
 Verify preferences, self-service and global-profile integration suites, relevant frontend tests, and isolated HTTP adapter tests.
+
+Phase 3 is complete and locally verified from checkpoint `0c2266d`. `user-accounts/routes.ts`, `service.ts` and `schema.ts` own the ten operations in the prescribed five-section order. `createUserAccountService({db,cursors})` returns named operations; `UserAccountService` types the service-only `userAccountRoutes` plugin. Application composition constructs one service and registers the encapsulated plugin beneath the authenticated parent, without a prefix or additional authentication hook. Routes own transport/schema attachment and preserve preference eligibility/status mapping; services own SQL and transaction orchestration without runtime HTTP imports. The preference SELECT/RETURNING projection now has its explicit three-column allowlist, independent of the shared HTTP schema.
+
+`ownProfile`, `inspectGlobalProfile` and `setOwnBlock` remain exported transaction-taking implementations in the service so existing real rollback/snapshot tests retain control of their transaction. No compatibility alias or parallel HTTP interface is retained. Superseded preference/global-profile modules and inline account routes are removed. The three community self-service operations remain in `accounts/self-service.ts`, registered as `registerCommunitySelfService`, until the Phase 4 profiles/preferences group; their SQL, helpers and authorization are unchanged. Personal community summaries remain owned by user accounts without a community-service dependency.
+
+The unchanged Phase 1 fixture, all 43 backend HTTP/shared/startup/adapter cases, server TypeScript, root lint, all nine local real Auth/HTTP suites, the 130-file client boundary scan and 74 relevant frontend tests in 11 files passed. All 110 SQL template expressions and eight moved/retained query-helper bodies match the prior checkpoint; cursor formats, frontend/shared contracts, migrations, dependency lockfile and runtime privilege manifest remain unchanged. [Phase 3 evidence](evidence/fastify-phase-3-2026-11-04/README.md) records interfaces, scope boundaries, environment and verification. No Phase 3 gate remains blocked. Phase 4 has not started.
 
 ### Phase 4 — Community feature, one operation group at a time
 

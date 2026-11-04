@@ -1,20 +1,19 @@
-import { registerGlobalProfiles } from './accounts/global-profiles.ts'
 import type { DirectoryCursors } from './directory-cursors.ts'
 import { registerCommunityDirectory, registerPublicDirectory } from './communities/directory.ts'
 import { registerCommunityCommands } from './communities/routes.ts'
 import { registerAccountRecords } from './communities/records.ts'
 import { registerAccountHistory } from './communities/history.ts'
-import { registerSelfService } from './accounts/self-service.ts'
+import { registerCommunitySelfService } from './accounts/self-service.ts'
 import { registerCommunityConfiguration, registerCommunityLanding } from './communities/configuration.ts'
 import { registerCommunityProfile } from './communities/profile.ts'
 import { registerStandingReference } from './communities/standing.ts'
-import { errorResponse, registerHttpErrors } from './http-errors.ts'
-import { getAuthenticatedContext, registerRequiredAuthentication } from './http-authentication.ts'
+import { registerHttpErrors } from './http-errors.ts'
+import { registerRequiredAuthentication } from './http-authentication.ts'
 import type { BearerVerifier } from './token-verifier.ts'
 import Fastify from 'fastify'
 import { randomUUID } from 'node:crypto'
-import { preferencesPath, preferencesSchema, type AccountPreferences } from '../../shared/account-preferences.ts'
-import { accountPreferences } from './accounts/preferences.ts'
+import { createUserAccountService } from './user-accounts/service.ts'
+import { userAccountRoutes } from './user-accounts/routes.ts'
 import { checkRuntime, type AppDatabase } from './database.ts'
 
 export interface BuildApiOptions {
@@ -29,6 +28,7 @@ export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
     ajv: { customOptions: { removeAdditional: false, coerceTypes: false, useDefaults: false } } })
   app.addHook('onClose', cleanup)
   registerHttpErrors(app)
+  const userAccountService = createUserAccountService({ db, cursors })
   app.get('/health/live', async () => ({ live: true }))
   app.get('/health/ready', async () => { await checkRuntime(db); return { ready: true } })
   registerStandingReference(app, db, verify)
@@ -40,24 +40,10 @@ export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
     registerAccountHistory(routes, db)
     registerAccountRecords(routes, db)
     registerCommunityDirectory(routes, db, cursors)
-    registerSelfService(routes, db)
-    registerGlobalProfiles(routes, db, cursors)
+    registerCommunitySelfService(routes, db)
+    routes.register(userAccountRoutes, { service: userAccountService })
     registerCommunityConfiguration(routes, db)
     registerCommunityProfile(routes, db)
-    const querystring = { type: 'object', additionalProperties: false, properties: {} }
-    const response = { 200: preferencesSchema, 403: errorResponse, 404: errorResponse }
-    routes.get(preferencesPath, { schema: { querystring, response } }, async (request, reply) => {
-      const result = await accountPreferences(db, getAuthenticatedContext(request))
-      if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
-      if (result.value.status !== 200) return reply.code(result.value.status).send({ code: 'missing', requestId: request.id })
-      return result.value.row
-    })
-    routes.put<{ Body: AccountPreferences }>(preferencesPath, { schema: { querystring, body: preferencesSchema, response } }, async (request, reply) => {
-      const result = await accountPreferences(db, getAuthenticatedContext(request), request.body)
-      if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
-      if (result.value.status !== 200) return reply.code(result.value.status).send({ code: 'missing', requestId: request.id })
-      return result.value.row
-    })
   })
   return app
 }

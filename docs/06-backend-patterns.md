@@ -1,6 +1,6 @@
 # Backend code patterns
 
-**Fastify structure — approved 2026-11-04.** Follow the [refactoring plan](22-fastify-architecture-refactoring-plan.md) for feature triads, matching operation sections, plugin scopes, authentication/error ownership and narrow explicit dependencies. Phases 1–2 preserve the HTTP baseline and implement shared facilities, plain authenticated context, tagged transaction eligibility and explicit cleanup ownership. Existing feature registrations remain until Phases 3–5. Earlier proposed structures below do not supersede this target or the approved API transition.
+**Fastify structure — approved 2026-11-04.** Follow the [refactoring plan](22-fastify-architecture-refactoring-plan.md) for feature triads, matching operation sections, plugin scopes, authentication/error ownership and narrow explicit dependencies. Phases 1–3 preserve the HTTP baseline, establish shared facilities/cleanup ownership and implement the user-account triad. Its service owns transactions and explicit database projections without runtime HTTP imports; its plugin owns transport mapping with service-only dependencies. Remaining community/health registrations await Phases 4–5. Earlier proposed structures below do not supersede this target or the approved API transition.
 
 **2026-11-03.** The [approved API transition](20-persistent-api-transition-proposal.md) governs new application-data paths. Earlier descriptions of direct browser access apply to the unmigrated implementation. Client feature boundaries, Supabase Auth and accepted product audiences continue to apply.
 
