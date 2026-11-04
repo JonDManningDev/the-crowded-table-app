@@ -1,0 +1,14 @@
+{
+  "captured_at": "2026-11-04T04:27:04.264Z",
+  "origin": "http://localhost:5173",
+  "checks": [
+    "hosted Auth password sign-in",
+    "local API preference load",
+    "one-button preference save",
+    "reload persistence",
+    "database readback",
+    "sign-out",
+    "fixture deletion"
+  ],
+  "passed": true
+}

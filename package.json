@@ -6,8 +6,10 @@
   "workspaces": ["server"],
   "scripts": {
     "test": "vitest run",
-    "dev": "vite --mode local-api",
-    "dev:api": "npm start -w server",
+    "dev": "vite --mode hosted-db",
+    "dev:api": "npm run start:hosted-db -w server",
+    "dev:local": "vite --mode local-api",
+    "dev:api:local": "npm start -w server",
     "build": "npm run check -w server && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -36,5 +36,5 @@ try {
   await admin.query('commit')
   if (!existsSync(browserEnv)) writeFileSync(browserEnv,
     `VITE_SUPABASE_URL=${config.API_URL}\nVITE_SUPABASE_PUBLISHABLE_KEY=${config.ANON_KEY}\n`, { flag: 'wx' })
-  console.log('Local configuration ready. Start npm run dev:api and npm run dev from the repository root.')
+  console.log('Local Supabase configuration ready. Start npm run dev:api:local and npm run dev:local from the repository root.')
 } finally { await admin.end() }

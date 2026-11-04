@@ -1,0 +1,14 @@
+[
+  {
+    "role": "anon",
+    "operation": "PATCH user_accounts",
+    "status": 401,
+    "code": "42501"
+  },
+  {
+    "role": "service_role",
+    "operation": "PATCH user_accounts",
+    "status": 403,
+    "code": "42501"
+  }
+]

@@ -107,6 +107,8 @@ The 29 existing triggers comprise eight invariant guards, eight audit stampers, 
 
 ## 5. Ordered migration and release gates
 
+**Hosted development cutover authorized and applied 2026-11-03.** The user explicitly requested the database cutover while keeping the frontend/API local. Migrations through `20261103001700` are applied to the selected hosted project; [implementation status](12-implementation-status.md#hosted-development-database-cutover) records actual verification. The broader application-hosting/production conditions below remain deferred under the following clarification.
+
 **Development scope clarified 2026-11-03.** The app has no testers, users or live production build. Only the database is hosted; the frontend and API will continue running locally until more features are implemented. The next hosted step is a development database cutover: confirm the selected project and migration state, apply the forward migrations, configure the local API's restricted hosted connection, and verify the local application against hosted Auth/database plus the retired direct-access boundary. Do not add compatibility fallbacks, availability targets, maintenance-window coordination or recovery rehearsals to this development step. Host/vendor/domain selection, production capacity and monitoring, and production availability/recovery planning are deferred to an actual application-hosting or production proposal. Existing authorization, credential secrecy, verified TLS and migration integrity checks still apply. This clarification supersedes the broader release prerequisites below for the current development cutover; it does not itself execute or authorize a database reset.
 
 | Step | Work after approval | Evidence required to advance |

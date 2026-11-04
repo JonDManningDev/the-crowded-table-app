@@ -10,6 +10,12 @@ export default defineConfig(({ mode }) => {
       throw new Error('Run npm run setup:local -w server before starting the local frontend.')
     }
   }
+  if (mode === 'hosted-db') {
+    const url = loadEnv(mode, process.cwd()).VITE_SUPABASE_URL
+    if (url !== 'https://fsnipgsrlclbnfepcbvz.supabase.co') {
+      throw new Error('Configure the selected hosted development database before starting the local frontend.')
+    }
+  }
   return {
     server: { port: 5173, strictPort: true, proxy: { '/api': 'http://127.0.0.1:3001' } },
     plugins: [
