@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
-const root=new URL('../../src/',import.meta.url)
+const root=new URL('../../client/src/',import.meta.url)
 let files=0
 const violations=[]
 function inspect(directory) {

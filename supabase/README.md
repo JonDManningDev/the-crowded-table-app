@@ -11,11 +11,11 @@ npm run dev:api
 npm run dev
 ```
 
-The frontend serves `http://localhost:5173` and forwards `/api` to `http://127.0.0.1:3001`. The API uses the restricted `ct_api` login through the linked Supabase session pooler on port 5432, with `sslmode=verify-full` and the Supabase CA certificate. The server's ignored `server/.env.hosted-db.local` contains its database credential and cursor key; `.env.hosted-db.local` contains only browser Auth configuration. Never copy the database URL, cursor key or service-role key into a Vite variable. Supabase documents [custom-role session-pooler connections and TLS](https://supabase.com/docs/guides/database/connecting-to-postgres). The CA lives in ignored `supabase/.temp/hosted-ca.crt`; its fingerprint is checked by the setup script.
+The frontend serves `http://localhost:5173` and forwards `/api` to `http://127.0.0.1:3001`. The API uses the restricted `ct_api` login through the linked Supabase session pooler on port 5432, with `sslmode=verify-full` and the Supabase CA certificate. The server's ignored `server/.env.hosted-db.local` contains its database credential and cursor key; `client/.env.hosted-db.local` contains only browser Auth configuration. Never copy the database URL, cursor key or service-role key into a Vite variable. Supabase documents [custom-role session-pooler connections and TLS](https://supabase.com/docs/guides/database/connecting-to-postgres). The CA lives in ignored `supabase/.temp/hosted-ca.crt`; its fingerprint is checked by the setup script.
 
 `server/scripts/setup-hosted-db.mjs --allow-hosted-testing` is a one-time initializer with fixed-project/ledger guards. It requires `CT_SUPABASE_CLI` to point to the installed CLI executable, generates the runtime password locally, and refuses to overwrite an existing server credential file. Do not rerun setup to start the app or implicitly rotate credentials. A partially interrupted setup requires checking the saved credential and role before retrying. CLI output containing keys/SQL is kept out of logs.
 
-For the independent local Supabase stack, use `npm run dev:api:local` and `npm run dev:local`. Its existing `server/.env.local`, `.env.local-api.local`, setup script and guarded local test suites remain separate. These are development targets, not compatibility paths for the retired Data API.
+For the independent local Supabase stack, use `npm run dev:api:local` and `npm run dev:local`. Its existing `server/.env.local`, `client/.env.local-api.local`, setup script and guarded local test suites remain separate. These are development targets, not compatibility paths for the retired Data API.
 
 Hosted verification uses `node --env-file=server/.env.hosted-db.local server/tests/hosted-api.mjs --allow-hosted-testing` from the repository root with `CT_SUPABASE_CLI` set. It starts its own loopback HTTP listener, uses synthetic hosted Auth users/communities, and checks exact runtime privileges, real HTTP operations, isolation, profile blocks, archive and old REST/GraphQL access. It deletes only its own fixtures and captures metadata under `docs/evidence/hosted-api-cutover-2026-11-03/`. The obsolete `hosted_direct_data_api.mjs` suite is removed; references below record its historical results only. Local suites must never be redirected to the hosted project.
 
@@ -23,7 +23,7 @@ Data API remains enabled with zero external application grants, allowing explici
 
 The first two versioned migrations implement the agreed feature slice. They target a Supabase database with its Auth migrations already applied. They do not create or replace Supabase-owned Auth tables.
 
-Validated with Supabase CLI 2.119.0: a clean local rebuild, 85 pgTAP assertions, three two-connection concurrency scenarios, SQL lint, the live email-confirmation setting, and the application TypeScript/production build all passed. Generated public-schema types are checked in at `src/lib/database.types.ts`. That initial validation reported both original migrations applied; frontend account flows are implemented; hosted signup email receipt, verified password sign-in, and recovery through password update/home return were confirmed by the user.
+Validated with Supabase CLI 2.119.0: a clean local rebuild, 85 pgTAP assertions, three two-connection concurrency scenarios, SQL lint, the live email-confirmation setting, and the application TypeScript/production build all passed. Generated public-schema types are checked in at `shared/database.types.ts`. That initial validation reported both original migrations applied; frontend account flows are implemented; hosted signup email receipt, verified password sign-in, and recovery through password update/home return were confirmed by the user.
 
 ## Global profile implementation — 2026-10-16
 
@@ -192,7 +192,7 @@ To rebuild **only this project's disposable local database**, `npx --yes supabas
 Regenerate the checked-in types after schema changes:
 
 ```powershell
-npx --yes supabase gen types typescript --local --schema public | Set-Content -Encoding utf8 src/lib/database.types.ts
+npx --yes supabase gen types typescript --local --schema public | Set-Content -Encoding utf8 shared/database.types.ts
 ```
 
 Apply these files in timestamp order through the Supabase migration workflow. Once deployed, change behavior with a new migration rather than editing an applied file. No remote deployment is performed by these files or the tests. Review `supabase db push --dry-run` against the intended linked project before a separately authorized deployment. Do not roll back by dropping account/tenant tables containing user data; use forward repairs and backups.

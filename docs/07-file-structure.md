@@ -1,5 +1,26 @@
 # Application file structure and client refactor
 
+## Approved client/server workspace restructuring — 2026-11-03
+
+The user approved a dedicated `@crowded-table/client` npm workspace beside `server/`, with one root lockfile and root command orchestration. Move frontend source, public assets, HTML, Vite/Vitest/TypeScript configuration and browser environment files into `client/`; keep the internal feature organization and runtime behavior. Move generated database types into `shared/database.types.ts` so neither application imports the other's source. Existing shared HTTP contracts remain ordinary TypeScript source.
+
+Implemented and verified locally. The current top-level layout is:
+
+```text
+client/     # src/, public/, index.html, package.json, Vite/Vitest/TypeScript, browser env files
+server/     # src/, scripts/, tests/, package.json, TypeScript, private runtime env files
+shared/     # HTTP contracts and database.types.ts
+supabase/   # migrations, configuration and database tooling
+docs/       # product and engineering documentation
+package.json, package-lock.json, eslint.config.js, AGENTS.md, README.md
+```
+
+`npm run dev`/`dev:api` use hosted Supabase with local application processes; `dev:local`/`dev:api:local` use local Supabase. `npm test`, `build`, `lint` and `preview` remain root entry points. Frontend build output is `client/dist/`. See [verification](12-implementation-status.md#clientserver-workspace-restructuring).
+
+Root dev/test/build/preview commands delegate to the client workspace, server commands retain the server workspace, and root lint covers TypeScript with React rules scoped to the client. Build output is `client/dist/`. Keep browser settings in client-local ignored environment files and database credentials in server-local files; update setup scripts, audit paths and current documentation. Preserve ports 5173/3001 and API forwarding. Do not add aliases, compatibility copies, dependencies upgrades, migrations, credential rotation or hosting changes. Dated descriptions below remain historical or illustrative; their `src/` examples are client-relative after this move.
+
+Verify a clean root npm install from the lockfile, all frontend tests, server type checking, client build, root lint, local API suites and client access audit. Check both development targets, assets/deep links/proxying and authenticated browser behavior using local fixtures. Hosted verification is read-only. Record actual results in implementation status and leave both hosted-target application processes running locally.
+
 **2026-11-03.** The [approved API transition](20-persistent-api-transition-proposal.md) governs new application-data paths. Earlier descriptions of direct browser access apply to the unmigrated implementation. Client feature boundaries, Supabase Auth and accepted product audiences continue to apply.
 
 Footer extraction (2026-10-21): `app/layout/Footer.tsx` renders the shared footer in the existing App content position. Its colocated `Footer.module.css` owns the decorative text, border, spacing and mobile stacking rules previously in App.css. The footer continues to use the shared Icon primitive.
@@ -12,7 +33,7 @@ Status: **current canonical client architecture direction**, recorded 2026-10-02
 
 The [frontend patterns](05-frontend-patterns.md) define the decisions and recommended conventions. This document owns the illustrative structure, current implementation inventory, and refactor sequence. Open choices are tracked in the [decision register](08-decisions-and-open-questions.md#client-architecture-review-questions).
 
-## Existing repository
+## Existing repository — historical before the workspace move
 
 Data API implementation (2026-10-24): `src/features/user-accounts/api.ts` owns global profile/preferences reads and direct writes. `src/features/communities/api.ts` owns separate community profile saving and consolidated community-account preference saving. The latter is not wired to the sample UI. Restricted administrative views and content/tenant-detail DML are available in the local schema for future management UI; no speculative screen or query layer was introduced.
 

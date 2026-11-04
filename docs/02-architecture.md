@@ -1,5 +1,7 @@
 # Architecture plan
 
+**Client/server workspaces — approved 2026-11-03.** Frontend source, styles, public assets and build/test configuration now belong to the top-level `client/` workspace; `src/` examples below are client-relative. API code remains in `server/`, shared HTTP contracts and generated database types in `shared/`, and database tooling in `supabase/`. The root package orchestrates both applications. See [workspace structure](07-file-structure.md#approved-clientserver-workspace-restructuring--2026-11-03).
+
 **2026-11-03.** The [approved API transition](20-persistent-api-transition-proposal.md) governs new application-data paths. Earlier descriptions of direct browser access apply to the unmigrated implementation. Client feature boundaries, Supabase Auth and accepted product audiences continue to apply.
 
 For the current reactivation rules, see [G-03d in the migration specification](19-access-migration-specification.md). It supersedes earlier reinstatement rules in this document.

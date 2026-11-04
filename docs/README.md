@@ -4,6 +4,8 @@ Status: revised from the user-supplied product handoff and subsequent explicit d
 
 ## Source and precedence
 
+**Client/server workspaces — approved 2026-11-03.** The frontend is the `client/` npm workspace beside `server/`. Root commands delegate to the appropriate workspace, and one root lockfile owns installation. Browser environment files move into `client/`; database types are shared infrastructure. See [the approved structure](07-file-structure.md#approved-clientserver-workspace-restructuring--2026-11-03) and the root setup instructions.
+
 **Hosted database cutover authorized and applied 2026-11-03.** All 25 migrations through `20261103001700` now match the selected hosted development database. The frontend and API remain local, using hosted Auth/PostgreSQL; `npm run dev` and `npm run dev:api` start that target. The independent local Supabase target uses `dev:local` and `dev:api:local`. See [current cutover verification](12-implementation-status.md#hosted-development-database-cutover) and [run instructions](../supabase/README.md#hosted-development-database-local-application--2026-11-03). Earlier local-only/hosted-pending statements below are historical milestones.
 
 **Development deployment scope clarified 2026-11-03.** There are no testers, users or live production build. Only the database is hosted; frontend/API hosting is deferred until more features are implemented. The next hosted step is a simple development database migration and verification using the local frontend/API. Compatibility fallbacks and production availability/recovery planning are outside this step. See [the revised deployment scope](20-persistent-api-transition-proposal.md#5-ordered-migration-and-release-gates).

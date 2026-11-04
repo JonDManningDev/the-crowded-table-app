@@ -7,7 +7,7 @@ import pg from 'pg'
 
 const root = new URL('../../', import.meta.url)
 const serverEnv = new URL('server/.env.local', root)
-const browserEnv = new URL('.env.local-api.local', root)
+const browserEnv = new URL('client/.env.local-api.local', root)
 const config = localStack()
 const dbUrl = new URL(config.DB_URL), apiUrl = new URL(config.API_URL)
 for (const host of [dbUrl.hostname, apiUrl.hostname]) assert.ok(['127.0.0.1','localhost'].includes(host))

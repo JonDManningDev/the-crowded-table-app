@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { CreateCommunityPage } from './CreateCommunityPage'
 import { countryCodes, validateCommunityCreation } from '../creation'
-import sql from '../../../../supabase/migrations/20261001000100_identity_tenant_schema.sql?raw'
+import sql from '../../../../../supabase/migrations/20261001000100_identity_tenant_schema.sql?raw'
 
 const api = vi.hoisted(() => ({ submitCommunity: vi.fn() }))
 vi.mock('../command-client', () => api)

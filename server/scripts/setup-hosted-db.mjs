@@ -35,5 +35,5 @@ assert.ok(key)
 // Persist privately first so an interrupted setup cannot lose the new credential.
 writeFileSync(env,`DATABASE_URL=${url.href}\nSUPABASE_URL=https://${projectRef}.supabase.co\nSUPABASE_PUBLISHABLE_KEY=${key}\nDIRECTORY_CURSOR_KEY=${randomBytes(32).toString('hex')}\n`,{flag:'wx',mode:0o600})
 query("alter role ct_api password '"+password+"'; select true as configured",false)
-writeFileSync(new URL('.env.hosted-db.local',root),`VITE_SUPABASE_URL=https://${projectRef}.supabase.co\nVITE_SUPABASE_PUBLISHABLE_KEY=${key}\n`,{flag:'wx',mode:0o600})
+writeFileSync(new URL('client/.env.hosted-db.local',root),`VITE_SUPABASE_URL=https://${projectRef}.supabase.co\nVITE_SUPABASE_PUBLISHABLE_KEY=${key}\n`,{flag:'wx',mode:0o600})
 console.log('Hosted development database credentials configured for local app processes; no secrets printed.')

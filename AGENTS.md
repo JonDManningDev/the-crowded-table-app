@@ -21,7 +21,7 @@
 
 # Design tokens and styling
 
-- Follow `docs/13-ui-style-guide.md` for approved presentation and `docs/14-design-tokens.md` for token ownership, naming, admission, themes, and migration gates. CSS custom properties in `src/styles/tokens/` are authoritative; preserve CSS Modules. Do not add token generators, JSON sources, or styling dependencies.
+- Follow `docs/13-ui-style-guide.md` for approved presentation and `docs/14-design-tokens.md` for token ownership, naming, admission, themes, and migration gates. CSS custom properties in `client/src/styles/tokens/` are authoritative; preserve CSS Modules. Do not add token generators, JSON sources, or styling dependencies.
 - Select semantic tokens by the element's actual purpose, not by a coincidentally matching value. Keep heading, eyebrow, navigation, action, feedback, and decorative roles distinct. Use the approved 4/8/12/16/24/32px primitive spacing scale for general composition without an applicable semantic role; preserve approved role-specific measurements.
 - Prefer existing tokens. Do not introduce an unapproved raw shared design value or promote a legacy discrepancy to a permanent role. For each new component-local design value, document its purpose, why existing roles/scales are unsuitable, and why local ownership is appropriate, in a nearby comment or the design documentation. Geometry and structural CSS do not automatically require tokens.
 - Before changing a shared token, analyze direct and aliased consumers, component families, interaction states, responsive mappings, and theme/overlay effects. Record the intended impact and required verification; obtain approval for visual changes before applying them. Numerical equality alone never justifies consolidation.

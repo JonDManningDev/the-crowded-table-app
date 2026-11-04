@@ -1,14 +1,16 @@
 # CSS-native design tokens
 
+**Client/server workspaces — approved 2026-11-03.** Frontend source, styles, public assets and build/test configuration now belong to the top-level `client/` workspace; `src/` examples below are client-relative. API code remains in `server/`, shared HTTP contracts and generated database types in `shared/`, and database tooling in `supabase/`. The root package orchestrates both applications. See [workspace structure](07-file-structure.md#approved-clientserver-workspace-restructuring--2026-11-03).
+
 Status: architecture approved by the user on 2026-10-23 (D-123). Token batches through Community are accepted. Final static audit and cascade correction are accepted. Obsolete account-margin cleanup is implemented and verified, awaiting review; active extraction candidates below remain open. The [UI style guide](13-ui-style-guide.md) owns visual requirements; this document owns their CSS representation. See [implementation status](12-implementation-status.md) for verification. Other component-family migrations remain gated.
 
 ## Ownership and files
 
-- `src/styles/tokens/primitives.css`: raw, reusable palette/family values and the approved general spacing scale.
-- `src/styles/tokens/semantic.css`: default light-theme roles and responsive role mappings. All deprecated compatibility definitions have now been removed. A role may contain a direct value when a primitive would add only one-to-one indirection.
-- `src/styles/tokens/index.css`: ordered imports of primitives, then semantics. Imported once by `src/index.css` after its external font import and before rules.
-- `src/styles/tokens/themes.css`: reserved future responsibility, **not created/imported in this batch**. Alternate themes and their browser fixture are deferred until scoped themes are scheduled.
-- `src/index.css`: resets, global element defaults and typography. App.css retains global composition and documented local/legacy exceptions after its accepted extraction batch. Colocated CSS Modules own component structure, layout, states, responsive composition and private values.
+- `client/src/styles/tokens/primitives.css`: raw, reusable palette/family values and the approved general spacing scale.
+- `client/src/styles/tokens/semantic.css`: default light-theme roles and responsive role mappings. All deprecated compatibility definitions have now been removed. A role may contain a direct value when a primitive would add only one-to-one indirection.
+- `client/src/styles/tokens/index.css`: ordered imports of primitives, then semantics. Imported once by `client/src/index.css` after its external font import and before rules.
+- `client/src/styles/tokens/themes.css`: reserved future responsibility, **not created/imported in this batch**. Alternate themes and their browser fixture are deferred until scoped themes are scheduled.
+- `client/src/index.css`: resets, global element defaults and typography. App.css retains global composition and documented local/legacy exceptions after its accepted extraction batch. Colocated CSS Modules own component structure, layout, states, responsive composition and private values.
 
 CSS custom properties are the sole token source. No JSON token source, generation, Style Dictionary, Sass, Tailwind, dependencies, cascade layers or universal Card API. There is no existing shared React Card primitive to retrofit. Specialized cards retain independent structure and behavior.
 

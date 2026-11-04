@@ -1,6 +1,6 @@
 import { submitCommunity } from './command-client'
 import { selfServiceRequest } from '../../lib/api-client'
-import type { CommunityPreferences } from '../../../shared/self-service'
+import type { CommunityPreferences } from '../../../../shared/self-service'
 import type { CommunityPreviewIdentity, MembershipPreviewContent } from './types'
 import { interests, previewCommunity } from '../../mock/data'
 import type { Activity, Profile, SeatStatus } from '../../mock/data'
