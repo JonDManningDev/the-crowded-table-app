@@ -51,6 +51,8 @@ export async function checkRuntime(db: AppDatabase) {
       and has_function_privilege(current_user,'app_private.public_community_directory(text,uuid,integer)','EXECUTE')
       and not has_any_column_privilege('authenticated','public.tenant_staff_assignments','SELECT')
       and has_column_privilege(current_user,'public.community_account_permissions','can_post_public_events','UPDATE')
+      and not has_schema_privilege('authenticated','app_private','USAGE')
+      and not has_any_column_privilege('service_role','public.user_accounts','SELECT,INSERT,UPDATE')
       and not has_table_privilege('authenticated','public.tenant_admin_actions','SELECT') as ready
     from pg_roles where rolname = current_user
   `.execute(db)

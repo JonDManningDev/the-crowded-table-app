@@ -21,6 +21,20 @@ The [coordinated community write cutover](12-implementation-status.md#community-
 
 ## Review summary
 
+### Final local access audit — authorized 2026-11-03
+
+Implemented and verified locally in migration `20261103001700`. The [final audit report](21-final-local-access-audit.md) records findings, corrections, the B-01–12 cross-check, catalog evidence, passing checks and separate hosted/future-domain gates.
+
+Audit the migrated foundation against B-01–12/G-01–06 and the HTTP contracts. Capture a row-free local catalog/role manifest, compare exact runtime columns and callable private helpers, inspect owners/search paths/defaults and prove no ordinary or service-role application Data API bypass. Keep Auth/Storage/Realtime platform privileges separate. Final hosted credentials/configuration/advisor/latency/recovery checks are release gates, not inferred from local evidence.
+
+Close audit findings in a forward migration: revoke remaining browser private-schema/helper permissions, drop the unused legacy `is_owner` helper, revoke residual service-role application table/column grants and remove application-schema future-object defaults for browser/service roles. Preserve explicit runtime grants, trigger execution, Auth provisioning, immutable audit and archive RLS. Test disposable new tables, functions and sequences under the actual migration creator. Store an exact runtime privilege manifest so later migrations must review any drift.
+
+Complete the accepted own-request projection at GET `/api/communities/:tenantId/me/request`: verified self in an active community, `{request:null}` or exactly request ID, kind and request time; pending joins and restricted returns qualify, cross-user selectors are rejected and archive denies. Add explicit shared types and response schemas to the early command/review/queue/candidate routes so future internal fields cannot leak through serialization. Preserve their existing fields, status codes and scoped audiences.
+
+Exercise current Auth signup/provisioning, confirmation/recovery mechanisms, all application REST relations and private-schema probes, the enabled GraphQL resolver, private Storage reads/writes and private Realtime admission. Verify no application relation appears in a Realtime publication and no application Storage/channel policy exists. Local Data API remains enabled as the hostile-client test harness with zero application grants; choose disabling or a deliberate empty exposure configuration in the separately authorized hosted release. Do not change shared platform services merely to eliminate a local test surface.
+
+Record actual results, runtime authority limits, lifecycle/snapshot semantics, deferred real-resource/hosting gates and remaining API contract issues before declaring the local audit complete. No UI or hosted release is included.
+
 ### Global profiles and profile-encounter blocks — authorized 2026-11-03
 
 Implemented locally in migration `20261103001600`; see [verification and remaining scope](12-implementation-status.md#global-profiles-and-block-enforcement-through-the-typescript-api).
