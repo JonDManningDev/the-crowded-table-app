@@ -39,3 +39,17 @@
 - Prefer existing tokens. Do not introduce an unapproved raw shared design value or promote a legacy discrepancy to a permanent role. For each new component-local design value, document its purpose, why existing roles/scales are unsuitable, and why local ownership is appropriate, in a nearby comment or the design documentation. Geometry and structural CSS do not automatically require tokens.
 - Before changing a shared token, analyze direct and aliased consumers, component families, interaction states, responsive mappings, and theme/overlay effects. Record the intended impact and required verification; obtain approval for visual changes before applying them. Numerical equality alone never justifies consolidation.
 - Keep token extraction separate from design refinement. Preserve computed rendering, verify affected routes/states at relevant widths, run build/lint and relevant tests, and check undefined properties, cycles, and unused aliases. Deprecate only with a replacement, consumer list, and removal checkpoint. Follow the documented batch review gate; do not continue into remaining families without authorization.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues in `JonDManningDev/the-crowded-table-app`. See `docs/agents/issue-tracker.md` for publishing, fetching and coordinating tickets.
+
+### Triage labels
+
+Use the five default triage labels. See `docs/agents/triage-labels.md` for the role mapping.
+
+### Domain docs
+
+Single context across the application. See `docs/agents/domain.md` before exploring domain terminology or decisions.
