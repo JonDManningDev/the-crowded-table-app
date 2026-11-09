@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { CommandResult, CommunityCommand, CreateCommunityInput } from '../../../../shared/community-commands'
+import type { CommandResult, CommunityCommand, CreateCommunityInput } from './community-commands'
 
 async function post(expectedUserId: string, path: string, body: CommunityCommand | CreateCommunityInput): Promise<CommandResult> {
   if (!supabase) throw new Error('Community services are not configured.')

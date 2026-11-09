@@ -212,13 +212,13 @@ Normal cleanup belongs to `app.close()` after `buildApi` successfully returns. S
 
 ### Schema and DTO boundary
 
-Retain genuinely shared browser-safe DTO contracts and existing shared schema definitions where justified. At completion, the browser and server consumed the same account-preference schema. The [TypeBox adoption decision](08-decisions-and-open-questions.md#typebox-for-fastify-http-schemas--accepted-direction-2026-11-09) keeps TypeBox runtime imports in the server and shares the preference field list with the browser.
+Keep HTTP definitions with their owning workspace features. The TypeBox adoption checkpoint shared the account-preference field list. The [workspace ownership follow-up](#6-workspace-ownership-and-typebox-follow-up--2026-11-09) supersedes that layout.
 
-Services may import shared DTO types and domain constants. They must not use runtime HTTP schemas to choose SQL columns, implement policies or interpret database state.
+Services may import server-owned DTO types and domain constants. They must not use runtime HTTP schemas to choose SQL columns, implement policies or interpret database state.
 
 Specifically, replace `preferencesSchema.required` as the preference SQL projection source with an explicit database column allowlist in the service. Preserve precisely the same selected fields.
 
-Keep frontend imports within shared contracts; do not introduce frontend imports into backend directories. Do not broaden this refactor into a shared-contract reorganization.
+Keep application imports within each workspace. Verify agreement between workspace-local HTTP definitions at the HTTP boundary.
 
 Schema relocation must not tighten inputs, add header validation, change error precedence, close intentionally open fields, or alter serialization. Health defines fixed success-body schemas for reply typing only; its routes preserve absent runtime schemas and unrestricted request inputs.
 
@@ -339,7 +339,7 @@ The following durable rules are recorded in the existing agent guidance by Phase
 - Every HTTP feature has `routes.ts`, `service.ts`, and `schema.ts`, regardless of size.
 - Maintain identical operation section names and ordering across the three files.
 - Routes own HTTP integration; services own operations and database orchestration; schemas own transport validation and serialization.
-- Keep runtime HTTP schemas out of service logic and SQL projections. Preserve justified shared DTO contracts without conflating transport, domain and database types.
+- Keep runtime HTTP schemas out of service logic and SQL projections. Keep HTTP definitions workspace-local and preserve the distinction between transport, domain and database types.
 - Register encapsulated feature plugins. Put shared authentication in the authenticated parent and feature hooks in their proper scope.
 - Keep public/protected registrations in the same feature directory when they share ownership. Do not add nesting merely to mirror files.
 - Construct resources and service instances centrally and pass narrow explicit dependencies. Do not introduce a global service locator.
@@ -350,4 +350,13 @@ The following durable rules are recorded in the existing agent guidance by Phase
 - Migrate community operation groups incrementally and pass their existing integration, authorization and concurrency checks before continuing.
 - Update documentation when ownership or boundaries change. Do not reorganize the frontend for symmetry.
 
-No further structural changes are planned.
+## 6. Workspace ownership and TypeBox follow-up — 2026-11-09
+
+The [accepted design](08-decisions-and-open-questions.md#fastify-schema-follow-up--accepted-design-2026-11-09) defines the pre-MVP target. [Issue #3](https://github.com/JonDManningDev/the-crowded-table-app/issues/3) tracks the two implementation checkpoints.
+
+1. **Workspace ownership.** Move every HTTP definition out of `shared/` into the owning features in `client/` and `server/`. Split the files used by both applications, and move the generated database types to the server. Use the browser SDK for Auth and update the type-generation command and affected source and test imports. Preserve the exact HTTP fixture. Verify the browser Auth flows, the HTTP adapters, workspace import ownership and the browser data-access boundary.
+2. **TypeBox simplification.** Remove syntax-only wrappers and express tagged request variants, nullable scalars and open audit details with native builders as agreed. Preserve null and successful field stripping for nullable object replies. Keep the narrow, commented exception if a direct native form cannot do both. Check positive and nearest-denial payloads for community commands and account blocks. Check serialization for null, projected extra fields, open audit details and valid database values. Review and apply only the agreed fixture differences after those behavior checks pass.
+
+Run server TypeScript, the HTTP suite, the local real Auth/HTTP suites and the client boundary scan, frontend tests, lint and the production build at each checkpoint. Review each diff and commit it independently once the required checks pass. Preserve the triads and existing runtime boundaries. Reconcile the current architecture, workspace guidance, runbooks and implementation status with the verified result.
+
+The [workspace ownership checkpoint](12-implementation-status.md#workspace-http-ownership-checkpoint--2026-11-09) passed all gates locally, including the unchanged HTTP fixture. TypeBox simplification remains the next checkpoint.

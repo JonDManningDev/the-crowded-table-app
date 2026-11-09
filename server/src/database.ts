@@ -1,6 +1,6 @@
 import { Kysely, PostgresDialect, sql } from 'kysely'
 import pg from 'pg'
-import type { Database } from '../../shared/database.types.ts'
+import type { Database } from './database.types.ts'
 
 type PreferenceTable = Pick<Database['public']['Tables']['user_accounts']['Row'],
   'user_id' | 'user_is_discoverable' | 'enable_matchmaking' | 'allow_direct_messages'>

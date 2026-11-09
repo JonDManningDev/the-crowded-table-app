@@ -1,4 +1,4 @@
-import type { OwnProfile } from './self-service.ts'
+import type { OwnProfile } from '../user-accounts/self-service.ts'
 
 export type AccountFacts = {
   tenant_id: string; user_id: string; standing: 'pending' | 'approved' | 'suspended' | 'inactive'

@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Workspace HTTP ownership checkpoint — 2026-11-09
+
+Client adapters own their HTTP paths, payload types, and response checks. The Fastify features own their HTTP and service definitions, and the single generated public-schema type file lives at `server/src/database.types.ts`. The browser initializes Supabase for Auth using the SDK without a database type import. The Phase 1 HTTP fixture still matches all 41 explicit operations and 28 generated HEAD registrations. The generated database type file is byte-identical after the move.
+
+Server TypeScript, all 63 HTTP and backend cases, nine real local Auth/HTTP suites, the 134-file browser boundary scan, all 279 frontend tests, lint, and the production build passed. The real suites exercised signup, confirmation and recovery, preferences, self-service, community commands, authorization denials, bypasses, and concurrency. The browser bundle inspection with Auth configured found Supabase and no TypeBox modules. Local integration used the loopback stack on ports 54321 and 54322. TypeBox simplification is the next checkpoint. Hosted execution and deployment remain deferred.
+
 ## Fastify TypeBox adoption — 2026-11-09
 
 The user-accounts checkpoint migrates ten operations to TypeBox 1.4.6 and `@fastify/type-provider-typebox` 6.3.0. The plugin infers request and reply types from its attached schemas. The shared preference field list supplies the server schema and browser response check. Shared error and profile input schemas use TypeBox on the server. The HTTP fixture matches all 41 operations and 28 generated HEAD registrations exactly. AJV and the Fastify serializer retain their current configuration.
@@ -1367,7 +1373,7 @@ Final hosted verification passed all 108 checks in the new suite, plus separate 
 
 ## Client/server workspace restructuring
 
-Implemented the user-approved layout on 2026-11-03. The React application is now the `@crowded-table/client` npm workspace beside `server/`, with source, public assets, HTML, Vite/Vitest/TypeScript configuration and browser environment files under `client/`. The root package delegates commands, retains common tooling and repository test dependencies, and uses one root lockfile. Generated database types move to `shared/database.types.ts`; both applications import shared infrastructure without importing one another. Setup scripts and the client access audit use the new paths. Root ESLint scopes React rules to client TypeScript and ignores nested build output. Current setup, architecture, token ownership and generation documentation are updated; dated evidence remains historical.
+Implemented the user-approved layout on 2026-11-03. The React application is now the `@crowded-table/client` npm workspace beside `server/`, with source, public assets, HTML, Vite/Vitest/TypeScript configuration and browser environment files under `client/`. The root package delegates commands, retains common tooling and repository test dependencies, and uses one root lockfile. Generated database types move to `shared/database.types.ts`; both applications import shared infrastructure without importing one another. Setup scripts and the client access audit use the new paths. Root ESLint scopes React rules to client TypeScript and ignores nested build output. Setup, architecture, token ownership and generation documentation were updated at that milestone. The workspace HTTP ownership checkpoint above supersedes the original shared source layout.
 
 Clean root `npm ci` passed with zero dependency-version changes. All 279 frontend tests in 38 files, server TypeScript checks, the client production build, root lint, all nine local API suites and the Auth-only client access audit passed. The audit now covers 130 production client files because generated database types are shared. One frontend test needed its raw migration-fixture import rebased. No UI or behavior change was made: comparison against the prior commit found only six frontend files with import-path edits; styles, assets and other component code are unchanged. The existing Vite chunk-size warning remains.
 

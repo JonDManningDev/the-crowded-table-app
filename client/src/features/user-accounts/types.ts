@@ -1,4 +1,4 @@
-import type { CommunityFilter, CommunitySummary } from '../../../../shared/self-service'
+import type { CommunityFilter, CommunitySummary } from './self-service'
 export type { CommunityFilter, CommunitySummary }
 import type { GameArtVariant } from '../../components/GameArt'
 
@@ -11,7 +11,7 @@ export type CommunicationPreferences = {
   allow_direct_messages: boolean
 }
 
-export type { AccountPreferences } from '../../../../shared/account-preferences'
+export type { AccountPreferences } from './account-preferences'
 
 export type PremiumFeaturePlaceholder = {
   id: string

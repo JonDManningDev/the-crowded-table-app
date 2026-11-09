@@ -1,6 +1,6 @@
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox'
-import { preferencesPath } from '../../../shared/account-preferences.ts'
-import { myCommunitiesPath, ownProfilePath } from '../../../shared/self-service.ts'
+import { preferencesPath } from './account-preferences.ts'
+import { myCommunitiesPath, ownProfilePath } from './self-service.ts'
 import { getAuthenticatedContext } from '../http-authentication.ts'
 import type { UserAccountService } from './service.ts'
 import { readAccountPreferencesSchema, saveAccountPreferencesSchema,

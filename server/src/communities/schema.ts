@@ -2,9 +2,9 @@ import { Type, type TObject, type TProperties } from 'typebox'
 import { profileInputSchema } from '../profile-input-schema.ts'
 import { errorResponse } from '../http-errors.ts'
 import { nullableObject, nullableString } from '../http-schema.ts'
-import { copySlots, settingFields, type CopyKey } from '../../../shared/community-configuration.ts'
-import { staffFlags, type CommunityCommand } from '../../../shared/community-commands.ts'
-import { communityPreferenceFields } from '../../../shared/self-service.ts'
+import { copySlots, settingFields, type CopyKey } from './community-configuration.ts'
+import { staffFlags, type CommunityCommand } from './community-commands.ts'
+import { communityPreferenceFields } from './community-preferences.ts'
 
 const closed = { additionalProperties: false }
 const optionalFields = { ...closed, required: [] }

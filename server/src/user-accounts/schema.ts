@@ -1,5 +1,5 @@
 import { Type, type Static, type TSchema } from 'typebox'
-import { accountPreferenceFields } from '../../../shared/account-preferences.ts'
+import { accountPreferenceFields } from './account-preferences.ts'
 import { errorResponse } from '../http-errors.ts'
 import { nullableObject, nullableString } from '../http-schema.ts'
 import { profileInputSchema } from '../profile-input-schema.ts'

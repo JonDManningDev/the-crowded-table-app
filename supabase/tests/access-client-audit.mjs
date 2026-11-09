@@ -20,6 +20,15 @@ function inspect(directory) {
       }
       if(ts.isPropertyAccessExpression(node)&&['storage','realtime'].includes(node.name.text)) violations.push(source.fileName+': '+node.getText(source))
       if(ts.isStringLiteral(node)&&/\/(rest|graphql|storage|realtime)\/v1\b/.test(node.text)) violations.push(source.fileName+': direct data URL')
+      if((ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier) {
+        const specifier=node.moduleSpecifier.text
+        if(specifier.startsWith('.')&&!new URL(specifier,url).href.startsWith(root.href)) {
+          violations.push(source.fileName+': import outside client source: '+specifier)
+        }
+        if(/^(typebox|@fastify\/type-provider-typebox)(\/|$)/.test(specifier)) {
+          violations.push(source.fileName+': server schema dependency: '+specifier)
+        }
+      }
       if(ts.isImportDeclaration(node)&&node.moduleSpecifier.text==='@supabase/supabase-js') {
         const bindings=node.importClause?.namedBindings
         if(bindings&&ts.isNamedImports(bindings)&&bindings.elements.some(e=>(e.propertyName??e.name).text==='createClient')) {
@@ -32,5 +41,5 @@ function inspect(directory) {
   }
 }
 inspect(root)
-assert.deepEqual(violations,[],'Production client has an unreviewed direct data surface')
-console.log(`PASS Auth-only Supabase client boundary across ${files} production TypeScript files`)
+assert.deepEqual(violations,[],'Production client has an unreviewed data surface or workspace import')
+console.log(`PASS Auth-only Supabase and workspace boundaries across ${files} production TypeScript files`)

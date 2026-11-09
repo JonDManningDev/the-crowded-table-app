@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import type { Database } from '../../../shared/database.types'
 
 const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
@@ -20,7 +19,7 @@ function isPublicKey(value: string) {
   try { return JSON.parse(atob(value.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role === 'anon' } catch { return false }
 }
 export const supabase = url && key && isPublicKey(key)
-  ? createClient<Database>(url, key, { auth: { flowType: 'implicit', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
+  ? createClient(url, key, { auth: { flowType: 'implicit', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
   : null
 // getSession alone can return an older stored session after URL parsing fails.
 export const authInitialization = supabase?.auth.initialize()

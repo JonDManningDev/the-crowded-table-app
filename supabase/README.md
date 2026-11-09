@@ -23,7 +23,7 @@ Data API remains enabled with zero external application grants, allowing explici
 
 The first two versioned migrations implement the agreed feature slice. They target a Supabase database with its Auth migrations already applied. They do not create or replace Supabase-owned Auth tables.
 
-Validated with Supabase CLI 2.119.0: a clean local rebuild, 85 pgTAP assertions, three two-connection concurrency scenarios, SQL lint, the live email-confirmation setting, and the application TypeScript/production build all passed. Generated public-schema types are checked in at `shared/database.types.ts`. That initial validation reported both original migrations applied; frontend account flows are implemented; hosted signup email receipt, verified password sign-in, and recovery through password update/home return were confirmed by the user.
+Validated with Supabase CLI 2.119.0: a clean local rebuild, 85 pgTAP assertions, three two-connection concurrency scenarios, SQL lint, the live email-confirmation setting, and the application TypeScript/production build all passed. Generated public-schema types are checked in at `server/src/database.types.ts`. That initial validation reported both original migrations applied; frontend account flows are implemented; hosted signup email receipt, verified password sign-in, and recovery through password update/home return were confirmed by the user.
 
 ## Global profile implementation — 2026-10-16
 
@@ -54,7 +54,7 @@ API startup uses port `3001` when `PORT` is absent. A supplied `PORT` must be AS
 
 Use Node 22.18 or later. From the repository root install dependencies with `npm ci`. Start the local Supabase stack, apply pending migrations with `npx supabase migration up --local`, then run `npm run setup:local -w server`. Setup configures an initially credential-less local `ct_api` login and writes ignored server and browser environment files. For an already-provisioned login supply its credential separately. Setup also creates a server-only `DIRECTORY_CURSOR_KEY` if absent, preserving any existing key. It must be 32 cryptographically random bytes encoded as 64 hex characters. Run setup again after this cutover for an existing local environment. Keep runtime secrets out of Vite variables. The frontend and API must use the same Auth project. The default development mode reads the local browser configuration and refuses a hosted Auth URL.
 
-For the local Supabase stack, run `npm run dev:api:local` and `npm run dev:local` in separate terminals. Vite proxies `/api` to the local Fastify listener on port 3001. Settings uses GET/PUT `/api/me/preferences`. Community creation uses POST `/api/communities`. Membership, staff and archive commands use POST `/api/communities/:tenantId/commands`. The browser uses Supabase Auth for the bearer token. The shared [command types](../shared/community-commands.ts) define the payloads. A join requires a submitted community profile. Staff can read authorized current requests at GET `/api/communities/:tenantId/requests`; the response includes the request UUID and account revision used for approval. Grant managers use GET `/api/communities/:tenantId/staff-candidates` for the eligible candidate projection. Auto-approval uses PATCH `/api/communities/:tenantId/settings`. Configuration and self-service browser paths are retired; remaining account-fact surfaces retain their documented grants. Production needs same-origin forwarding and a separately authorized paired API, schema and frontend release. Running a new frontend against an old hosted stack is unsupported.
+For the local Supabase stack, run `npm run dev:api:local` and `npm run dev:local` in separate terminals. Vite proxies `/api` to the local Fastify listener on port 3001. Settings uses GET/PUT `/api/me/preferences`. Community creation uses POST `/api/communities`. Membership, staff and archive commands use POST `/api/communities/:tenantId/commands`. The browser uses Supabase Auth for the bearer token. The server [command types](../server/src/communities/community-commands.ts) define the payloads. A join requires a submitted community profile. Staff can read authorized current requests at GET `/api/communities/:tenantId/requests`; the response includes the request UUID and account revision used for approval. Grant managers use GET `/api/communities/:tenantId/staff-candidates` for the eligible candidate projection. Auto-approval uses PATCH `/api/communities/:tenantId/settings`. Configuration and self-service browser paths are retired; remaining account-fact surfaces retain their documented grants. Production needs same-origin forwarding and a separately authorized paired API, schema and frontend release. Running a new frontend against an old hosted stack is unsupported.
 
 Run `npm run test:local -w server` for the real Auth/HTTP/SQL suite. It creates and removes only synthetic local users. If local services are forwarded to alternative **loopback** ports, set `CT_LOCAL_API_PORT` and `CT_LOCAL_DB_PORT` for setup and tests. Keep `SUPABASE_JWT_ISSUER` bound to the issuing project's canonical Auth URL. Run pgTAP, populated upgrade, direct HTTP, frontend tests, build and lint as well. The historical hosted test script targets the previous hosted schema and requires revision at coordinated cutover.
 
@@ -76,7 +76,7 @@ Community profiles now use a scoped update. Membership and creation establish th
 
 ## Local account history
 
-Migration `20261103001100` closes all ordinary raw history/category reads, including authenticated owners. GET `/api/communities/:tenantId/history` returns `{ rows, next }` using the [shared history contract](../shared/account-history.ts). Optional `target`, `category` (`community_account` or `staff_account`), `eventId`, `cursor` and `limit` are the only query fields. Lists order by timestamp and event UUID descending, default to 50 rows and allow at most 100. Pass `next` as `cursor` with the same actor, tenant and filters; page size may change. Exact-event queries apply the same authorization and filters, ignore pagination and return an empty list for either an unavailable or inaccessible event. Responses use `private, no-store`.
+Migration `20261103001100` closes all ordinary raw history/category reads, including authenticated owners. GET `/api/communities/:tenantId/history` returns `{ rows, next }` using the [server history contract](../server/src/communities/account-history.ts). Optional `target`, `category` (`community_account` or `staff_account`), `eventId`, `cursor` and `limit` are the only query fields. Lists order by timestamp and event UUID descending, default to 50 rows and allow at most 100. Pass `next` as `cursor` with the same actor, tenant and filters; page size may change. Exact-event queries apply the same authorization and filters, ignore pagination and return an empty list for either an unavailable or inaccessible event. Responses use `private, no-store`.
 
 Effective staff require the corresponding audit flag; either flag admits a dual-category event. Owners can read all events, including while archived. Other readers lose access on archive, loss of approved standing, staff pause/revocation, flag removal or Auth ineligibility. Grant/discipline authority alone does not grant history access. Suspension reasons remain on community-only events; the separately authorized linked staff event carries no copy. Original legacy actions and immutable categories survive later role changes. Unclassified entries remain owner-only.
 
@@ -84,7 +84,7 @@ The read transaction holds the tenant against concurrent lifecycle changes befor
 
 ## Local self-service profiles, preferences and summaries
 
-Migration `20261103001200` revokes browser reads/writes on global profiles, curated community profiles and private community preferences, and drops `my_community_summaries`. It grants the restricted runtime the corresponding self operations. Existing exact community-profile HTTP reads remain available. The [shared self-service types](../shared/self-service.ts) replace the summary view's generated transport type; public schema types are regenerated after the view removal.
+Migration `20261103001200` revokes browser reads/writes on global profiles, curated community profiles and private community preferences, and drops `my_community_summaries`. It grants the restricted runtime the corresponding self operations. Existing exact community-profile HTTP reads remain available. The [client self-service types](../client/src/features/user-accounts/self-service.ts) replace the summary view's generated transport type; public schema types are regenerated after the view removal.
 
 GET/PUT `/api/me/profile` returns `{ profile }`, with a null profile only when the caller has not created one. PUT accepts `display_name` and nullable `bio`; actor, timestamps and audit IDs remain trusted. GET `/api/me/communities` returns `{ rows, next }`, with `filter=all|managed|owned`, optional cursor and limit (50 default, 100 maximum). It preserves pending and archived cards, timestamp-descending/UUID-ascending ordering and the ten original card fields. The runtime-only relationship accessor exposes only the caller's tenant IDs and membership/management/ownership booleans; it is the narrow archived-card exception to account-content RLS.
 
@@ -94,7 +94,7 @@ All operations use verified Auth and `private, no-store`. Feature adapters bind 
 
 ## Local community landing and configuration
 
-Migration `20261103001300` drops `lookup_tenant` and all ordinary browser table/column privileges on tenants, settings and website overrides. The [shared configuration contract](../shared/community-configuration.ts) defines the fields and seven supported copy slots. The former `auto-approval` command variant is removed; settings PATCH is its sole replacement.
+Migration `20261103001300` drops `lookup_tenant` and all ordinary browser table/column privileges on tenants, settings and website overrides. The [server configuration contract](../server/src/communities/community-configuration.ts) defines the fields and seven supported copy slots. The former `auto-approval` command variant is removed; settings PATCH is its sole replacement.
 
 | HTTP operation | Current authorization and fields |
 | --- | --- |
@@ -110,7 +110,7 @@ Protected operations verify Auth, lock the tenant before checking current author
 
 ## Local staff records and participant permissions
 
-Migration `20261103001400` retires ordinary browser staff-assignment grants and the legacy holder/owner browser policy. Participant permissions remain closed to browser roles. The [shared record types](../shared/community-records.ts) describe the full authorized records; staff commands continue to own assignment creation, status and staff-flag changes.
+Migration `20261103001400` retires ordinary browser staff-assignment grants and the legacy holder/owner browser policy. Participant permissions remain closed to browser roles. The [server record types](../server/src/communities/community-records.ts) describe the full authorized records; staff commands continue to own assignment creation, status and staff-flag changes.
 
 | HTTP operation | Authorization |
 | --- | --- |
@@ -196,7 +196,7 @@ To rebuild **only this project's disposable local database**, `npx --yes supabas
 Regenerate the checked-in types after schema changes:
 
 ```powershell
-npx --yes supabase gen types typescript --local --schema public | Set-Content -Encoding utf8 shared/database.types.ts
+npx --yes supabase gen types typescript --local --schema public | Set-Content -Encoding utf8 server/src/database.types.ts
 ```
 
 Apply these files in timestamp order through the Supabase migration workflow. Once deployed, change behavior with a new migration rather than editing an applied file. No remote deployment is performed by these files or the tests. Review `supabase db push --dry-run` against the intended linked project before a separately authorized deployment. Do not roll back by dropping account/tenant tables containing user data; use forward repairs and backups.

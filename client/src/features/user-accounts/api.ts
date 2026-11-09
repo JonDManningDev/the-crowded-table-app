@@ -1,5 +1,5 @@
-import { accountPreferenceFields, preferencesPath } from '../../../../shared/account-preferences'
-import { myCommunitiesPath, ownProfilePath, type CommunitySummaryPage, type OwnProfileResponse } from '../../../../shared/self-service'
+import { accountPreferenceFields, preferencesPath } from './account-preferences'
+import { myCommunitiesPath, ownProfilePath, type CommunitySummaryPage, type OwnProfileResponse } from './self-service'
 import { currentApiUser, selfServiceRequest } from '../../lib/api-client'
 import { previewCommunity } from '../../mock/data'
 import { supabase } from '../../lib/supabase'

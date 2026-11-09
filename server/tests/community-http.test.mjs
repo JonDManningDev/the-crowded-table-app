@@ -7,7 +7,7 @@ import * as plugins from '../src/communities/routes.ts'
 import { registerRequiredAuthentication, getAuthenticatedContext } from '../src/http-authentication.ts'
 import { registerHttpErrors } from '../src/http-errors.ts'
 import { ApplicationError } from '../src/application-errors.ts'
-import { staffFlags } from '../../shared/community-commands.ts'
+import { staffFlags } from '../src/communities/community-commands.ts'
 import { actorId, targetId, tenantId, authorization, createHttpHarness } from './helpers/http-harness.mjs'
 
 const operations = [

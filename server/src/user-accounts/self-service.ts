@@ -2,10 +2,6 @@ export type ProfileInput = { display_name: string; bio: string | null }
 export type OwnProfile = ProfileInput & {
   user_id: string; created_at: string; updated_at: string; created_by: string | null; updated_by: string | null
 }
-export type OwnProfileResponse = { profile: OwnProfile | null }
-export type CommunityPreferences = {
-  show_global_profile: boolean; allow_direct_messages: boolean; allow_private_invitations: boolean
-}
 export type CommunityFilter = 'all' | 'managed' | 'owned'
 export type CommunitySummary = {
   id: string; name: string; city: string | null; state_province: string | null; country_code: string
@@ -16,4 +12,3 @@ export type CommunitySummaryQuery = { filter?: CommunityFilter; cursor?: string;
 export type CommunitySummaryPage = { rows: CommunitySummary[]; next: string | null }
 export const ownProfilePath = '/api/me/profile'
 export const myCommunitiesPath = '/api/me/communities'
-export const communityPreferenceFields = ['show_global_profile','allow_direct_messages','allow_private_invitations'] as const

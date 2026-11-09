@@ -5,16 +5,15 @@ A React/TypeScript gaming-community app with a persistent TypeScript API and Sup
 ## Source layout
 
 - `client/`: the `@crowded-table/client` workspace: React source, public assets, HTML, Vite/Vitest and frontend TypeScript configuration.
-- `server/`: the API workspace: Fastify services, startup configuration, setup scripts and integration tests.
-- `shared/`: HTTP contracts and generated `database.types.ts`, consumed by both applications.
+- `server/`: the API workspace: Fastify services, generated public-schema database types, startup configuration, setup scripts and integration tests.
 - `supabase/`: migrations, database configuration, preflight queries and access-verification tooling.
 - `docs/`: product decisions, architecture, implementation evidence and operational instructions.
 
-The root package owns repository commands, common TypeScript/ESLint tooling and one `package-lock.json`. Install dependencies once from the root; workspace manifests declare application dependencies. See [file structure](docs/07-file-structure.md) for frontend feature organization.
+Each workspace owns the HTTP definitions used by its features. The root package owns repository commands, common TypeScript/ESLint tooling and one `package-lock.json`. Install dependencies once from the root; workspace manifests declare application dependencies. See [file structure](docs/07-file-structure.md) for frontend feature organization.
 
 ## Codex workspace setup
 
-In Codex's project menu, choose **Edit project**, attach the complete Git repository root (the folder containing `.git`, `AGENTS.md` and the root `package.json`), and make it the primary folder. `client/` and `server/` are npm workspaces inside this repository; use their shared parent as the Codex project root so agents can also work with `shared/`, `supabase/` and `docs/`.
+In Codex's project menu, choose **Edit project**, attach the complete Git repository root (the folder containing `.git`, `AGENTS.md` and the root `package.json`), and make it the primary folder. `client/` and `server/` are npm workspaces inside this repository; use their shared parent as the Codex project root so agents can also work with `supabase/` and `docs/`.
 
 After relocating a checkout, update the project's folder attachment and remove the obsolete attachment without deleting its files. Verify the chat's working directory and workspace roots point to the checkout: `git rev-parse --show-toplevel` should report the repository root. If an existing chat retains the old location after reopening, continue in a new chat opened from the corrected project with the task context carried over.
 

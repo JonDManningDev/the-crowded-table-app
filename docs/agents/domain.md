@@ -14,7 +14,7 @@ decisions are resolved.
 
 ## Layout
 
-Use one application-wide context across `client/`, `server/` and `shared/`:
+Use one application-wide context across `client/` and `server/`:
 
 - `GLOSSARY.md`: shared domain vocabulary.
 - `docs/adr/`: substantial decision tradeoffs.

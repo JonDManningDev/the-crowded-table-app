@@ -6,14 +6,13 @@ The [refactoring plan](22-fastify-architecture-refactoring-plan.md#1-scope-and-t
 
 ## Approved client/server workspace restructuring — 2026-11-03
 
-The user approved a dedicated `@crowded-table/client` npm workspace beside `server/`, with one root lockfile and root command orchestration. Move frontend source, public assets, HTML, Vite/Vitest/TypeScript configuration and browser environment files into `client/`; keep the internal feature organization and runtime behavior. Move generated database types into `shared/database.types.ts` so neither application imports the other's source. Existing shared HTTP contracts remain ordinary TypeScript source.
+The user approved a dedicated `@crowded-table/client` npm workspace beside `server/`, with one root lockfile and root command orchestration. Move frontend source, public assets, HTML, Vite/Vitest/TypeScript configuration and browser environment files into `client/`; keep the internal feature organization and runtime behavior. Each workspace owns the HTTP definitions its features use. Generated public-schema database types live at `server/src/database.types.ts`. The browser uses the Supabase SDK for Auth independently of those types.
 
 Implemented and verified locally. The current top-level layout is:
 
 ```text
 client/     # src/, public/, index.html, package.json, Vite/Vitest/TypeScript, browser env files
 server/     # src/, scripts/, tests/, package.json, TypeScript, private runtime env files
-shared/     # HTTP contracts and database.types.ts
 supabase/   # migrations, configuration and database tooling
 docs/       # product and engineering documentation
 package.json, package-lock.json, eslint.config.js, AGENTS.md, README.md
