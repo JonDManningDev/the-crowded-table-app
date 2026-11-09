@@ -5,11 +5,10 @@ import { withEligibleActorTransaction, type AuthenticatedContext } from '../acto
 import { ApplicationError } from '../application-errors.ts'
 import type { DirectoryCursors } from '../directory-cursors.ts'
 import { copySlots, settingFields, type CopyKey, type CommunityCopy, type CommunityDetails, type CommunityDetailsInput, type CommunityLanding, type CommunitySettings, type CommunitySettingsRecord } from './community-configuration.ts'
-import { type AccountFacts, type DirectoryPage, type DirectoryQuery, type MemberDirectoryRow, type PublicDirectoryRow } from './community-directory.ts'
+import { type AccountFacts, type CommunityProfileInput, type DirectoryPage, type DirectoryQuery, type MemberDirectoryRow, type PublicDirectoryRow } from './community-directory.ts'
 import { staffFlags, type CommunityCommand, type CommandResult, type CreateCommunityInput, type CuratedProfile, type StaffPermissions } from './community-commands.ts'
 import { type AccountReview, type CommunityRequest, type OwnCommunityRequestResponse, type StaffCandidate } from './community-reads.ts'
 import { communityPreferenceFields, type CommunityPreferences } from './community-preferences.ts'
-import type { ProfileInput } from '../user-accounts/self-service.ts'
 import { type ParticipantPermissions, type RecordPage, type RecordQuery, type StaffRecord } from './community-records.ts'
 import { type HistoryEntry, type HistoryPage, type HistoryQuery } from './account-history.ts'
 
@@ -52,7 +51,7 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
     readProfile(context: AuthenticatedContext, params: { tenantId: string; userId: string }) {
       return readProfile(db, context, params)
     },
-    saveOwnProfile(context: AuthenticatedContext, params: { tenantId: string }, input: ProfileInput) {
+    saveOwnProfile(context: AuthenticatedContext, params: { tenantId: string }, input: CommunityProfileInput) {
       return run(db, context, tx => ownCommunityProfile(tx, context.actorId, params.tenantId, input))
     },
     readOwnPreferences(context: AuthenticatedContext, params: { tenantId: string }) {
@@ -408,7 +407,7 @@ function readProfile(db: AppDatabase, context: AuthenticatedContext, params: { t
     return profile ? { status: 200 as const, profile } : { status: 404 as const }
   })
 }
-export async function ownCommunityProfile(tx: Transaction<ApiTables>, actor: string, tenant: string, input: ProfileInput) {
+export async function ownCommunityProfile(tx: Transaction<ApiTables>, actor: string, tenant: string, input: CommunityProfileInput) {
   // Independent self edits have statement-time lifecycle checks and no tenant lock.
   const result = await sql`update public.community_account_profiles p set display_name=${input.display_name.trim()},bio=${input.bio?.trim() || null}
     where p.tenant_id=${tenant} and p.user_id=${actor} and app_private.active_tenant(p.tenant_id)

@@ -1,11 +1,13 @@
-import type { OwnProfile } from '../user-accounts/self-service.ts'
-
 export type AccountFacts = {
   tenant_id: string; user_id: string; standing: 'pending' | 'approved' | 'suspended' | 'inactive'
   first_approved_at: string | null; has_disciplinary_restriction: boolean
   created_at: string; updated_at: string; created_by: string | null; updated_by: string | null
 }
-export type CommunityProfile = OwnProfile & { tenant_id: string }
+export type CommunityProfileInput = { display_name: string; bio: string | null }
+export type CommunityProfile = CommunityProfileInput & {
+  tenant_id: string; user_id: string; created_at: string; updated_at: string
+  created_by: string | null; updated_by: string | null
+}
 export type RoleBadge = 'owner' | 'admin' | null
 export type MemberDirectoryRow = { account: AccountFacts; profile: CommunityProfile | null; staff_role: RoleBadge }
 export type PublicDirectoryRow = { display_name: string; staff_role: RoleBadge }

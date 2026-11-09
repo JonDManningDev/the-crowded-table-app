@@ -20,9 +20,13 @@ function inspect(directory) {
       }
       if(ts.isPropertyAccessExpression(node)&&['storage','realtime'].includes(node.name.text)) violations.push(source.fileName+': '+node.getText(source))
       if(ts.isStringLiteral(node)&&/\/(rest|graphql|storage|realtime)\/v1\b/.test(node.text)) violations.push(source.fileName+': direct data URL')
-      if((ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier) {
-        const specifier=node.moduleSpecifier.text
-        if(specifier.startsWith('.')&&!new URL(specifier,url).href.startsWith(root.href)) {
+      let moduleSpecifier
+      if(ts.isImportDeclaration(node)||ts.isExportDeclaration(node)) moduleSpecifier=node.moduleSpecifier
+      if(ts.isCallExpression(node)&&node.expression.kind===ts.SyntaxKind.ImportKeyword) moduleSpecifier=node.arguments[0]
+      if(ts.isImportTypeNode(node)&&ts.isLiteralTypeNode(node.argument)) moduleSpecifier=node.argument.literal
+      if(moduleSpecifier&&ts.isStringLiteralLike(moduleSpecifier)) {
+        const specifier=moduleSpecifier.text
+        if(/^@crowded-table\/api(\/|$)/.test(specifier)||(specifier.startsWith('.')&&!new URL(specifier,url).href.startsWith(root.href))) {
           violations.push(source.fileName+': import outside client source: '+specifier)
         }
         if(/^(typebox|@fastify\/type-provider-typebox)(\/|$)/.test(specifier)) {

@@ -30,7 +30,11 @@ const attribution = {
   updated_by: nullableUuid,
 } as const
 const standing = Type.Enum(['pending', 'approved', 'suspended', 'inactive'], { type: 'string' })
-const staffRole = Type.Union([Type.Enum(['owner', 'admin'], { type: 'string' }), Type.Null()])
+const staffRoles = ['owner', 'admin'] as const
+const staffStatuses = ['active', 'paused', 'revoked'] as const
+// A type array preserves baseline serialization, and Type.Enum's types exclude null.
+const nullableStaffRole = { enum: [...staffRoles, null], type: ['string', 'null'] } as const
+const nullableStaffStatus = { enum: [...staffStatuses, null], type: ['string', 'null'] } as const
 const accountFacts = Type.Object({
   tenant_id: uuid,
   user_id: uuid,
@@ -106,7 +110,7 @@ export const publicDirectorySchema = {
   querystring: directoryQuery,
   response: {
     200: Type.Object({
-      rows: Type.Array(Type.Object({ display_name: Type.String(), staff_role: staffRole }, closed)),
+      rows: Type.Array(Type.Object({ display_name: Type.String(), staff_role: nullableStaffRole }, closed)),
       next: nullableText,
     }, closed),
     ...errors,
@@ -168,6 +172,7 @@ export const executeCommandSchema = {
 } as const
 
 // Requests and reviews
+const requestKind = Type.Enum(['join', 'reactivation'], { type: 'string' })
 export const ownRequestSchema = {
   params: tenantParams,
   querystring: emptyQuery,
@@ -175,7 +180,7 @@ export const ownRequestSchema = {
     200: Type.Object({
       request: nullableObject(Type.Object({
         request_id: uuid,
-        kind: Type.Enum(['join', 'reactivation'], { type: 'string' }),
+        kind: requestKind,
         requested_at: timestamp,
       }, closed)),
     }, closed),
@@ -203,8 +208,8 @@ export const staffCandidatesSchema = {
         user_id: uuid,
         standing: Type.Literal('approved'),
         display_name: nullableText,
-        staff_role: staffRole,
-        staff_status: Type.Union([Type.Enum(['active', 'paused', 'revoked'], { type: 'string' }), Type.Null()]),
+        staff_role: nullableStaffRole,
+        staff_status: nullableStaffStatus,
       }, closed)),
       next: nullableUuid,
     }, closed),
@@ -219,7 +224,7 @@ export const pendingRequestsSchema = {
     200: Type.Object({
       rows: Type.Array(Type.Object({
         id: uuid,
-        kind: Type.Enum(['join', 'reactivation'], { type: 'string' }),
+        kind: requestKind,
         user_id: uuid,
         requested_at: timestamp,
         revision: uuid,
@@ -329,7 +334,7 @@ export const memberDirectorySchema = {
       rows: Type.Array(Type.Object({
         account: accountFacts,
         profile: nullableObject(communityProfile),
-        staff_role: staffRole,
+        staff_role: nullableStaffRole,
       }, closed)),
       next: nullableText,
     }, closed),
@@ -356,8 +361,8 @@ export const accountFactsSchema = {
 const accountMetadata = { tenant_id: uuid, user_id: uuid, ...attribution } as const
 const staffRecord = Type.Object({
   ...accountMetadata,
-  role: Type.Enum(['owner', 'admin'], { type: 'string' }),
-  status: Type.Enum(['active', 'paused', 'revoked'], { type: 'string' }),
+  role: Type.Enum(staffRoles, { type: 'string' }),
+  status: Type.Enum(staffStatuses, { type: 'string' }),
   ...staffPermissions.properties,
 }, closed)
 const participantPermissions = Type.Object({ ...accountMetadata, can_post_public_events: Type.Boolean() }, closed)

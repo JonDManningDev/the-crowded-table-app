@@ -420,3 +420,22 @@ test('nullable scalars preserve valid values and reject malformed service output
   h.queue(details.name, { ...saved, city: 'c'.repeat(121) })
   error(h, details, await h.app.inject(request), 503, 'unavailable')
 })
+
+test('nullable staff fields preserve valid values, null, and legacy serializer behavior', async t => {
+  const h = harness(t)
+  for (const name of ['publicDirectory', 'memberDirectory', 'staffCandidates']) {
+    const operation = operations.find(operation => operation.name === name)
+    const roles = ['owner', 'admin', null, 'unexpected-role']
+    const statuses = ['active', 'paused', null, 'unexpected-status']
+    const dto = response(operation).dto
+    dto.rows = roles.map((staff_role, index) => ({
+      ...dto.rows[0],
+      staff_role,
+      ...(name === 'staffCandidates' && { staff_status: statuses[index] }),
+    }))
+    h.queue(name, result(operation, dto))
+    const received = await h.app.inject(input(operation))
+    assert.equal(received.statusCode, 200, name)
+    assert.deepEqual(received.json(), dto, name)
+  }
+})

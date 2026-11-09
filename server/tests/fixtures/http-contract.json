@@ -2515,17 +2515,14 @@
                     ]
                   },
                   "staff_role": {
-                    "anyOf": [
-                      {
-                        "enum": [
-                          "owner",
-                          "admin"
-                        ],
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
+                    "enum": [
+                      "owner",
+                      "admin",
+                      null
+                    ],
+                    "type": [
+                      "string",
+                      "null"
                     ]
                   }
                 },
@@ -3868,32 +3865,26 @@
                     ]
                   },
                   "staff_role": {
-                    "anyOf": [
-                      {
-                        "enum": [
-                          "owner",
-                          "admin"
-                        ],
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
+                    "enum": [
+                      "owner",
+                      "admin",
+                      null
+                    ],
+                    "type": [
+                      "string",
+                      "null"
                     ]
                   },
                   "staff_status": {
-                    "anyOf": [
-                      {
-                        "enum": [
-                          "active",
-                          "paused",
-                          "revoked"
-                        ],
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
+                    "enum": [
+                      "active",
+                      "paused",
+                      "revoked",
+                      null
+                    ],
+                    "type": [
+                      "string",
+                      "null"
                     ]
                   },
                   "standing": {
@@ -5339,17 +5330,14 @@
                     "type": "string"
                   },
                   "staff_role": {
-                    "anyOf": [
-                      {
-                        "enum": [
-                          "owner",
-                          "admin"
-                        ],
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
+                    "enum": [
+                      "owner",
+                      "admin",
+                      null
+                    ],
+                    "type": [
+                      "string",
+                      "null"
                     ]
                   }
                 },
