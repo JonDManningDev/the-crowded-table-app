@@ -45,7 +45,7 @@ function contract(operation) { return baseline.schemas[`${operation.method} ${op
 function sample(schema, key = '') {
   if ('const' in schema) return schema.const
   if (schema.enum) return schema.enum[0]
-  if (schema.oneOf) return sample(schema.oneOf[0], key)
+  if (schema.anyOf) return schema.anyOf.some(branch => branch.type === 'null') ? null : sample(schema.anyOf[0], key)
   if (Array.isArray(schema.type) && schema.type.includes('null')) return null
   if (schema.type === 'object') return Object.fromEntries(Object.entries(schema.properties ?? {}).map(([key, value]) => [key, sample(value, key)]))
   if (schema.type === 'array') return [sample(schema.items)]
@@ -319,7 +319,7 @@ test('all paged/selective community operations forward validated nonempty query 
 test('history keeps open details and empty unauthorized pages; own requests keep null distinct from missing', async t => {
   const h = harness(t), history = operations.find(operation => operation.name === 'history')
   const dto = response(history).dto
-  dto.rows[0].details = { future: [{ subject: 'kept', count: 1 }], flag: true }
+  dto.rows[0].details = { future: [{ subject: 'kept', count: 1 }], flag: true, 'line\nbreak': null }
   h.queue(history.name, result(history, dto))
   assert.deepEqual((await h.app.inject(input(history))).json(), dto)
   const own = operations.find(operation => operation.name === 'ownRequest')
@@ -333,4 +333,90 @@ test('history keeps open details and empty unauthorized pages; own requests keep
   assert.equal(empty.statusCode, 200)
   assert.deepEqual(empty.json(), { rows: [], next: null })
   assert.equal(actual.queries.length, 5)
+})
+
+test('member directory preserves nullable profile and staff role and projects returned profiles', async t => {
+  const h = harness(t)
+  const operation = operations.find(operation => operation.name === 'memberDirectory')
+  const dto = response(operation).dto
+  const profile = { tenant_id: tenantId, user_id: targetId, display_name: 'Player', bio: 'Bio',
+    created_at: '2026-11-04T00:00:00.000Z', updated_at: '2026-11-04T00:00:00.000Z',
+    created_by: actorId, updated_by: null }
+  const row = { ...dto.rows[0], profile, staff_role: 'admin' }
+  h.queue(operation.name, { rows: [...dto.rows, { ...row, profile: { ...profile, internal_secret: 'omit' } }], next: null })
+  const received = await h.app.inject(input(operation))
+  assert.equal(received.statusCode, 200)
+  assert.deepEqual(received.json(), { rows: [...dto.rows, row], next: null })
+})
+
+test('community command tags accept their own fields and reject invalid variants before dispatch', async t => {
+  const h = harness(t)
+  const operation = operations.find(operation => operation.name === 'executeCommand')
+  const request = input(operation)
+  const fullPermissions = Object.fromEntries(staffFlags.map(flag => [flag, false]))
+  const cases = [
+    [{ kind: 'join', profile: { displayName: 'Player', bio: 'b'.repeat(2000) } }, { profile: { displayName: 'Player', bio: 'b'.repeat(2001) } }],
+    [{ kind: 'deactivate' }, { requestId: targetId }],
+    [{ kind: 'reactivate' }, { profile: { displayName: 'Player', bio: null } }],
+    [{ kind: 'withdraw', requestId: targetId }, { requestId: undefined }],
+    [{ kind: 'approve', requestId: targetId, revision: actorId }, { revision: undefined }],
+    [{ kind: 'suspend', target: targetId, revision: actorId, reason: '' }, { reason: false }],
+    [{ kind: 'remove', target: targetId, revision: actorId }, { target: 1 }],
+    [{ kind: 'clear', target: targetId, revision: actorId }, { revision: undefined }],
+    [{ kind: 'grant', target: targetId }, { permissions: fullPermissions }],
+    [{ kind: 'resume', target: targetId }, { target: undefined }],
+    [{ kind: 'revoke', target: targetId, reason: 'Reason' }, { reason: null }],
+    [{ kind: 'reappoint', target: targetId, permissions: fullPermissions }, { permissions: { can_grant_staff: true } }],
+    [{ kind: 'permissions', target: targetId, permissions: { can_grant_staff: false } }, { permissions: {} }],
+    [{ kind: 'archive', archived: false }, { archived: 'false' }],
+  ]
+  for (const [payload, invalid] of cases) {
+    const dto = { outcome: 'accepted', tenantId }
+    h.queue(operation.name, result(operation, dto))
+    const accepted = await h.app.inject({ ...request, payload })
+    assert.equal(accepted.statusCode, 200, payload.kind)
+    assert.deepEqual(accepted.json(), dto)
+    checkCall(h, operation, { ...request, payload })
+    error(h, operation, await h.app.inject({ ...request, payload: { ...payload, ...invalid } }), 400, 'invalid_request')
+  }
+  for (const payload of [
+    { kind: 'unknown' },
+    { kind: 'join', profile: { displayName: 'Player', bio: null, hidden: true } },
+    { kind: 'permissions', target: targetId, permissions: { can_grant_staff: true, unknown: false } },
+    { kind: 'permissions', target: targetId, permissions: { can_grant_staff: 'true' } },
+  ]) {
+    error(h, operation, await h.app.inject({ ...request, payload }), 400, 'invalid_request')
+  }
+  assert.equal(h.calls.length, cases.length)
+})
+
+test('nullable scalars preserve valid values and reject malformed service output', async t => {
+  const h = harness(t)
+  t.mock.method(console, 'error', () => {})
+  const facts = operations.find(operation => operation.name === 'accountFacts')
+  const dto = { tenant_id: tenantId, user_id: targetId, standing: 'approved',
+    first_approved_at: '2026-11-04T00:00:00.000Z', has_disciplinary_restriction: false,
+    created_at: '2026-11-04T00:00:00.000Z', updated_at: '2026-11-04T00:00:00.000Z',
+    created_by: actorId, updated_by: null }
+  for (const [value, expected] of [[{ ...dto, first_approved_at: new Date(dto.first_approved_at) }, dto],
+    [{ ...dto, first_approved_at: null }, { ...dto, first_approved_at: null }]]) {
+    h.queue(facts.name, value)
+    const received = await h.app.inject(input(facts))
+    assert.equal(received.statusCode, 200)
+    assert.deepEqual(received.json(), expected)
+  }
+  for (const invalid of [{ first_approved_at: 'invalid date' }, { created_by: 'invalid UUID' }]) {
+    h.queue(facts.name, { ...dto, ...invalid })
+    error(h, facts, await h.app.inject(input(facts)), 503, 'unavailable')
+  }
+  const details = operations.find(operation => operation.name === 'saveDetails')
+  const request = { ...input(details), payload: { city: 'c'.repeat(120), state_province: null } }
+  const saved = { ...response(details).dto, ...request.payload }
+  h.queue(details.name, saved)
+  const received = await h.app.inject(request)
+  assert.equal(received.statusCode, 200)
+  assert.deepEqual(received.json(), saved)
+  error(h, details, await h.app.inject({ ...request, payload: { city: 'c'.repeat(121) } }), 400, 'invalid_request')
+  h.queue(details.name, { ...saved, city: 'c'.repeat(121) })
+  error(h, details, await h.app.inject(request), 503, 'unavailable')
 })

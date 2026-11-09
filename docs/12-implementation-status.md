@@ -1,10 +1,18 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Fastify TypeBox simplification checkpoint — 2026-11-09
+
+Community commands and account-block sources use closed TypeBox object branches with distinct literal tags. Fastify infers request bodies and checks them at the service calls. Nullable scalars use native unions and audit details use an open object that preserves nested JSON, null values, and line breaks in keys. Nullable object replies retain the single `Type.Unsafe` helper because a closed object union rejects extra fields before the serializer can strip them.
+
+Focused HTTP checks passed before applying 91 reviewed schema changes covering nullable scalars, the two tagged unions, and the open audit object. The fixture comparison retained all 41 explicit operations, 28 generated HEADs, effective limits, and authentication categories. Checks covered every command and block source with nearby invalid inputs, null and projected object replies, native PostgreSQL date serialization, text at its limits, and the agreed serialization failures for malformed nullable UUIDs, timestamps, and overlong strings.
+
+Server TypeScript, all 68 HTTP and backend cases, nine local real Auth/HTTP suites, the 134-file browser boundary scan, all 279 frontend tests, lint, and the production build passed. The real suites covered authorization, bypasses, rollback, and concurrent transitions on loopback ports 54321 and 54322. The Auth-configured bundle included Supabase and excluded TypeBox. Hosted execution and deployment remain deferred.
+
 ## Workspace HTTP ownership checkpoint — 2026-11-09
 
 Client adapters own their HTTP paths, payload types, and response checks. The Fastify features own their HTTP and service definitions, and the single generated public-schema type file lives at `server/src/database.types.ts`. The browser initializes Supabase for Auth using the SDK without a database type import. The Phase 1 HTTP fixture still matches all 41 explicit operations and 28 generated HEAD registrations. The generated database type file is byte-identical after the move.
 
-Server TypeScript, all 63 HTTP and backend cases, nine real local Auth/HTTP suites, the 134-file browser boundary scan, all 279 frontend tests, lint, and the production build passed. The real suites exercised signup, confirmation and recovery, preferences, self-service, community commands, authorization denials, bypasses, and concurrency. The browser bundle inspection with Auth configured found Supabase and no TypeBox modules. Local integration used the loopback stack on ports 54321 and 54322. TypeBox simplification is the next checkpoint. Hosted execution and deployment remain deferred.
+Server TypeScript, all 63 HTTP and backend cases, nine real local Auth/HTTP suites, the 134-file browser boundary scan, all 279 frontend tests, lint, and the production build passed. The real suites exercised signup, confirmation and recovery, preferences, self-service, community commands, authorization denials, bypasses, and concurrency. The browser bundle inspection with Auth configured found Supabase and no TypeBox modules. Local integration used the loopback stack on ports 54321 and 54322. The [TypeBox simplification checkpoint](#fastify-typebox-simplification-checkpoint--2026-11-09) followed this checkpoint.
 
 ## Fastify TypeBox adoption — 2026-11-09
 

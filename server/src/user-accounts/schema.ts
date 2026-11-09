@@ -1,13 +1,13 @@
-import { Type, type Static, type TSchema } from 'typebox'
+import { Type, type TSchema } from 'typebox'
 import { accountPreferenceFields } from './account-preferences.ts'
 import { errorResponse } from '../http-errors.ts'
-import { nullableObject, nullableString } from '../http-schema.ts'
+import { nullableObject } from '../http-schema.ts'
 import { profileInputSchema } from '../profile-input-schema.ts'
 
 const closed = { additionalProperties: false }
 const uuid = Type.String({ format: 'uuid' })
-const nullableUuid = nullableString({ format: 'uuid' })
-const nullableText = nullableString()
+const nullableUuid = Type.Union([uuid, Type.Null()])
+const nullableText = Type.Union([Type.String(), Type.Null()])
 const timestamp = Type.String({ format: 'date-time' })
 const noQuery = Type.Object({}, closed)
 const emptyQuery = Type.Object({}, { ...closed, required: [] })
@@ -79,11 +79,10 @@ const block = Type.Object({ blocker_user_id: uuid, blocked_user_id: uuid, create
 const blocksQuery = Type.Object(paging, { ...closed, required: [] })
 export const listAccountBlocksSchema = { querystring: blocksQuery, response: { 200: page(block), ...errors } }
 
-const globalBlockSource = Type.Object({ kind: Type.Literal('global_profile') }, closed)
-const communityBlockSource = Type.Object({ kind: Type.Literal('community_profile'), tenantId: uuid }, closed)
-const blockSource = Type.Unsafe<Static<typeof globalBlockSource> | Static<typeof communityBlockSource>>({
-  oneOf: [globalBlockSource, communityBlockSource],
-})
+const blockSource = Type.Union([
+  Type.Object({ kind: Type.Literal('global_profile') }, closed),
+  Type.Object({ kind: Type.Literal('community_profile'), tenantId: uuid }, closed),
+])
 const blockInput = Type.Object({ confirmed: Type.Literal(true), source: blockSource }, closed)
 const blockResponse = Type.Object({ blocked: Type.Boolean() }, closed)
 export const blockAccountSchema = { params: userParams, querystring: emptyQuery, body: blockInput, response: { 200: blockResponse, ...errors } }

@@ -175,6 +175,47 @@ test('route schemas reject forbidden fields, invalid selectors and wrong scalar 
   assert.equal(h.verifications.length, invalid.length)
 })
 
+test('own profile keeps a bio at its limit and rejects an overlong bio from the service', async t => {
+  const h = harness(t)
+  t.mock.method(console, 'error', () => {})
+  const item = cases.find(item => item.operation === 'saveOwnProfile')
+  const payload = { ...profileInput, bio: 'b'.repeat(2000) }
+  const expected = { profile: { ...profile, bio: payload.bio } }
+  h.queue(item.operation, { profile: { ...expected.profile, internal_secret: 'omit' } })
+  const request = { ...requestOptions(item), payload }
+  const received = await h.app.inject(request)
+  assert.equal(received.statusCode, 200)
+  assert.deepEqual(received.json(), expected)
+  const overlongBio = 'b'.repeat(2001)
+  assertError(h, await h.app.inject({ ...request, payload: { ...payload, bio: overlongBio } }), 400, 'invalid_request')
+  h.queue(item.operation, { profile: { ...profile, bio: overlongBio } })
+  assertError(h, await h.app.inject(request), 503, 'unavailable')
+})
+
+test('account blocks accept each source and reject unknown or mixed source fields', async t => {
+  const h = harness(t)
+  const item = cases.find(item => item.operation === 'blockAccount')
+  for (const source of [{ kind: 'global_profile' }, { kind: 'community_profile', tenantId }]) {
+    const payload = { confirmed: true, source }
+    h.queue(item.operation, { blocked: true })
+    const response = await h.app.inject({ ...requestOptions(item), payload })
+    assert.equal(response.statusCode, 200)
+    assert.deepEqual(response.json(), { blocked: true })
+    assertCall(h, { ...item, args: [targetId, payload] })
+  }
+  for (const source of [
+    { kind: 'global_profile', tenantId },
+    { kind: 'community_profile' },
+    { kind: 'community_profile', tenantId: 42 },
+    { kind: 'community_profile', tenantId, extra: true },
+    { kind: 'unknown' },
+  ]) {
+    const response = await h.app.inject({ ...requestOptions(item), payload: { confirmed: true, source } })
+    assertError(h, response, 400, 'invalid_request')
+  }
+  assert.equal(h.calls.length, 2)
+})
+
 test('adapter preserves preference result branches, application errors, profile null and empty pages', async t => {
   const h = harness(t)
   for (const item of cases.slice(0, 2)) {
