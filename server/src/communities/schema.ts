@@ -1,31 +1,32 @@
-import type { FromSchema } from 'json-schema-to-ts'
-import type { Static } from 'typebox'
+import { Type, type TObject, type TProperties } from 'typebox'
 import { profileInputSchema } from '../profile-input-schema.ts'
 import { errorResponse } from '../http-errors.ts'
-import { copySlots, settingFields, type CopyKey, type CommunitySettings } from '../../../shared/community-configuration.ts'
+import { nullableObject, nullableString } from '../http-schema.ts'
+import { copySlots, settingFields, type CopyKey } from '../../../shared/community-configuration.ts'
 import { staffFlags, type CommunityCommand } from '../../../shared/community-commands.ts'
-import { communityPreferenceFields, type CommunityPreferences } from '../../../shared/self-service.ts'
+import { communityPreferenceFields } from '../../../shared/self-service.ts'
 
-// Preserve each schema's exact required-array value while retaining literal types.
-type ObjectSchema<P, R> = { type: 'object'; properties: P; required: R; additionalProperties: false }
-function object<const P extends Record<string, unknown>>(properties: P): ObjectSchema<P, (keyof P & string)[]>
-function object<const P extends Record<string, unknown>, const R extends readonly string[]>(properties: P, required: R): ObjectSchema<P, R>
-function object(properties: Record<string, unknown>, required: readonly string[] = Object.keys(properties)) {
-  return { type: 'object', properties, required, additionalProperties: false } as const
-}
+const closed = { additionalProperties: false }
+const optionalFields = { ...closed, required: [] }
+const object = <P extends TProperties>(properties: P) => Type.Object(properties, closed)
+const nonemptyPatch = <P extends TProperties>(schema: TObject<P>) =>
+  Type.Partial(schema, { ...optionalFields, minProperties: 1 })
+const stringEnum = <const Values extends string[]>(values: readonly [...Values]) => Type.Enum(values, { type: 'string' })
+const nullableEnum = <const Value extends string>(values: readonly Value[]) =>
+  Type.Unsafe<Value | null>({ type: ['string', 'null'], enum: [...values, null] })
 
-const uuid = { type: 'string', format: 'uuid' } as const
-const nullableUuid = { type: ['string', 'null'], format: 'uuid' } as const
-const timestamp = { type: 'string', format: 'date-time' } as const
-const boolean = { type: 'boolean' } as const
+const uuid = Type.String({ format: 'uuid' })
+const nullableUuid = nullableString({ format: 'uuid' })
+const timestamp = Type.String({ format: 'date-time' })
+const boolean = Type.Boolean()
 const tenantParams = object({ tenantId: uuid })
 const accountParams = object({ tenantId: uuid, userId: uuid })
 const slugParams = object({
-  slug: { type: 'string', minLength: 3, maxLength: 63, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$' },
+  slug: Type.String({ minLength: 3, maxLength: 63, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$' }),
 })
-const emptyQuery = object({})
+const emptyQuery = Type.Object({}, optionalFields)
 // These operations originally omit `required`; keep that distinct from an empty array.
-const noQuery = { type: 'object', additionalProperties: false, properties: {} } as const
+const noQuery = object({})
 const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse } as const
 const commandErrors = { ...errors, 409: errorResponse } as const
 const attribution = {
@@ -34,61 +35,55 @@ const attribution = {
   created_by: nullableUuid,
   updated_by: nullableUuid,
 } as const
-const standing = { type: 'string', enum: ['pending', 'approved', 'suspended', 'inactive'] } as const
-const staffRole = { type: ['string', 'null'], enum: ['owner', 'admin', null] } as const
+const standing = stringEnum(['pending', 'approved', 'suspended', 'inactive'])
+const staffRole = nullableEnum(['owner', 'admin'])
 const accountFacts = object({
   tenant_id: uuid,
   user_id: uuid,
   standing,
-  first_approved_at: { type: ['string', 'null'], format: 'date-time' },
+  first_approved_at: nullableString({ format: 'date-time' }),
   has_disciplinary_restriction: boolean,
   ...attribution,
 })
 const communityProfile = object({
   tenant_id: uuid,
   user_id: uuid,
-  display_name: { type: 'string' },
-  bio: { type: ['string', 'null'] },
+  display_name: Type.String(),
+  bio: nullableString(),
   ...attribution,
 })
-const directoryQuery = object({
-  limit: { type: 'string', pattern: '^(100|[1-9][0-9]?)$' },
-  cursor: { type: 'string', minLength: 1, maxLength: 1024 },
-}, [])
+const directoryQuery = Type.Object({
+  limit: Type.Optional(Type.String({ pattern: '^(100|[1-9][0-9]?)$' })),
+  cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
+}, optionalFields)
 const detailInput = {
-  name: { type: 'string', maxLength: 120, minLength: 1 },
-  country_code: { type: 'string', pattern: '^[A-Z]{2}$' },
-  state_province: { type: ['string', 'null'], maxLength: 120 },
-  city: { type: ['string', 'null'], maxLength: 120 },
-  timezone: { type: 'string', maxLength: 128, minLength: 1 },
+  name: Type.String({ maxLength: 120, minLength: 1 }),
+  country_code: Type.String({ pattern: '^[A-Z]{2}$' }),
+  state_province: nullableString({ maxLength: 120 }),
+  city: nullableString({ maxLength: 120 }),
+  timezone: Type.String({ maxLength: 128, minLength: 1 }),
 } as const
-const copyKey = { type: 'string', enum: Object.keys(copySlots) as CopyKey[] } as const
+const copyKey = stringEnum(Object.keys(copySlots) as CopyKey[])
 const publicCopy = {
   tenant_id: uuid,
   content_key: copyKey,
-  text_value: { type: 'string', maxLength: 2000, minLength: 1 },
+  text_value: Type.String({ maxLength: 2000, minLength: 1 }),
 } as const
 
 // Public access and standing
-const standingFields = [
-  'standing', 'enable_standard_chat_visibility', 'enable_standard_activity_visibility',
-  'enable_other_profile_visibility', 'enable_own_profile_management', 'enable_standard_participation',
-  'enable_standard_dms',
-] as const
 export const listStandingsSchema = {
   querystring: noQuery,
   response: {
     401: errorResponse,
-    200: {
-      type: 'array',
-      items: {
-        type: 'object',
-        required: standingFields,
-        properties: Object.fromEntries(standingFields.map(field => [field, {
-          type: field === 'standing' ? 'string' : 'boolean',
-        }])),
-      },
-    },
+    200: Type.Array(Type.Object({
+      standing: Type.String(),
+      enable_standard_chat_visibility: boolean,
+      enable_standard_activity_visibility: boolean,
+      enable_other_profile_visibility: boolean,
+      enable_own_profile_management: boolean,
+      enable_standard_participation: boolean,
+      enable_standard_dms: boolean,
+    })),
   },
 } as const
 
@@ -98,67 +93,61 @@ export const readLandingSchema = {
   response: {
     200: object({
       id: uuid,
-      slug: { type: 'string', maxLength: 63, minLength: 1 },
+      slug: Type.String({ maxLength: 63, minLength: 1 }),
       ...detailInput,
       auto_approve_users: boolean,
       allow_public_chat_visibility: boolean,
       allow_public_activity_visibility: boolean,
       allow_public_directory_visibility: boolean,
-      overrides: { type: 'array', items: object(publicCopy) },
+      overrides: Type.Array(object(publicCopy)),
     }),
     400: errorResponse,
     401: errorResponse,
     404: errorResponse,
   },
 } as const
-export type ReadLandingParams = FromSchema<typeof readLandingSchema.params>
 
 export const publicDirectorySchema = {
   params: slugParams,
   querystring: directoryQuery,
   response: {
     200: object({
-      rows: {
-        type: 'array',
-        items: object({ display_name: { type: 'string' }, staff_role: staffRole }),
-      },
-      next: { type: ['string', 'null'] },
+      rows: Type.Array(object({ display_name: Type.String(), staff_role: staffRole })),
+      next: nullableString(),
     }),
     ...errors,
   },
 } as const
-export type DirectoryQuery = FromSchema<typeof publicDirectorySchema.querystring>
 
 // Creation and lifecycle
 const creationProfile = object({
-  displayName: { type: 'string', minLength: 1, maxLength: 80 },
-  bio: { type: ['null', 'string'], maxLength: 2000 },
+  displayName: Type.String({ minLength: 1, maxLength: 80 }),
+  bio: Type.Unsafe<string | null>({ type: ['null', 'string'], maxLength: 2000 }),
 })
 const commandResponse = object({
-  outcome: { type: 'string' },
+  outcome: Type.String(),
   tenantId: uuid,
-  revision: uuid,
-  requestId: uuid,
-}, ['outcome', 'tenantId'])
+  revision: Type.Optional(uuid),
+  requestId: Type.Optional(uuid),
+})
 
 export const createCommunitySchema = {
   body: object({
-    name: { type: 'string', minLength: 1, maxLength: 120 },
-    slug: { type: 'string', minLength: 3, maxLength: 63 },
-    country: { type: 'string', minLength: 2, maxLength: 2 },
-    timezone: { type: 'string', minLength: 1, maxLength: 128 },
-    region: { type: 'string', minLength: 0, maxLength: 120 },
-    city: { type: 'string', minLength: 0, maxLength: 120 },
+    name: Type.String({ minLength: 1, maxLength: 120 }),
+    slug: Type.String({ minLength: 3, maxLength: 63 }),
+    country: Type.String({ minLength: 2, maxLength: 2 }),
+    timezone: Type.String({ minLength: 1, maxLength: 128 }),
+    region: Type.String({ minLength: 0, maxLength: 120 }),
+    city: Type.String({ minLength: 0, maxLength: 120 }),
     profile: creationProfile,
   }),
   querystring: emptyQuery,
   response: { 201: commandResponse, ...commandErrors },
 } as const
-export type CreateCommunityBody = FromSchema<typeof createCommunitySchema.body>
 
-const staffPermissions = Object.fromEntries(staffFlags.map(flag => [flag, boolean]))
-const commandReason = { type: 'string', minLength: 0, maxLength: 2000 } as const
-const commandShapes: Record<CommunityCommand['kind'], Record<string, unknown>> = {
+const staffPermissions = Type.Record(Type.Enum(staffFlags), boolean, closed)
+const commandReason = Type.Optional(Type.String({ minLength: 0, maxLength: 2000 }))
+const commandShapes: Record<CommunityCommand['kind'], TProperties> = {
   join: { profile: creationProfile },
   deactivate: {},
   reactivate: {},
@@ -170,23 +159,21 @@ const commandShapes: Record<CommunityCommand['kind'], Record<string, unknown>> =
   grant: { target: uuid },
   resume: { target: uuid },
   revoke: { target: uuid, reason: commandReason },
-  reappoint: { target: uuid, permissions: object(staffPermissions) },
-  permissions: { target: uuid, permissions: { ...object(staffPermissions, []), minProperties: 1 } },
+  reappoint: { target: uuid, permissions: staffPermissions },
+  permissions: { target: uuid, permissions: nonemptyPatch(staffPermissions) },
   archive: { archived: boolean },
 }
 export const executeCommandSchema = {
   params: tenantParams,
-  body: {
-    oneOf: Object.entries(commandShapes).map(([kind, properties]) => object(
-      { kind: { const: kind }, ...properties },
-      ['kind', ...Object.keys(properties).filter(key => key !== 'reason')],
-    )),
-  },
+  // The generated oneOf uses the shared discriminated union for its static type.
+  body: Type.Unsafe<CommunityCommand>({
+    oneOf: Object.entries(commandShapes).map(([kind, properties]) => object({
+      kind: Type.Unsafe({ const: kind }), ...properties,
+    })),
+  }),
   querystring: emptyQuery,
   response: { 200: commandResponse, ...commandErrors },
 } as const
-// Command oneOf is generated by kind; retain its shared discriminated union.
-export type ExecuteCommandBody = CommunityCommand
 
 // Requests and reviews
 export const ownRequestSchema = {
@@ -194,19 +181,15 @@ export const ownRequestSchema = {
   querystring: emptyQuery,
   response: {
     200: object({
-      request: {
-        ...object({
-          request_id: uuid,
-          kind: { type: 'string', enum: ['join', 'reactivation'] },
-          requested_at: timestamp,
-        }),
-        type: ['object', 'null'],
-      },
+      request: nullableObject(object({
+        request_id: uuid,
+        kind: stringEnum(['join', 'reactivation']),
+        requested_at: timestamp,
+      })),
     }),
     ...commandErrors,
   },
 } as const
-export type CommunityParams = FromSchema<typeof ownRequestSchema.params>
 
 export const reviewAccountSchema = {
   params: object({ tenantId: uuid, target: uuid }),
@@ -216,51 +199,43 @@ export const reviewAccountSchema = {
     ...commandErrors,
   },
 } as const
-export type ReviewParams = FromSchema<typeof reviewAccountSchema.params>
 
-const requestPageQuery = object({ after: uuid }, [])
+const requestPageQuery = Type.Object({ after: Type.Optional(uuid) }, optionalFields)
 export const staffCandidatesSchema = {
   params: tenantParams,
   querystring: requestPageQuery,
   response: {
     200: object({
-      rows: {
-        type: 'array',
-        items: object({
-          tenant_id: uuid,
-          user_id: uuid,
-          standing: { type: 'string', const: 'approved' },
-          display_name: { type: ['string', 'null'] },
-          staff_role: staffRole,
-          staff_status: { type: ['string', 'null'], enum: ['active', 'paused', 'revoked', null] },
-        }),
-      },
+      rows: Type.Array(object({
+        tenant_id: uuid,
+        user_id: uuid,
+        standing: Type.Literal('approved'),
+        display_name: nullableString(),
+        staff_role: staffRole,
+        staff_status: nullableEnum(['active', 'paused', 'revoked']),
+      })),
       next: nullableUuid,
     }),
     ...commandErrors,
   },
 } as const
-export type RequestPageQuery = FromSchema<typeof staffCandidatesSchema.querystring>
 
 export const pendingRequestsSchema = {
   params: tenantParams,
   querystring: requestPageQuery,
   response: {
     200: object({
-      rows: {
-        type: 'array',
-        items: object({
-          id: uuid,
-          kind: { type: 'string', enum: ['join', 'reactivation'] },
-          user_id: uuid,
-          requested_at: timestamp,
-          revision: uuid,
-          standing,
-          first_approved_at: { type: ['string', 'null'], format: 'date-time' },
-          has_disciplinary_restriction: boolean,
-          display_name: { type: ['string', 'null'] },
-        }),
-      },
+      rows: Type.Array(object({
+        id: uuid,
+        kind: stringEnum(['join', 'reactivation']),
+        user_id: uuid,
+        requested_at: timestamp,
+        revision: uuid,
+        standing,
+        first_approved_at: nullableString({ format: 'date-time' }),
+        has_disciplinary_restriction: boolean,
+        display_name: nullableString(),
+      })),
       next: nullableUuid,
     }),
     ...commandErrors,
@@ -270,15 +245,10 @@ export const pendingRequestsSchema = {
 // Profiles and preferences
 export const readProfileSchema = {
   // Preserve the original open params object; other account params are closed.
-  params: {
-    type: 'object',
-    required: ['tenantId', 'userId'],
-    properties: { tenantId: uuid, userId: uuid },
-  },
+  params: Type.Object({ tenantId: uuid, userId: uuid }),
   querystring: noQuery,
   response: { 200: communityProfile, 403: errorResponse, 404: errorResponse },
 } as const
-export type ReadProfileParams = FromSchema<typeof readProfileSchema.params>
 
 export const saveOwnProfileSchema = {
   params: tenantParams,
@@ -286,15 +256,8 @@ export const saveOwnProfileSchema = {
   body: profileInputSchema,
   response: { 200: object({ tenantId: uuid }), ...errors },
 } as const
-export type CommunityProfileInput = Static<typeof profileInputSchema>
 
-const preferenceProperties = Object.fromEntries(communityPreferenceFields.map(key => [key, boolean]))
-const preferenceResponse = {
-  type: 'object',
-  required: communityPreferenceFields,
-  additionalProperties: false,
-  properties: preferenceProperties,
-} as const
+const preferenceResponse = Type.Record(Type.Enum(communityPreferenceFields), boolean, closed)
 export const readOwnPreferencesSchema = {
   params: tenantParams,
   querystring: noQuery,
@@ -304,23 +267,16 @@ export const readOwnPreferencesSchema = {
 export const saveOwnPreferencesSchema = {
   params: tenantParams,
   querystring: noQuery,
-  body: {
-    type: 'object',
-    minProperties: 1,
-    additionalProperties: false,
-    properties: preferenceProperties,
-  },
+  body: Type.Partial(preferenceResponse, { ...closed, minProperties: 1 }),
   response: { 200: preferenceResponse, ...errors },
 } as const
-// Dynamic flag maps retain the browser-safe DTO contract.
-export type SaveOwnPreferencesBody = Partial<CommunityPreferences>
 
 // Configuration and copy
 const detailsResponse = object({
   id: uuid,
-  slug: { type: 'string', maxLength: 63, minLength: 1 },
+  slug: Type.String({ maxLength: 63, minLength: 1 }),
   ...detailInput,
-  operational_status: { type: 'string', enum: ['active', 'archived'] },
+  operational_status: stringEnum(['active', 'archived']),
   ...attribution,
 })
 export const readDetailsSchema = {
@@ -332,13 +288,12 @@ export const readDetailsSchema = {
 export const saveDetailsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
-  body: { ...object(detailInput, []), minProperties: 1 },
+  body: nonemptyPatch(object(detailInput)),
   response: { 200: detailsResponse, ...errors },
 } as const
-export type SaveDetailsBody = FromSchema<typeof saveDetailsSchema.body>
 
-const settingsInput = Object.fromEntries(settingFields.map(key => [key, boolean]))
-const settingsResponse = object({ tenant_id: uuid, ...settingsInput, ...attribution })
+const settingsInput = Type.Record(Type.Enum(settingFields), boolean, closed)
+const settingsResponse = object({ tenant_id: uuid, ...settingsInput.properties, ...attribution })
 export const readSettingsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
@@ -348,13 +303,11 @@ export const readSettingsSchema = {
 export const saveSettingsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
-  body: { ...object(settingsInput, []), minProperties: 1 },
+  body: nonemptyPatch(settingsInput),
   response: { 200: settingsResponse, ...errors },
 } as const
-// Dynamic settings maps retain the browser-safe DTO contract.
-export type SaveSettingsBody = Partial<CommunitySettings>
 
-const copyResponse = object({ rows: { type: 'array', items: object({ ...publicCopy, ...attribution }) } })
+const copyResponse = object({ rows: Type.Array(object({ ...publicCopy, ...attribution })) })
 const copyParams = object({ tenantId: uuid, contentKey: copyKey })
 export const readCopySchema = {
   params: tenantParams,
@@ -365,11 +318,9 @@ export const readCopySchema = {
 export const saveCopySchema = {
   params: copyParams,
   querystring: emptyQuery,
-  body: object({ text_value: { type: 'string', maxLength: 2000, minLength: 1 } }),
+  body: object({ text_value: Type.String({ maxLength: 2000, minLength: 1 }) }),
   response: { 200: copyResponse, ...errors },
 } as const
-export type CopyParams = FromSchema<typeof saveCopySchema.params>
-export type SaveCopyBody = FromSchema<typeof saveCopySchema.body>
 
 export const deleteCopySchema = {
   params: copyParams,
@@ -383,15 +334,12 @@ export const memberDirectorySchema = {
   querystring: directoryQuery,
   response: {
     200: object({
-      rows: {
-        type: 'array',
-        items: object({
-          account: accountFacts,
-          profile: { ...communityProfile, type: ['object', 'null'] },
-          staff_role: staffRole,
-        }),
-      },
-      next: { type: ['string', 'null'] },
+      rows: Type.Array(object({
+        account: accountFacts,
+        profile: nullableObject(communityProfile),
+        staff_role: staffRole,
+      })),
+      next: nullableString(),
     }),
     ...errors,
   },
@@ -401,7 +349,7 @@ export const ownerAccountsSchema = {
   params: tenantParams,
   querystring: directoryQuery,
   response: {
-    200: object({ rows: { type: 'array', items: accountFacts }, next: { type: ['string', 'null'] } }),
+    200: object({ rows: Type.Array(accountFacts), next: nullableString() }),
     ...errors,
   },
 } as const
@@ -416,37 +364,35 @@ export const accountFactsSchema = {
 const accountMetadata = { tenant_id: uuid, user_id: uuid, ...attribution } as const
 const staffRecord = object({
   ...accountMetadata,
-  role: { type: 'string', enum: ['owner', 'admin'] },
-  status: { type: 'string', enum: ['active', 'paused', 'revoked'] },
-  ...staffPermissions,
+  role: stringEnum(['owner', 'admin']),
+  status: stringEnum(['active', 'paused', 'revoked']),
+  ...staffPermissions.properties,
 })
 const participantPermissions = object({ ...accountMetadata, can_post_public_events: boolean })
-const recordQuery = object({
-  cursor: { type: 'string', minLength: 1, maxLength: 1024 },
-  limit: { type: 'string', pattern: '^(100|[1-9][0-9]?)$' },
-}, [])
+const recordQuery = Type.Object({
+  cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
+  limit: Type.Optional(Type.String({ pattern: '^(100|[1-9][0-9]?)$' })),
+}, optionalFields)
 export const listStaffSchema = {
   params: tenantParams,
   querystring: recordQuery,
   response: {
-    200: object({ rows: { type: 'array', items: staffRecord }, next: { type: ['string', 'null'] } }),
+    200: object({ rows: Type.Array(staffRecord), next: nullableString() }),
     ...errors,
   },
 } as const
-export type RecordQuery = FromSchema<typeof listStaffSchema.querystring>
 
 export const readStaffSchema = {
   params: accountParams,
   querystring: emptyQuery,
   response: { 200: staffRecord, ...errors },
 } as const
-export type CommunityAccountParams = FromSchema<typeof readStaffSchema.params>
 
 export const listParticipantPermissionsSchema = {
   params: tenantParams,
   querystring: recordQuery,
   response: {
-    200: object({ rows: { type: 'array', items: participantPermissions }, next: { type: ['string', 'null'] } }),
+    200: object({ rows: Type.Array(participantPermissions), next: nullableString() }),
     ...errors,
   },
 } as const
@@ -463,46 +409,37 @@ export const saveParticipantPermissionsSchema = {
   body: object({ can_post_public_events: boolean }),
   response: { 200: participantPermissions, ...errors },
 } as const
-export type ParticipantPermissionBody = FromSchema<typeof saveParticipantPermissionsSchema.body>
 
 // Audit history
-const historyCategory = { type: 'string', enum: ['community_account', 'staff_account'] } as const
+const historyCategory = stringEnum(['community_account', 'staff_account'])
 export const historySchema = {
   params: tenantParams,
-  querystring: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      target: uuid,
-      category: historyCategory,
-      eventId: uuid,
-      cursor: { type: 'string', maxLength: 1024 },
-      limit: { type: 'string', pattern: '^([1-9]|[1-9][0-9]|100)$' },
-    },
-  },
+  querystring: object({
+    target: Type.Optional(uuid),
+    category: Type.Optional(historyCategory),
+    eventId: Type.Optional(uuid),
+    cursor: Type.Optional(Type.String({ maxLength: 1024 })),
+    limit: Type.Optional(Type.String({ pattern: '^([1-9]|[1-9][0-9]|100)$' })),
+  }),
   response: {
     200: object({
-      rows: {
-        type: 'array',
-        items: object({
-          id: uuid,
-          tenant_id: uuid,
-          action: { type: 'string' },
-          target_user_id: nullableUuid,
-          content_key: { type: ['string', 'null'] },
-          created_at: timestamp,
-          created_by: nullableUuid,
-          operation_id: uuid,
-          reason: { type: ['string', 'null'] },
-          details: { type: 'object', additionalProperties: true },
-          categories: { type: 'array', items: historyCategory },
-        }),
-      },
-      next: { type: ['string', 'null'] },
+      rows: Type.Array(object({
+        id: uuid,
+        tenant_id: uuid,
+        action: Type.String(),
+        target_user_id: nullableUuid,
+        content_key: nullableString(),
+        created_at: timestamp,
+        created_by: nullableUuid,
+        operation_id: uuid,
+        reason: nullableString(),
+        details: Type.Unsafe<Record<string, unknown>>({ type: 'object', additionalProperties: true }),
+        categories: Type.Array(historyCategory),
+      })),
+      next: nullableString(),
     }),
     400: errorResponse,
     401: errorResponse,
     403: errorResponse,
   },
 } as const
-export type HistoryQuery = FromSchema<typeof historySchema.querystring>

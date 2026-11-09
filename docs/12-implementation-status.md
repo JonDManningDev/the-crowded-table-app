@@ -4,7 +4,9 @@
 
 The user-accounts checkpoint migrates ten operations to TypeBox 1.4.6 and `@fastify/type-provider-typebox` 6.3.0. The plugin infers request and reply types from its attached schemas. The shared preference field list supplies the server schema and browser response check. Shared error and profile input schemas use TypeBox on the server. The HTTP fixture matches all 41 operations and 28 generated HEAD registrations exactly. AJV and the Fastify serializer retain their current configuration.
 
-All 63 backend cases, nine local real Auth/HTTP suites, the 130-file client boundary scan, all 279 frontend tests, lint, and the production build passed. The community plugins and health reply types remain to migrate. Verification used the local development stack.
+All 63 backend cases, nine local real Auth/HTTP suites, the 130-file client boundary scan, all 279 frontend tests, lint, and the production build passed for user accounts. Verification used the local development stack.
+
+The community checkpoint migrates all 29 explicit operations across the public and authenticated plugins. The generated command schema retains exclusive variants and the shared discriminated command type. Finite field maps derive the preference, settings, and permission types from the same keys used by the schemas. Nullable projections, nonempty patches, and open audit details match the original fixture. All 63 backend cases, nine local real Auth/HTTP suites, the client boundary scan, server TypeScript, and lint passed. Health reply types remain to migrate.
 
 ## Fastify review follow-ups — 2026-11-04
 

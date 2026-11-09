@@ -1,12 +1,13 @@
 import { Type, type Static, type TSchema } from 'typebox'
 import { accountPreferenceFields } from '../../../shared/account-preferences.ts'
 import { errorResponse } from '../http-errors.ts'
+import { nullableObject, nullableString } from '../http-schema.ts'
 import { profileInputSchema } from '../profile-input-schema.ts'
 
 const closed = { additionalProperties: false }
 const uuid = Type.String({ format: 'uuid' })
-const nullableUuid = Type.Unsafe<string | null>({ type: ['string', 'null'], format: 'uuid' })
-const nullableString = Type.Unsafe<string | null>({ type: ['string', 'null'] })
+const nullableUuid = nullableString({ format: 'uuid' })
+const nullableText = nullableString()
 const timestamp = Type.String({ format: 'date-time' })
 const noQuery = Type.Object({}, closed)
 const emptyQuery = Type.Object({}, { ...closed, required: [] })
@@ -17,7 +18,7 @@ const paging = {
   limit: Type.Optional(Type.String({ pattern: '^(100|[1-9][0-9]?)$' })),
 }
 const page = <T extends TSchema>(items: T) =>
-  Type.Object({ rows: Type.Array(items), next: nullableString }, closed)
+  Type.Object({ rows: Type.Array(items), next: nullableText }, closed)
 
 // Account preferences
 const preferences = Type.Record(Type.Enum(accountPreferenceFields), Type.Boolean(), closed)
@@ -34,9 +35,7 @@ const profile = Type.Object({
   created_by: nullableUuid,
   updated_by: nullableUuid,
 }, closed)
-// Keep the nullable object shape used by the serializer to project extra fields.
-const ownProfile = Type.Unsafe<Static<typeof profile> | null>({ ...profile, type: ['object', 'null'] })
-const profileResponse = Type.Object({ profile: ownProfile }, closed)
+const profileResponse = Type.Object({ profile: nullableObject(profile) }, closed)
 export const readOwnProfileSchema = { querystring: noQuery, response: { 200: profileResponse, ...errors } }
 export const saveOwnProfileSchema = { querystring: noQuery, body: profileInputSchema, response: { 200: profileResponse, ...errors } }
 
@@ -44,8 +43,8 @@ export const saveOwnProfileSchema = { querystring: noQuery, body: profileInputSc
 const summary = Type.Object({
   id: uuid,
   name: Type.String(),
-  city: nullableString,
-  state_province: nullableString,
+  city: nullableText,
+  state_province: nullableText,
   country_code: Type.String(),
   operational_status: Type.Enum(['active', 'archived'], { type: 'string' }),
   created_at: timestamp,
@@ -64,7 +63,7 @@ export const listMyCommunitiesSchema = { querystring: summaryQuery, response: { 
 const globalProfile = Type.Object({
   user_id: uuid,
   display_name: Type.String(),
-  bio: nullableString,
+  bio: nullableText,
   created_at: timestamp,
   updated_at: timestamp,
   created_by: nullableUuid,
