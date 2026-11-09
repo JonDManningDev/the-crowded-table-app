@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { sql, type Transaction } from 'kysely'
-import type { ApiTables, AppDatabase } from '../database.ts'
-import { withEligibleActorTransaction, type AuthenticatedContext } from '../actor-transaction.ts'
+import { type ApiTables, type AppDatabase, withEligibleActorTransaction, type AuthenticatedContext } from '../database.ts'
 import { ApplicationError } from '../http-errors.ts'
 import type { DirectoryCursors } from '../directory-cursors.ts'
 import { copySlots, settingFields, type CopyKey, type CommunityCopy, type CommunityDetails, type CommunityDetailsInput, type CommunityLanding, type CommunitySettings, type CommunitySettingsRecord } from './community-configuration.ts'

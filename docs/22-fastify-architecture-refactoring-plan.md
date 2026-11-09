@@ -18,7 +18,6 @@ server/src/
 ├── http-authentication.ts
 ├── http-errors.ts
 ├── database.ts
-├── actor-transaction.ts
 ├── directory-cursors.ts
 │
 ├── user-accounts/
@@ -43,7 +42,7 @@ The authentication/error filenames resolve concrete responsibility overlap witho
 | --- | --- |
 | `token-verifier.ts` | Construct the Supabase-backed bearer verifier and validate token identity claims. No Fastify imports, hooks, HTTP responses, or database eligibility checks. |
 | `http-authentication.ts` | Required/optional HTTP authentication integration, request identity decoration, authenticated-context extraction, and existing authentication-related cache headers. Receives the verifier explicitly; does not construct it. |
-| `actor-transaction.ts` | Export the plain `AuthenticatedContext` type and transaction helper. Set trusted attribution and perform the existing locked database eligibility check. No Fastify dependencies. |
+| `database.ts` | Own connection construction, database types, runtime verification and actor-scoped transactions. Export `AuthenticatedContext`, `EligibleActorTransactionResult` and `withEligibleActorTransaction`; bind trusted attribution and perform the locked database eligibility check. No Fastify dependencies. |
 | `http-errors.ts` | Define `ApplicationError` with its existing status/code representation. Own the common error-response schema and existing root error-handler translation/logging. Preserve PostgreSQL, application-error and unexpected-error mappings exactly. |
 
 Authentication failures retain the current direct 401 response. They do not need to pass through a new exception mechanism.
@@ -54,7 +53,7 @@ Feature-specific result-to-HTTP mappings remain in `routes.ts`. Operation-specif
 
 - `index.ts`: validate configuration, construct resources, start listening, handle signals and startup failures.
 - `app.ts`: construct feature services, register plugins, install root options/errors and owned cleanup.
-- `database.ts`: retain pool/Kysely construction, database types and runtime verification.
+- `database.ts`: retain pool/Kysely construction, database types and runtime verification, and own the actor-scoped transaction helper and its context/result types.
 - `directory-cursors.ts`: retain the shared encrypted cursor mechanism; feature services retain their endpoint-specific scopes and other existing cursor formats.
 
 No additional architectural directories, repository layer, DI container, validation library, or `fastify-plugin` dependency are required.
@@ -362,3 +361,5 @@ The [workspace ownership checkpoint](12-implementation-status.md#workspace-http-
 Review verified that nullable staff role and status replies preserve the original HTTP serializer behavior with a JSON Schema type array. A native union rejects unexpected strings, and the installed TypeBox enum builder excludes null in its TypeScript signature. Keep the inferred schema literals in the community feature. Community profile input and output types also belong to that feature. User-account and community-account profile inputs each live in their owning feature's `schema.ts`. Their current validation matches, but the inputs can evolve independently; the shared server profile input module was removed at the user's direction on 2026-11-09.
 
 Application error ownership follow-up (accepted 2026-11-09): at the user's direction, `ApplicationError` now lives in `http-errors.ts` alongside translation and the error-response schema. All callers import it there; `application-errors.ts` is removed without a compatibility export. This supersedes the separate application-error module from Phase 2. Status codes, error messages and translation behavior remain unchanged.
+
+Actor transaction ownership follow-up (accepted 2026-11-09): the user approved folding `actor-transaction.ts` into `database.ts`. Connection management and safe actor-scoped execution share the database module; the helper and its types retain their existing names and contracts. All callers import them from `database.ts`, and the separate file is removed without a compatibility export. This supersedes the separate transaction module from Phase 2. Preserve transaction-local context, eligibility locking, tagged results and rollback behavior.

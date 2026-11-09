@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest, onRequestAsyncHookHandler } from 'fastify'
-import type { AuthenticatedContext } from './actor-transaction.ts'
+import type { AuthenticatedContext } from './database.ts'
 import type { BearerVerifier } from './token-verifier.ts'
 
 export function registerRequiredAuthentication(app: FastifyInstance, verify: BearerVerifier) {

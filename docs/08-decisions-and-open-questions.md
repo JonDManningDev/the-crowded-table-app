@@ -559,6 +559,8 @@ This direction updates the schema tooling in the [completed Fastify architecture
 
 #### Fastify schema follow-up — accepted design 2026-11-09
 
+Actor transaction ownership clarified 2026-11-09: the user approved moving `withEligibleActorTransaction`, `AuthenticatedContext` and `EligibleActorTransactionResult` into `server/src/database.ts` and removing `actor-transaction.ts`. Database construction and safe transaction execution form a cohesive module; preserve all existing transaction and eligibility behavior. This supersedes the separate module in the completed Fastify plan. Reconsider a split if database responsibilities develop independently enough to justify it.
+
 Application error ownership clarified 2026-11-09: consolidate `ApplicationError` into `server/src/http-errors.ts` and remove `application-errors.ts`, as explicitly requested by the user. This supersedes the separate module in the completed Fastify plan; preserve the class and HTTP error behavior. Reconsider a separate module if an independent error responsibility emerges.
 
 Profile input ownership clarified 2026-11-09: user-account and community-account inputs have separate definitions in their owning server feature's `schema.ts`. Remove `server/src/profile-input-schema.ts`; matching current fields do not justify coupling inputs expected to evolve independently. Preserve current validation and HTTP behavior. Reconsider sharing only if a stable shared product contract emerges.
