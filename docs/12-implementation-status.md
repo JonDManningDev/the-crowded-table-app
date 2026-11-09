@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Fastify TypeBox adoption — 2026-11-09
+
+The user-accounts checkpoint migrates ten operations to TypeBox 1.4.6 and `@fastify/type-provider-typebox` 6.3.0. The plugin infers request and reply types from its attached schemas. The shared preference field list supplies the server schema and browser response check. Shared error and profile input schemas use TypeBox on the server. The HTTP fixture matches all 41 operations and 28 generated HEAD registrations exactly. AJV and the Fastify serializer retain their current configuration.
+
+All 63 backend cases, nine local real Auth/HTTP suites, the 130-file client boundary scan, all 279 frontend tests, lint, and the production build passed. The community plugins and health reply types remain to migrate. Verification used the local development stack.
+
 ## Fastify review follow-ups — 2026-11-04
 
 Implemented from clean checkpoint `2448c1e`. Environment `PORT` accepts ASCII decimal digits only and numeric values `0`–`65535`, including leading zeros and explicit `0`; absent configuration still defaults to `3001`. Empty/whitespace, signed, fractional, hexadecimal, exponent and out-of-range forms are rejected. Programmatic ports are checked before any constructor, readiness check or resource allocation. Existing valid startup, cleanup and generic CLI failure behavior remain intact.

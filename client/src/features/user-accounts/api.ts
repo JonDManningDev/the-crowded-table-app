@@ -1,4 +1,4 @@
-import { preferencesPath, preferencesSchema } from '../../../../shared/account-preferences'
+import { accountPreferenceFields, preferencesPath } from '../../../../shared/account-preferences'
 import { myCommunitiesPath, ownProfilePath, type CommunitySummaryPage, type OwnProfileResponse } from '../../../../shared/self-service'
 import { currentApiUser, selfServiceRequest } from '../../lib/api-client'
 import { previewCommunity } from '../../mock/data'
@@ -83,7 +83,7 @@ async function requestPreferences(expectedUserId: string, preferences?: AccountP
 export async function readAccountPreferences(userId: string): Promise<AccountPreferences> {
   const response = await requestPreferences(userId)
   const data = await response.json()
-  if (!preferencesSchema.required.every(key => typeof data?.[key] === 'boolean')) {
+  if (!accountPreferenceFields.every(key => typeof data?.[key] === 'boolean')) {
     throw new Error('Invalid account preferences response.')
   }
   return data

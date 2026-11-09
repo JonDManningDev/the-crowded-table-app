@@ -1,11 +1,8 @@
 import type { FastifyInstance } from 'fastify'
+import { Type } from 'typebox'
 import { ApplicationError } from './application-errors.ts'
 
-export const errorResponse = {
-  type: 'object',
-  required: ['code', 'requestId'],
-  properties: { code: { type: 'string' }, requestId: { type: 'string' } },
-} as const
+export const errorResponse = Type.Object({ code: Type.String(), requestId: Type.String() })
 
 export function registerHttpErrors(app: FastifyInstance) {
   app.setErrorHandler((error, request, reply) => {

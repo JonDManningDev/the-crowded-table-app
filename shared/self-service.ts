@@ -16,8 +16,4 @@ export type CommunitySummaryQuery = { filter?: CommunityFilter; cursor?: string;
 export type CommunitySummaryPage = { rows: CommunitySummary[]; next: string | null }
 export const ownProfilePath = '/api/me/profile'
 export const myCommunitiesPath = '/api/me/communities'
-export const profileInputSchema = {
-  type: 'object', required: ['display_name','bio'], additionalProperties: false,
-  properties: { display_name: { type: 'string', minLength: 1, maxLength: 80 }, bio: { type: ['string','null'], maxLength: 2000 } },
-} as const
 export const communityPreferenceFields = ['show_global_profile','allow_direct_messages','allow_private_invitations'] as const

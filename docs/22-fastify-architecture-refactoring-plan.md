@@ -207,12 +207,12 @@ Normal cleanup belongs to `app.close()` after `buildApi` successfully returns. S
 **`schema.ts`**
 
 - Owns feature HTTP schema composition and appropriate schema-derived transport types.
-- Uses existing JSON Schema tooling and `json-schema-to-ts`.
+- At completion, used plain JSON Schema and `json-schema-to-ts`. The [TypeBox adoption decision](08-decisions-and-open-questions.md#typebox-for-fastify-http-schemas--accepted-direction-2026-11-09) supersedes this tooling choice for the follow-up migration, starting with user accounts.
 - Contains no database access, authorization queries or business execution.
 
 ### Schema and DTO boundary
 
-Retain genuinely shared browser-safe DTO contracts and existing shared schema definitions where justified. For example, the browser already consumes the account-preference schema; the backend feature schema composes that same definition rather than duplicating it.
+Retain genuinely shared browser-safe DTO contracts and existing shared schema definitions where justified. At completion, the browser and server consumed the same account-preference schema. The [TypeBox adoption decision](08-decisions-and-open-questions.md#typebox-for-fastify-http-schemas--accepted-direction-2026-11-09) keeps TypeBox runtime imports in the server and shares the preference field list with the browser.
 
 Services may import shared DTO types and domain constants. They must not use runtime HTTP schemas to choose SQL columns, implement policies or interpret database state.
 

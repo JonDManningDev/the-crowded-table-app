@@ -1,73 +1,91 @@
-import type { FromSchema, JSONSchema } from 'json-schema-to-ts'
-import { preferencesSchema } from '../../../shared/account-preferences.ts'
-import { profileInputSchema } from '../../../shared/self-service.ts'
+import { Type, type Static, type TSchema } from 'typebox'
+import { accountPreferenceFields } from '../../../shared/account-preferences.ts'
 import { errorResponse } from '../http-errors.ts'
+import { profileInputSchema } from '../profile-input-schema.ts'
 
-const uuid = { type: 'string', format: 'uuid' } as const
-const nullableUuid = { type: ['string', 'null'], format: 'uuid' } as const
-const timestamp = { type: 'string', format: 'date-time' } as const
-const noQuery = { type: 'object', additionalProperties: false, properties: {} } as const
+const closed = { additionalProperties: false }
+const uuid = Type.String({ format: 'uuid' })
+const nullableUuid = Type.Unsafe<string | null>({ type: ['string', 'null'], format: 'uuid' })
+const nullableString = Type.Unsafe<string | null>({ type: ['string', 'null'] })
+const timestamp = Type.String({ format: 'date-time' })
+const noQuery = Type.Object({}, closed)
+const emptyQuery = Type.Object({}, { ...closed, required: [] })
 const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse }
-function object<const P extends Record<string, JSONSchema>>(properties: P) {
-  return { type: 'object', properties, required: Object.keys(properties) as (keyof P & string)[], additionalProperties: false } as const
+const userParams = Type.Object({ userId: uuid }, closed)
+const paging = {
+  cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
+  limit: Type.Optional(Type.String({ pattern: '^(100|[1-9][0-9]?)$' })),
 }
-const userParams = object({ userId: uuid })
-const emptyQuery = object({})
-export type UserIdParams = FromSchema<typeof userParams>
-const paging = { cursor: { type: 'string', minLength: 1, maxLength: 1024 },
-  limit: { type: 'string', pattern: '^(100|[1-9][0-9]?)$' } } as const
-const page = <const T extends JSONSchema>(items: T) => object({ rows: { type: 'array', items }, next: { type: ['string', 'null'] } })
+const page = <T extends TSchema>(items: T) =>
+  Type.Object({ rows: Type.Array(items), next: nullableString }, closed)
 
 // Account preferences
-const preferencesResponse = { 200: preferencesSchema, 403: errorResponse, 404: errorResponse }
+const preferences = Type.Record(Type.Enum(accountPreferenceFields), Type.Boolean(), closed)
+const preferencesResponse = { 200: preferences, 403: errorResponse, 404: errorResponse }
 export const readAccountPreferencesSchema = { querystring: noQuery, response: preferencesResponse }
-export const saveAccountPreferencesSchema = { querystring: noQuery, body: preferencesSchema, response: preferencesResponse }
-export type SaveAccountPreferencesBody = FromSchema<typeof preferencesSchema>
+export const saveAccountPreferencesSchema = { querystring: noQuery, body: preferences, response: preferencesResponse }
 
 // Own profile
-const profile = { type: ['object', 'null'], required: ['user_id', 'display_name', 'bio', 'created_at', 'updated_at', 'created_by', 'updated_by'],
-  additionalProperties: false, properties: { ...profileInputSchema.properties, user_id: uuid,
-    created_at: timestamp, updated_at: timestamp, created_by: nullableUuid, updated_by: nullableUuid } } as const
-const profileResponse = { type: 'object', required: ['profile'], additionalProperties: false, properties: { profile } } as const
+const profile = Type.Object({
+  user_id: uuid,
+  ...profileInputSchema.properties,
+  created_at: timestamp,
+  updated_at: timestamp,
+  created_by: nullableUuid,
+  updated_by: nullableUuid,
+}, closed)
+// Keep the nullable object shape used by the serializer to project extra fields.
+const ownProfile = Type.Unsafe<Static<typeof profile> | null>({ ...profile, type: ['object', 'null'] })
+const profileResponse = Type.Object({ profile: ownProfile }, closed)
 export const readOwnProfileSchema = { querystring: noQuery, response: { 200: profileResponse, ...errors } }
 export const saveOwnProfileSchema = { querystring: noQuery, body: profileInputSchema, response: { 200: profileResponse, ...errors } }
-export type SaveOwnProfileBody = FromSchema<typeof profileInputSchema>
 
 // My communities
-const summaryFields = { id: uuid, name: { type: 'string' }, city: { type: ['string', 'null'] },
-  state_province: { type: ['string', 'null'] }, country_code: { type: 'string' },
-  operational_status: { type: 'string', enum: ['active', 'archived'] }, created_at: timestamp,
-  is_owned: { type: 'boolean' }, is_managed: { type: 'boolean' }, is_member: { type: 'boolean' } } as const
-const summaryResponse = { type: 'object', required: ['rows', 'next'], additionalProperties: false, properties: {
-  rows: { type: 'array', items: { type: 'object', required: Object.keys(summaryFields), additionalProperties: false, properties: summaryFields } },
-  next: { type: ['string', 'null'] },
-} } as const
-const summaryQuery = { type: 'object', additionalProperties: false, properties: {
-  filter: { type: 'string', enum: ['all', 'managed', 'owned'] }, cursor: { type: 'string', maxLength: 1024 },
-  limit: { type: 'string', pattern: '^([1-9]|[1-9][0-9]|100)$' },
-} } as const
-export const listMyCommunitiesSchema = { querystring: summaryQuery, response: { 200: summaryResponse, ...errors } }
-export type ListMyCommunitiesQuery = FromSchema<typeof summaryQuery>
+const summary = Type.Object({
+  id: uuid,
+  name: Type.String(),
+  city: nullableString,
+  state_province: nullableString,
+  country_code: Type.String(),
+  operational_status: Type.Enum(['active', 'archived'], { type: 'string' }),
+  created_at: timestamp,
+  is_owned: Type.Boolean(),
+  is_managed: Type.Boolean(),
+  is_member: Type.Boolean(),
+}, closed)
+const summaryQuery = Type.Object({
+  filter: Type.Optional(Type.Enum(['all', 'managed', 'owned'], { type: 'string' })),
+  cursor: Type.Optional(Type.String({ maxLength: 1024 })),
+  limit: Type.Optional(Type.String({ pattern: '^([1-9]|[1-9][0-9]|100)$' })),
+}, closed)
+export const listMyCommunitiesSchema = { querystring: summaryQuery, response: { 200: page(summary), ...errors } }
 
 // Global profiles
-const globalProfile = object({ user_id: uuid, display_name: { type: 'string' }, bio: { type: ['string', 'null'] },
-  created_at: timestamp, updated_at: timestamp, created_by: nullableUuid, updated_by: nullableUuid })
-const discoveryQuery = { type: 'object', properties: { ...paging, q: { type: 'string', maxLength: 120 } },
-  required: [], additionalProperties: false } as const
+const globalProfile = Type.Object({
+  user_id: uuid,
+  display_name: Type.String(),
+  bio: nullableString,
+  created_at: timestamp,
+  updated_at: timestamp,
+  created_by: nullableUuid,
+  updated_by: nullableUuid,
+}, closed)
+const discoveryQuery = Type.Object({ ...paging, q: Type.Optional(Type.String({ maxLength: 120 })) },
+  { ...closed, required: [] })
 export const discoverGlobalProfilesSchema = { querystring: discoveryQuery, response: { 200: page(globalProfile), ...errors } }
-export type DiscoverGlobalProfilesQuery = FromSchema<typeof discoveryQuery>
 export const readGlobalProfileSchema = { params: userParams, querystring: emptyQuery, response: { 200: globalProfile, ...errors } }
 
 // Account blocks
-const block = object({ blocker_user_id: uuid, blocked_user_id: uuid, created_at: timestamp, created_by: uuid })
-const blocksQuery = { type: 'object', properties: paging, required: [], additionalProperties: false } as const
+const block = Type.Object({ blocker_user_id: uuid, blocked_user_id: uuid, created_at: timestamp, created_by: uuid }, closed)
+const blocksQuery = Type.Object(paging, { ...closed, required: [] })
 export const listAccountBlocksSchema = { querystring: blocksQuery, response: { 200: page(block), ...errors } }
-export type ListAccountBlocksQuery = FromSchema<typeof blocksQuery>
-const blockInput = object({ confirmed: { const: true, type: 'boolean' }, source: { oneOf: [
-  object({ kind: { const: 'global_profile', type: 'string' } }),
-  object({ kind: { const: 'community_profile', type: 'string' }, tenantId: uuid }),
-] } })
-const blockResponse = object({ blocked: { type: 'boolean' } })
+
+const globalBlockSource = Type.Object({ kind: Type.Literal('global_profile') }, closed)
+const communityBlockSource = Type.Object({ kind: Type.Literal('community_profile'), tenantId: uuid }, closed)
+const blockSource = Type.Unsafe<Static<typeof globalBlockSource> | Static<typeof communityBlockSource>>({
+  oneOf: [globalBlockSource, communityBlockSource],
+})
+const blockInput = Type.Object({ confirmed: Type.Literal(true), source: blockSource }, closed)
+const blockResponse = Type.Object({ blocked: Type.Boolean() }, closed)
 export const blockAccountSchema = { params: userParams, querystring: emptyQuery, body: blockInput, response: { 200: blockResponse, ...errors } }
-export type BlockAccountBody = FromSchema<typeof blockInput>
 export const unblockAccountSchema = { params: userParams, querystring: emptyQuery, response: { 200: blockResponse, ...errors } }

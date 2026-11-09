@@ -1,8 +1,10 @@
 import type { FromSchema } from 'json-schema-to-ts'
+import type { Static } from 'typebox'
+import { profileInputSchema } from '../profile-input-schema.ts'
 import { errorResponse } from '../http-errors.ts'
 import { copySlots, settingFields, type CopyKey, type CommunitySettings } from '../../../shared/community-configuration.ts'
 import { staffFlags, type CommunityCommand } from '../../../shared/community-commands.ts'
-import { communityPreferenceFields, profileInputSchema, type CommunityPreferences } from '../../../shared/self-service.ts'
+import { communityPreferenceFields, type CommunityPreferences } from '../../../shared/self-service.ts'
 
 // Preserve each schema's exact required-array value while retaining literal types.
 type ObjectSchema<P, R> = { type: 'object'; properties: P; required: R; additionalProperties: false }
@@ -284,7 +286,7 @@ export const saveOwnProfileSchema = {
   body: profileInputSchema,
   response: { 200: object({ tenantId: uuid }), ...errors },
 } as const
-export type CommunityProfileInput = FromSchema<typeof profileInputSchema>
+export type CommunityProfileInput = Static<typeof profileInputSchema>
 
 const preferenceProperties = Object.fromEntries(communityPreferenceFields.map(key => [key, boolean]))
 const preferenceResponse = {
