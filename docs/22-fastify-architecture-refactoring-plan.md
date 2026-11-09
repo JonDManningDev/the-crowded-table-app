@@ -207,7 +207,7 @@ Normal cleanup belongs to `app.close()` after `buildApi` successfully returns. S
 **`schema.ts`**
 
 - Owns feature HTTP schema composition and appropriate schema-derived transport types.
-- At completion, used plain JSON Schema and `json-schema-to-ts`. The [TypeBox adoption decision](08-decisions-and-open-questions.md#typebox-for-fastify-http-schemas--accepted-direction-2026-11-09) supersedes this tooling choice for the follow-up migration, starting with user accounts.
+- Uses TypeBox. The feature plugins use Fastify's matching type provider to infer request and reply types from attached schemas. AJV and the Fastify response serializer consume the emitted JSON Schema. The [TypeBox adoption decision](08-decisions-and-open-questions.md#typebox-for-fastify-http-schemas--accepted-direction-2026-11-09) supersedes the plain JSON Schema and `json-schema-to-ts` tooling used at Phase 5 completion.
 - Contains no database access, authorization queries or business execution.
 
 ### Schema and DTO boundary

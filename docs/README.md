@@ -4,7 +4,7 @@ Status: revised from the user-supplied product handoff and subsequent explicit d
 
 ## Source and precedence
 
-**TypeBox for Fastify HTTP schemas — 2026-11-09.** The [decision](08-decisions-and-open-questions.md#typebox-for-fastify-http-schemas--accepted-direction-2026-11-09) adopts TypeBox and its Fastify type provider and retains AJV and the current response serializer. See [implementation status](12-implementation-status.md#fastify-typebox-adoption--2026-11-09) for checkpoint verification.
+**TypeBox for Fastify HTTP schemas — completed and locally verified 2026-11-09.** User accounts and both community plugins use TypeBox and its Fastify type provider. Health derives reply types from TypeBox. AJV and the current response serializer consume the same JSON Schema recorded in the original fixture. See the [decision](08-decisions-and-open-questions.md#typebox-for-fastify-http-schemas--accepted-direction-2026-11-09) and [checkpoint verification](12-implementation-status.md#fastify-typebox-adoption--2026-11-09).
 
 **Fastify review follow-ups — completed 2026-11-04.** Startup now validates strict decimal `PORT` syntax and numeric range before allocation; explicit port `0` remains supported. A default-bearing test-only route locks `useDefaults:false` without changing production schemas or the HTTP fixture. All 63 backend cases, server TypeScript and root lint passed. See [follow-up evidence](evidence/fastify-review-followups-2026-11-04/README.md); the five-phase evidence below remains historical.
 
