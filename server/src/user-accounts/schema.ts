@@ -2,7 +2,6 @@ import { Type, type TSchema } from 'typebox'
 import { accountPreferenceFields } from './account-preferences.ts'
 import { errorResponse } from '../http-errors.ts'
 import { nullableObject } from '../http-schema.ts'
-import { profileInputSchema } from '../profile-input-schema.ts'
 
 const closed = { additionalProperties: false }
 const uuid = Type.String({ format: 'uuid' })
@@ -27,6 +26,10 @@ export const readAccountPreferencesSchema = { querystring: noQuery, response: pr
 export const saveAccountPreferencesSchema = { querystring: noQuery, body: preferences, response: preferencesResponse }
 
 // Own profile
+const profileInputSchema = Type.Object({
+  display_name: Type.String({ minLength: 1, maxLength: 80 }),
+  bio: Type.Union([Type.String({ maxLength: 2000 }), Type.Null()]),
+}, closed)
 const profile = Type.Object({
   user_id: uuid,
   ...profileInputSchema.properties,

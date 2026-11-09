@@ -1,5 +1,4 @@
 import { Type } from 'typebox'
-import { profileInputSchema } from '../profile-input-schema.ts'
 import { errorResponse } from '../http-errors.ts'
 import { nullableObject } from '../http-schema.ts'
 import { copySlots, settingFields, type CopyKey } from './community-configuration.ts'
@@ -240,6 +239,10 @@ export const pendingRequestsSchema = {
 } as const
 
 // Profiles and preferences
+const profileInputSchema = Type.Object({
+  display_name: Type.String({ minLength: 1, maxLength: 80 }),
+  bio: Type.Union([Type.String({ maxLength: 2000 }), Type.Null()]),
+}, closed)
 export const readProfileSchema = {
   // Preserve the original open params object; other account params are closed.
   params: Type.Object({ tenantId: uuid, userId: uuid }),

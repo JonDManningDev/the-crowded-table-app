@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Feature-owned profile inputs — 2026-11-09
+
+At the user's direction, user accounts and communities now define separate profile input schemas in their respective `schema.ts` files. Removed `server/src/profile-input-schema.ts`. Current validation, route contracts and serialization remain unchanged; the features can evolve independently.
+
+Server TypeScript, all 69 backend HTTP cases (including the unchanged baseline fixture), all nine local real Auth/HTTP suites, all 279 frontend tests, the 134-file browser boundary scan, root lint, production build and diff whitespace checks passed. The local environment still points at historical forwarded ports; verification used process-only overrides for the running stack's loopback ports 54321/54322 without changing the environment file. The diff review confirmed independent feature definitions with identical existing constraints and no shared-module imports. No deployment is required.
+
 ## Fastify TypeBox simplification checkpoint — 2026-11-09
 
 Community commands and account-block sources use closed TypeBox object branches with distinct literal tags. Fastify infers request bodies and checks them at the service calls. Nullable UUIDs, timestamps, and text use native unions. Nullable staff enums retain the serializer's type-array representation. Audit details use an open object that preserves nested JSON, null values, and line breaks in keys. Nullable object replies retain the single `Type.Unsafe` helper because a closed object union rejects extra fields before the serializer can strip them.
