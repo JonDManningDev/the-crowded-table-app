@@ -3,7 +3,7 @@ import type { AccountPreferences } from './account-preferences.ts'
 import type { ProfileInput, OwnProfile, CommunitySummary, CommunitySummaryPage, CommunitySummaryQuery } from './self-service.ts'
 import type { BlockInput, DiscoveryQuery, GlobalProfile, OutgoingBlock, ProfilePage } from './global-profiles.ts'
 import { withEligibleActorTransaction, type AuthenticatedContext } from '../actor-transaction.ts'
-import { ApplicationError } from '../application-errors.ts'
+import { ApplicationError } from '../http-errors.ts'
 import type { ApiTables, AppDatabase } from '../database.ts'
 import type { DirectoryCursors } from '../directory-cursors.ts'
 

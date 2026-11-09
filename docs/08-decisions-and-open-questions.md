@@ -559,6 +559,8 @@ This direction updates the schema tooling in the [completed Fastify architecture
 
 #### Fastify schema follow-up — accepted design 2026-11-09
 
+Application error ownership clarified 2026-11-09: consolidate `ApplicationError` into `server/src/http-errors.ts` and remove `application-errors.ts`, as explicitly requested by the user. This supersedes the separate module in the completed Fastify plan; preserve the class and HTTP error behavior. Reconsider a separate module if an independent error responsibility emerges.
+
 Profile input ownership clarified 2026-11-09: user-account and community-account inputs have separate definitions in their owning server feature's `schema.ts`. Remove `server/src/profile-input-schema.ts`; matching current fields do not justify coupling inputs expected to evolve independently. Preserve current validation and HTTP behavior. Reconsider sharing only if a stable shared product contract emerges.
 
 The user set a pre-MVP direction for separate client and server application libraries. Shared HTTP definitions made it harder to trace each side's behavior, so workspace-local ownership takes precedence over reducing duplication. Each existing workspace will own the HTTP definitions its features use. Keep client request and response types, paths and checks beside the client adapters, and keep server schemas with the Fastify features. Allow small definitions to appear on both sides and verify agreement through HTTP tests. Reconsider shared application code when the application is closer to its MVP criteria.

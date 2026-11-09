@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
-import { ApplicationError } from './application-errors.ts'
+import { ApplicationError } from './http-errors.ts'
 
 // Public positions must not reveal a user UUID, even after base64 decoding.
 // Authentication binds each cursor to its endpoint/audience; rotation fails closed.

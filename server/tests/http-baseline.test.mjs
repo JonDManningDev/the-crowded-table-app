@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { ApplicationError } from '../src/application-errors.ts'
+import { ApplicationError } from '../src/http-errors.ts'
 import { actorId, authorization, createHttpHarness, targetId, tenantId } from './helpers/http-harness.mjs'
 
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/http-contract.json', import.meta.url), 'utf8'))

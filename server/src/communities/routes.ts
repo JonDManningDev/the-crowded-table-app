@@ -3,7 +3,7 @@ import type { CommunityService } from './service.ts'
 import * as schemas from './schema.ts'
 import { optionalAuthentication, verifyOptionalIdentity, getAuthenticatedContext } from '../http-authentication.ts'
 import type { BearerVerifier } from '../token-verifier.ts'
-import { ApplicationError } from '../application-errors.ts'
+import { ApplicationError } from '../http-errors.ts'
 
 type PublicCommunityOperations = Pick<CommunityService, "listStandings" | "readLanding" | "publicDirectory">
 export const publicCommunityRoutes: FastifyPluginAsyncTypebox<{ service: PublicCommunityOperations; verify: BearerVerifier }> = async (routes, { service, verify }) => {

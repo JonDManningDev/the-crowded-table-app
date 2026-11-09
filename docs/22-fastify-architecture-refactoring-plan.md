@@ -17,7 +17,6 @@ server/src/
 ├── token-verifier.ts
 ├── http-authentication.ts
 ├── http-errors.ts
-├── application-errors.ts
 ├── database.ts
 ├── actor-transaction.ts
 ├── directory-cursors.ts
@@ -45,8 +44,7 @@ The authentication/error filenames resolve concrete responsibility overlap witho
 | `token-verifier.ts` | Construct the Supabase-backed bearer verifier and validate token identity claims. No Fastify imports, hooks, HTTP responses, or database eligibility checks. |
 | `http-authentication.ts` | Required/optional HTTP authentication integration, request identity decoration, authenticated-context extraction, and existing authentication-related cache headers. Receives the verifier explicitly; does not construct it. |
 | `actor-transaction.ts` | Export the plain `AuthenticatedContext` type and transaction helper. Set trusted attribution and perform the existing locked database eligibility check. No Fastify dependencies. |
-| `application-errors.ts` | Define `ApplicationError`, moved from `CommunityError`, retaining the existing status/code representation. No Fastify or community dependencies. |
-| `http-errors.ts` | Own the common error-response schema and existing root error-handler translation/logging. Preserve PostgreSQL, application-error and unexpected-error mappings exactly. |
+| `http-errors.ts` | Define `ApplicationError` with its existing status/code representation. Own the common error-response schema and existing root error-handler translation/logging. Preserve PostgreSQL, application-error and unexpected-error mappings exactly. |
 
 Authentication failures retain the current direct 401 response. They do not need to pass through a new exception mechanism.
 
@@ -362,3 +360,5 @@ Run server TypeScript, the HTTP suite, the local real Auth/HTTP suites and the c
 The [workspace ownership checkpoint](12-implementation-status.md#workspace-http-ownership-checkpoint--2026-11-09) passed all gates locally, including the unchanged HTTP fixture. The [TypeBox simplification checkpoint](12-implementation-status.md#fastify-typebox-simplification-checkpoint--2026-11-09) also passed all local gates. Its fixture incorporates the reviewed representation changes while retaining the original registrations, effective limits, and authentication categories.
 
 Review verified that nullable staff role and status replies preserve the original HTTP serializer behavior with a JSON Schema type array. A native union rejects unexpected strings, and the installed TypeBox enum builder excludes null in its TypeScript signature. Keep the inferred schema literals in the community feature. Community profile input and output types also belong to that feature. User-account and community-account profile inputs each live in their owning feature's `schema.ts`. Their current validation matches, but the inputs can evolve independently; the shared server profile input module was removed at the user's direction on 2026-11-09.
+
+Application error ownership follow-up (accepted 2026-11-09): at the user's direction, `ApplicationError` now lives in `http-errors.ts` alongside translation and the error-response schema. All callers import it there; `application-errors.ts` is removed without a compatibility export. This supersedes the separate application-error module from Phase 2. Status codes, error messages and translation behavior remain unchanged.

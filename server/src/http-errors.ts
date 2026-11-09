@@ -1,6 +1,10 @@
 import type { FastifyInstance } from 'fastify'
 import { Type } from 'typebox'
-import { ApplicationError } from './application-errors.ts'
+
+export class ApplicationError extends Error {
+  statusCode: number
+  constructor(status: number, code: string) { super(code); this.statusCode = status }
+}
 
 export const errorResponse = Type.Object({ code: Type.String(), requestId: Type.String() })
 

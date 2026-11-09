@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Application error consolidation — 2026-11-09
+
+At the user's direction, `ApplicationError` now belongs to `server/src/http-errors.ts` with the shared error-response schema and root error handler. Updated service, route, cursor and test imports and removed `application-errors.ts` without a compatibility export. The class implementation and error mappings are unchanged. This supersedes the separate application-error module in the historical Phase 2 layout.
+
+Server TypeScript, all 69 backend HTTP cases (including the unchanged baseline fixture), all nine local real Auth/HTTP suites, all 279 frontend tests, the 134-file browser boundary scan, root lint, production build and diff whitespace checks passed. Local suites used the same process-only loopback port corrections as the profile-input checkpoint. Diff review confirmed the unchanged class body and error handler, updated imports, and absence of remaining server references to the removed module. No database migration or deployment is required.
+
 ## Feature-owned profile inputs — 2026-11-09
 
 At the user's direction, user accounts and communities now define separate profile input schemas in their respective `schema.ts` files. Removed `server/src/profile-input-schema.ts`. Current validation, route contracts and serialization remain unchanged; the features can evolve independently.
