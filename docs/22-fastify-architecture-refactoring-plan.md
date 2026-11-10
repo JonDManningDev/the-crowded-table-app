@@ -6,7 +6,7 @@ This plan governs the structural refactor of the existing persistent API. The [a
 
 ## 1. Scope and target structure
 
-Refactor the existing API into frontend-aligned features with mandatory `routes.ts`, `service.ts`, and `schema.ts` files. Preserve all 41 explicit HTTP operations, 28 automatic HEAD operations, and existing security/database behavior.
+The completed five-phase refactor established frontend-aligned three-file features. The [accepted four-file follow-up](#7-four-file-feature-follow-up--2026-11-10) now governs communities and user accounts; health retains `routes.ts`, `service.ts`, and `schema.ts`. Preserve all 41 explicit HTTP operations, 28 automatic HEAD operations, and existing security/database behavior.
 
 Phase 1 changed tests/documentation, Phase 2 changed shared facilities/callers, Phase 3 moved user-account operations into their triad, Phase 4 migrated all eight community groups, and Phase 5 completed health, transport typing and final reconciliation. All preserve the HTTP contract. No shared browser contract, database migration, runtime privilege or frontend change is included.
 
@@ -23,11 +23,13 @@ server/src/
 ├── user-accounts/
 │   ├── routes.ts
 │   ├── service.ts
-│   └── schema.ts
+│   ├── json-schema.ts
+│   └── types.ts
 ├── communities/
 │   ├── routes.ts
 │   ├── service.ts
-│   └── schema.ts
+│   ├── json-schema.ts
+│   └── types.ts
 └── health/
     ├── routes.ts
     ├── service.ts
@@ -60,7 +62,7 @@ No additional architectural directories, repository layer, DI container, validat
 
 ## 2. Feature ownership and parallel organization
 
-Every feature uses identical section names and ordering across its three files. Within a section, route declarations, public service operations and schema exports follow the same operation order.
+Each feature uses identical section names and ordering across routes, HTTP schemas and services. Communities/user accounts organize their standalone contracts consistently with those operations where applicable. Within a section, route declarations, public service operations and schema exports follow the same operation order.
 
 Use concise section comments. Place supporting helpers immediately after their related operations; place genuinely feature-wide helpers in a final `Internal helpers` section. Shared schema fragments may precede the operation sections.
 
@@ -185,11 +187,11 @@ No direct dependency between the two feature services is needed for current oper
 
 Normal cleanup belongs to `app.close()` after `buildApi` successfully returns. Startup cleans up allocated resources when construction fails before ownership transfers; later boot/readiness/listener failures close the returned app. Startup supplies one memoized cleanup promise and shares one close request across shutdown signals. Preserve cleanup exactly once, await failed-startup cleanup, retain the original startup failure if cleanup also rejects, and remove installed signal handlers on close. Shutdown failures use a generic diagnostic and nonzero exit status. No new timeout or force-close policy is introduced.
 
-### Three-file dependency rules
+### Feature dependency rules
 
 **`routes.ts`**
 
-- Owns Fastify registration, lifecycle integration, schema attachment, validated input/context extraction and HTTP response mapping.
+- Owns endpoint paths, Fastify registration, lifecycle integration, schema attachment, validated input/context extraction and HTTP response mapping.
 - Calls named service operations.
 - Contains no SQL, transaction orchestration or substantial business authorization.
 - Never imports another feature's HTTP adapter.
@@ -198,14 +200,22 @@ Normal cleanup belongs to `app.close()` after `buildApi` successfully returns. S
 
 - Owns application operations, current-state authorization, SQL, transaction orchestration, locking and audit coordination.
 - Receives resource dependencies explicitly.
-- Has no Fastify imports or runtime imports from feature `schema.ts` or HTTP utility modules.
+- Has no Fastify imports or runtime imports from HTTP schemas or HTTP utility modules.
 - Uses explicit database projections independent of response schemas.
 
-**`schema.ts`**
+**`json-schema.ts` (communities/user accounts); `schema.ts` (health)**
 
-- Owns feature HTTP schema composition and appropriate schema-derived transport types.
+- Owns HTTP validation/serialization schema composition. Fastify infers handler inputs and replies from attached schemas. For communities/user accounts, declared schema-derived transport aliases belong in `types.ts` through erased references; health retains schema-owned reply types without attaching runtime schemas.
 - Uses TypeBox. The feature plugins use Fastify's matching type provider to infer request and reply types from attached schemas. AJV and the Fastify response serializer consume the emitted JSON Schema. The [TypeBox adoption decision](08-decisions-and-open-questions.md#typebox-for-fastify-http-schemas--accepted-direction-2026-11-09) supersedes the plain JSON Schema and `json-schema-to-ts` tooling used at Phase 5 completion.
 - Contains no database access, authorization queries or business execution.
+
+**`types.ts` (communities/user accounts only)**
+
+- Owns independent service input/result contracts, feature DTO/record shapes, dependency interfaces and internal structural/helper types.
+- Holds associated declarative constants such as staff flags, settings/preference fields and copy slots/limits; executes no HTTP/database operations.
+- Preserves independently declared community command and account-block contracts. Route calls check TypeBox-inferred transport inputs against these ordinary service inputs.
+- Uses erased type-only references for any existing schema-derived aliases and for service-factory `ReturnType` facades. Schemas and services consume its contracts/constants with no runtime cycle.
+- Health keeps its existing schema/type convention and is outside this consolidation.
 
 ### Schema and DTO boundary
 
@@ -333,8 +343,8 @@ Real-runtime authorization, bypass, rollback and concurrency tests remain author
 The following durable rules are recorded in the existing agent guidance by Phase 1 and apply as the corresponding source responsibilities migrate:
 
 - Match backend HTTP feature names to frontend feature ownership by default. Assign each operation one authoritative owner and document functional exceptions.
-- Every HTTP feature has `routes.ts`, `service.ts`, and `schema.ts`, regardless of size.
-- Maintain identical operation section names and ordering across the three files.
+- Communities and user accounts each have exactly `routes.ts`, `json-schema.ts`, `types.ts`, and `service.ts`; health retains its three-file structure.
+- Maintain identical operation section names and ordering across routes, HTTP schemas and services; organize contracts consistently where applicable.
 - Routes own HTTP integration; services own operations and database orchestration; schemas own transport validation and serialization.
 - Keep runtime HTTP schemas out of service logic and SQL projections. Keep HTTP definitions workspace-local and preserve the distinction between transport, domain and database types.
 - Register encapsulated feature plugins. Put shared authentication in the authenticated parent and feature hooks in their proper scope.
@@ -342,7 +352,7 @@ The following durable rules are recorded in the existing agent guidance by Phase
 - Construct resources and service instances centrally and pass narrow explicit dependencies. Do not introduce a global service locator.
 - Keep token verification, HTTP authentication, transaction eligibility and error translation under their designated owners.
 - Use request decorators for verified context; permit infrastructure decorators only for a concrete lifecycle or encapsulation benefit.
-- Prefer cohesive feature files. Additional supporting modules require a demonstrated responsibility, not a file-length threshold.
+- Keep communities and user accounts within their four responsibility files. Other structural changes require their own authorized scope.
 - Preserve PostgreSQL authority and existing security/consistency behavior.
 - Migrate community operation groups incrementally and pass their existing integration, authorization and concurrency checks before continuing.
 - Update documentation when ownership or boundaries change. Do not reorganize the frontend for symmetry.
@@ -358,8 +368,21 @@ Run server TypeScript, the HTTP suite, the local real Auth/HTTP suites and the c
 
 The [workspace ownership checkpoint](12-implementation-status.md#workspace-http-ownership-checkpoint--2026-11-09) passed all gates locally, including the unchanged HTTP fixture. The [TypeBox simplification checkpoint](12-implementation-status.md#fastify-typebox-simplification-checkpoint--2026-11-09) also passed all local gates. Its fixture incorporates the reviewed representation changes while retaining the original registrations, effective limits, and authentication categories.
 
-Review verified that nullable staff role and status replies preserve the original HTTP serializer behavior with a JSON Schema type array. A native union rejects unexpected strings, and the installed TypeBox enum builder excludes null in its TypeScript signature. Keep the inferred schema literals in the community feature. Community profile input and output types also belong to that feature. User-account and community-account profile inputs each live in their owning feature's `schema.ts`. Their current validation matches, but the inputs can evolve independently; the shared server profile input module was removed at the user's direction on 2026-11-09.
+Review verified that nullable staff role and status replies preserve the original HTTP serializer behavior with a JSON Schema type array. A native union rejects unexpected strings, and the installed TypeBox enum builder excludes null in its TypeScript signature. Keep the inferred schema literals in the community feature. Community profile input and output types also belong to that feature. User-account and community-account profile inputs each live in their owning feature's HTTP schema module (`json-schema.ts` under the accepted four-file follow-up). Their current validation matches, but the inputs can evolve independently; the shared server profile input module was removed at the user's direction on 2026-11-09.
 
 Application error ownership follow-up (accepted 2026-11-09): at the user's direction, `ApplicationError` now lives in `http-errors.ts` alongside translation and the error-response schema. All callers import it there; `application-errors.ts` is removed without a compatibility export. This supersedes the separate application-error module from Phase 2. Status codes, error messages and translation behavior remain unchanged.
 
 Actor transaction ownership follow-up (accepted 2026-11-09): the user approved folding `actor-transaction.ts` into `database.ts`. Connection management and safe actor-scoped execution share the database module; the helper and its types retain their existing names and contracts. All callers import them from `database.ts`, and the separate file is removed without a compatibility export. This supersedes the separate transaction module from Phase 2. Preserve transaction-local context, eligibility locking, tagged results and rollback behavior.
+
+## 7. Four-file feature follow-up — 2026-11-10
+
+The [accepted decision](08-decisions-and-open-questions.md#four-file-server-feature-responsibilities--accepted-2026-11-10) and [issue #4](https://github.com/JonDManningDev/the-crowded-table-app/issues/4) authorize consolidation of communities and user accounts only. This follows the completed migration; it does not restart or rewrite its five phases or eight community checkpoints.
+
+- `routes.ts` owns endpoint paths, Fastify plugins, schema attachment, verified context extraction, invocation and HTTP result mapping.
+- `json-schema.ts` owns TypeBox transport validation/serialization with the existing provider, AJV and serializer. Preserve nullable-object projection, nullable staff enum representation, tagged inputs and open audit details.
+- `types.ts` owns service input/result contracts, DTO/record shapes, dependencies and internal structural/helper types, plus associated declarative field lists, staff flags and copy limits. It executes no HTTP/database operations. Existing schema-derived types and factory-derived facades use erased type-only references. Independently declared service command/block contracts remain independent; route calls check inferred transport compatibility.
+- `service.ts` owns operations, authorization, SQL, locking, transactions, audit and orchestration, consuming contracts from types. Database projections remain explicit and independent of HTTP schemas.
+
+Remove the ten supporting modules and update all source/test consumers without compatibility exports. Health/shared infrastructure, browser ownership, SQL and the HTTP fixture remain unchanged. Required gates: server TypeScript, exact HTTP baseline (41 explicit operations/28 HEADs), nine real local Auth/HTTP suites, client boundary scan, frontend tests, lint and build; inspect layout/import cleanup and runtime boundaries rather than adding layout tests. A failed/unavailable gate blocks completion pending resolution or explicit user adjudication. Review and commit this checkpoint independently only after all gates pass. See [actual implementation/verification status](12-implementation-status.md#four-file-server-feature-consolidation--2026-11-10).
+
+The four-file follow-up is implemented and locally verified: all 69 HTTP cases and the unchanged fixture, server TypeScript, nine real Auth/HTTP suites, the 134-file boundary scan, 279 frontend tests, lint and build passed. [Checkpoint evidence](evidence/feature-contracts-2026-11-10/README.md) records the scoped result; no deployment is included.

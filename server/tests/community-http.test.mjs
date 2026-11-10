@@ -6,7 +6,7 @@ import Fastify from 'fastify'
 import * as plugins from '../src/communities/routes.ts'
 import { registerRequiredAuthentication, getAuthenticatedContext } from '../src/http-authentication.ts'
 import { ApplicationError, registerHttpErrors } from '../src/http-errors.ts'
-import { staffFlags } from '../src/communities/community-commands.ts'
+import { staffFlags } from '../src/communities/types.ts'
 import { actorId, targetId, tenantId, authorization, createHttpHarness } from './helpers/http-harness.mjs'
 
 const operations = [

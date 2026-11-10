@@ -4,7 +4,7 @@ Implemented and locally verified on 2026-11-04 under the [approved architecture]
 
 ## Ownership and interfaces
 
-The [routes](../../../server/src/user-accounts/routes.ts), [service](../../../server/src/user-accounts/service.ts) and [schema](../../../server/src/user-accounts/schema.ts) contain these matching operation sections, in order:
+The [routes](../../../server/src/user-accounts/routes.ts), [service](../../../server/src/user-accounts/service.ts) and [schema](../../../server/src/user-accounts/json-schema.ts) contain these matching operation sections, in order:
 
 | Section | Service operations, in order |
 | --- | --- |

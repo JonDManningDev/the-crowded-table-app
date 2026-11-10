@@ -1,5 +1,5 @@
 import { Type, type TSchema } from 'typebox'
-import { accountPreferenceFields } from './account-preferences.ts'
+import { accountPreferenceFields } from './types.ts'
 import { errorResponse } from '../http-errors.ts'
 import { nullableObject } from '../http-schema.ts'
 

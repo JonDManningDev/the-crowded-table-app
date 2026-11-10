@@ -170,7 +170,7 @@ try {
   await cmd(owner,{kind:'approve',requestId:queued[0].id,revision:queued[0].revision})
   await cmd(owner,{kind:'grant',target:other.id})
   await cmd(owner,{kind:'permissions',target:other.id,permissions:{can_discipline_users:true}})
-  const { staffFlags } = await import('../src/communities/community-commands.ts')
+  const { staffFlags } = await import('../src/communities/types.ts')
   const permissions = Object.fromEntries(staffFlags.map(flag=>[flag,false]))
   await cmd(other,{kind:'reappoint',target:member.id,permissions},403)
   await cmd(owner,{kind:'reappoint',target:member.id,permissions})

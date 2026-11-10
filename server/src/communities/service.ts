@@ -1,18 +1,68 @@
 import { randomUUID } from 'node:crypto'
-import { sql, type Transaction } from 'kysely'
-import { type ApiTables, type AppDatabase, withEligibleActorTransaction, type AuthenticatedContext } from '../database.ts'
+import { sql } from 'kysely'
+import { type AppDatabase, withEligibleActorTransaction, type AuthenticatedContext } from '../database.ts'
 import { ApplicationError } from '../http-errors.ts'
 import type { DirectoryCursors } from '../directory-cursors.ts'
-import { copySlots, settingFields, type CopyKey, type CommunityCopy, type CommunityDetails, type CommunityDetailsInput, type CommunityLanding, type CommunitySettings, type CommunitySettingsRecord } from './community-configuration.ts'
-import { type AccountFacts, type CommunityProfileInput, type DirectoryPage, type DirectoryQuery, type MemberDirectoryRow, type PublicDirectoryRow } from './community-directory.ts'
-import { staffFlags, type CommunityCommand, type CommandResult, type CreateCommunityInput, type CuratedProfile, type StaffPermissions } from './community-commands.ts'
-import { type AccountReview, type CommunityRequest, type OwnCommunityRequestResponse, type StaffCandidate } from './community-reads.ts'
-import { communityPreferenceFields, type CommunityPreferences } from './community-preferences.ts'
-import { type ParticipantPermissions, type RecordPage, type RecordQuery, type StaffRecord } from './community-records.ts'
-import { type HistoryEntry, type HistoryPage, type HistoryQuery } from './account-history.ts'
-
-type Tx = Transaction<ApiTables>
-interface CommunityDependencies { db: AppDatabase; cursors: DirectoryCursors }
+import {
+  copySlots,
+  settingFields,
+  type CommunityCopy,
+  type CommunityDetails,
+  type CommunityDetailsInput,
+  type CommunityLanding,
+  type CommunitySettings,
+  type CommunitySettingsRecord,
+  type AccountFacts,
+  type CommunityProfileInput,
+  type DirectoryPage,
+  type DirectoryQuery,
+  type MemberDirectoryRow,
+  type PublicDirectoryRow,
+  staffFlags,
+  type CommunityCommand,
+  type CommandResult,
+  type CreateCommunityInput,
+  type CuratedProfile,
+  type AccountReview,
+  type CommunityRequest,
+  type OwnCommunityRequestResponse,
+  type StaffCandidate,
+  communityPreferenceFields,
+  type CommunityPreferences,
+  type RecordPage,
+  type RecordQuery,
+  type HistoryEntry,
+  type HistoryPage,
+  type HistoryQuery,
+  type SlugParams,
+  type PublicDirectoryResult,
+  type Staff,
+  type Account,
+  type Pending,
+  type Context,
+  type Action,
+  type ApprovalSettings,
+  type AuthorizationResult,
+  type OperationalStatus,
+  type ReviewParams,
+  type AfterQuery,
+  type MissingRequest,
+  type AccountParams,
+  type AccountStanding,
+  type ConfigurationKind,
+  type CopyParams,
+  type CopyInput,
+  type CopyChange,
+  type DirectoryAccess,
+  type RecordKind,
+  type Records,
+  type ParticipantPermissionInput,
+  type Position,
+  type AuditAuthority,
+  type Tx,
+  type TenantParams,
+  type CommunityDependencies,
+} from './types.ts'
 
 export function createCommunityService({ db, cursors }: CommunityDependencies) {
   return {
@@ -20,100 +70,99 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
     listStandings() {
       return db.selectFrom('community_standing').select(standingFields).orderBy('standing').execute()
     },
-    readLanding(params: { slug: string }) {
+    readLanding(params: SlugParams) {
       return readCommunityLanding(db, params.slug)
     },
-    publicDirectory(params: { slug: string }, query: DirectoryQuery) {
+    publicDirectory(params: SlugParams, query: DirectoryQuery) {
       return db.transaction().execute(tx => readPublicDirectory(tx, params.slug, query, cursors))
     },
     // Creation and lifecycle
     createCommunity(context: AuthenticatedContext, input: CreateCommunityInput) {
       return withEligibleActorTransaction(db, context, tx => createCommunity(tx, context.actorId, input))
     },
-    executeCommand(context: AuthenticatedContext, params: { tenantId: string }, input: CommunityCommand) {
+    executeCommand(context: AuthenticatedContext, params: TenantParams, input: CommunityCommand) {
       return withEligibleActorTransaction(db, context, tx => communityCommand(tx, context.actorId, params.tenantId, input))
     },
     // Requests and reviews
-    ownRequest(context: AuthenticatedContext, params: { tenantId: string }) {
+    ownRequest(context: AuthenticatedContext, params: TenantParams) {
       return ownRequest(db, context, params)
     },
-    reviewAccount(context: AuthenticatedContext, params: { tenantId: string; target: string }) {
+    reviewAccount(context: AuthenticatedContext, params: ReviewParams) {
       return reviewAccount(db, context, params)
     },
-    staffCandidates(context: AuthenticatedContext, params: { tenantId: string }, query: { after?: string }) {
+    staffCandidates(context: AuthenticatedContext, params: TenantParams, query: AfterQuery) {
       return staffCandidates(db, context, params, query)
     },
-    pendingRequests(context: AuthenticatedContext, params: { tenantId: string }, query: { after?: string }) {
+    pendingRequests(context: AuthenticatedContext, params: TenantParams, query: AfterQuery) {
       return pendingRequests(db, context, params, query)
     },
     // Profiles and preferences
-    readProfile(context: AuthenticatedContext, params: { tenantId: string; userId: string }) {
+    readProfile(context: AuthenticatedContext, params: AccountParams) {
       return readProfile(db, context, params)
     },
-    saveOwnProfile(context: AuthenticatedContext, params: { tenantId: string }, input: CommunityProfileInput) {
+    saveOwnProfile(context: AuthenticatedContext, params: TenantParams, input: CommunityProfileInput) {
       return run(db, context, tx => ownCommunityProfile(tx, context.actorId, params.tenantId, input))
     },
-    readOwnPreferences(context: AuthenticatedContext, params: { tenantId: string }) {
+    readOwnPreferences(context: AuthenticatedContext, params: TenantParams) {
       return run(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId))
     },
-    saveOwnPreferences(context: AuthenticatedContext, params: { tenantId: string }, input: Partial<CommunityPreferences>) {
+    saveOwnPreferences(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunityPreferences>) {
       return run(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId, input))
     },
     // Configuration and copy
-    readDetails(context: AuthenticatedContext, params: { tenantId: string }) {
+    readDetails(context: AuthenticatedContext, params: TenantParams) {
       return run(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId))
     },
-    saveDetails(context: AuthenticatedContext, params: { tenantId: string }, input: Partial<CommunityDetailsInput>) {
+    saveDetails(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunityDetailsInput>) {
       return run(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId, input))
     },
-    readSettings(context: AuthenticatedContext, params: { tenantId: string }) {
+    readSettings(context: AuthenticatedContext, params: TenantParams) {
       return run(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId))
     },
-    saveSettings(context: AuthenticatedContext, params: { tenantId: string }, input: Partial<CommunitySettings>) {
+    saveSettings(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunitySettings>) {
       return run(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId, input))
     },
-    readCopy(context: AuthenticatedContext, params: { tenantId: string }) {
+    readCopy(context: AuthenticatedContext, params: TenantParams) {
       return run(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId))
     },
-    saveCopy(context: AuthenticatedContext, params: { tenantId: string; contentKey: CopyKey }, input: { text_value: string }) {
+    saveCopy(context: AuthenticatedContext, params: CopyParams, input: CopyInput) {
       return run(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey, text: input.text_value }))
     },
-    deleteCopy(context: AuthenticatedContext, params: { tenantId: string; contentKey: CopyKey }) {
+    deleteCopy(context: AuthenticatedContext, params: CopyParams) {
       return run(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey }))
     },
     // Directories and account facts
-    memberDirectory(context: AuthenticatedContext, params: { tenantId: string }, query: DirectoryQuery) {
+    memberDirectory(context: AuthenticatedContext, params: TenantParams, query: DirectoryQuery) {
       return run(db, context, tx => readMemberDirectory(tx, context.actorId, params.tenantId, query, cursors))
     },
-    ownerAccounts(context: AuthenticatedContext, params: { tenantId: string }, query: DirectoryQuery) {
+    ownerAccounts(context: AuthenticatedContext, params: TenantParams, query: DirectoryQuery) {
       return run(db, context, tx => listOwnerAccounts(tx, context.actorId, params.tenantId, query, cursors))
     },
-    accountFacts(context: AuthenticatedContext, params: { tenantId: string; userId: string }) {
+    accountFacts(context: AuthenticatedContext, params: AccountParams) {
       return run(db, context, tx => readAccountFacts(tx, context.actorId, params.tenantId, params.userId))
     },
     // Staff and participant permissions
-    listStaff(context: AuthenticatedContext, params: { tenantId: string }, query: RecordQuery) {
+    listStaff(context: AuthenticatedContext, params: TenantParams, query: RecordQuery) {
       return run(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'staff', query))
     },
-    readStaff(context: AuthenticatedContext, params: { tenantId: string; userId: string }) {
+    readStaff(context: AuthenticatedContext, params: AccountParams) {
       return run(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'staff', params.userId))
     },
-    listParticipantPermissions(context: AuthenticatedContext, params: { tenantId: string }, query: RecordQuery) {
+    listParticipantPermissions(context: AuthenticatedContext, params: TenantParams, query: RecordQuery) {
       return run(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'participant', query))
     },
-    readParticipantPermissions(context: AuthenticatedContext, params: { tenantId: string; userId: string }) {
+    readParticipantPermissions(context: AuthenticatedContext, params: AccountParams) {
       return run(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'participant', params.userId))
     },
-    saveParticipantPermissions(context: AuthenticatedContext, params: { tenantId: string; userId: string }, input: { can_post_public_events: boolean }) {
+    saveParticipantPermissions(context: AuthenticatedContext, params: AccountParams, input: ParticipantPermissionInput) {
       return run(db, context, tx => setParticipantPermission(tx, context.actorId, params.tenantId, params.userId, input.can_post_public_events))
     },
     // Audit history
-    history(context: AuthenticatedContext, params: { tenantId: string }, query: HistoryQuery) {
+    history(context: AuthenticatedContext, params: TenantParams, query: HistoryQuery) {
       return history(db, context, params, query)
     }
   }
 }
-export type CommunityService = ReturnType<typeof createCommunityService>
 
 // Public access and standing
 const standingFields = ['standing', 'enable_standard_chat_visibility', 'enable_standard_activity_visibility', 'enable_other_profile_visibility', 'enable_own_profile_management', 'enable_standard_participation', 'enable_standard_dms'] as const
@@ -122,8 +171,7 @@ async function readCommunityLanding(db: AppDatabase, slug: string) {
 }
 export async function readPublicDirectory(tx: Tx, slug: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<PublicDirectoryRow>> {
   const scope = ['public-directory', slug], after = cursors.decode(scope, query.cursor), limit = Number(query.limit ?? 50)
-  type InternalRow = PublicDirectoryRow & { user_id: string }
-  const result = (await sql<{ rows: InternalRow[] | null }>`select app_private.public_community_directory(${slug},${after}::uuid,${limit}) as rows`.execute(tx)).rows[0]
+  const result = (await sql<PublicDirectoryResult>`select app_private.public_community_directory(${slug},${after}::uuid,${limit}) as rows`.execute(tx)).rows[0]
   if (result.rows === null) throw new ApplicationError(404, 'missing')
   const visible = result.rows.slice(0, limit), last = visible.at(-1)
   return {
@@ -133,10 +181,6 @@ export async function readPublicDirectory(tx: Tx, slug: string, query: Directory
 }
 
 // Creation and lifecycle
-type Staff = StaffPermissions & { role: 'owner' | 'admin'; status: 'active' | 'paused' | 'revoked' }
-type Account = { standing: 'approved' | 'pending' | 'suspended' | 'inactive'; revision: string; approved: boolean; restricted: boolean }
-type Pending = { id: string; user_id: string; kind: 'join' | 'reactivation' }
-type Context = { tx: Tx; tenant: string; actor: string }
 function deny(): never { throw new ApplicationError(403, 'forbidden') }
 function stale(): never { throw new ApplicationError(409, 'stale_state') }
 async function scope(tx: Tx, tenant: string) {
@@ -196,7 +240,6 @@ async function setStaffStatus(c: Context, user: string, before: Staff['status'],
   await sql`update public.tenant_staff_assignments set status=${after} where tenant_id=${c.tenant} and user_id=${user}`.execute(c.tx)
   await event(c, user, action, { before_status: before, after_status: after }, reason)
 }
-type Action<K extends CommunityCommand['kind']> = CommunityCommand & { kind: K }
 function result(c: Context, outcome: string): CommandResult { return { outcome, tenantId: c.tenant } }
 async function joinOrReturn(c: Context, member: Account | undefined, cmd: Action<'join' | 'reactivate'>) {
   const { tx, tenant, actor } = c
@@ -208,7 +251,7 @@ async function joinOrReturn(c: Context, member: Account | undefined, cmd: Action
     await setStanding(c, actor, 'inactive', true)
     return { ...result(c, 'review_requested'), requestId: await request(c, 'reactivation') }
   }
-  const settings = (await sql<{ auto_approve_users: boolean }>`select auto_approve_users from public.tenant_settings where tenant_id=${tenant}`.execute(tx)).rows[0]
+  const settings = (await sql<ApprovalSettings>`select auto_approve_users from public.tenant_settings where tenant_id=${tenant}`.execute(tx)).rows[0]
   const standing = member?.approved || settings.auto_approve_users ? 'approved' : 'pending'
   if (cmd.kind === 'join') await addAccount(c, standing, cmd.profile)
   else await setStanding(c, actor, standing)
@@ -242,7 +285,7 @@ async function changeAssignment(c: Context, user: string, member: Account, assig
   const { tx, tenant, actor } = c
   if (cmd.kind === 'grant') {
     if (member.standing !== 'approved' || assignment) stale()
-    const eligible = await sql<{ allowed: boolean }>`select app_private.is_staff_candidate(${tenant},${user},true) as allowed`.execute(tx)
+    const eligible = await sql<AuthorizationResult>`select app_private.is_staff_candidate(${tenant},${user},true) as allowed`.execute(tx)
     if (!eligible.rows[0].allowed) stale()
     await sql`insert into public.tenant_staff_assignments(tenant_id,user_id,role) values(${tenant},${user},'admin')`.execute(tx)
     await event(c, user, 'staff_created', { after_status: 'active' })
@@ -272,7 +315,7 @@ async function changeAssignment(c: Context, user: string, member: Account, assig
 export async function communityCommand(tx: Tx, actor: string, tenant: string, cmd: CommunityCommand): Promise<CommandResult> {
   const c = { tx, actor, tenant }
   await scope(tx, tenant)
-  const site = (await sql<{ operational_status: string }>`select operational_status from public.tenants where id=${tenant} for update`.execute(tx)).rows[0]
+  const site = (await sql<OperationalStatus>`select operational_status from public.tenants where id=${tenant} for update`.execute(tx)).rows[0]
   if (!site) throw new ApplicationError(404, 'missing')
   const me = await staff(c, actor)
   // The deferred active-assignment FK also requires approved community standing.
@@ -321,10 +364,10 @@ export async function communityCommand(tx: Tx, actor: string, tenant: string, cm
 }
 
 // Requests and reviews
-function ownRequest(db: AppDatabase, context: AuthenticatedContext, params: { tenantId: string }) {
+function ownRequest(db: AppDatabase, context: AuthenticatedContext, params: TenantParams) {
   const actor = context.actorId;
   const tenant = params.tenantId;
-  return withEligibleActorTransaction<OwnCommunityRequestResponse | { status: 404 }>(db, context, async tx => {
+  return withEligibleActorTransaction<OwnCommunityRequestResponse | MissingRequest>(db, context, async tx => {
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     const row = (await sql<OwnCommunityRequestResponse>`select case when r.id is not null then
         jsonb_build_object('request_id',r.id,'kind',r.kind,'requested_at',r.requested_at) end as request
@@ -334,7 +377,7 @@ function ownRequest(db: AppDatabase, context: AuthenticatedContext, params: { te
     return row ?? { status: 404 as const }
   })
 }
-function reviewAccount(db: AppDatabase, context: AuthenticatedContext, params: { tenantId: string; target: string }) {
+function reviewAccount(db: AppDatabase, context: AuthenticatedContext, params: ReviewParams) {
   const actor = context.actorId;
   const tenantId = params.tenantId;
   const target = params.target;
@@ -350,7 +393,7 @@ function reviewAccount(db: AppDatabase, context: AuthenticatedContext, params: {
     return row ? { row } : { status: 404 as const }
   })
 }
-function staffCandidates(db: AppDatabase, context: AuthenticatedContext, params: { tenantId: string }, query: { after?: string }) {
+function staffCandidates(db: AppDatabase, context: AuthenticatedContext, params: TenantParams, query: AfterQuery) {
   const tenantId = params.tenantId;
   return withEligibleActorTransaction(db, context, async tx => {
     await sql`select set_config('ct.tenant_id',${tenantId},true)`.execute(tx)
@@ -363,7 +406,7 @@ function staffCandidates(db: AppDatabase, context: AuthenticatedContext, params:
     return { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].user_id : null }
   })
 }
-function pendingRequests(db: AppDatabase, context: AuthenticatedContext, params: { tenantId: string }, query: { after?: string }) {
+function pendingRequests(db: AppDatabase, context: AuthenticatedContext, params: TenantParams, query: AfterQuery) {
   const actor = context.actorId;
   const tenantId = params.tenantId;
   return withEligibleActorTransaction(db, context, async tx => {
@@ -382,7 +425,7 @@ function pendingRequests(db: AppDatabase, context: AuthenticatedContext, params:
 
 // Profiles and preferences
 const communityProfileColumns = ['tenant_id', 'user_id', 'display_name', 'bio', 'created_at', 'updated_at', 'created_by', 'updated_by'] as const
-function readProfile(db: AppDatabase, context: AuthenticatedContext, params: { tenantId: string; userId: string }) {
+function readProfile(db: AppDatabase, context: AuthenticatedContext, params: AccountParams) {
   const actor = context.actorId;
   const tenantId = params.tenantId;
   const userId = params.userId;
@@ -406,7 +449,7 @@ function readProfile(db: AppDatabase, context: AuthenticatedContext, params: { t
     return profile ? { status: 200 as const, profile } : { status: 404 as const }
   })
 }
-export async function ownCommunityProfile(tx: Transaction<ApiTables>, actor: string, tenant: string, input: CommunityProfileInput) {
+export async function ownCommunityProfile(tx: Tx, actor: string, tenant: string, input: CommunityProfileInput) {
   // Independent self edits have statement-time lifecycle checks and no tenant lock.
   const result = await sql`update public.community_account_profiles p set display_name=${input.display_name.trim()},bio=${input.bio?.trim() || null}
     where p.tenant_id=${tenant} and p.user_id=${actor} and app_private.active_tenant(p.tenant_id)
@@ -416,12 +459,12 @@ export async function ownCommunityProfile(tx: Transaction<ApiTables>, actor: str
   if (!result.rows.length) throw new ApplicationError(404, 'missing')
   return { tenantId: tenant }
 }
-export async function ownCommunityPreferences(tx: Transaction<ApiTables>, actor: string, tenant: string, input?: Partial<CommunityPreferences>) {
+export async function ownCommunityPreferences(tx: Tx, actor: string, tenant: string, input?: Partial<CommunityPreferences>) {
   if (input) {
     // Account then preference is also the lifecycle writer's order. Do not take
     // a tenant lock: other members' independent saves must remain concurrent.
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
-    const account = (await sql<{ standing: string }>`select standing from public.community_accounts
+    const account = (await sql<AccountStanding>`select standing from public.community_accounts
       where tenant_id=${tenant} and user_id=${actor} for update`.execute(tx)).rows[0]
     if (!account || !['pending', 'approved'].includes(account.standing)) throw new ApplicationError(404, 'missing')
   }
@@ -436,7 +479,6 @@ export async function ownCommunityPreferences(tx: Transaction<ApiTables>, actor:
 }
 
 // Configuration and copy
-type ConfigurationKind = 'details' | 'settings' | 'copy'
 const detailFields = sql`id,slug,name,country_code,state_province,city,timezone,operational_status,created_at,updated_at,created_by,updated_by`
 const settingsFields = sql`tenant_id,${sql.join(settingFields.map(key => sql.id(key)))},created_at,updated_at,created_by,updated_by`
 const copyFields = sql`tenant_id,content_key,text_value,created_at,updated_at,created_by,updated_by`
@@ -446,7 +488,7 @@ async function authorizeConfiguration(tx: Tx, actor: string, tenant: string, kin
   // revoked between the check and the full-row projection.
   const site = (await sql`select id from public.tenants where id=${tenant} ${write ? sql`for update` : sql`for share`}`.execute(tx)).rows[0]
   if (!site) throw new ApplicationError(404, 'missing')
-  const allowed = (await sql<{ allowed: boolean }>`select ${write
+  const allowed = (await sql<AuthorizationResult>`select ${write
     ? sql`app_private.can_edit_configuration(${tenant},${kind})`
     : sql`app_private.is_approved_owner(${tenant}) or (app_private.active_tenant(${tenant}) and exists(
         select from public.community_accounts c where c.tenant_id=${tenant} and c.user_id=${actor} and c.standing in ('approved','suspended')))`
@@ -474,7 +516,7 @@ export async function configurationSettings(tx: Tx, actor: string, tenant: strin
   }
   return (await sql<CommunitySettingsRecord>`select ${settingsFields} from public.tenant_settings where tenant_id=${tenant}`.execute(tx)).rows[0]
 }
-export async function configurationCopy(tx: Tx, actor: string, tenant: string, change?: { key: CopyKey; text?: string }) {
+export async function configurationCopy(tx: Tx, actor: string, tenant: string, change?: CopyChange) {
   await authorizeConfiguration(tx, actor, tenant, 'copy', Boolean(change))
   if (change) {
     if (change.text === undefined) {
@@ -498,7 +540,7 @@ async function lockDirectoryTenant(tx: Tx, actor: string, tenant: string) {
   await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
   if (!(await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows[0]) throw new ApplicationError(404, 'missing')
   // Recheck after waiting on any configuration/lifecycle writer, not in its old snapshot.
-  return (await sql<{ active: boolean; owner: boolean; member: boolean }>`select app_private.active_tenant(${tenant}) as active,
+  return (await sql<DirectoryAccess>`select app_private.active_tenant(${tenant}) as active,
     app_private.is_approved_owner(${tenant}) as owner, exists(select from public.community_accounts where tenant_id=${tenant}
       and user_id=${actor} and standing in ('approved','suspended')) as member`.execute(tx)).rows[0]
 }
@@ -535,8 +577,6 @@ export async function readAccountFacts(tx: Tx, actor: string, tenant: string, ta
 }
 
 // Staff and participant permissions
-type RecordKind = 'staff' | 'participant'
-type Records = { staff: StaffRecord; participant: ParticipantPermissions }
 const recordMetadataColumns = ['tenant_id', 'user_id', 'created_at', 'updated_at', 'created_by', 'updated_by']
 const table = { staff: 'public.tenant_staff_assignments', participant: 'public.community_account_permissions' }
 const columns = {
@@ -547,7 +587,7 @@ async function authorizeRecords(tx: Tx, actor: string, tenant: string, kind: Rec
   await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
   const site = (await sql`select id from public.tenants where id=${tenant} ${write ? sql`for update` : sql`for share`}`.execute(tx)).rows[0]
   if (!site) throw new ApplicationError(404, 'missing')
-  const allowed = (await sql<{ allowed: boolean }>`select app_private.can_manage_account_records(${tenant},${kind})
+  const allowed = (await sql<AuthorizationResult>`select app_private.can_manage_account_records(${tenant},${kind})
     or (${!write && target === actor} and app_private.active_tenant(${tenant})) as allowed`.execute(tx)).rows[0]?.allowed
   if (!allowed) throw new ApplicationError(write ? 403 : 404, write ? 'forbidden' : 'missing')
 }
@@ -579,7 +619,7 @@ export async function listAccountRecords<K extends RecordKind>(tx: Tx, actor: st
 }
 export async function setParticipantPermission(tx: Tx, actor: string, tenant: string, target: string, enabled: boolean) {
   await authorizeRecords(tx, actor, tenant, 'participant', target, true)
-  const before = (await sql<{ can_post_public_events: boolean }>`select can_post_public_events from public.community_account_permissions
+  const before = (await sql<ParticipantPermissionInput>`select can_post_public_events from public.community_account_permissions
     where tenant_id=${tenant} and user_id=${target} for update`.execute(tx)).rows[0]
   if (!before) throw new ApplicationError(404, 'missing')
   if (before.can_post_public_events !== enabled) {
@@ -591,8 +631,7 @@ export async function setParticipantPermission(tx: Tx, actor: string, tenant: st
 }
 
 // Audit history
-type Position = { time: string; id: string }
-function history(db: AppDatabase, context: AuthenticatedContext, params: { tenantId: string }, query: HistoryQuery) {
+function history(db: AppDatabase, context: AuthenticatedContext, params: TenantParams, query: HistoryQuery) {
   const actor = context.actorId;
   return withEligibleActorTransaction(db, context, tx => accountHistory(tx, actor, params.tenantId, query))
 }
@@ -615,16 +654,16 @@ function decodeCursor(actor: string, tenant: string, query: HistoryQuery): Posit
     return { time: value[4], id: value[5] }
   } catch { throw new ApplicationError(400, 'invalid_cursor') }
 }
-export async function accountHistory(tx: Transaction<ApiTables>, actor: string, tenant: string, query: HistoryQuery): Promise<HistoryPage> {
+export async function accountHistory(tx: Tx, actor: string, tenant: string, query: HistoryQuery): Promise<HistoryPage> {
   const position = decodeCursor(actor, tenant, query)
   await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
   // Every command takes this row FOR UPDATE. Acquire it before reading the
   // staff flags, so a committed archive or revocation governs this request.
-  const site = (await sql<{ operational_status: string }>`select operational_status from public.tenants
+  const site = (await sql<OperationalStatus>`select operational_status from public.tenants
     where id=${tenant} for share`.execute(tx)).rows[0]
   const empty: HistoryPage = { rows: [], next: null }
   if (!site) return empty
-  const staff = (await sql<{ role: string; can_audit_community_accounts: boolean; can_audit_staff_accounts: boolean }>`
+  const staff = (await sql<AuditAuthority>`
     select s.role,s.can_audit_community_accounts,s.can_audit_staff_accounts
     from public.tenant_staff_assignments s join public.community_accounts c using(tenant_id,user_id)
     where s.tenant_id=${tenant} and s.user_id=${actor} and s.status='active' and c.standing='approved'

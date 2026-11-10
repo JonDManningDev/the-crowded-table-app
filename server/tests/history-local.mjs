@@ -1,7 +1,7 @@
 import { directoryCursors } from '../src/directory-cursors.ts'
 import assert from 'node:assert/strict'
 import { randomUUID, randomBytes } from 'node:crypto'
-import { staffFlags } from '../src/communities/community-commands.ts'
+import { staffFlags } from '../src/communities/types.ts'
 import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'

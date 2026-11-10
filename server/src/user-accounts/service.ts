@@ -1,13 +1,23 @@
-import { sql, type Transaction } from 'kysely'
-import type { AccountPreferences } from './account-preferences.ts'
-import type { ProfileInput, OwnProfile, CommunitySummary, CommunitySummaryPage, CommunitySummaryQuery } from './self-service.ts'
-import type { BlockInput, DiscoveryQuery, GlobalProfile, OutgoingBlock, ProfilePage } from './global-profiles.ts'
-import { withEligibleActorTransaction, type AuthenticatedContext, type ApiTables, type AppDatabase } from '../database.ts'
+import { sql } from 'kysely'
+import { withEligibleActorTransaction, type AuthenticatedContext, type AppDatabase } from '../database.ts'
 import { ApplicationError } from '../http-errors.ts'
 import type { DirectoryCursors } from '../directory-cursors.ts'
-
-type Tx = Transaction<ApiTables>
-interface UserAccountDependencies { db: AppDatabase; cursors: DirectoryCursors }
+import type {
+  AccountPreferences,
+  ProfileInput,
+  OwnProfile,
+  CommunitySummary,
+  CommunitySummaryPage,
+  CommunitySummaryQuery,
+  BlockInput,
+  DiscoveryQuery,
+  GlobalProfile,
+  OutgoingBlock,
+  ProfilePage,
+  Position,
+  Tx,
+  UserAccountDependencies,
+} from './types.ts'
 
 // Composition binds resources; implementations follow the shared section order.
 export function createUserAccountService({ db, cursors }: UserAccountDependencies) {
@@ -24,7 +34,6 @@ export function createUserAccountService({ db, cursors }: UserAccountDependencie
     unblockAccount(context: AuthenticatedContext, target: string) { return unblockAccount(db, context, target) },
   }
 }
-export type UserAccountService = ReturnType<typeof createUserAccountService>
 
 // Account preferences
 function readAccountPreferences(db: AppDatabase, context: AuthenticatedContext) {
@@ -48,7 +57,7 @@ function readOwnProfile(db: AppDatabase, context: AuthenticatedContext) {
 function saveOwnProfile(db: AppDatabase, context: AuthenticatedContext, input: ProfileInput) {
   return run(db, context, tx => ownProfile(tx, context.actorId, input))
 }
-export async function ownProfile(tx: Transaction<ApiTables>, actor: string, input?: ProfileInput) {
+export async function ownProfile(tx: Tx, actor: string, input?: ProfileInput) {
   const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
   const result = input
     ? await sql<OwnProfile>`insert into public.user_account_profiles(display_name,bio) values(${input.display_name.trim()},${input.bio?.trim() || null})
@@ -61,9 +70,9 @@ export async function ownProfile(tx: Transaction<ApiTables>, actor: string, inpu
 function listMyCommunities(db: AppDatabase, context: AuthenticatedContext, query: CommunitySummaryQuery) {
   return run(db, context, tx => myCommunities(tx, context.actorId, query))
 }
-async function myCommunities(tx: Transaction<ApiTables>, actor: string, query: CommunitySummaryQuery): Promise<CommunitySummaryPage> {
+async function myCommunities(tx: Tx, actor: string, query: CommunitySummaryQuery): Promise<CommunitySummaryPage> {
   const filter = query.filter ?? 'all', scope = [actor,filter]
-  let position: { time: string; id: string } | undefined
+  let position: Position | undefined
   if (query.cursor) {
     try {
       const value: unknown = JSON.parse(Buffer.from(query.cursor,'base64url').toString('utf8'))

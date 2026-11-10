@@ -1,15 +1,15 @@
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox'
-import { preferencesPath } from './account-preferences.ts'
-import { myCommunitiesPath, ownProfilePath } from './self-service.ts'
 import { getAuthenticatedContext } from '../http-authentication.ts'
-import type { UserAccountService } from './service.ts'
+import type { UserAccountRoutesOptions } from './types.ts'
 import { readAccountPreferencesSchema, saveAccountPreferencesSchema,
   readOwnProfileSchema, saveOwnProfileSchema,
   listMyCommunitiesSchema,
   discoverGlobalProfilesSchema, readGlobalProfileSchema,
-  listAccountBlocksSchema, blockAccountSchema, unblockAccountSchema } from './schema.ts'
+  listAccountBlocksSchema, blockAccountSchema, unblockAccountSchema } from './json-schema.ts'
 
-interface UserAccountRoutesOptions { service: UserAccountService }
+export const preferencesPath = '/api/me/preferences'
+const ownProfilePath = '/api/me/profile'
+const myCommunitiesPath = '/api/me/communities'
 
 export const userAccountRoutes: FastifyPluginAsyncTypebox<UserAccountRoutesOptions> = async (routes, { service }) => {
   // Account preferences

@@ -1,11 +1,10 @@
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox'
-import type { CommunityService } from './service.ts'
-import * as schemas from './schema.ts'
+import type { PublicCommunityOperations, ProtectedCommunityOperations } from './types.ts'
+import * as schemas from './json-schema.ts'
 import { optionalAuthentication, verifyOptionalIdentity, getAuthenticatedContext } from '../http-authentication.ts'
 import type { BearerVerifier } from '../token-verifier.ts'
 import { ApplicationError } from '../http-errors.ts'
 
-type PublicCommunityOperations = Pick<CommunityService, "listStandings" | "readLanding" | "publicDirectory">
 export const publicCommunityRoutes: FastifyPluginAsyncTypebox<{ service: PublicCommunityOperations; verify: BearerVerifier }> = async (routes, { service, verify }) => {
   // Public access and standing
   routes.get("/api/community-standings", { schema: schemas.listStandingsSchema }, async (request, reply) => {
@@ -19,33 +18,6 @@ export const publicCommunityRoutes: FastifyPluginAsyncTypebox<{ service: PublicC
   routes.get("/api/public/communities/:slug/directory", { onRequest: optionalAuthentication(verify), schema: schemas.publicDirectorySchema }, request => service.publicDirectory(request.params, request.query))
 }
 
-type ProtectedCommunityOperations = Pick<CommunityService,
-  "createCommunity"
-  | "executeCommand"
-  | "ownRequest"
-  | "reviewAccount"
-  | "staffCandidates"
-  | "pendingRequests"
-  | "readProfile"
-  | "saveOwnProfile"
-  | "readOwnPreferences"
-  | "saveOwnPreferences"
-  | "readDetails"
-  | "saveDetails"
-  | "readSettings"
-  | "saveSettings"
-  | "readCopy"
-  | "saveCopy"
-  | "deleteCopy"
-  | "memberDirectory"
-  | "ownerAccounts"
-  | "accountFacts"
-  | "listStaff"
-  | "readStaff"
-  | "listParticipantPermissions"
-  | "readParticipantPermissions"
-  | "saveParticipantPermissions"
-  | "history">
 export const communityRoutes: FastifyPluginAsyncTypebox<{ service: ProtectedCommunityOperations }> = async (routes, { service }) => {
   // Creation and lifecycle
   routes.post("/api/communities", { bodyLimit: 32768, schema: schemas.createCommunitySchema }, async (request, reply) => {
