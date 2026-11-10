@@ -2,16 +2,27 @@ import { Kysely, PostgresDialect, sql, type Transaction } from 'kysely'
 import pg from 'pg'
 import type { Database } from './database.types.ts'
 
-type PreferenceTable = Pick<Database['public']['Tables']['user_accounts']['Row'],
-  'user_id' | 'user_is_discoverable' | 'enable_matchmaking' | 'allow_direct_messages'>
+/*
+ * Available Database Types
+ * (By convention, we align the API's table and column availability according to the configured PostgreSQL grants.)
+ */
 
 type Tables = Database['public']['Tables']
+
 export type ApiTables = {
-  user_accounts: PreferenceTable
-  community_standing: Tables['community_standing']['Row']
-  community_accounts: Pick<Tables['community_accounts']['Row'], 'tenant_id' | 'user_id' | 'standing'>
-  community_account_profiles: Tables['community_account_profiles']['Row']
-}
+  user_accounts: Pick<Tables["user_accounts"]["Row"],
+    "user_id" | "user_is_discoverable" | "enable_matchmaking" | "allow_direct_messages"
+  >;
+  community_standing: Tables["community_standing"]["Row"];
+  community_accounts: Pick<Tables["community_accounts"]["Row"],
+    "tenant_id" | "user_id" | "standing"
+  >;
+  community_account_profiles: Tables["community_account_profiles"]["Row"];
+};
+
+/*
+ * Database Connection
+ */
 
 export function connectDatabase(connectionString: string, max = 4) {
   const endpoint = new URL(connectionString)
@@ -25,6 +36,10 @@ export function connectDatabase(connectionString: string, max = 4) {
 }
 
 export type AppDatabase = ReturnType<typeof connectDatabase>
+
+/*
+ * Authenticated Transaction Helper
+ */
 
 export type AuthenticatedContext = Readonly<{ actorId: string; requestId: string }>
 export type EligibleActorTransactionResult<T> = { eligible: false } | { eligible: true; value: T }
@@ -40,6 +55,10 @@ export async function withEligibleActorTransaction<T>(db: AppDatabase, context: 
     return { eligible: true, value: await work(tx) }
   })
 }
+
+/*
+ * Runtime Checks
+ */
 
 export async function checkRuntime(db: AppDatabase) {
   const { rows } = await sql<{ ready: boolean }>`
