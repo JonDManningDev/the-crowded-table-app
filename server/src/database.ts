@@ -38,7 +38,7 @@ export function connectDatabase(connectionString: string, max = 4) {
 export type AppDatabase = ReturnType<typeof connectDatabase>
 
 /*
- * Authenticated Transaction Helper
+ * Authenticated Context Utilities
  */
 
 export type AuthenticatedContext = Readonly<{ actorId: string; requestId: string }>
