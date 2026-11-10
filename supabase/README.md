@@ -196,7 +196,7 @@ To rebuild **only this project's disposable local database**, `npx --yes supabas
 Regenerate the checked-in types after schema changes:
 
 ```powershell
-npx --yes supabase gen types typescript --local --schema public | Set-Content -Encoding utf8 server/src/database.types.ts
+npm run regen:types
 ```
 
 Apply these files in timestamp order through the Supabase migration workflow. Once deployed, change behavior with a new migration rather than editing an applied file. No remote deployment is performed by these files or the tests. Review `supabase db push --dry-run` against the intended linked project before a separately authorized deployment. Do not roll back by dropping account/tenant tables containing user data; use forward repairs and backups.
