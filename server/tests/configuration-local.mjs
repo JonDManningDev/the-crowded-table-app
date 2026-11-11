@@ -62,6 +62,13 @@ try {
   const tenant=await community(owner), otherTenant=await community(outsider)
   const slug=(await admin.query('select slug from public.tenants where id=$1',[tenant])).rows[0].slug
   const path='/api/communities/'+tenant
+  const creation=(await http(owner,path+'/history','GET')).rows
+  assert.deepEqual(creation.map(row=>row.action).sort(),['community_approved','staff_created','tenant_settings.insert','tenants.insert'])
+  assert.equal(new Set(creation.map(row=>row.operation_id)).size,1)
+  assert.ok(creation.every(row=>row.created_by===owner.id&&row.reason===null))
+  for(const row of creation.filter(row=>row.action.includes('.'))) {
+    assert.deepEqual(row.details,{});assert.deepEqual(row.categories,[]);assert.equal(row.target_user_id,null)
+  }
   // Canonical tenant storage rejects invalid values; only the API normalizes.
   await assert.rejects(withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
@@ -155,6 +162,15 @@ try {
   assert.ok(audit.every(r=>r.created_by===editor.id&&r.operation_id&&r.reason===null&&JSON.stringify(r.details)==='{}'))
   assert.equal(audit.at(-1).action,'tenant_website_content_overrides.delete')
   assert.ok(!JSON.stringify(audit).includes('literal text'))
+  // Authorized history preserves the automatic-event contract after API cutover.
+  const copyHistory=(await http(owner,path+'/history','GET')).rows.filter(row=>row.action.startsWith('tenant_website_content_overrides.'))
+  assert.equal(copyHistory.length,8)
+  for(const row of copyHistory) {
+    assert.deepEqual(row.details,{});assert.deepEqual(row.categories,[])
+    assert.equal(row.target_user_id,null);assert.equal(row.created_by,editor.id);assert.equal(row.reason,null)
+    assert.ok(row.content_key&&row.operation_id)
+  }
+  assert.deepEqual(await http(editor,path+'/history','GET'),{rows:[],next:null})
   await assert.rejects(withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },async tx=>{
     await configurationDetails(tx,owner.id,tenant,{name:'Rollback'})
     await configurationSettings(tx,owner.id,tenant,{pause_community_events:false})

@@ -170,7 +170,8 @@ try {
   assert.equal(remainder.next,null)
   assert.equal(new Set([...defaultPage.rows,...remainder.rows].map(row=>row.id)).size,defaultPage.rows.length+remainder.rows.length)
 
-  // Omit all service audience predicates: real runtime RLS must still protect reasons.
+  // Omit API predicates: scoped runtime access is deliberately broader than HTTP.
+  // Semantic privacy belongs to API policies; PostgreSQL retains scope and provenance.
   const raw=(viewer,scope=tenant)=>db.transaction().execute(async tx=>{
     if(viewer) await sql`select set_config('request.jwt.claim.sub',${viewer.id},true)`.execute(tx)
     if(scope) await sql`select set_config('ct.tenant_id',${scope},true)`.execute(tx)
@@ -178,9 +179,9 @@ try {
   })
   assert.deepEqual(await raw(null),[])
   assert.deepEqual(await raw(sr,null),[])
-  assert.deepEqual(await raw(manager),[])
-  assert.deepEqual(await raw(outsider),[])
-  assert.ok(!(await raw(sr)).some(r=>r.id===suspension.id||r.reason===secret))
+  assert.ok((await raw(manager)).some(r=>r.id===suspension.id))
+  assert.ok((await raw(outsider)).some(r=>r.id===suspension.id))
+  assert.ok((await raw(sr)).some(r=>r.id===suspension.id&&r.reason===secret))
   assert.ok((await raw(cr)).some(r=>r.id===suspension.id&&r.reason===secret))
   assert.ok((await raw(owner)).some(r=>r.id===legacy[2].id))
   assert.ok(!(await raw(owner)).some(r=>r.tenant_id===otherTenant))
@@ -192,9 +193,46 @@ try {
   }),error=>error.code==='23514')
   await db.transaction().execute(async tx=>{
     await sql`select set_config('request.jwt.claim.sub',${sr.id},true),set_config('ct.tenant_id',${tenant},true)`.execute(tx)
-    assert.deepEqual((await sql`select * from app_private.tenant_admin_action_categories where action_id=${suspension.id}`.execute(tx)).rows,[])
-    assert.equal((await sql`select app_private.can_read_account_action(${tenant},${suspension.id}) as allowed`.execute(tx)).rows[0].allowed,false)
+    assert.equal((await sql`select * from app_private.tenant_admin_action_categories where action_id=${suspension.id}`.execute(tx)).rows.length,1)
+    assert.equal((await sql`select to_regprocedure('app_private.can_read_account_action(uuid,uuid)') as retired`.execute(tx)).rows[0].retired,null)
   })
+  // Storage guarantees are independent of API semantic correctness. These
+  // probes use the actual runtime login and never commit fixture events.
+  const runtime = work => withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() }, async tx => {
+    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+    return work(tx)
+  })
+  for (const statement of [
+    sql`update public.tenant_admin_actions set reason='forged' where id=${suspension.id}`,
+    sql`delete from public.tenant_admin_actions where id=${suspension.id}`,
+    sql`truncate public.tenant_admin_actions`,
+    sql`update app_private.tenant_admin_action_categories set category='staff_account' where action_id=${suspension.id}`,
+    sql`delete from app_private.tenant_admin_action_categories where action_id=${suspension.id}`,
+    sql`truncate app_private.tenant_admin_action_categories`,
+    sql`insert into public.tenant_admin_actions(tenant_id,action,created_by) values(${tenant},'tenants.update',${outsider.id})`,
+    sql`insert into app_private.tenant_admin_action_categories(action_id,category) values(${randomUUID()},'staff_account')`,
+  ]) await assert.rejects(runtime(tx=>statement.execute(tx)),error=>error.code==='42501')
+  for (const [statement,code] of [
+    [sql`insert into public.tenant_admin_actions(tenant_id,action,target_user_id,details)
+      values(${tenant},'staff_created',${randomUUID()},'{"after_status":"active"}'::jsonb)`,'23503'],
+    [sql`insert into public.tenant_admin_actions(tenant_id,action,details)
+      values(${tenant},'staff_created','{"after_status":true}'::jsonb)`,'23514'],
+    [sql`insert into public.tenant_admin_actions(tenant_id,action,details)
+      values(${tenant},'community_join_requested','{"request_id":"invalid"}'::jsonb)`,'22P02'],
+    [sql`insert into public.tenant_admin_actions(tenant_id,action) values(${tenant},'unknown.event')`,'23503'],
+  ]) await assert.rejects(runtime(tx=>statement.execute(tx)),error=>error.code===code)
+  await assert.rejects(runtime(async tx=>{
+    // A structurally valid but semantically wrong reason/category is possible
+    // for a defective trusted writer. PostgreSQL does not certify semantics.
+    const row=(await sql`insert into public.tenant_admin_actions(tenant_id,action,reason)
+      values(${tenant},'tenants.update','Runtime semantic probe') returning id,created_by,operation_id`.execute(tx)).rows[0]
+    assert.equal(row.created_by,owner.id);assert.ok(row.operation_id)
+    assert.equal((await sql`select * from app_private.tenant_admin_action_categories where action_id=${row.id}`.execute(tx)).rows.length,0)
+    await sql`insert into app_private.tenant_admin_action_categories values(${row.id},'staff_account')`.execute(tx)
+    await sql`select set_config('ct.tenant_id',${otherTenant},true)`.execute(tx)
+    await assert.rejects(sql`insert into app_private.tenant_admin_action_categories values(${row.id},'community_account')`.execute(tx),error=>error.code==='42501')
+    throw Error('rollback storage probe')
+  }),/rollback storage probe/)
   for(const viewer of [owner,sr,cr]) {
     for(const select of ['*','id,reason','id,tenant_admin_action_categories(*)']) assert.ok((await viewer.client.from('tenant_admin_actions').select(select).eq('tenant_id',tenant)).error)
     assert.ok((await viewer.client.from('tenants').select('id,tenant_admin_actions(*)').eq('id',tenant)).error)
@@ -216,21 +254,21 @@ try {
   await cmd(sr,{kind:'deactivate'})
   await cmd(sr,{kind:'reactivate'})
   assert.deepEqual(await history(sr),empty)
-  assert.deepEqual(await raw(sr),[])
+  assert.ok((await raw(sr)).some(r=>r.id===suspension.id))
   await cmd(owner,{kind:'resume',target:sr.id})
   await cmd(owner,{kind:'suspend',target:sr.id,revision:(await review(sr)).revision,reason:'Reader suspended'})
   assert.deepEqual(await history(sr),empty)
-  assert.deepEqual(await raw(sr),[])
+  assert.ok((await raw(sr)).some(r=>r.id===suspension.id))
   await cmd(owner,{kind:'clear',target:sr.id,revision:(await review(sr)).revision})
   await cmd(owner,{kind:'reappoint',target:sr.id,permissions:{...noPermissions,can_audit_staff_accounts:true}})
   await cmd(sr,{kind:'deactivate'})
   assert.deepEqual(await history(sr),empty)
-  assert.deepEqual(await raw(sr),[])
+  assert.ok((await raw(sr)).some(r=>r.id===suspension.id))
   await cmd(sr,{kind:'reactivate'})
   await cmd(owner,{kind:'resume',target:sr.id})
   await cmd(owner,{kind:'revoke',target:sr.id})
   assert.deepEqual(await history(sr),empty)
-  assert.deepEqual(await raw(sr),[])
+  assert.ok((await raw(sr)).some(r=>r.id===suspension.id))
   await cmd(owner,{kind:'reappoint',target:sr.id,permissions:{...noPermissions,can_audit_staff_accounts:true}})
   await admin.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1",[sr.id])
   await history(sr,{},tenant,403)
@@ -262,8 +300,8 @@ try {
     ()=>admin.query("update public.tenants set operational_status='archived' where id=$1",[tenant]),
     ()=>history(sr)),empty)
   assert.deepEqual(await history(cr),empty)
-  assert.deepEqual(await raw(sr),[])
-  assert.deepEqual(await raw(cr),[])
+  assert.ok((await raw(sr)).some(r=>r.id===suspension.id))
+  assert.ok((await raw(cr)).some(r=>r.id===suspension.id))
   assert.equal((await history(owner,exact(suspension.id))).rows[0].reason,secret)
   assert.ok((await raw(owner)).some(r=>r.id===suspension.id))
   await cmd(owner,{kind:'archive',archived:false})

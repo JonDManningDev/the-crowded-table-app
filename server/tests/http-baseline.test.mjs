@@ -177,7 +177,8 @@ test('malformed JSON and byte limits preserve authentication precedence and comm
     payload: body.padEnd(8193, ' ') }), 413, 'invalid_request')
   errorResponse(h, await h.app.inject({ method: 'PUT', url: '/api/me/preferences', headers: { 'content-type': 'application/json' },
     payload: body.padEnd(8193, ' ') }), 401, 'unauthenticated')
-  h.eligible([{ user_id: actorId }], ...Array.from({ length: 10 }, () => []))
+  h.eligible([{ user_id: actorId }], [], [], [], [{ id: targetId }], [{ id: targetId }],
+    [], [], [], [], [], [{ id: targetId }], [], [{ id: targetId }], [])
   const created = await h.app.inject({ method: 'POST', url: '/api/communities', headers,
     payload: JSON.stringify({ ...createInput, name: '  Test community  ', region: '  ', city: '  Test city  ',
       profile: { displayName: '  Test owner  ', bio: '  ' } }).padEnd(32768, ' ') })
@@ -253,8 +254,10 @@ test('own profile and request preserve null versus missing; review retains unava
 
 test('unauthorized history stays a successful empty page; authorized detail fields remain open', async t => {
   const h = createHttpHarness(t)
-  for (const steps of [[[], []], [[], [{ operational_status: 'active' }], []],
-    [[], [{ operational_status: 'active' }], [{ role: 'admin', can_audit_community_accounts: false, can_audit_staff_accounts: false }]]]) {
+  for (const steps of [[[], []],
+    [[], [{ operational_status: 'active' }], [{ operational_status: 'active' }], [], [], []],
+    [[], [{ operational_status: 'active' }], [{ operational_status: 'active' }], [{ standing: 'approved' }],
+      [{ role: 'admin', status: 'active', can_audit_community_accounts: false, can_audit_staff_accounts: false }], []]]) {
     h.eligible(...steps)
     const response = await h.app.inject({ url: `${community}/history`, headers: authorization })
     assert.equal(response.statusCode, 200)
@@ -263,7 +266,8 @@ test('unauthorized history stays a successful empty page; authorized detail fiel
   const entry = { id: targetId, tenant_id: tenantId, action: 'community_approved', target_user_id: null,
     content_key: null, created_at: '2026-11-04T00:00:00.000000Z', created_by: actorId, operation_id: actorId,
     reason: null, details: { future_field: { retained: true } }, categories: ['community_account'] }
-  h.eligible([], [{ operational_status: 'active' }], [{ role: 'owner' }], [{ ...entry, internal_secret: 'omit' }])
+  h.eligible([], [{ operational_status: 'active' }], [{ operational_status: 'active' }],
+    [{ standing: 'approved' }], [{ role: 'owner', status: 'active' }], [{ ...entry, internal_secret: 'omit' }])
   const response = await h.app.inject({ url: `${community}/history`, headers: authorization })
   assert.equal(response.statusCode, 200)
   assert.deepEqual(response.json(), { rows: [entry], next: null })

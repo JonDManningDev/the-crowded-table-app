@@ -160,7 +160,6 @@ export type HistoryEntry = {
 }
 export type HistoryPage = { rows: HistoryEntry[]; next: string | null }
 export type Position = { time: string; id: string }
-export type AuditAuthority = { role: string; can_audit_community_accounts: boolean; can_audit_staff_accounts: boolean }
 
 // Internal helpers
 export type Tx = Transaction<DB>

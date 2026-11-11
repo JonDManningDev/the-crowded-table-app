@@ -124,7 +124,7 @@ test('real local operations retry with fresh authorization and one committed out
 
     await t.test('two failed join attempts roll back accounts, requests and event/categories before one success', async () => {
       const result = await faulted(member, path + '/commands', join,
-        { match: /insert into public\.tenant_admin_actions/, codes: ['40001', '40P01'] })
+        { match: /insert into "tenant_admin_actions"/, codes: ['40001', '40P01'] })
       assert.equal(result.attempts, 3)
       assert.equal(result.queries.filter(query => query.text.includes('lock_eligible_actor')).length, 3)
       assert.equal(result.queries.filter(query => query.text.includes('for update')).length >= 3, true)
@@ -135,6 +135,31 @@ test('real local operations retry with fresh authorization and one committed out
       assert.equal(committed[0].action, 'community_join_requested')
       assert.equal(committed[0].details.request_id, result.value.requestId)
       assert.deepEqual(committed[0].categories, ['community_account'])
+    })
+
+    await t.test('failure after category insertion rolls back mutation, event and categories before one retry', async () => {
+      const result = await faulted(owner, path + '/accounts/' + member.id + '/permissions',
+        { can_post_public_events: true },
+        { match: /insert into "app_private"\."tenant_admin_action_categories"/, codes: ['40001'] }, 200, 'PATCH')
+      assert.equal(result.attempts, 2)
+      const committed = await events(result.operation)
+      assert.equal(committed.length, 1)
+      assert.equal(committed[0].action, 'community_permissions_changed')
+      assert.deepEqual(committed[0].details, { before: false, after: true })
+      assert.deepEqual(committed[0].categories, ['community_account'])
+      const noop = await faulted(owner, path + '/accounts/' + member.id + '/permissions',
+        { can_post_public_events: true }, { match: /never/, codes: [] }, 200, 'PATCH')
+      assert.deepEqual(await events(noop.operation), [])
+    })
+
+    await t.test('failure between event and categories leaves neither mutation nor event committed', async () => {
+      const result = await faulted(owner, path + '/accounts/' + member.id + '/permissions',
+        { can_post_public_events: false },
+        { match: /insert into "tenant_admin_actions"/, codes: ['23505'] }, 503, 'PATCH')
+      assert.equal(result.attempts, 1)
+      assert.deepEqual(await events(result.operation), [])
+      const current = await request(controlApp, owner, path + '/accounts/' + member.id + '/permissions')
+      assert.equal(current.can_post_public_events, true)
     })
 
     await t.test('a confirmed failure at commit retries and commits one configuration event', async () => {
@@ -175,7 +200,7 @@ test('real local operations retry with fresh authorization and one committed out
       const review = await request(controlApp, owner, path + '/accounts/' + member.id + '/review')
       const input = { kind: 'withdraw', requestId: own.request.request_id }
       const result = await faulted(member, path + '/commands', input,
-        { match: /insert into public\.tenant_admin_actions/, codes: ['40001'], afterRollback: () =>
+        { match: /insert into "tenant_admin_actions"/, codes: ['40001'], afterRollback: () =>
           command(owner, { kind: 'approve', requestId: input.requestId, revision: review.revision }) }, 409)
       assert.equal(result.attempts, 2)
       assert.equal(result.value.code, 'stale_state')

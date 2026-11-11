@@ -8,7 +8,7 @@ import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActio
   communityPendingRequestAudience, loadConfigurationFacts, requireCanReadConfiguration, requireCanEditConfiguration,
   loadAccountRecordFacts, requireCanReadAccountRecord, requireCanManageAccountRecords,
   requireCanListCommunityAccounts, requireCanReadCommunityAccountFacts, communityAccountFactsTargetAudience,
-  type Account, type Staff, type Pending } from './policies.ts'
+  loadHistoryFacts, communityHistoryAudience, type Account, type Staff, type Pending } from './policies.ts'
 import { sql } from 'kysely'
 import { type AppDatabase, withEligibleActorTransaction, withTransactionRetry, type AuthenticatedContext } from '../database.ts'
 import { ApplicationError } from '../http-errors.ts'
@@ -63,7 +63,6 @@ import {
   type Records,
   type ParticipantPermissionInput,
   type Position,
-  type AuditAuthority,
   type Tx,
   type TenantParams,
   type CommunityDependencies,
@@ -191,9 +190,20 @@ function stale(): never { throw new ApplicationError(409, 'stale_state') }
 async function scope(tx: Tx, tenant: string) {
   await sql`select set_config('ct.tenant_id', ${tenant}, true)`.execute(tx)
 }
-async function event({ tx, tenant }: Context, user: string, action: string, details: object = {}, reason?: string) {
-  await sql`insert into public.tenant_admin_actions(tenant_id,target_user_id,action,details,reason)
-    values(${tenant},${user},${action},${JSON.stringify(details)}::jsonb,${reason?.trim() || null})`.execute(tx)
+async function event({ tx, tenant }: Context, user: string | null, action: string,
+  details: Record<string, unknown> = {}, reason?: string, contentKey: string | null = null) {
+  const row = await tx.insertInto('tenant_admin_actions').values({
+    tenant_id: tenant, target_user_id: user, action, details: JSON.stringify(details),
+    reason: reason?.trim() || null, content_key: contentKey,
+  }).returning('id').executeTakeFirstOrThrow()
+  // Classification belongs to the trusted API writer. Linked discipline events
+  // carry no community reason; revocation from paused staff is staff-only.
+  const categories: string[] = []
+  if (action.startsWith('staff_')) categories.push('staff_account')
+  if (action.startsWith('community_') || action === 'staff_created' || action === 'staff_reappointed'
+    || (action === 'staff_revoked' && details.before_status === 'active')) categories.push('community_account')
+  if (categories.length) await tx.insertInto('app_private.tenant_admin_action_categories')
+    .values(categories.map(category => ({ action_id: row.id, category }))).execute()
 }
 async function setStanding({ tx, tenant }: Context, user: string, standing: Account['standing'], restricted = false) {
   if (standing === 'inactive') {
@@ -220,6 +230,8 @@ export async function createCommunity(tx: Tx, actor: string, input: CreateCommun
   await sql`insert into public.tenants(id,name,slug,country_code,timezone,state_province,city)
     values(${tenant},${input.name.trim()},${input.slug},${input.country},${input.timezone},${input.region.trim() || null},${input.city.trim() || null})`.execute(tx)
   await sql`insert into public.tenant_settings(tenant_id) values(${tenant})`.execute(tx)
+  await event(c, null, 'tenants.insert')
+  await event(c, null, 'tenant_settings.insert')
   await addAccount(c, 'approved', input.profile)
   await sql`insert into public.tenant_staff_assignments(tenant_id,user_id,role,${sql.join(staffFlags.map(key => sql.id(key)))})
     values(${tenant},${actor},'owner',${sql.join(staffFlags.map(() => sql`true`))})`.execute(tx)
@@ -322,6 +334,7 @@ export async function communityCommand(tx: Tx, actor: string, tenant: string, cm
     const status = cmd.archived ? 'archived' : 'active'
     if (facts.site?.operational_status === status) return result(c, 'already_applied')
     await sql`update public.tenants set operational_status=${status} where id=${tenant}`.execute(tx)
+    await event(c, null, cmd.archived ? 'tenants.archive' : 'tenants.restore')
     return result(c, status)
   }
   let user = 'target' in cmd ? cmd.target : actor
@@ -482,8 +495,9 @@ export async function configurationDetails(tx: Tx, actor: string, tenant: string
       throw new ApplicationError(400, 'invalid_details')
     }
     const entries = Object.entries(input).map(([key, value]) => [key, typeof value === 'string' ? value.trim() || null : value] as const)
-    await sql`update public.tenants set ${sql.join(entries.map(([key, value]) => sql`${sql.id(key)}=${value}`))}
+    const changed = await sql`update public.tenants set ${sql.join(entries.map(([key, value]) => sql`${sql.id(key)}=${value}`))}
       where id=${tenant} and (${sql.join(entries.map(([key, value]) => sql`${sql.id(key)} is distinct from ${value}`), sql` or `)})`.execute(tx)
+    if (changed.numAffectedRows) await event({ tx, actor, tenant }, null, 'tenants.update')
   }
   return (await sql<CommunityDetails>`select ${detailFields} from public.tenants where id=${tenant}`.execute(tx)).rows[0]
 }
@@ -491,8 +505,9 @@ export async function configurationSettings(tx: Tx, actor: string, tenant: strin
   await authorizeConfiguration(tx, actor, tenant, 'settings', Boolean(input))
   if (input) {
     const entries = Object.entries(input)
-    await sql`update public.tenant_settings set ${sql.join(entries.map(([key, value]) => sql`${sql.id(key)}=${value}`))}
+    const changed = await sql`update public.tenant_settings set ${sql.join(entries.map(([key, value]) => sql`${sql.id(key)}=${value}`))}
       where tenant_id=${tenant} and (${sql.join(entries.map(([key, value]) => sql`${sql.id(key)} is distinct from ${value}`), sql` or `)})`.execute(tx)
+    if (changed.numAffectedRows) await event({ tx, actor, tenant }, null, 'tenant_settings.update')
   }
   return (await sql<CommunitySettingsRecord>`select ${settingsFields} from public.tenant_settings where tenant_id=${tenant}`.execute(tx)).rows[0]
 }
@@ -502,11 +517,16 @@ export async function configurationCopy(tx: Tx, actor: string, tenant: string, c
     if (change.text === undefined) {
       const deleted = await sql`delete from public.tenant_website_content_overrides where tenant_id=${tenant} and content_key=${change.key} returning content_key`.execute(tx)
       if (!deleted.rows.length) throw new ApplicationError(404, 'missing')
+      await event({ tx, actor, tenant }, null, 'tenant_website_content_overrides.delete', {}, undefined, change.key)
     } else {
       if (!change.text.trim() || Array.from(change.text).length > copySlots[change.key]) throw new ApplicationError(400, 'invalid_copy')
-      await sql`insert into public.tenant_website_content_overrides(tenant_id,content_key,text_value) values(${tenant},${change.key},${change.text})
+      const existing = await tx.selectFrom('tenant_website_content_overrides').select('text_value')
+        .where('tenant_id', '=', tenant).where('content_key', '=', change.key).forUpdate().executeTakeFirst()
+      const changed = await sql`insert into public.tenant_website_content_overrides(tenant_id,content_key,text_value) values(${tenant},${change.key},${change.text})
         on conflict(tenant_id,content_key) do update set text_value=excluded.text_value
         where tenant_website_content_overrides.text_value is distinct from excluded.text_value`.execute(tx)
+      if (changed.numAffectedRows) await event({ tx, actor, tenant }, null,
+        existing ? 'tenant_website_content_overrides.update' : 'tenant_website_content_overrides.insert', {}, undefined, change.key)
     }
   }
   return { rows: (await sql<CommunityCopy>`select ${copyFields} from public.tenant_website_content_overrides where tenant_id=${tenant} order by content_key`.execute(tx)).rows }
@@ -611,8 +631,8 @@ export async function setParticipantPermission(tx: Tx, actor: string, tenant: st
   const changed = (await sql<Records['participant']>`update public.community_account_permissions set can_post_public_events=${enabled}
     where tenant_id=${tenant} and user_id=${target} returning ${sql.join(columns.participant.map(key => sql.id(key)))}`.execute(tx)).rows[0]
   if (!changed) throw new ApplicationError(404, 'missing')
-  await sql`insert into public.tenant_admin_actions(tenant_id,target_user_id,action,details)
-    values(${tenant},${target},'community_permissions_changed',${JSON.stringify({ before: before.can_post_public_events, after: enabled })}::jsonb)`.execute(tx)
+  await event({ tx, actor, tenant }, target, 'community_permissions_changed',
+    { before: before.can_post_public_events, after: changed.can_post_public_events })
   return changed
 }
 
@@ -649,14 +669,7 @@ export async function accountHistory(tx: Tx, actor: string, tenant: string, quer
     where id=${tenant} for share`.execute(tx)).rows[0]
   const empty: HistoryPage = { rows: [], next: null }
   if (!site) return empty
-  const staff = (await sql<AuditAuthority>`
-    select s.role,s.can_audit_community_accounts,s.can_audit_staff_accounts
-    from public.tenant_staff_assignments s join public.community_accounts c using(tenant_id,user_id)
-    where s.tenant_id=${tenant} and s.user_id=${actor} and s.status='active' and c.standing='approved'
-  `.execute(tx)).rows[0]
-  if (!staff) return empty
-  const owner = staff.role === 'owner'
-  if (!owner && (site.operational_status !== 'active' || !staff.can_audit_community_accounts && !staff.can_audit_staff_accounts)) return empty
+  const facts = await loadHistoryFacts(tx, actor, tenant)
   const limit = query.eventId ? 1 : Number(query.limit ?? 50)
   const rows = (await sql<HistoryEntry>`
     select a.id,a.tenant_id,a.action,a.target_user_id,a.content_key,
@@ -669,9 +682,7 @@ export async function accountHistory(tx: Tx, actor: string, tenant: string, quer
       and (${query.eventId ?? null}::uuid is null or a.id=${query.eventId ?? null}::uuid)
       and (${query.category ?? null}::text is null or exists(select from app_private.tenant_admin_action_categories c
         where c.action_id=a.id and c.category=${query.category ?? null}))
-      and (${owner} or exists(select from app_private.tenant_admin_action_categories c where c.action_id=a.id
-        and ((c.category='community_account' and ${staff.can_audit_community_accounts})
-          or (c.category='staff_account' and ${staff.can_audit_staff_accounts}))))
+      and (${communityHistoryAudience(facts)})
       and (${position?.time ?? null}::timestamptz is null or (a.created_at,a.id)<(${position?.time ?? null}::timestamptz,${position?.id ?? null}::uuid))
     order by a.created_at desc,a.id desc limit ${query.eventId ? 1 : limit + 1}
   `.execute(tx)).rows

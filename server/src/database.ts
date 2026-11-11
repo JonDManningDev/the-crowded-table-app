@@ -72,6 +72,10 @@ export async function checkRuntime(db: AppDatabase) {
       and has_function_privilege(current_user,'app_private.auth_identity_eligible(uuid,boolean)','EXECUTE')
       and to_regprocedure('app_private.is_staff_candidate(uuid,uuid,boolean)') is null
       and has_column_privilege(current_user,'public.tenant_admin_actions','reason','SELECT')
+      and has_column_privilege(current_user,'app_private.tenant_admin_action_categories','category','INSERT')
+      and to_regprocedure('app_private.can_read_account_action(uuid,uuid)') is null
+      and to_regprocedure('app_private.classify_command()') is null
+      and to_regprocedure('app_private.append_admin_action()') is null
       and has_column_privilege(current_user,'public.user_account_profiles','display_name','UPDATE')
       and to_regclass('public.my_community_summaries') is null
       and to_regprocedure('public.lookup_tenant(text)') is null

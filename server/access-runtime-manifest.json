@@ -17,7 +17,7 @@
     {
       "relation": "app_private.tenant_admin_action_categories",
       "select": "{action_id,category}",
-      "insert": "{}",
+      "insert": "{action_id,category}",
       "update": "{}",
       "delete": false
     },
@@ -59,7 +59,7 @@
     {
       "relation": "public.tenant_admin_actions",
       "select": "{action,content_key,created_at,created_by,details,id,operation_id,reason,target_user_id,tenant_id}",
-      "insert": "{action,details,reason,target_user_id,tenant_id}",
+      "insert": "{action,content_key,details,reason,target_user_id,tenant_id}",
       "update": "{}",
       "delete": false
     },
@@ -128,9 +128,6 @@
     },
     {
       "signature": "app_private.can_inspect_global_profile(uuid)"
-    },
-    {
-      "signature": "app_private.can_read_account_action(uuid,uuid)"
     },
     {
       "signature": "app_private.command_scope()"

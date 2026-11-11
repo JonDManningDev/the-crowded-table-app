@@ -220,3 +220,18 @@ export function requireCanReadCommunityAccountFacts(facts: AccountRecordFacts, o
 export function communityAccountFactsTargetAudience(facts: AccountRecordFacts, own: boolean) {
   return sql`${canListCommunityAccounts(facts) === 'allowed' || own} or standing in ('approved','suspended','inactive')`
 }
+
+// Audit history. The service holds a tenant SHARE lock before these facts are
+// loaded; category filtering must precede cursor/order/limit, including exact IDs.
+export function loadHistoryFacts(tx: Tx, actor: string, tenant: string) {
+  return loadCommunityStaffFacts(tx, actor, tenant)
+}
+type HistoryFacts = Awaited<ReturnType<typeof loadHistoryFacts>>
+export function communityHistoryAudience(facts: HistoryFacts) {
+  const staff = facts.account?.standing === 'approved' && facts.assignment?.status === 'active' ? facts.assignment : undefined
+  const owner = staff?.role === 'owner'
+  return sql`${Boolean(owner)} or (${facts.site?.operational_status === 'active'} and exists(
+    select from app_private.tenant_admin_action_categories c where c.action_id=a.id
+    and ((c.category='community_account' and ${Boolean(staff?.can_audit_community_accounts)})
+      or (c.category='staff_account' and ${Boolean(staff?.can_audit_staff_accounts)}))))`
+}

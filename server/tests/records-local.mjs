@@ -168,7 +168,7 @@ try {
   await assert.rejects(withEligibleActorTransaction(db, { actorId: manager.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     await sql`insert into public.tenant_admin_actions(tenant_id,target_user_id,action,details,reason)
-      values(${tenant},${member.id},'community_permissions_changed','{"before":false,"after":true}', 'private text')`.execute(tx)
+      values(${tenant},${member.id},'community_permissions_changed','{"before":false,"after":true}', repeat('x',2001))`.execute(tx)
   }),error=>error.code==='23514')
   for(const actor of [owner,grant,manager,member]) for(const relation of ['tenant_staff_assignments','community_account_permissions']) {
     assert.equal((await actor.client.from(relation).select('*')).error?.code,'42501')
