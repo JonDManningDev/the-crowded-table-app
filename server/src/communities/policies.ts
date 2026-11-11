@@ -56,14 +56,28 @@ export async function loadCommunityRequestFacts(tx: Tx, tenant: string, request:
 }
 
 async function loadCommunityStaffFacts(tx: Tx, actor: string, tenant: string) {
-  const site = await tx.selectFrom('tenants').select('operational_status').where('id', '=', tenant).executeTakeFirst()
-  const account = await tx.selectFrom('community_accounts').select('standing')
-    .where('tenant_id', '=', tenant).where('user_id', '=', actor).executeTakeFirst()
-  return { site, account, assignment: await loadStaffAssignmentFacts(tx, tenant, actor) }
+  // Services complete the tenant root lock before this statement starts, so
+  // all joined facts see authority committed by a preceding lock holder.
+  const row = await tx.selectFrom('tenants as t')
+    .leftJoin('community_accounts as c', join => join.onRef('c.tenant_id', '=', 't.id').on('c.user_id', '=', actor))
+    .leftJoin('tenant_staff_assignments as s', join => join.onRef('s.tenant_id', '=', 't.id').on('s.user_id', '=', actor))
+    .select(['t.operational_status', 'c.user_id as accountId', 'c.standing', 's.user_id as assignmentId', 's.role', 's.status'])
+    .select(staffFlags.map(key => `s.${key}` as const))
+    .where('t.id', '=', tenant).executeTakeFirst()
+  if (!row) return { site: undefined, account: undefined, assignment: undefined }
+  // Only LEFT JOIN absence introduces nulls into these NOT NULL columns.
+  // Identity sentinels preserve real assignments whose flags are all false.
+  // The role/status unions reflect storage CHECKs rather than generated enums.
+  const assignment: Staff | undefined = row.assignmentId === null ? undefined : {
+    role: row.role as Staff['role'], status: row.status as Staff['status'],
+    ...Object.fromEntries(staffFlags.map(key => [key, row[key]!])) as StaffPermissions,
+  }
+  return { site: { operational_status: row.operational_status },
+    account: row.accountId === null ? undefined : { standing: row.standing! }, assignment }
 }
 
 // Configuration and copy. Services lock the tenant root before loading facts,
-// so each statement sees the authority committed by any preceding lock holder.
+// so the facts statement sees authority committed by any preceding lock holder.
 export function loadConfigurationFacts(tx: Tx, actor: string, tenant: string) {
   return loadCommunityStaffFacts(tx, actor, tenant)
 }

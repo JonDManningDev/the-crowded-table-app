@@ -6,7 +6,8 @@ import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
 import { configurationDetails, configurationSettings, configurationCopy, communityCommand } from '../src/communities/service.ts'
-import { copySlots } from '../src/communities/types.ts'
+import { copySlots, staffFlags } from '../src/communities/types.ts'
+import { loadConfigurationFacts, loadAccountRecordFacts, loadHistoryFacts } from '../src/communities/policies.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
@@ -87,8 +88,35 @@ try {
   assert.equal((await send(pending,path+'/accounts/'+pending.id+'/review')).request_id,requested.requestId)
   for(const actor of [settings,editor,member]) await cmd(actor,join)
   for(const actor of [settings,editor]) await cmd(owner,{kind:'grant',target:actor.id})
+  const noPermissions=await staffFacts(settings)
+  assert.equal(noPermissions.assignment.role,'admin')
+  assert.equal(noPermissions.assignment.status,'active')
+  for(const flag of staffFlags) assert.equal(noPermissions.assignment[flag],false)
   await cmd(owner,{kind:'permissions',target:settings.id,permissions:{can_manage_settings:true}})
   await cmd(owner,{kind:'permissions',target:editor.id,permissions:{can_modify_content:true}})
+  // Exercise the public policy-loader contracts with real runtime RLS. Missing
+  // child rows must not remove a visible tenant or invent staff authority.
+  async function staffFacts(actor, targetTenant=tenant) {
+    return withEligibleActorTransaction(db, { actorId:actor.id, requestId:randomUUID() }, async tx=>{
+      await sql`select set_config('ct.tenant_id',${targetTenant},true)`.execute(tx)
+      await sql`select id from public.tenants where id=${targetTenant} for share`.execute(tx)
+      const facts=await loadConfigurationFacts(tx,actor.id,targetTenant)
+      assert.deepEqual(await loadAccountRecordFacts(tx,actor.id,targetTenant),facts)
+      assert.deepEqual(await loadHistoryFacts(tx,actor.id,targetTenant),facts)
+      return facts
+    })
+  }
+  for(const [actor,standing] of [[member,'approved'],[pending,'pending'],[outsider,undefined]]) {
+    assert.deepEqual(await staffFacts(actor),{site:{operational_status:'active'},account:standing?{standing}:undefined,assignment:undefined})
+  }
+  const editorFacts=await staffFacts(editor)
+  assert.deepEqual(editorFacts.account,{standing:'approved'})
+  assert.equal(editorFacts.assignment.role,'admin')
+  assert.equal(editorFacts.assignment.status,'active')
+  assert.equal(editorFacts.assignment.can_modify_content,true)
+  assert.equal(editorFacts.assignment.can_manage_settings,false)
+  assert.deepEqual(await staffFacts(editor,otherTenant),{site:{operational_status:'active'},account:undefined,assignment:undefined})
+  assert.deepEqual(await staffFacts(owner,randomUUID()),{site:undefined,account:undefined,assignment:undefined})
   await cmd(owner,{kind:'auto-approval',enabled:false},400)
 
   for(const actor of [owner,settings,editor,member]) {
@@ -240,7 +268,7 @@ try {
       await admin.query('select id from public.tenants where id=$1 for update',[tenant])
       await change()
       response=compete();response.catch(()=>{})
-      const deadline=Date.now()+1800
+      const deadline=Date.now()+1500
       while(!(await admin.query("select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as waiting")).rows[0].waiting) {
         assert.ok(Date.now()<deadline,'configuration operation must wait for current authority')
         await new Promise(resolve=>setTimeout(resolve,10))
@@ -249,6 +277,17 @@ try {
     } finally {await admin.query('rollback')}
     return response
   }
+  await afterLockedChange(
+    ()=>admin.query("update public.tenant_staff_assignments set status='paused' where tenant_id=$1 and user_id=$2",[tenant,editor.id]),
+    ()=>copy(editor,'community.hero.heading','Paused assignment race',403))
+  assert.equal((await staffFacts(editor)).assignment.status,'paused')
+  await cmd(owner,{kind:'resume',target:editor.id})
+  const priorMemberStanding=(await staffFacts(member)).account.standing
+  await afterLockedChange(
+    ()=>admin.query("update public.community_accounts set standing='inactive' where tenant_id=$1 and user_id=$2",[tenant,member.id]),
+    ()=>details(member,undefined,404))
+  assert.deepEqual((await staffFacts(member)).account,{standing:'inactive'})
+  await admin.query('update public.community_accounts set standing=$3 where tenant_id=$1 and user_id=$2',[tenant,member.id,priorMemberStanding])
   await afterLockedChange(
     ()=>admin.query('update public.tenant_staff_assignments set can_modify_content=false where tenant_id=$1 and user_id=$2',[tenant,editor.id]),
     ()=>copy(editor,'community.hero.heading','Revoked content race',403))
@@ -264,6 +303,10 @@ try {
   for(const actor of [member,editor,settings,pending,outsider]) {
     await details(actor,undefined,404);await config(actor,undefined,404);await copy(actor,undefined,undefined,404)
   }
+  assert.deepEqual(await staffFacts(editor),{site:{operational_status:'archived'},account:undefined,assignment:undefined})
+  const archivedOwner=await staffFacts(owner)
+  assert.deepEqual(archivedOwner.account,{standing:'approved'})
+  assert.equal(archivedOwner.assignment.role,'owner')
   assert.equal((await landing(null,slug,404)).code,(await landing(null,'missing-'+randomUUID(),404)).code)
   await details(owner,{name:'Archived owner detail'})
   await config(owner,{auto_approve_users:false,pause_community_events:false})
@@ -342,6 +385,89 @@ try {
     ()=>copy(editor,'community.hero.heading','Stale pre-archive authority',403))
   assert.equal((await copy(owner)).rows.find(r=>r.content_key==='community.hero.heading').text_value,'Committed before archive')
   await cmd(owner,{kind:'archive',archived:false})
+  // Two real runtime transactions upgrade the same SHARE lock. PostgreSQL
+  // chooses a deadlock victim; the whole operation retries with fresh facts.
+  const attempts=[0,0], operationIds=[randomUUID(),randomUUID()], pids=[]
+  let admitUpgrades, allShared
+  const upgrades=new Promise(resolve=>{admitUpgrades=resolve})
+  const shared=new Promise(resolve=>{allShared=resolve})
+  const contenders=operationIds.map((requestId,index)=>withEligibleActorTransaction(db,{actorId:owner.id,requestId},async tx=>{
+    attempts[index]++
+    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+    await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)
+    if(attempts[index]===1) {
+      pids.push((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
+      if(pids.length===2)allShared()
+      await upgrades
+    }
+    return configurationDetails(tx,owner.id,tenant,{city:'Natural deadlock '+index})
+  }))
+  contenders.forEach(p=>p.catch(()=>{}))
+  let deadlockSettled=false
+  const completedContenders=Promise.all(contenders)
+  completedContenders.then(()=>{deadlockSettled=true},()=>{deadlockSettled=true})
+  try {
+    await Promise.race([shared,completedContenders]);admitUpgrades()
+    const deadlockDeadline=Date.now()+1500
+    // The detector may resolve the cycle before the observer samples it. The
+    // SHARE barrier plus a successful retry still proves the real conflict.
+    while(!deadlockSettled && attempts[0]+attempts[1]===2 &&
+      (await admin.query("select count(*)::int as n from pg_stat_activity where pid=any($1::int[]) and wait_event_type='Lock'",[pids])).rows[0].n!==2) {
+      assert.ok(Date.now()<deadlockDeadline,'observe both real lock upgrades before deadlock detection')
+      await new Promise(resolve=>setTimeout(resolve,10))
+    }
+    await completedContenders
+  } finally {admitUpgrades();await Promise.allSettled(contenders)}
+  assert.equal(attempts[0]+attempts[1],3)
+  for(const operationId of operationIds)assert.equal((await admin.query("select count(*)::int as n from public.tenant_admin_actions where operation_id=$1 and action='tenants.update'",[operationId])).rows[0].n,1)
+
+  // A repeatable-read snapshot predating another committed writer produces a
+  // natural 40001 when the operation tries to lock the changed tenant root.
+  const serialEndpoint=new URL(endpoint)
+  serialEndpoint.searchParams.set('options','-c default_transaction_isolation=repeatable\\ read')
+  const serialDb=connectDatabase(serialEndpoint.href,1)
+  let snapshotReady,resumeSnapshot,serialAttempts=0
+  const snapshot=new Promise(resolve=>{snapshotReady=resolve})
+  const resume=new Promise(resolve=>{resumeSnapshot=resolve})
+  const serialOperation=randomUUID()
+  try {
+    const pending=withEligibleActorTransaction(serialDb,{actorId:owner.id,requestId:serialOperation},async tx=>{
+      serialAttempts++
+      assert.equal((await sql`select current_setting('transaction_isolation') as level`.execute(tx)).rows[0].level,'repeatable read')
+      await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+      await sql`select id from public.tenants where id=${tenant}`.execute(tx)
+      if(serialAttempts===1){snapshotReady();await resume}
+      return configurationDetails(tx,owner.id,tenant,{city:'Natural serialization retry'})
+    })
+    pending.catch(()=>{})
+    await Promise.race([snapshot,pending])
+    await details(owner,{city:'Concurrent committed update'})
+    resumeSnapshot();await pending
+    assert.equal(serialAttempts,2)
+    assert.equal((await admin.query("select count(*)::int as n from public.tenant_admin_actions where operation_id=$1 and action='tenants.update'",[serialOperation])).rows[0].n,1)
+  } finally {resumeSnapshot();await serialDb.destroy()}
+
+  const singleDb=connectDatabase(endpoint.href,1)
+  try {
+    const cleared=async()=>assert.deepEqual((await sql`select nullif(current_setting('request.jwt.claim.sub',true),'') as actor,
+      nullif(current_setting('ct.operation_id',true),'') as operation,nullif(current_setting('ct.tenant_id',true),'') as tenant`.execute(singleDb)).rows[0],{actor:null,operation:null,tenant:null})
+    await withEligibleActorTransaction(singleDb,{actorId:owner.id,requestId:randomUUID()},tx=>configurationDetails(tx,owner.id,tenant))
+    await cleared()
+    await assert.rejects(withEligibleActorTransaction(singleDb,{actorId:outsider.id,requestId:randomUUID()},tx=>configurationDetails(tx,outsider.id,tenant)),error=>error.statusCode===404)
+    await cleared()
+    await assert.rejects(withEligibleActorTransaction(singleDb,{actorId:owner.id,requestId:randomUUID()},async tx=>{
+      await configurationDetails(tx,owner.id,tenant);throw new Error('pool isolation rollback')
+    }),/pool isolation rollback/)
+    await cleared()
+    await withEligibleActorTransaction(singleDb,{actorId:editor.id,requestId:randomUUID()},async tx=>{
+      assert.equal((await sql`select current_setting('request.jwt.claim.sub') as actor`.execute(tx)).rows[0].actor,editor.id)
+      await configurationDetails(tx,editor.id,tenant)
+    })
+    await cleared()
+    const anonymousApp=buildApi({db:singleDb,verify:verifyBearer(local.API_URL,local.ANON_KEY,local.issuer),cursors:directoryCursors(randomBytes(32).toString('hex')),cleanup:async()=>{}})
+    try {assert.equal((await anonymousApp.inject({method:'GET',url:'/api/public/communities/'+slug})).statusCode,200);await cleared()}
+    finally {await anonymousApp.close()}
+  } finally {await singleDb.destroy()}
   console.log('PASS public exact-slug landing, safe copy projection, full configuration audience/field matrix, archive and eligibility boundaries, immutable attribution, no-op/retry/reset, rollback, raw bypasses and both authority serialization orders')
 } finally {
   try {
