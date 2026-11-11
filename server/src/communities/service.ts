@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { sql } from 'kysely'
-import { type AppDatabase, withEligibleActorTransaction, type AuthenticatedContext } from '../database.ts'
+import { type AppDatabase, withEligibleActorTransaction, withTransactionRetry, type AuthenticatedContext } from '../database.ts'
 import { ApplicationError } from '../http-errors.ts'
 import type { DirectoryCursors } from '../directory-cursors.ts'
 import {
@@ -68,13 +68,13 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
   return {
     // Public access and standing
     listStandings() {
-      return db.selectFrom('community_standing').select(standingFields).orderBy('standing').execute()
+      return withTransactionRetry(db, tx => tx.selectFrom('community_standing').select(standingFields).orderBy('standing').execute())
     },
     readLanding(params: SlugParams) {
       return readCommunityLanding(db, params.slug)
     },
     publicDirectory(params: SlugParams, query: DirectoryQuery) {
-      return db.transaction().execute(tx => readPublicDirectory(tx, params.slug, query, cursors))
+      return withTransactionRetry(db, tx => readPublicDirectory(tx, params.slug, query, cursors))
     },
     // Creation and lifecycle
     createCommunity(context: AuthenticatedContext, input: CreateCommunityInput) {
@@ -167,7 +167,8 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
 // Public access and standing
 const standingFields = ['standing', 'enable_standard_chat_visibility', 'enable_standard_activity_visibility', 'enable_other_profile_visibility', 'enable_own_profile_management', 'enable_standard_participation', 'enable_standard_dms'] as const
 async function readCommunityLanding(db: AppDatabase, slug: string) {
-  return (await sql<CommunityLanding>`select * from app_private.community_landing(${slug})`.execute(db)).rows[0]
+  return withTransactionRetry(db, async tx =>
+    (await sql<CommunityLanding>`select * from app_private.community_landing(${slug})`.execute(tx)).rows[0])
 }
 export async function readPublicDirectory(tx: Tx, slug: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<PublicDirectoryRow>> {
   const scope = ['public-directory', slug], after = cursors.decode(scope, query.cursor), limit = Number(query.limit ?? 50)

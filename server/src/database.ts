@@ -20,16 +20,31 @@ export function connectDatabase(connectionString: string, max = 4) {
 export type AppDatabase = ReturnType<typeof connectDatabase>
 
 /*
- * Authenticated Context Utilities
+ * Transactions and Authenticated Context
  */
 
 export type AuthenticatedContext = Readonly<{ actorId: string; requestId: string }>
 export type EligibleActorTransactionResult<T> = { eligible: false } | { eligible: true; value: T }
 
+// Callbacks may be replayed in full. External effects belong after successful
+// commit; failed attempts repeat context, locks, facts and decisions.
+export async function withTransactionRetry<T>(db: AppDatabase, work: (tx: Transaction<DB>) => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await db.transaction().execute(work)
+    } catch (error) {
+      // Only a server-confirmed aborted transaction permits automatic replay.
+      // Transport errors (including a lost COMMIT acknowledgement) are uncertain.
+      if (attempt >= 3 || !(error instanceof pg.DatabaseError)
+        || (error.code !== '40001' && error.code !== '40P01')) throw error
+    }
+  }
+}
+
 export async function withEligibleActorTransaction<T>(db: AppDatabase, context: AuthenticatedContext,
   work: (tx: Transaction<DB>) => Promise<T>): Promise<EligibleActorTransactionResult<T>> {
   const { actorId: actor, requestId } = context
-  return db.transaction().execute(async tx => {
+  return withTransactionRetry(db, async tx => {
     await sql`select set_config('request.jwt.claim.sub', ${actor}, true),
       set_config('ct.operation_id', ${requestId}, true)`.execute(tx)
     const eligible = await sql<{ allowed: boolean }>`select app_private.lock_eligible_actor() as allowed`.execute(tx)

@@ -1,5 +1,7 @@
 # Account and navigation implementation audit — 2026-10-16
 
+**Issue #7 transaction-retry checkpoint - 2026-11-10.** Authorized implementation adds at most three complete transaction attempts for confirmed PostgreSQL 40001/40P01 errors, with fresh context/eligibility/authorization and one correlation identity. Anonymous community reads retain their identity contract. Business/stale errors and uncertain commits are not replayed. See [checkpoint evidence](evidence/transaction-retries-2026-11-10/README.md) for commands, verification and review. Issue #6 is complete and closed; policy/workflow cutovers in #8-#15 and hosted work remain pending. Earlier unstarted statements describe the design/publication stage.
+
 **Issue #6 query-schema checkpoint - 2026-11-10.** The user authorized implementation of issue #6. Complete Kysely-native public/private application types, local-only generation and drift verification, generated-column compiler checks and driver-accurate query declarations are implemented. See [checkpoint evidence](evidence/database-types-2026-11-10/README.md) for verification and run commands. This checkpoint leaves product authorization, workflow/audit placement and retries at their existing boundaries; issues #7-#15 and hosted work remain pending. Earlier statements that implementation had not begun describe the design/publication stage.
 
 ## Four-file server feature consolidation — 2026-11-10

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
+import pg from 'pg'
 import { ApplicationError } from '../src/http-errors.ts'
 import { actorId, authorization, createHttpHarness, targetId, tenantId } from './helpers/http-harness.mjs'
 
@@ -327,4 +328,81 @@ test('root not-found keeps Fastify default JSON and does not acquire protected h
   }
   assert.equal(h.verifications.length, 0)
   assert.equal(h.queries.length, 0)
+})
+
+test('a confirmed serialization failure retries the complete authenticated operation', async t => {
+  const h = createHttpHarness(t)
+  h.eligible(databaseFailure('40001'))
+  h.eligible([preferences])
+  const response = await h.app.inject({ url: '/api/me/preferences', headers: authorization })
+  assert.equal(response.statusCode, 200)
+  assert.deepEqual(response.json(), preferences)
+  const contexts = h.queries.filter(query => query.sql.includes("set_config('request.jwt.claim.sub'"))
+  assert.equal(contexts.length, 2)
+  assert.deepEqual(contexts[0].parameters, contexts[1].parameters)
+})
+
+function databaseFailure(code) {
+  const failure = new pg.DatabaseError('database failure', 0, 'error')
+  failure.code = code
+  return failure
+}
+
+test('both transient SQLSTATEs exhaust at three complete attempts and preserve the unavailable response', async t => {
+  t.mock.method(console, 'error', () => {})
+  for (const code of ['40001', '40P01']) {
+    const h = createHttpHarness(t)
+    for (let attempt = 0; attempt < 3; attempt++) h.eligible(databaseFailure(code))
+    const response = await h.app.inject({ url: '/api/me/preferences', headers: authorization })
+    assert.equal(response.statusCode, 503)
+    assert.equal(response.json().code, 'unavailable')
+    const contexts = h.queries.filter(query => query.sql.includes("set_config('request.jwt.claim.sub'"))
+    assert.equal(contexts.length, 3)
+    assert.ok(contexts.every(query => query.parameters[1] === response.json().requestId))
+  }
+})
+
+test('a retry checks current eligibility and returns the existing denial without application work', async t => {
+  const h = createHttpHarness(t)
+  h.eligible(databaseFailure('40001'))
+  h.queue([], [{ allowed: false }])
+  const response = await h.app.inject({ url: '/api/me/preferences', headers: authorization })
+  assert.equal(response.statusCode, 403)
+  assert.equal(response.json().code, 'ineligible')
+  assert.equal(h.queries.filter(query => query.sql.includes('lock_eligible_actor')).length, 2)
+})
+
+test('business, stale, arbitrary SQL and unconfirmed transport errors are never replayed', async t => {
+  t.mock.method(console, 'error', () => {})
+  for (const [failure, status, code] of [
+    [new ApplicationError(403, 'forbidden'), 403, 'forbidden'],
+    [new ApplicationError(409, 'stale_state'), 409, 'stale_state'],
+    [databaseFailure('23505'), 503, 'unavailable'],
+    [Object.assign(new Error('lost connection'), { code: 'ECONNRESET' }), 503, 'unavailable'],
+    [Object.assign(new Error('unconfirmed SQLSTATE'), { code: '40001' }), 503, 'unavailable'],
+  ]) {
+    const h = createHttpHarness(t)
+    h.eligible(failure)
+    const response = await h.app.inject({ url: '/api/me/preferences', headers: authorization })
+    assert.equal(response.statusCode, status)
+    assert.equal(response.json().code, code)
+    assert.equal(h.queries.filter(query => query.sql.includes('lock_eligible_actor')).length, 1)
+  }
+})
+
+test('public community reads retry without introducing actor context or eligibility', async t => {
+  for (const [url, rows, expected] of [
+    ['/api/community-standings', [], []],
+    ['/api/public/communities/test-community', [landing], landing],
+    ['/api/public/communities/test-community/directory', [{ rows: [] }], { rows: [], next: null }],
+  ]) {
+    const h = createHttpHarness(t)
+    h.queue(databaseFailure('40P01'), rows)
+    const response = await h.app.inject({ url })
+    assert.equal(response.statusCode, 200)
+    assert.deepEqual(response.json(), expected)
+    assert.equal(response.headers['cache-control'], url === '/api/community-standings' ? undefined : 'no-store')
+    assert.equal(h.queries.length, 2)
+    assert.ok(h.queries.every(query => !query.sql.includes('set_config') && !query.sql.includes('lock_eligible_actor')))
+  }
 })

@@ -11,11 +11,12 @@
     "start:hosted-db": "node --env-file=.env.hosted-db.local src/index.ts",
     "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests/tsconfig.json",
     "test:http": "node --test --test-concurrency=1 tests/http-baseline.test.mjs tests/shared-facilities.test.mjs tests/startup.test.mjs tests/user-accounts-http.test.mjs tests/community-http.test.mjs tests/health-http.test.mjs",
-    "test:local": "node --env-file=.env.local tests/preferences-local.mjs && node --env-file=.env.local tests/community-local.mjs && node --env-file=.env.local tests/history-local.mjs && node --env-file=.env.local tests/self-service-local.mjs && node --env-file=.env.local tests/configuration-local.mjs && node --env-file=.env.local tests/records-local.mjs && node --env-file=.env.local tests/directory-local.mjs && node --env-file=.env.local tests/global-profiles-local.mjs && node --env-file=.env.local tests/access-audit-local.mjs && node ../supabase/tests/access-client-audit.mjs",
+    "test:local": "node --env-file=.env.local tests/preferences-local.mjs && node --env-file=.env.local tests/community-local.mjs && node --env-file=.env.local tests/history-local.mjs && node --env-file=.env.local tests/self-service-local.mjs && node --env-file=.env.local tests/configuration-local.mjs && node --env-file=.env.local tests/records-local.mjs && node --env-file=.env.local tests/directory-local.mjs && node --env-file=.env.local tests/global-profiles-local.mjs && node --env-file=.env.local tests/access-audit-local.mjs && npm run test:retry:local && node ../supabase/tests/access-client-audit.mjs",
     "setup:local": "node scripts/setup-local.mjs",
     "regen:types": "node scripts/database-codegen.mjs",
     "verify:types": "node scripts/database-codegen.mjs --verify",
-    "test:types:local": "node --test tests/database-types-local.test.mjs"
+    "test:types:local": "node --test tests/database-types-local.test.mjs",
+    "test:retry:local": "node --env-file=.env.local --test tests/transaction-retry-local.test.mjs"
   },
   "dependencies": {
     "@fastify/type-provider-typebox": "^6.3.0",

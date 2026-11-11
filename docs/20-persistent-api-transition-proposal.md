@@ -1,5 +1,7 @@
 # Persistent TypeScript API transition proposal
 
+**Issue #7 transaction-retry checkpoint - 2026-11-10.** Authorized implementation adds at most three complete transaction attempts for confirmed PostgreSQL 40001/40P01 errors, with fresh context/eligibility/authorization and one correlation identity. Anonymous community reads retain their identity contract. Business/stale errors and uncertain commits are not replayed. See [checkpoint evidence](evidence/transaction-retries-2026-11-10/README.md) for commands, verification and review. Issue #6 is complete and closed; policy/workflow cutovers in #8-#15 and hosted work remain pending. Earlier unstarted statements describe the design/publication stage.
+
 **Approved 2026-11-03.** The owner approved the proposed stack, role model, archive RLS, package revision and local pilot sequence. The sections below preserve the reviewed rationale. Implementation evidence is tracked in [12](12-implementation-status.md).
 
 **Recommendation.** Keep the current frontend feature APIs as the point of change. Move one working feature, Account Settings, through a Fastify service to PostgreSQL. Prove identity, audit attribution, browser lockout and recovery there. Then migrate community creation and its dependent lifecycle operations as a coordinated unit. Revise Packages 2–3 **before executing Package 4**. Implementing the proposed PostgREST projections, permission helpers and public RPCs first would create a second authorization system just as the application starts to use the first one.
