@@ -2,6 +2,25 @@ import { sql } from 'kysely'
 import { ApplicationError } from '../http-errors.ts'
 import { staffFlags, type CommunityCommand, type ConfigurationKind, type RecordKind, type StaffPermissions, type Tx } from './types.ts'
 
+// Public reads use no actor context. The service locks the exact slug's root,
+// then loads these gates in a new statement after any lock wait.
+export function publicCommunityLandingAudience() {
+  return sql<boolean>`t.operational_status='active'`
+}
+export async function loadPublicDirectoryFacts(tx: Tx, tenant: string) {
+  return tx.selectFrom('tenants as t').innerJoin('tenant_settings as s', 's.tenant_id', 't.id')
+    .select(['t.operational_status', 's.allow_public_directory_visibility']).where('t.id', '=', tenant).executeTakeFirst()
+}
+export function canReadPublicDirectory(facts: Awaited<ReturnType<typeof loadPublicDirectoryFacts>>): Decision {
+  return facts?.operational_status === 'active' && facts.allow_public_directory_visibility ? 'allowed' : 'missing'
+}
+export function requireCanReadPublicDirectory(facts: Awaited<ReturnType<typeof loadPublicDirectoryFacts>>) {
+  requireDecision(canReadPublicDirectory(facts))
+}
+export function publicCommunityDirectoryTargetAudience() {
+  return sql<boolean>`c.standing in ('approved','suspended')`
+}
+
 // Creation and lifecycle. Services call these loaders in tenant-root, target
 // account, target Auth order; facts never survive the operation/transaction.
 export type Staff = StaffPermissions & { role: 'owner' | 'admin'; status: 'active' | 'paused' | 'revoked' }

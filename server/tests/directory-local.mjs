@@ -199,8 +199,19 @@ try {
     if(actor) assert.equal(new Set([...maximum.rows,...rest.rows].map(row=>row.user_id??row.account.user_id)).size,103)
     else assert.equal([...maximum.rows,...rest.rows].filter(row=>row.display_name==='Duplicate name').length,102)
   }
-  await assert.rejects(sql`select app_private.public_community_directory(${slug},null,101)`.execute(db),error=>error.code==='22023')
-  assert.equal((await sql`select app_private.public_community_directory('wild%',null,1) as rows`.execute(db)).rows[0].rows,null)
+  // Public orchestration provides read scope, never actor identity or write
+  // authority. Without selectors the runtime cannot enumerate community roots.
+  await db.transaction().execute(async tx=>{
+    assert.deepEqual((await sql`select id from public.tenants`.execute(tx)).rows,[])
+    assert.deepEqual((await sql`select user_id from public.community_account_profiles`.execute(tx)).rows,[])
+    await sql`select set_config('ct.public_slug',${slug},true), set_config('ct.public_tenant_id',${tenant},true)`.execute(tx)
+    assert.equal((await sql`select id from public.tenants for share`.execute(tx)).rows.length,1)
+    assert.equal((await sql`select user_id from public.community_account_profiles where tenant_id=${tenant}`.execute(tx)).rows.length,8)
+    await sql`savepoint rejected_write`.execute(tx)
+    await assert.rejects(sql`update public.tenants set name='forged' where id=${tenant}`.execute(tx),e=>e.code==='42501')
+    await sql`rollback to savepoint rejected_write`.execute(tx)
+  })
+  assert.equal((await sql`select to_regprocedure('app_private.public_community_directory(text,uuid,integer)') as fn`.execute(db)).rows[0].fn,null)
   async function afterLockedChange(change,compete) {
     await admin.query('begin')
     let response
@@ -232,7 +243,13 @@ try {
   await cmd(member,{kind:'reactivate'})
   await afterLockedChange(
     ()=>admin.query("update public.tenants set operational_status='archived' where id=$1",[tenant]),
-    ()=>publicDirectory(null,'',404))
+    ()=>Promise.all([publicDirectory(null,'',404),http(null,'/api/public/communities/'+slug,'GET',undefined,404)]))
+  await db.transaction().execute(async tx=>{
+    await sql`select set_config('ct.public_slug',${slug},true), set_config('ct.public_tenant_id',${tenant},true)`.execute(tx)
+    for(const relation of ['community_accounts','community_account_profiles','tenant_staff_assignments','tenant_settings','tenant_website_content_overrides']) {
+      assert.deepEqual((await sql`select tenant_id from ${sql.table(relation)} where tenant_id=${tenant}`.execute(tx)).rows,[])
+    }
+  })
   await directory(owner,'',404)
   for(const actor of [manager,member,pending,inactive,suspended]) {
     await directory(actor,'',404);await facts(actor,actor.id,404);await accounts(actor,'',404)

@@ -247,10 +247,10 @@ test('real local operations retry with fresh authorization and one committed out
       const url = '/api/public/communities/' + slug + '/directory'
       const before = await request(controlApp, null, url)
       const result = await faulted(null, url, undefined,
-        { match: /app_private\.public_community_directory/, codes: ['40P01'] }, 200, 'GET')
+        { match: /from "community_accounts" as "c"/, codes: ['40P01'] }, 200, 'GET')
       assert.equal(result.attempts, 2)
       assert.equal(result.operation, undefined)
-      assert.ok(result.queries.every(query => !query.text.includes('lock_eligible_actor') && !query.text.includes('set_config')))
+      assert.ok(result.queries.every(query => !query.text.includes('lock_eligible_actor') && !query.text.includes('request.jwt.claim.sub') && !query.text.includes('ct.operation_id')))
       assert.deepEqual(result.value, before)
     })
   } finally {

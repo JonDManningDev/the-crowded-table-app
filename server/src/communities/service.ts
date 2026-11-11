@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActionFacts,
+import { publicCommunityLandingAudience, loadPublicDirectoryFacts, requireCanReadPublicDirectory, publicCommunityDirectoryTargetAudience, loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActionFacts,
   loadLifecycleAccountFacts, loadStaffAssignmentFacts, loadCommunityRequestFacts,
   requireCanEnterCommunityAction, requireCanSelectCommunityRequest, requireCanTargetCommunityAccount,
   requireCanApproveCommunityRequest, requireCanReturnToCommunity, loadJoinCommunityFacts, decideCommunityEntry,
@@ -18,10 +18,11 @@ import type { DirectoryCursors } from '../directory-cursors.ts'
 import {
   copySlots,
   settingFields,
+  type CommunityLanding,
+  type PublicCopy,
   type CommunityCopy,
   type CommunityDetails,
   type CommunityDetailsInput,
-  type CommunityLanding,
   type CommunitySettings,
   type CommunitySettingsRecord,
   type AccountFacts,
@@ -47,7 +48,6 @@ import {
   type HistoryPage,
   type HistoryQuery,
   type SlugParams,
-  type PublicDirectoryResult,
   type Context,
   type Action,
   type OperationalStatus,
@@ -172,18 +172,43 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
 
 // Public access and standing
 const standingFields = ['standing', 'enable_standard_chat_visibility', 'enable_standard_activity_visibility', 'enable_other_profile_visibility', 'enable_own_profile_management', 'enable_standard_participation', 'enable_standard_dms'] as const
-async function readCommunityLanding(db: AppDatabase, slug: string) {
-  return withTransactionRetry(db, async tx =>
-    (await sql<CommunityLanding>`select * from app_private.community_landing(${slug})`.execute(tx)).rows[0])
+async function lockPublicCommunity(tx: Tx, slug: string) {
+  await sql`select set_config('ct.public_slug', ${slug}, true)`.execute(tx)
+  const site = await tx.selectFrom('tenants').select('id').where('slug', '=', slug).forShare().executeTakeFirst()
+  if (site) await sql`select set_config('ct.public_tenant_id', ${site.id}, true)`.execute(tx)
+  return site
+}
+async function readCommunityLanding(db: AppDatabase, slug: string): Promise<CommunityLanding | undefined> {
+  return withTransactionRetry(db, async tx => {
+    const site = await lockPublicCommunity(tx, slug)
+    if (!site) return undefined
+    return tx.selectFrom('tenants as t').innerJoin('tenant_settings as s', 's.tenant_id', 't.id')
+      .select(['t.id', 't.slug', 't.name', 't.country_code', 't.state_province', 't.city', 't.timezone',
+        's.auto_approve_users', 's.allow_public_chat_visibility', 's.allow_public_activity_visibility', 's.allow_public_directory_visibility'])
+      .select(sql<PublicCopy[]>`coalesce((select jsonb_agg(jsonb_build_object(
+        'tenant_id',o.tenant_id,'content_key',o.content_key,'text_value',o.text_value) order by o.content_key)
+        from public.tenant_website_content_overrides o where o.tenant_id=t.id
+        and o.content_key in (${sql.join(Object.keys(copySlots))})), '[]'::jsonb)`.as('overrides'))
+      .where('t.id', '=', site.id).where(publicCommunityLandingAudience()).executeTakeFirst()
+  })
 }
 export async function readPublicDirectory(tx: Tx, slug: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<PublicDirectoryRow>> {
   const scope = ['public-directory', slug], after = cursors.decode(scope, query.cursor), limit = Number(query.limit ?? 50)
-  const result = (await sql<PublicDirectoryResult>`select app_private.public_community_directory(${slug},${after}::uuid,${limit}) as rows`.execute(tx)).rows[0]
-  if (result.rows === null) throw new ApplicationError(404, 'missing')
-  const visible = result.rows.slice(0, limit), last = visible.at(-1)
+  const site = await lockPublicCommunity(tx, slug)
+  if (!site) throw new ApplicationError(404, 'missing')
+  requireCanReadPublicDirectory(await loadPublicDirectoryFacts(tx, site.id))
+  const rows = await tx.selectFrom('community_accounts as c')
+    .innerJoin('community_account_profiles as p', join => join.onRef('p.tenant_id', '=', 'c.tenant_id').onRef('p.user_id', '=', 'c.user_id'))
+    .leftJoin('tenant_staff_assignments as s', join => join.onRef('s.tenant_id', '=', 'c.tenant_id').onRef('s.user_id', '=', 'c.user_id'))
+    .select(['c.user_id', 'p.display_name'])
+    .select(sql<PublicDirectoryRow['staff_role']>`case when c.standing='approved' and s.status='active' then s.role end`.as('staff_role'))
+    .where('c.tenant_id', '=', site.id).where(publicCommunityDirectoryTargetAudience())
+    .$if(after !== null, q => q.where('c.user_id', '>', after!))
+    .orderBy('c.user_id').limit(limit + 1).execute()
+  const visible = rows.slice(0, limit), last = visible.at(-1)
   return {
     rows: visible.map(({ display_name, staff_role }) => ({ display_name, staff_role })),
-    next: result.rows.length > limit && last ? cursors.encode(scope, last.user_id) : null
+    next: rows.length > limit && last ? cursors.encode(scope, last.user_id) : null
   }
 }
 

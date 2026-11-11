@@ -83,12 +83,12 @@ export async function checkRuntime(db: AppDatabase) {
       and to_regprocedure('public.lookup_tenant(text)') is null
       and to_regprocedure('app_private.can_edit_configuration(uuid,text)') is null
       and to_regprocedure('app_private.guard_configuration_details()') is null
-      and has_function_privilege(current_user,'app_private.community_landing(text)','EXECUTE')
+      and to_regprocedure('app_private.community_landing(text)') is null
       and not has_any_column_privilege('authenticated','public.user_account_profiles','SELECT,INSERT,UPDATE')
       and has_function_privilege(current_user,'app_private.inspect_global_profile(uuid)','EXECUTE')
       and not has_any_column_privilege('authenticated','public.user_account_blocks','SELECT,INSERT,UPDATE')
       and not has_any_column_privilege('authenticated','public.community_accounts','SELECT')
-      and has_function_privilege(current_user,'app_private.public_community_directory(text,uuid,integer)','EXECUTE')
+      and to_regprocedure('app_private.public_community_directory(text,uuid,integer)') is null
       and not has_any_column_privilege('authenticated','public.tenant_staff_assignments','SELECT')
       and has_column_privilege(current_user,'public.community_account_permissions','can_post_public_events','UPDATE')
       and to_regprocedure('app_private.can_manage_account_records(uuid,text)') is null

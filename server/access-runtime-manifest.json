@@ -133,9 +133,6 @@
       "signature": "app_private.command_scope()"
     },
     {
-      "signature": "app_private.community_landing(text)"
-    },
-    {
       "signature": "app_private.inspect_global_profile(uuid)"
     },
     {
@@ -146,9 +143,6 @@
     },
     {
       "signature": "app_private.my_community_relationships()"
-    },
-    {
-      "signature": "app_private.public_community_directory(text,uuid,integer)"
     },
     {
       "signature": "app_private.verified_user()"

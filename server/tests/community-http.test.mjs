@@ -232,25 +232,19 @@ test('public and protected community scopes inherit identity correctly without l
   }
 })
 
-test('public service retains its projections, single-query bindings and absence of actor eligibility', async t => {
+test('public service retains projections and anonymous transaction scope without actor eligibility', async t => {
   const h = createHttpHarness(t)
   h.queue([])
   assert.equal((await h.app.inject('/api/community-standings')).statusCode, 200)
-  assert.equal(h.queries.length, 1)
-  assert.equal(h.queries[0].sql, 'select "standing", "enable_standard_chat_visibility", "enable_standard_activity_visibility", "enable_other_profile_visibility", "enable_own_profile_management", "enable_standard_participation", "enable_standard_dms" from "community_standing" order by "standing"')
   assert.deepEqual(h.queries[0].parameters, [])
   const landing = operations.find(operation => operation.name === 'readLanding')
-  h.queue([response(landing).dto])
+  h.queue([], [{ id: tenantId }], [], [response(landing).dto])
   assert.equal((await h.app.inject(input(landing))).statusCode, 200)
-  assert.equal(h.queries.length, 2)
-  assert.equal(h.queries[1].sql, 'select * from app_private.community_landing($1)')
-  assert.deepEqual(h.queries[1].parameters, ['test-community'])
   const directory = operations.find(operation => operation.name === 'publicDirectory')
-  h.queue([{ rows: [] }])
+  h.queue([], [{ id: tenantId }], [], [{ operational_status: 'active', allow_public_directory_visibility: true }], [])
   assert.equal((await h.app.inject(input(directory))).statusCode, 200)
-  assert.equal(h.queries.length, 3)
-  assert.equal(h.queries[2].sql, 'select app_private.public_community_directory($1,$2::uuid,$3) as rows')
-  assert.deepEqual(h.queries[2].parameters, ['test-community', null, 50])
+  assert.ok(h.queries.some(q => q.sql.includes('for share') && q.parameters[0] === 'test-community'))
+  assert.ok(h.queries.every(q => !/lock_eligible_actor|request.jwt.claim.sub|ct.operation_id/.test(q.sql)))
 })
 
 test('exact profile service projects the same eight columns independently of HTTP schemas', async t => {

@@ -7,9 +7,7 @@ select ok(to_regprocedure('app_private.can_modify_content(uuid)') is null,'obsol
 select ok(not has_any_column_privilege(r,t,'SELECT,INSERT,UPDATE') and not has_table_privilege(r,t,'DELETE'),r||' cannot bypass configuration API on '||t)
   from unnest(array['anon','authenticated','service_role']) r cross join unnest(array[
     'public.tenants','public.tenant_settings','public.tenant_website_content_overrides']) t;
-select ok(not has_function_privilege(r,f,'EXECUTE'),r||' cannot invoke '||f)
-  from unnest(array['anon','authenticated','service_role']) r cross join unnest(array[
-    'app_private.community_landing(text)']) f;
+select ok(to_regprocedure('app_private.community_landing(text)') is null,'internal landing function retired');
 select ok(not has_column_privilege('ct_api','public.tenants',c,'UPDATE'),'runtime cannot update tenant '||c)
   from unnest(array['id','slug','created_at','updated_at','created_by','updated_by']) c;
 select ok(not has_column_privilege('ct_api','public.tenant_website_content_overrides',c,'UPDATE'),'runtime cannot move or forge copy '||c)

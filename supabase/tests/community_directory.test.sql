@@ -5,8 +5,7 @@ select no_plan();
 select ok(not has_any_column_privilege(r,'public.community_accounts','SELECT,INSERT,UPDATE')
   and not has_table_privilege(r,'public.community_accounts','DELETE'),r||' cannot bypass account API')
   from unnest(array['anon','authenticated','service_role']) r;
-select ok(not has_function_privilege(r,'app_private.public_community_directory(text,uuid,integer)','EXECUTE'),r||' cannot invoke internal directory projection')
-  from unnest(array['anon','authenticated','service_role']) r;
+select ok(to_regprocedure('app_private.public_community_directory(text,uuid,integer)') is null,'internal public directory function retired');
 select ok(has_column_privilege('ct_api','public.community_accounts',c,'SELECT'),'runtime reads accepted fact '||c)
   from unnest(array['tenant_id','user_id','standing','first_approved_at','has_disciplinary_restriction','created_at','updated_at','created_by','updated_by']) c;
 select ok(not has_column_privilege('ct_api','public.community_accounts',c,'UPDATE'),'runtime cannot forge fact metadata '||c)

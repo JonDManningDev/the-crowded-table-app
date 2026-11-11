@@ -6,8 +6,6 @@ import type { createCommunityService } from './service.ts'
 
 // Public access and standing
 export type SlugParams = { slug: string }
-export type InternalRow = PublicDirectoryRow & { user_id: string }
-export type PublicDirectoryResult = { rows: InternalRow[] | null }
 
 // Creation and lifecycle
 export const staffFlags = [

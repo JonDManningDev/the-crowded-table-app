@@ -85,13 +85,13 @@ test('public, protected and health scopes retain isolated authentication and cac
     }
     for (const headers of [{}, authorization]) {
       const before = h.verifications.length
-      h.queue([{ ...landing, internal_secret: 'omit' }])
+      h.queue([], [{ id: tenantId }], [], [{ ...landing, internal_secret: 'omit' }])
       const publicLanding = await h.app.inject({ method, url: '/api/public/communities/test-community', headers })
       assert.equal(publicLanding.statusCode, 200)
       assert.equal(publicLanding.headers['cache-control'], 'no-store')
       if (method === 'HEAD') assert.equal(publicLanding.body, '')
       else assert.deepEqual(publicLanding.json(), landing)
-      h.queue([{ rows: [{ user_id: targetId, display_name: 'Test member', staff_role: null }] }])
+      h.queue([], [{ id: tenantId }], [], [{ operational_status: 'active', allow_public_directory_visibility: true }], [{ user_id: targetId, display_name: 'Test member', staff_role: null }])
       const directory = await h.app.inject({ method, url: '/api/public/communities/test-community/directory', headers })
       assert.equal(directory.statusCode, 200)
       assert.equal(directory.headers['cache-control'], 'no-store')
@@ -275,11 +275,11 @@ test('unauthorized history stays a successful empty page; authorized detail fiel
 
 test('public missing landing/directory map to 404 while a visible empty directory is 200', async t => {
   const h = createHttpHarness(t)
-  h.queue([])
+  h.queue([], [])
   errorResponse(h, await h.app.inject({ url: '/api/public/communities/test-community' }), 404, 'missing', 'no-store')
-  h.queue([{ rows: null }])
+  h.queue([], [{ id: tenantId }], [], [{ operational_status: 'active', allow_public_directory_visibility: false }])
   errorResponse(h, await h.app.inject({ url: '/api/public/communities/test-community/directory' }), 404, 'missing', 'no-store')
-  h.queue([{ rows: [] }])
+  h.queue([], [{ id: tenantId }], [], [{ operational_status: 'active', allow_public_directory_visibility: true }], [])
   const response = await h.app.inject({ url: '/api/public/communities/test-community/directory' })
   assert.equal(response.statusCode, 200)
   assert.deepEqual(response.json(), { rows: [], next: null })
@@ -401,17 +401,17 @@ test('business, stale, arbitrary SQL and unconfirmed transport errors are never 
 
 test('public community reads retry without introducing actor context or eligibility', async t => {
   for (const [url, rows, expected] of [
-    ['/api/community-standings', [], []],
-    ['/api/public/communities/test-community', [landing], landing],
-    ['/api/public/communities/test-community/directory', [{ rows: [] }], { rows: [], next: null }],
+    ['/api/community-standings', [[]], []],
+    ['/api/public/communities/test-community', [[], [{ id: tenantId }], [], [landing]], landing],
+    ['/api/public/communities/test-community/directory', [[], [{ id: tenantId }], [], [{ operational_status: 'active', allow_public_directory_visibility: true }], []], { rows: [], next: null }],
   ]) {
     const h = createHttpHarness(t)
-    h.queue(databaseFailure('40P01'), rows)
+    h.queue(databaseFailure('40P01'), ...rows)
     const response = await h.app.inject({ url })
     assert.equal(response.statusCode, 200)
     assert.deepEqual(response.json(), expected)
     assert.equal(response.headers['cache-control'], url === '/api/community-standings' ? undefined : 'no-store')
-    assert.equal(h.queries.length, 2)
-    assert.ok(h.queries.every(query => !query.sql.includes('set_config') && !query.sql.includes('lock_eligible_actor')))
+    assert.equal(h.queries.length, 1 + rows.length)
+    assert.ok(h.queries.every(query => !/request.jwt.claim.sub|ct.operation_id/.test(query.sql) && !query.sql.includes('lock_eligible_actor')))
   }
 })

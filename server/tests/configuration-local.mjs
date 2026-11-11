@@ -203,7 +203,7 @@ try {
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     await sql`update public.tenant_website_content_overrides set content_key='community.hero.heading' where tenant_id=${tenant}`.execute(tx)
   }),error=>error.code==='42501')
-  assert.deepEqual((await sql`select * from app_private.community_landing('wild%')`.execute(db)).rows,[])
+  assert.equal((await sql`select to_regprocedure('app_private.community_landing(text)') as fn`.execute(db)).rows[0].fn,null)
   for(const actor of [owner,editor,member]) {
     for(const table of ['tenants','tenant_settings','tenant_website_content_overrides']) assert.ok((await actor.client.from(table).select('*')).error)
     assert.ok((await actor.client.rpc('lookup_tenant',{p_slug:slug})).error)
