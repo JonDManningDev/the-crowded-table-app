@@ -26,6 +26,18 @@ export type AppDatabase = ReturnType<typeof connectDatabase>
 export type AuthenticatedContext = Readonly<{ actorId: string; requestId: string }>
 export type EligibleActorTransactionResult<T> = { eligible: false } | { eligible: true; value: T }
 
+export async function withEligibleActorTransaction<T>(db: AppDatabase, context: AuthenticatedContext,
+  work: (tx: Transaction<DB>) => Promise<T>): Promise<EligibleActorTransactionResult<T>> {
+  const { actorId: actor, requestId } = context
+  return withTransactionRetry(db, async tx => {
+    await sql`select set_config('request.jwt.claim.sub', ${actor}, true),
+      set_config('ct.operation_id', ${requestId}, true)`.execute(tx)
+    const eligible = await sql<{ allowed: boolean }>`select app_private.lock_eligible_actor() as allowed`.execute(tx)
+    if (!eligible.rows[0].allowed) return { eligible: false }
+    return { eligible: true, value: await work(tx) }
+  })
+}
+
 // Callbacks may be replayed in full. External effects belong after successful
 // commit; failed attempts repeat context, locks, facts and decisions.
 export async function withTransactionRetry<T>(db: AppDatabase, work: (tx: Transaction<DB>) => Promise<T>): Promise<T> {
@@ -39,18 +51,6 @@ export async function withTransactionRetry<T>(db: AppDatabase, work: (tx: Transa
         || (error.code !== '40001' && error.code !== '40P01')) throw error
     }
   }
-}
-
-export async function withEligibleActorTransaction<T>(db: AppDatabase, context: AuthenticatedContext,
-  work: (tx: Transaction<DB>) => Promise<T>): Promise<EligibleActorTransactionResult<T>> {
-  const { actorId: actor, requestId } = context
-  return withTransactionRetry(db, async tx => {
-    await sql`select set_config('request.jwt.claim.sub', ${actor}, true),
-      set_config('ct.operation_id', ${requestId}, true)`.execute(tx)
-    const eligible = await sql<{ allowed: boolean }>`select app_private.lock_eligible_actor() as allowed`.execute(tx)
-    if (!eligible.rows[0].allowed) return { eligible: false }
-    return { eligible: true, value: await work(tx) }
-  })
 }
 
 /*
