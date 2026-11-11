@@ -1,0 +1,2664 @@
+{
+  "captured_at": "2026-11-11T03:52:56.865Z",
+  "runtime": {
+    "relations": [
+      {
+        "delete": false,
+        "insert": [],
+        "relation": "app_private.account_action_types",
+        "select": [],
+        "update": []
+      },
+      {
+        "delete": true,
+        "insert": [
+          "id",
+          "kind",
+          "requested_by",
+          "tenant_id",
+          "user_id"
+        ],
+        "relation": "app_private.community_account_requests",
+        "select": [
+          "id",
+          "kind",
+          "requested_at",
+          "requested_by",
+          "tenant_id",
+          "user_id"
+        ],
+        "update": []
+      },
+      {
+        "delete": false,
+        "insert": [],
+        "relation": "app_private.tenant_admin_action_categories",
+        "select": [
+          "action_id",
+          "category"
+        ],
+        "update": []
+      },
+      {
+        "delete": false,
+        "insert": [
+          "tenant_id",
+          "user_id"
+        ],
+        "relation": "public.community_account_permissions",
+        "select": [
+          "can_post_public_events",
+          "created_at",
+          "created_by",
+          "tenant_id",
+          "updated_at",
+          "updated_by",
+          "user_id"
+        ],
+        "update": [
+          "can_post_public_events"
+        ]
+      },
+      {
+        "delete": false,
+        "insert": [
+          "tenant_id",
+          "user_id"
+        ],
+        "relation": "public.community_account_preferences",
+        "select": [
+          "allow_direct_messages",
+          "allow_private_invitations",
+          "show_global_profile",
+          "tenant_id",
+          "user_id"
+        ],
+        "update": [
+          "allow_direct_messages",
+          "allow_private_invitations",
+          "show_global_profile"
+        ]
+      },
+      {
+        "delete": false,
+        "insert": [
+          "bio",
+          "display_name",
+          "tenant_id",
+          "user_id"
+        ],
+        "relation": "public.community_account_profiles",
+        "select": [
+          "bio",
+          "created_at",
+          "created_by",
+          "display_name",
+          "tenant_id",
+          "updated_at",
+          "updated_by",
+          "user_id"
+        ],
+        "update": [
+          "bio",
+          "display_name"
+        ]
+      },
+      {
+        "delete": false,
+        "insert": [
+          "standing",
+          "tenant_id",
+          "user_id"
+        ],
+        "relation": "public.community_accounts",
+        "select": [
+          "created_at",
+          "created_by",
+          "first_approved_at",
+          "has_disciplinary_restriction",
+          "revision",
+          "standing",
+          "tenant_id",
+          "updated_at",
+          "updated_by",
+          "user_id"
+        ],
+        "update": [
+          "has_disciplinary_restriction",
+          "standing"
+        ]
+      },
+      {
+        "delete": false,
+        "insert": [],
+        "relation": "public.community_standing",
+        "select": [
+          "enable_other_profile_visibility",
+          "enable_own_profile_management",
+          "enable_standard_activity_visibility",
+          "enable_standard_chat_visibility",
+          "enable_standard_dms",
+          "enable_standard_participation",
+          "standing"
+        ],
+        "update": []
+      },
+      {
+        "delete": false,
+        "insert": [
+          "action",
+          "details",
+          "reason",
+          "target_user_id",
+          "tenant_id"
+        ],
+        "relation": "public.tenant_admin_actions",
+        "select": [
+          "action",
+          "content_key",
+          "created_at",
+          "created_by",
+          "details",
+          "id",
+          "operation_id",
+          "reason",
+          "target_user_id",
+          "tenant_id"
+        ],
+        "update": []
+      },
+      {
+        "delete": false,
+        "insert": [
+          "tenant_id"
+        ],
+        "relation": "public.tenant_settings",
+        "select": [
+          "allow_public_activity_visibility",
+          "allow_public_chat_visibility",
+          "allow_public_directory_visibility",
+          "auto_approve_users",
+          "created_at",
+          "created_by",
+          "pause_community_events",
+          "tenant_id",
+          "updated_at",
+          "updated_by"
+        ],
+        "update": [
+          "allow_public_activity_visibility",
+          "allow_public_chat_visibility",
+          "allow_public_directory_visibility",
+          "auto_approve_users",
+          "pause_community_events"
+        ]
+      },
+      {
+        "delete": false,
+        "insert": [
+          "can_approve_users",
+          "can_audit_community_accounts",
+          "can_audit_staff_accounts",
+          "can_discipline_staff",
+          "can_discipline_users",
+          "can_grant_staff",
+          "can_manage_community_activities",
+          "can_manage_community_permissions",
+          "can_manage_official_activities",
+          "can_manage_settings",
+          "can_moderate_all_chats",
+          "can_modify_content",
+          "can_see_private_events",
+          "role",
+          "tenant_id",
+          "user_id"
+        ],
+        "relation": "public.tenant_staff_assignments",
+        "select": [
+          "can_approve_users",
+          "can_audit_community_accounts",
+          "can_audit_staff_accounts",
+          "can_discipline_staff",
+          "can_discipline_users",
+          "can_grant_staff",
+          "can_manage_community_activities",
+          "can_manage_community_permissions",
+          "can_manage_official_activities",
+          "can_manage_settings",
+          "can_moderate_all_chats",
+          "can_modify_content",
+          "can_see_private_events",
+          "created_at",
+          "created_by",
+          "role",
+          "status",
+          "tenant_id",
+          "updated_at",
+          "updated_by",
+          "user_id"
+        ],
+        "update": [
+          "can_approve_users",
+          "can_audit_community_accounts",
+          "can_audit_staff_accounts",
+          "can_discipline_staff",
+          "can_discipline_users",
+          "can_grant_staff",
+          "can_manage_community_activities",
+          "can_manage_community_permissions",
+          "can_manage_official_activities",
+          "can_manage_settings",
+          "can_moderate_all_chats",
+          "can_modify_content",
+          "can_see_private_events",
+          "status"
+        ]
+      },
+      {
+        "delete": true,
+        "insert": [
+          "content_key",
+          "tenant_id",
+          "text_value"
+        ],
+        "relation": "public.tenant_website_content_overrides",
+        "select": [
+          "content_key",
+          "created_at",
+          "created_by",
+          "tenant_id",
+          "text_value",
+          "updated_at",
+          "updated_by"
+        ],
+        "update": [
+          "text_value"
+        ]
+      },
+      {
+        "delete": false,
+        "insert": [
+          "city",
+          "country_code",
+          "id",
+          "name",
+          "slug",
+          "state_province",
+          "timezone"
+        ],
+        "relation": "public.tenants",
+        "select": [
+          "city",
+          "country_code",
+          "created_at",
+          "created_by",
+          "id",
+          "name",
+          "operational_status",
+          "slug",
+          "state_province",
+          "timezone",
+          "updated_at",
+          "updated_by"
+        ],
+        "update": [
+          "city",
+          "country_code",
+          "name",
+          "operational_status",
+          "state_province",
+          "timezone"
+        ]
+      },
+      {
+        "delete": true,
+        "insert": [
+          "blocked_user_id"
+        ],
+        "relation": "public.user_account_blocks",
+        "select": [
+          "blocked_user_id",
+          "blocker_user_id",
+          "created_at",
+          "created_by"
+        ],
+        "update": []
+      },
+      {
+        "delete": false,
+        "insert": [
+          "bio",
+          "display_name"
+        ],
+        "relation": "public.user_account_profiles",
+        "select": [
+          "bio",
+          "created_at",
+          "created_by",
+          "display_name",
+          "updated_at",
+          "updated_by",
+          "user_id"
+        ],
+        "update": [
+          "bio",
+          "display_name"
+        ]
+      },
+      {
+        "delete": false,
+        "insert": [],
+        "relation": "public.user_accounts",
+        "select": [
+          "allow_direct_messages",
+          "enable_matchmaking",
+          "user_id",
+          "user_is_discoverable"
+        ],
+        "update": [
+          "allow_direct_messages",
+          "enable_matchmaking",
+          "user_is_discoverable"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "signature": "app_private.active_tenant(uuid)"
+      },
+      {
+        "signature": "app_private.can_block_from_profile(uuid)"
+      },
+      {
+        "signature": "app_private.can_discover_global_profile(uuid)"
+      },
+      {
+        "signature": "app_private.can_edit_configuration(uuid,text)"
+      },
+      {
+        "signature": "app_private.can_inspect_global_profile(uuid)"
+      },
+      {
+        "signature": "app_private.can_manage_account_records(uuid,text)"
+      },
+      {
+        "signature": "app_private.can_read_account_action(uuid,uuid)"
+      },
+      {
+        "signature": "app_private.command_scope()"
+      },
+      {
+        "signature": "app_private.community_landing(text)"
+      },
+      {
+        "signature": "app_private.inspect_global_profile(uuid)"
+      },
+      {
+        "signature": "app_private.is_approved_owner(uuid)"
+      },
+      {
+        "signature": "app_private.is_staff_candidate(uuid,uuid,boolean)"
+      },
+      {
+        "signature": "app_private.lock_eligible_actor()"
+      },
+      {
+        "signature": "app_private.my_community_relationships()"
+      },
+      {
+        "signature": "app_private.public_community_directory(text,uuid,integer)"
+      },
+      {
+        "signature": "app_private.verified_user()"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "version": "20261001000100"
+    },
+    {
+      "version": "20261001000200"
+    },
+    {
+      "version": "20261015000100"
+    },
+    {
+      "version": "20261016000100"
+    },
+    {
+      "version": "20261016000200"
+    },
+    {
+      "version": "20261024000100"
+    },
+    {
+      "version": "20261024000200"
+    },
+    {
+      "version": "20261024000300"
+    },
+    {
+      "version": "20261103000100"
+    },
+    {
+      "version": "20261103000200"
+    },
+    {
+      "version": "20261103000300"
+    },
+    {
+      "version": "20261103000400"
+    },
+    {
+      "version": "20261103000500"
+    },
+    {
+      "version": "20261103000600"
+    },
+    {
+      "version": "20261103000700"
+    },
+    {
+      "version": "20261103000800"
+    },
+    {
+      "version": "20261103000900"
+    },
+    {
+      "version": "20261103001000"
+    },
+    {
+      "version": "20261103001100"
+    },
+    {
+      "version": "20261103001200"
+    },
+    {
+      "version": "20261103001300"
+    },
+    {
+      "version": "20261103001400"
+    },
+    {
+      "version": "20261103001500"
+    },
+    {
+      "version": "20261103001600"
+    },
+    {
+      "version": "20261103001700"
+    }
+  ],
+  "relations": [
+    {
+      "owner": "postgres",
+      "relation": "app_private.account_action_types",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "app_private.community_account_requests",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "app_private.tenant_admin_action_categories",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.community_account_permissions",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.community_account_preferences",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.community_account_profiles",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.community_accounts",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.community_standing",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.tenant_admin_actions",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.tenant_settings",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.tenant_staff_assignments",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.tenant_website_content_overrides",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.tenants",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.user_account_blocks",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.user_account_profiles",
+      "relkind": "r",
+      "rls": true
+    },
+    {
+      "owner": "postgres",
+      "relation": "public.user_accounts",
+      "relkind": "r",
+      "rls": true
+    }
+  ],
+  "functions": [
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.active_tenant(uuid)"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.append_admin_action()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.attribute_command()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.can_block_from_profile(uuid)"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.can_discover_global_profile(uuid)"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.can_edit_configuration(uuid,text)"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.can_inspect_global_profile(uuid)"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.can_manage_account_records(uuid,text)"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.can_read_account_action(uuid,uuid)"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.classify_command()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": false,
+      "owner": "postgres",
+      "signature": "app_private.command_scope()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.community_landing(text)"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.guard_community_sharing()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": false,
+      "owner": "postgres",
+      "signature": "app_private.guard_configuration_details()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.inspect_global_profile(uuid)"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.is_approved_owner(uuid)"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.is_staff_candidate(uuid,uuid,boolean)"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.lock_eligible_actor()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.my_community_relationships()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": false,
+      "owner": "postgres",
+      "signature": "app_private.normalize_editable_text()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": false,
+      "owner": "postgres",
+      "signature": "app_private.protect_invariants()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": false,
+      "owner": "postgres",
+      "signature": "app_private.protect_staff_assignment()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.provision_user_account()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.public_community_directory(text,uuid,integer)"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": false,
+      "owner": "postgres",
+      "signature": "app_private.reject_audit_mutation()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.require_tenant_roots()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": false,
+      "owner": "postgres",
+      "signature": "app_private.stamp_audit()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": false,
+      "owner": "postgres",
+      "signature": "app_private.stamp_community_revision()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": false,
+      "owner": "postgres",
+      "signature": "app_private.stamp_first_approval()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": false,
+      "owner": "postgres",
+      "signature": "app_private.validate_command_details()"
+    },
+    {
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "signature": "app_private.verified_user()"
+    }
+  ],
+  "external_relation_grants": [],
+  "external_function_grants": [],
+  "role": [
+    {
+      "rolbypassrls": false,
+      "rolcanlogin": true,
+      "rolcreatedb": false,
+      "rolcreaterole": false,
+      "rolinherit": false,
+      "rolname": "ct_api",
+      "rolreplication": false,
+      "rolsuper": false
+    }
+  ],
+  "memberships": [
+    {
+      "member": "postgres",
+      "role": "ct_api"
+    }
+  ],
+  "defaults": [
+    {
+      "acl": "{postgres=X/postgres}",
+      "owner": "postgres",
+      "schema": "GLOBAL",
+      "type": "f"
+    },
+    {
+      "acl": "{postgres=rwU/postgres}",
+      "owner": "postgres",
+      "schema": "public",
+      "type": "S"
+    },
+    {
+      "acl": "{postgres=X/postgres}",
+      "owner": "postgres",
+      "schema": "public",
+      "type": "f"
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres}",
+      "owner": "postgres",
+      "schema": "public",
+      "type": "r"
+    },
+    {
+      "acl": "{postgres=rwU/postgres,anon=rwU/postgres,authenticated=rwU/postgres,service_role=rwU/postgres}",
+      "owner": "postgres",
+      "schema": "storage",
+      "type": "S"
+    },
+    {
+      "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "owner": "postgres",
+      "schema": "storage",
+      "type": "f"
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}",
+      "owner": "postgres",
+      "schema": "storage",
+      "type": "r"
+    }
+  ],
+  "schema_permissions": [
+    {
+      "create": false,
+      "nspname": "app_private",
+      "rolname": "anon",
+      "usage": false
+    },
+    {
+      "create": false,
+      "nspname": "public",
+      "rolname": "anon",
+      "usage": true
+    },
+    {
+      "create": false,
+      "nspname": "app_private",
+      "rolname": "authenticated",
+      "usage": false
+    },
+    {
+      "create": false,
+      "nspname": "public",
+      "rolname": "authenticated",
+      "usage": true
+    },
+    {
+      "create": false,
+      "nspname": "app_private",
+      "rolname": "ct_api",
+      "usage": true
+    },
+    {
+      "create": false,
+      "nspname": "public",
+      "rolname": "ct_api",
+      "usage": true
+    },
+    {
+      "create": false,
+      "nspname": "app_private",
+      "rolname": "service_role",
+      "usage": false
+    },
+    {
+      "create": false,
+      "nspname": "public",
+      "rolname": "service_role",
+      "usage": true
+    }
+  ],
+  "publications": [
+    {
+      "puballtables": false,
+      "pubname": "supabase_realtime",
+      "tables": []
+    }
+  ],
+  "storage": [
+    {
+      "buckets": 0,
+      "objects": 0
+    }
+  ],
+  "platform_policies": [],
+  "definitions": [
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.active_tenant(p_tenant uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select exists (select 1 from public.tenants where id = p_tenant and operational_status = 'active')\n$function$\n",
+      "signature": "app_private.active_tenant(uuid)"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.append_admin_action()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  row_data jsonb;\n  code text := tg_table_name || '.' || lower(tg_op);\nbegin\n  row_data := case when tg_op='DELETE' then to_jsonb(old) else to_jsonb(new) end;\n  if tg_table_name='tenants' and tg_op='UPDATE' and\n    (to_jsonb(old)->>'operational_status') is distinct from (row_data->>'operational_status') then\n    code := case when row_data->>'operational_status'='archived' then 'tenants.archive' else 'tenants.restore' end;\n  end if;\n  insert into public.tenant_admin_actions(tenant_id,action,target_user_id,content_key,created_by)\n    values(coalesce((row_data->>'tenant_id')::uuid,(row_data->>'id')::uuid),code,(row_data->>'user_id')::uuid,\n      row_data->>'content_key',auth.uid());\n  return null;\nend $function$\n",
+      "signature": "app_private.append_admin_action()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.attribute_command()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if session_user='ct_api' then\n    new.created_by := app_private.verified_user();\n    new.operation_id := nullif(current_setting('ct.operation_id',true),'')::uuid;\n    if new.created_by is null or new.operation_id is null or new.tenant_id is distinct from app_private.command_scope()\n      or exists(select from app_private.account_action_types where code=new.action and usage='legacy') then\n      raise exception 'invalid command attribution' using errcode='42501';\n    end if;\n  end if;\n  return new;\nend $function$\n",
+      "signature": "app_private.attribute_command()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.can_block_from_profile(p_target uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select app_private.verified_user() is not null and p_target<>app_private.verified_user() and (\r\n    exists(select from public.user_account_blocks b where (b.blocker_user_id,b.blocked_user_id)=(app_private.verified_user(),p_target))\r\n    or case current_setting('ct.block_source',true)\r\n      when 'global_profile' then app_private.can_inspect_global_profile(p_target)\r\n        and exists(select from public.user_account_profiles p where p.user_id=p_target)\r\n      when 'community_profile' then exists(\r\n        select from public.community_accounts viewer join public.community_accounts target using(tenant_id)\r\n        join public.community_account_profiles p on (p.tenant_id,p.user_id)=(target.tenant_id,target.user_id)\r\n        join public.tenants t on t.id=target.tenant_id\r\n        where t.id=nullif(current_setting('ct.block_tenant',true),'')::uuid\r\n          and viewer.user_id=app_private.verified_user() and target.user_id=p_target\r\n          and ((t.operational_status='active' and viewer.standing in ('approved','suspended')\r\n            and target.standing in ('approved','suspended','inactive'))\r\n            or (t.operational_status='archived' and app_private.is_approved_owner(t.id))))\r\n      else false end)\r\n$function$\n",
+      "signature": "app_private.can_block_from_profile(uuid)"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.can_discover_global_profile(p_target uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select app_private.verified_user() is not null and exists(select from public.user_accounts u\r\n    where u.user_id=p_target and u.user_is_discoverable)\r\n    and not exists(select from public.user_account_blocks b where\r\n      (b.blocker_user_id,b.blocked_user_id) in ((app_private.verified_user(),p_target),(p_target,app_private.verified_user())))\r\n$function$\n",
+      "signature": "app_private.can_discover_global_profile(uuid)"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.can_edit_configuration(p_tenant uuid, p_kind text)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select exists(select from public.tenant_staff_assignments s\r\n    join public.community_accounts c using(tenant_id,user_id) join public.tenants t on t.id=s.tenant_id\r\n    where s.tenant_id=p_tenant and s.user_id=app_private.verified_user() and s.status='active' and c.standing='approved'\r\n      and (s.role='owner' or t.operational_status='active')\r\n      and case p_kind when 'details' then s.role='owner' when 'settings' then s.can_manage_settings\r\n        when 'copy' then s.can_modify_content else false end)\r\n$function$\n",
+      "signature": "app_private.can_edit_configuration(uuid,text)"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.can_inspect_global_profile(p_target uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select app_private.verified_user() is not null and (p_target=app_private.verified_user() or (\r\n    not exists(select from public.user_account_blocks b where\r\n      (b.blocker_user_id,b.blocked_user_id) in ((app_private.verified_user(),p_target),(p_target,app_private.verified_user())))\r\n    and (exists(select from public.user_accounts u where u.user_id=p_target and u.user_is_discoverable)\r\n      or exists(select from public.community_accounts viewer join public.community_accounts target using(tenant_id)\r\n        join public.community_account_preferences prefs on (prefs.tenant_id,prefs.user_id)=(target.tenant_id,target.user_id)\r\n        join public.tenants t on t.id=target.tenant_id\r\n        where viewer.user_id=app_private.verified_user() and target.user_id=p_target\r\n          and viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended')\r\n          and t.operational_status='active' and prefs.show_global_profile))))\r\n$function$\n",
+      "signature": "app_private.can_inspect_global_profile(uuid)"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.can_manage_account_records(p_tenant uuid, p_kind text)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select p_tenant=app_private.command_scope() and exists(\r\n    select from public.tenant_staff_assignments s join public.community_accounts c using(tenant_id,user_id)\r\n    join public.tenants t on t.id=s.tenant_id\r\n    where s.tenant_id=p_tenant and s.user_id=app_private.verified_user() and s.status='active' and c.standing='approved'\r\n      and (s.role='owner' or t.operational_status='active')\r\n      and case p_kind when 'staff' then s.can_grant_staff when 'participant' then s.can_manage_community_permissions else false end)\r\n$function$\n",
+      "signature": "app_private.can_manage_account_records(uuid,text)"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.can_read_account_action(p_tenant uuid, p_action uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select p_tenant=app_private.command_scope()\n    and exists(select from public.tenant_admin_actions where id=p_action and tenant_id=p_tenant)\n    and exists(\n    select from public.tenant_staff_assignments s\n    join public.community_accounts c using(tenant_id,user_id)\n    join public.tenants t on t.id=s.tenant_id\n    where s.tenant_id=p_tenant and s.user_id=app_private.verified_user()\n      and s.status='active' and c.standing='approved'\n      and (s.role='owner' or (t.operational_status='active' and exists(\n        select from app_private.tenant_admin_action_categories category where category.action_id=p_action\n          and ((category.category='community_account' and s.can_audit_community_accounts)\n            or (category.category='staff_account' and s.can_audit_staff_accounts))\n      )))\n  )\n$function$\n",
+      "signature": "app_private.can_read_account_action(uuid,uuid)"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.classify_command()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if new.action like 'staff\\_%' then\n    insert into app_private.tenant_admin_action_categories values(new.id,'staff_account');\n  end if;\n  if new.action like 'community\\_%' or new.action in ('staff_created','staff_reappointed')\n      or (new.action='staff_revoked' and new.details->>'before_status'='active') then\n    insert into app_private.tenant_admin_action_categories values(new.id,'community_account');\n  end if;\n  return new;\nend $function$\n",
+      "signature": "app_private.classify_command()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.command_scope()\n RETURNS uuid\n LANGUAGE sql\n STABLE\n SET search_path TO ''\nAS $function$\n  select case when app_private.verified_user() is not null then nullif(current_setting('ct.tenant_id',true),'')::uuid end\n$function$\n",
+      "signature": "app_private.command_scope()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.community_landing(p_slug text)\n RETURNS TABLE(id uuid, slug text, name text, country_code text, state_province text, city text, timezone text, auto_approve_users boolean, allow_public_chat_visibility boolean, allow_public_activity_visibility boolean, allow_public_directory_visibility boolean, overrides jsonb)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select t.id,t.slug,t.name,t.country_code,t.state_province,t.city,t.timezone,s.auto_approve_users,\r\n    s.allow_public_chat_visibility,s.allow_public_activity_visibility,s.allow_public_directory_visibility,\r\n    coalesce((select jsonb_agg(jsonb_build_object('tenant_id',o.tenant_id,'content_key',o.content_key,'text_value',o.text_value) order by o.content_key)\r\n      from public.tenant_website_content_overrides o where o.tenant_id=t.id and o.content_key in (\r\n        'community.hero.eyebrow','community.hero.heading','community.hero.description','community.welcome.eyebrow',\r\n        'community.welcome.heading','community.welcome.body','community.welcome.emphasis')),'[]'::jsonb)\r\n  from public.tenants t join public.tenant_settings s on s.tenant_id=t.id\r\n  where t.slug=p_slug and t.operational_status='active'\r\n$function$\n",
+      "signature": "app_private.community_landing(text)"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.guard_community_sharing()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if tg_table_name='community_accounts' then\n    update public.community_account_preferences set show_global_profile=false\n      where tenant_id=new.tenant_id and user_id=new.user_id and show_global_profile;\n  else\n    perform 1 from public.community_accounts where tenant_id=new.tenant_id\n      and user_id=new.user_id and standing <> 'inactive' for update;\n    if not found then raise exception 'inactive_community_sharing' using errcode='23514'; end if;\n  end if;\n  return new;\nend $function$\n",
+      "signature": "app_private.guard_community_sharing()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.guard_configuration_details()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\r\nbegin\r\n  if session_user='ct_api' and (new.name,new.country_code,new.state_province,new.city,new.timezone,new.operational_status)\r\n    is distinct from (old.name,old.country_code,old.state_province,old.city,old.timezone,old.operational_status)\r\n    and not app_private.can_edit_configuration(old.id,'details') then\r\n    raise exception 'configuration_owner_required' using errcode='42501';\r\n  end if;\r\n  return new;\r\nend $function$\n",
+      "signature": "app_private.guard_configuration_details()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.inspect_global_profile(p_target uuid)\n RETURNS TABLE(user_id uuid, display_name text, bio text, created_at timestamp with time zone, updated_at timestamp with time zone, created_by uuid, updated_by uuid)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select p.user_id,p.display_name,p.bio,p.created_at,p.updated_at,p.created_by,p.updated_by\r\n    from public.user_account_profiles p where p.user_id=p_target and app_private.can_inspect_global_profile(p_target)\r\n$function$\n",
+      "signature": "app_private.inspect_global_profile(uuid)"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.is_approved_owner(p_tenant uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select exists (\n    select 1 from public.tenant_staff_assignments s\n    join public.community_accounts c using (tenant_id, user_id)\n    where s.tenant_id = p_tenant and s.user_id = app_private.verified_user()\n      and s.role = 'owner' and s.status = 'active' and c.standing = 'approved'\n  )\n$function$\n",
+      "signature": "app_private.is_approved_owner(uuid)"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.is_staff_candidate(p_tenant uuid, p_target uuid, p_lock boolean)\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if p_tenant is distinct from app_private.command_scope() or not exists (\n    select from public.tenant_staff_assignments actor join public.tenants t on t.id=actor.tenant_id\n    join public.community_accounts target on target.tenant_id=t.id and target.user_id=p_target\n    where actor.tenant_id=p_tenant and actor.user_id=app_private.verified_user() and actor.status='active'\n      and actor.can_grant_staff and t.operational_status='active' and target.standing='approved'\n  ) then return false; end if;\n  if p_lock then perform id from auth.users where id=p_target for share; end if;\n  return exists(select from auth.users where id=p_target and email is not null and email_confirmed_at is not null\n    and not coalesce(is_anonymous,false) and (banned_until is null or banned_until<=now()));\nend $function$\n",
+      "signature": "app_private.is_staff_candidate(uuid,uuid,boolean)"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.lock_eligible_actor()\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\nbegin\r\n  perform 1 from auth.users where id = auth.uid()\r\n    and email_confirmed_at is not null and email is not null and not coalesce(is_anonymous, false)\r\n    and (banned_until is null or banned_until <= now()) for share;\r\n  return found;\r\nend $function$\n",
+      "signature": "app_private.lock_eligible_actor()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.my_community_relationships()\n RETURNS TABLE(tenant_id uuid, is_owned boolean, is_managed boolean, is_member boolean)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select c.tenant_id,\n    coalesce(s.status='active' and s.role='owner' and c.standing='approved',false),\n    coalesce(s.status='active' and c.standing='approved',false),\n    c.standing in ('pending','approved','suspended')\n  from public.community_accounts c left join public.tenant_staff_assignments s using(tenant_id,user_id)\n  where c.user_id=app_private.verified_user() and c.standing in ('pending','approved','suspended')\n$function$\n",
+      "signature": "app_private.my_community_relationships()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.normalize_editable_text()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if tg_table_name = 'tenants' then\n    new.name := btrim(new.name);\n    new.state_province := nullif(btrim(new.state_province),'');\n    new.city := nullif(btrim(new.city),'');\n  else\n    new.display_name := btrim(new.display_name);\n    new.bio := nullif(btrim(new.bio),'');\n  end if;\n  return new;\nend $function$\n",
+      "signature": "app_private.normalize_editable_text()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.protect_invariants()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if tg_table_name = 'tenants' and tg_op <> 'DELETE' then\n    if tg_op = 'UPDATE' and (new.id <> old.id or new.slug <> old.slug) then\n      raise exception 'tenant_identity_immutable' using errcode = '23514';\n    end if;\n    if not exists (select 1 from pg_catalog.pg_timezone_names where name = new.timezone) then\n      raise exception 'invalid_timezone' using errcode = '23514';\n    end if;\n  elsif tg_table_name = 'tenant_staff_assignments' then\n    if tg_op = 'INSERT' and new.role = 'owner' then\n      new.can_approve_users := true;\n      new.can_create_admin := true;\n      new.can_modify_content := true;\n    elsif tg_op <> 'INSERT' then\n      if old.role = 'owner' and (tg_op = 'DELETE' or new is distinct from old) then\n        raise exception 'owner_assignment_immutable' using errcode = '23514';\n      end if;\n      if tg_op = 'UPDATE' and (new.tenant_id <> old.tenant_id or new.user_id <> old.user_id or new.role <> old.role) then\n        raise exception 'staff_identity_immutable' using errcode = '23514';\n      end if;\n    end if;\n  elsif tg_op = 'UPDATE' then\n    if to_jsonb(new)->'tenant_id' is distinct from to_jsonb(old)->'tenant_id'\n       or to_jsonb(new)->'user_id' is distinct from to_jsonb(old)->'user_id'\n       or (tg_table_name = 'tenant_website_content_overrides'\n         and to_jsonb(new)->'content_key' is distinct from to_jsonb(old)->'content_key') then\n      raise exception 'account_identity_immutable' using errcode = '23514';\n    end if;\n  end if;\n  if tg_op = 'DELETE' then return old; end if;\n  return new;\nend $function$\n",
+      "signature": "app_private.protect_invariants()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.protect_staff_assignment()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if old.role='owner' then\n    raise exception 'owner_assignment_immutable' using errcode='23514';\n  elsif tg_op='DELETE' then\n    return old;\n  elsif (new.tenant_id,new.user_id,new.role) is distinct from (old.tenant_id,old.user_id,old.role) then\n    raise exception 'staff_identity_immutable' using errcode='23514';\n  end if;\n  return new;\nend $function$\n",
+      "signature": "app_private.protect_staff_assignment()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.provision_user_account()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  insert into public.user_accounts(user_id) values (new.id);\n  return new;\nend $function$\n",
+      "signature": "app_private.provision_user_account()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.public_community_directory(p_slug text, p_after uuid, p_limit integer)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare site uuid; result jsonb;\r\nbegin\r\n  if p_limit is null or p_limit<1 or p_limit>100 then raise invalid_parameter_value; end if;\r\n  select id into site from public.tenants where slug=p_slug for share;\r\n  if site is null then return null; end if;\r\n  -- This statement runs after the tenant lock, including after waiting for a\r\n  -- writer. VOLATILE PL/pgSQL obtains a fresh snapshot for the current gate.\r\n  if not exists(select from public.tenants t join public.tenant_settings s on s.tenant_id=t.id\r\n    where t.id=site and t.operational_status='active' and s.allow_public_directory_visibility) then return null; end if;\r\n  select coalesce(jsonb_agg(jsonb_build_object('user_id',d.user_id,'display_name',d.display_name,'staff_role',d.staff_role) order by d.user_id),'[]'::jsonb)\r\n  into result from (\r\n    select c.user_id,p.display_name,case when c.standing='approved' and s.status='active' then s.role end as staff_role\r\n    from public.community_accounts c join public.community_account_profiles p using(tenant_id,user_id)\r\n    left join public.tenant_staff_assignments s using(tenant_id,user_id)\r\n    where c.tenant_id=site and c.standing in ('approved','suspended') and (p_after is null or c.user_id>p_after)\r\n    order by c.user_id limit p_limit+1\r\n  ) d;\r\n  return result;\r\nend $function$\n",
+      "signature": "app_private.public_community_directory(text,uuid,integer)"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.reject_audit_mutation()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin raise exception 'audit_is_append_only' using errcode = '23514'; end $function$\n",
+      "signature": "app_private.reject_audit_mutation()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.require_tenant_roots()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare v_tenant uuid;\nbegin\n  v_tenant := case when tg_table_name = 'tenants' then (to_jsonb(new)->>'id')::uuid\n    when tg_op = 'DELETE' then (to_jsonb(old)->>'tenant_id')::uuid else (to_jsonb(new)->>'tenant_id')::uuid end;\n  if exists (select 1 from public.tenants where id = v_tenant) then\n    if (select count(*) from public.tenant_staff_assignments where tenant_id = v_tenant and role = 'owner' and status = 'active') <> 1\n       or not exists (select 1 from public.tenant_settings where tenant_id = v_tenant) then\n      raise exception 'tenant_requires_owner_and_settings' using errcode = '23514';\n    end if;\n  end if;\n  return null;\nend $function$\n",
+      "signature": "app_private.require_tenant_roots()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.stamp_audit()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\r\ndeclare actor uuid;\r\nbegin\r\n  if tg_op = 'INSERT' and tg_table_name = 'user_accounts' then\r\n    actor := (to_jsonb(new)->>'user_id')::uuid;\r\n  elsif session_user = 'ct_api' then\r\n    actor := app_private.verified_user();\r\n    if actor is null then\r\n      raise exception 'verified actor required' using errcode = '42501';\r\n    end if;\r\n  else\r\n    actor := auth.uid();\r\n  end if;\r\n  if tg_op = 'INSERT' then\r\n    new.created_at := clock_timestamp();\r\n    new.created_by := actor;\r\n  else\r\n    new.created_at := old.created_at;\r\n    new.created_by := old.created_by;\r\n  end if;\r\n  new.updated_at := clock_timestamp();\r\n  new.updated_by := actor;\r\n  return new;\r\nend $function$\n",
+      "signature": "app_private.stamp_audit()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.stamp_community_revision()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin new.revision := gen_random_uuid(); return new; end $function$\n",
+      "signature": "app_private.stamp_community_revision()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.stamp_first_approval()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if tg_op='UPDATE' and old.first_approved_at is not null then\n    if new.first_approved_at is distinct from old.first_approved_at then\n      raise exception 'first_approval_immutable' using errcode='23514';\n    end if;\n  elsif new.first_approved_at is not null then\n    raise exception 'first_approval_must_be_stamped' using errcode='23514';\n  elsif new.standing='approved' then\n    new.first_approved_at := clock_timestamp();\n  end if;\n  return new;\nend $function$\n",
+      "signature": "app_private.stamp_first_approval()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.validate_command_details()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\r\ndeclare\r\n  fields text[];\r\n  item record;\r\nbegin\r\n  if new.action like '%.%' then\r\n    if new.details <> '{}'::jsonb or new.reason is not null then raise check_violation; end if;\r\n    return new;\r\n  end if;\r\n  fields := case\r\n    when new.action in ('community_join_requested','community_join_withdrawn','community_reactivation_requested','community_reactivation_withdrawn')\r\n      then array['request_id']\r\n    when new.action in ('community_approved','community_reactivated') then array['after_standing','request_id']\r\n    when new.action in ('community_deactivated','community_suspended','community_removed','community_restriction_cleared')\r\n      then array['before_standing','after_standing','before_restricted','after_restricted','request_id']\r\n    when new.action='staff_created' then array['after_status']\r\n    when new.action in ('staff_paused','staff_resumed','staff_revoked') then array['before_status','after_status']\r\n    when new.action='staff_reappointed' then array['before_status','after_status','permissions']\r\n    when new.action='staff_permissions_changed' then array['permissions']\r\n    when new.action='community_permissions_changed' then array['before','after']\r\n  end;\r\n  if fields is null or jsonb_typeof(new.details)<>'object' or new.details-fields <> '{}'::jsonb\r\n    or (new.reason is not null and (new.action not in ('community_suspended','community_removed','community_restriction_cleared','staff_revoked')\r\n      or length(new.reason)>2000)) then raise check_violation; end if;\r\n  if new.action in ('community_approved','community_reactivated') then\r\n    if not new.details ?| fields then raise check_violation; end if;\r\n  elsif new.action in ('community_deactivated','community_suspended','community_removed','community_restriction_cleared') then\r\n    if not new.details ?& array['before_standing','after_standing','before_restricted','after_restricted'] then raise check_violation; end if;\r\n  elsif not new.details ?& fields then raise check_violation;\r\n  end if;\r\n  for item in select * from jsonb_each(new.details) loop\r\n    case item.key\r\n      when 'before_standing','after_standing' then\r\n        if item.value not in ('\"pending\"','\"approved\"','\"suspended\"','\"inactive\"') then raise check_violation; end if;\r\n      when 'before_status','after_status' then\r\n        if item.value not in ('\"active\"','\"paused\"','\"revoked\"') then raise check_violation; end if;\r\n      when 'before_restricted','after_restricted','before','after' then\r\n        if jsonb_typeof(item.value)<>'boolean' then raise check_violation; end if;\r\n      when 'request_id' then\r\n        if jsonb_typeof(item.value)<>'string' then raise check_violation; end if;\r\n        perform (new.details->>'request_id')::uuid;\r\n      when 'permissions' then\r\n        if jsonb_typeof(item.value)<>'object' or item.value-array['can_approve_users','can_grant_staff','can_modify_content','can_discipline_users','can_discipline_staff','can_manage_community_activities','can_manage_official_activities','can_manage_community_permissions','can_see_private_events','can_manage_settings','can_moderate_all_chats','can_audit_community_accounts','can_audit_staff_accounts'] <> '{}'::jsonb\r\n          or exists (select from jsonb_each(item.value) p where jsonb_typeof(p.value)<>'object'\r\n            or p.value-array['before','after'] <> '{}'::jsonb or jsonb_typeof(p.value->'before') is distinct from 'boolean'\r\n            or jsonb_typeof(p.value->'after') is distinct from 'boolean') then raise check_violation; end if;\r\n    end case;\r\n  end loop;\r\n  return new;\r\nend $function$\n",
+      "signature": "app_private.validate_command_details()"
+    },
+    {
+      "definition": "CREATE OR REPLACE FUNCTION app_private.verified_user()\n RETURNS uuid\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select id from auth.users where id = auth.uid() and email_confirmed_at is not null\n    and email is not null and not coalesce(is_anonymous,false)\n    and (banned_until is null or banned_until <= now())\n$function$\n",
+      "signature": "app_private.verified_user()"
+    }
+  ],
+  "policies": [
+    {
+      "cmd": "ALL",
+      "permissive": "PERMISSIVE",
+      "policyname": "command_scope",
+      "qual": "(tenant_id = app_private.command_scope())",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "app_private",
+      "tablename": "community_account_requests",
+      "with_check": "(tenant_id = app_private.command_scope())"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "history_category_read",
+      "qual": "(EXISTS ( SELECT\n   FROM tenant_admin_actions a\n  WHERE (a.id = tenant_admin_action_categories.action_id)))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "app_private",
+      "tablename": "tenant_admin_action_categories",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "permissive": "PERMISSIVE",
+      "policyname": "command_create",
+      "qual": null,
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_account_permissions",
+      "with_check": "(tenant_id = app_private.command_scope())"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "RESTRICTIVE",
+      "policyname": "participant_archive_boundary",
+      "qual": "(app_private.active_tenant(tenant_id) OR app_private.is_approved_owner(tenant_id))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_account_permissions",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "policyname": "participant_edit",
+      "qual": "app_private.can_manage_account_records(tenant_id, 'participant'::text)",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_account_permissions",
+      "with_check": "app_private.can_manage_account_records(tenant_id, 'participant'::text)"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "participant_read",
+      "qual": "((tenant_id = app_private.command_scope()) AND (((user_id = app_private.verified_user()) AND app_private.active_tenant(tenant_id)) OR app_private.can_manage_account_records(tenant_id, 'participant'::text)))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_account_permissions",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_own_preferences_edit",
+      "qual": "((user_id = app_private.verified_user()) AND app_private.active_tenant(tenant_id) AND (EXISTS ( SELECT\n   FROM community_accounts c\n  WHERE (((c.tenant_id = community_account_preferences.tenant_id) AND (c.user_id = community_account_preferences.user_id)) AND (c.standing = ANY (ARRAY['pending'::text, 'approved'::text]))))))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_account_preferences",
+      "with_check": "(user_id = app_private.verified_user())"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_own_preferences_read",
+      "qual": "(user_id = app_private.verified_user())",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_account_preferences",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "permissive": "PERMISSIVE",
+      "policyname": "command_insert",
+      "qual": null,
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_account_preferences",
+      "with_check": "(tenant_id = app_private.command_scope())"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "RESTRICTIVE",
+      "policyname": "preference_archive_boundary",
+      "qual": "(app_private.active_tenant(tenant_id) OR app_private.is_approved_owner(tenant_id))",
+      "roles": [
+        "public"
+      ],
+      "schemaname": "public",
+      "tablename": "community_account_preferences",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_community_profile_read",
+      "qual": "(( SELECT app_private.verified_user() AS verified_user) IS NOT NULL)",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_account_profiles",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_own_profile_edit",
+      "qual": "((user_id = app_private.verified_user()) AND app_private.active_tenant(tenant_id) AND (EXISTS ( SELECT\n   FROM community_accounts c\n  WHERE (((c.tenant_id = community_account_profiles.tenant_id) AND (c.user_id = community_account_profiles.user_id)) AND (c.standing = ANY (ARRAY['pending'::text, 'approved'::text, 'suspended'::text]))))))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_account_profiles",
+      "with_check": "(user_id = app_private.verified_user())"
+    },
+    {
+      "cmd": "INSERT",
+      "permissive": "PERMISSIVE",
+      "policyname": "command_insert",
+      "qual": null,
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_account_profiles",
+      "with_check": "(tenant_id = app_private.command_scope())"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "RESTRICTIVE",
+      "policyname": "profile_archive_boundary",
+      "qual": "(app_private.active_tenant(tenant_id) OR app_private.is_approved_owner(tenant_id))",
+      "roles": [
+        "public"
+      ],
+      "schemaname": "public",
+      "tablename": "community_account_profiles",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "RESTRICTIVE",
+      "policyname": "account_archive_boundary",
+      "qual": "(app_private.active_tenant(tenant_id) OR app_private.is_approved_owner(tenant_id))",
+      "roles": [
+        "public"
+      ],
+      "schemaname": "public",
+      "tablename": "community_accounts",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_community_account_facts",
+      "qual": "(( SELECT app_private.verified_user() AS verified_user) IS NOT NULL)",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_accounts",
+      "with_check": null
+    },
+    {
+      "cmd": "ALL",
+      "permissive": "PERMISSIVE",
+      "policyname": "command_scope",
+      "qual": "(tenant_id = app_private.command_scope())",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_accounts",
+      "with_check": "(tenant_id = app_private.command_scope())"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_standing_reference",
+      "qual": "true",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "community_standing",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "permissive": "PERMISSIVE",
+      "policyname": "command_insert",
+      "qual": null,
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenant_admin_actions",
+      "with_check": "(tenant_id = app_private.command_scope())"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "history_read",
+      "qual": "((tenant_id = app_private.command_scope()) AND app_private.can_read_account_action(tenant_id, id))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenant_admin_actions",
+      "with_check": null
+    },
+    {
+      "cmd": "ALL",
+      "permissive": "PERMISSIVE",
+      "policyname": "command_scope",
+      "qual": "(tenant_id = app_private.command_scope())",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenant_settings",
+      "with_check": "(tenant_id = app_private.command_scope())"
+    },
+    {
+      "cmd": "UPDATE",
+      "permissive": "RESTRICTIVE",
+      "policyname": "configuration_settings_edit",
+      "qual": "app_private.can_edit_configuration(tenant_id, 'settings'::text)",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenant_settings",
+      "with_check": "app_private.can_edit_configuration(tenant_id, 'settings'::text)"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "RESTRICTIVE",
+      "policyname": "settings_archive_boundary",
+      "qual": "(app_private.active_tenant(tenant_id) OR app_private.is_approved_owner(tenant_id))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenant_settings",
+      "with_check": null
+    },
+    {
+      "cmd": "ALL",
+      "permissive": "PERMISSIVE",
+      "policyname": "command_scope",
+      "qual": "(tenant_id = app_private.command_scope())",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenant_staff_assignments",
+      "with_check": "(tenant_id = app_private.command_scope())"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "RESTRICTIVE",
+      "policyname": "staff_archive_boundary",
+      "qual": "(app_private.active_tenant(tenant_id) OR app_private.is_approved_owner(tenant_id))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenant_staff_assignments",
+      "with_check": null
+    },
+    {
+      "cmd": "DELETE",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_copy_delete",
+      "qual": "((tenant_id = app_private.command_scope()) AND app_private.can_edit_configuration(tenant_id, 'copy'::text))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenant_website_content_overrides",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_copy_insert",
+      "qual": null,
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenant_website_content_overrides",
+      "with_check": "((tenant_id = app_private.command_scope()) AND app_private.can_edit_configuration(tenant_id, 'copy'::text))"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_copy_read",
+      "qual": "((tenant_id = app_private.command_scope()) AND (app_private.can_edit_configuration(tenant_id, 'copy'::text) OR (app_private.active_tenant(tenant_id) AND (EXISTS ( SELECT\n   FROM community_accounts c\n  WHERE (((c.tenant_id = tenant_website_content_overrides.tenant_id) AND (c.user_id = app_private.verified_user())) AND (c.standing = ANY (ARRAY['approved'::text, 'suspended'::text]))))))))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenant_website_content_overrides",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_copy_update",
+      "qual": "((tenant_id = app_private.command_scope()) AND app_private.can_edit_configuration(tenant_id, 'copy'::text))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenant_website_content_overrides",
+      "with_check": "((tenant_id = app_private.command_scope()) AND app_private.can_edit_configuration(tenant_id, 'copy'::text))"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "RESTRICTIVE",
+      "policyname": "copy_archive_boundary",
+      "qual": "(app_private.active_tenant(tenant_id) OR app_private.is_approved_owner(tenant_id))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenant_website_content_overrides",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_own_summary",
+      "qual": "(id IN ( SELECT my_community_relationships.tenant_id\n   FROM app_private.my_community_relationships() my_community_relationships(tenant_id, is_owned, is_managed, is_member)))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenants",
+      "with_check": null
+    },
+    {
+      "cmd": "ALL",
+      "permissive": "PERMISSIVE",
+      "policyname": "command_scope",
+      "qual": "(id = app_private.command_scope())",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "tenants",
+      "with_check": "(id = app_private.command_scope())"
+    },
+    {
+      "cmd": "DELETE",
+      "permissive": "PERMISSIVE",
+      "policyname": "own_blocks_delete",
+      "qual": "(blocker_user_id = app_private.verified_user())",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "user_account_blocks",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "permissive": "PERMISSIVE",
+      "policyname": "own_blocks_insert",
+      "qual": null,
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "user_account_blocks",
+      "with_check": "((blocker_user_id = app_private.verified_user()) AND app_private.can_block_from_profile(blocked_user_id))"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "own_blocks_read",
+      "qual": "(blocker_user_id = app_private.verified_user())",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "user_account_blocks",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_discoverable_profile",
+      "qual": "app_private.can_discover_global_profile(user_id)",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "user_account_profiles",
+      "with_check": null
+    },
+    {
+      "cmd": "ALL",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_self_profile",
+      "qual": "(user_id = ( SELECT app_private.verified_user() AS verified_user))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "user_account_profiles",
+      "with_check": "(user_id = ( SELECT app_private.verified_user() AS verified_user))"
+    },
+    {
+      "cmd": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_self_edit",
+      "qual": "(user_id = ( SELECT app_private.verified_user() AS verified_user))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "user_accounts",
+      "with_check": "(user_id = ( SELECT app_private.verified_user() AS verified_user))"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "api_self_read",
+      "qual": "(user_id = ( SELECT app_private.verified_user() AS verified_user))",
+      "roles": [
+        "ct_api"
+      ],
+      "schemaname": "public",
+      "tablename": "user_accounts",
+      "with_check": null
+    }
+  ],
+  "triggers": [
+    {
+      "definition": "CREATE TRIGGER immutable_category BEFORE DELETE OR UPDATE ON app_private.tenant_admin_action_categories FOR EACH ROW EXECUTE FUNCTION app_private.reject_audit_mutation()",
+      "function": "app_private.reject_audit_mutation()",
+      "relation": "app_private.tenant_admin_action_categories",
+      "tgname": "immutable_category"
+    },
+    {
+      "definition": "CREATE TRIGGER crowded_table_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION app_private.provision_user_account()",
+      "function": "app_private.provision_user_account()",
+      "relation": "auth.users",
+      "tgname": "crowded_table_user_created"
+    },
+    {
+      "definition": "CREATE TRIGGER z_audit BEFORE INSERT OR UPDATE ON public.community_account_permissions FOR EACH ROW EXECUTE FUNCTION app_private.stamp_audit()",
+      "function": "app_private.stamp_audit()",
+      "relation": "community_account_permissions",
+      "tgname": "z_audit"
+    },
+    {
+      "definition": "CREATE TRIGGER validate_sharing BEFORE INSERT OR UPDATE ON public.community_account_preferences FOR EACH ROW WHEN (new.show_global_profile) EXECUTE FUNCTION app_private.guard_community_sharing()",
+      "function": "app_private.guard_community_sharing()",
+      "relation": "community_account_preferences",
+      "tgname": "validate_sharing"
+    },
+    {
+      "definition": "CREATE TRIGGER z_audit BEFORE INSERT OR UPDATE ON public.community_account_preferences FOR EACH ROW EXECUTE FUNCTION app_private.stamp_audit()",
+      "function": "app_private.stamp_audit()",
+      "relation": "community_account_preferences",
+      "tgname": "z_audit"
+    },
+    {
+      "definition": "CREATE TRIGGER a_invariants BEFORE INSERT OR DELETE OR UPDATE ON public.community_account_profiles FOR EACH ROW EXECUTE FUNCTION app_private.protect_invariants()",
+      "function": "app_private.protect_invariants()",
+      "relation": "community_account_profiles",
+      "tgname": "a_invariants"
+    },
+    {
+      "definition": "CREATE TRIGGER b_normalize BEFORE INSERT OR UPDATE ON public.community_account_profiles FOR EACH ROW EXECUTE FUNCTION app_private.normalize_editable_text()",
+      "function": "app_private.normalize_editable_text()",
+      "relation": "community_account_profiles",
+      "tgname": "b_normalize"
+    },
+    {
+      "definition": "CREATE TRIGGER z_audit BEFORE INSERT OR UPDATE ON public.community_account_profiles FOR EACH ROW EXECUTE FUNCTION app_private.stamp_audit()",
+      "function": "app_private.stamp_audit()",
+      "relation": "community_account_profiles",
+      "tgname": "z_audit"
+    },
+    {
+      "definition": "CREATE TRIGGER a_invariants BEFORE INSERT OR DELETE OR UPDATE ON public.community_accounts FOR EACH ROW EXECUTE FUNCTION app_private.protect_invariants()",
+      "function": "app_private.protect_invariants()",
+      "relation": "community_accounts",
+      "tgname": "a_invariants"
+    },
+    {
+      "definition": "CREATE TRIGGER b_first_approval BEFORE INSERT OR UPDATE ON public.community_accounts FOR EACH ROW EXECUTE FUNCTION app_private.stamp_first_approval()",
+      "function": "app_private.stamp_first_approval()",
+      "relation": "community_accounts",
+      "tgname": "b_first_approval"
+    },
+    {
+      "definition": "CREATE TRIGGER b_revision BEFORE UPDATE ON public.community_accounts FOR EACH ROW EXECUTE FUNCTION app_private.stamp_community_revision()",
+      "function": "app_private.stamp_community_revision()",
+      "relation": "community_accounts",
+      "tgname": "b_revision"
+    },
+    {
+      "definition": "CREATE TRIGGER clear_inactive_sharing AFTER UPDATE OF standing ON public.community_accounts FOR EACH ROW WHEN ((new.standing = 'inactive'::text)) EXECUTE FUNCTION app_private.guard_community_sharing()",
+      "function": "app_private.guard_community_sharing()",
+      "relation": "community_accounts",
+      "tgname": "clear_inactive_sharing"
+    },
+    {
+      "definition": "CREATE TRIGGER z_audit BEFORE INSERT OR UPDATE ON public.community_accounts FOR EACH ROW EXECUTE FUNCTION app_private.stamp_audit()",
+      "function": "app_private.stamp_audit()",
+      "relation": "community_accounts",
+      "tgname": "z_audit"
+    },
+    {
+      "definition": "CREATE TRIGGER attribute_command BEFORE INSERT ON public.tenant_admin_actions FOR EACH ROW EXECUTE FUNCTION app_private.attribute_command()",
+      "function": "app_private.attribute_command()",
+      "relation": "tenant_admin_actions",
+      "tgname": "attribute_command"
+    },
+    {
+      "definition": "CREATE TRIGGER classify_command AFTER INSERT ON public.tenant_admin_actions FOR EACH ROW EXECUTE FUNCTION app_private.classify_command()",
+      "function": "app_private.classify_command()",
+      "relation": "tenant_admin_actions",
+      "tgname": "classify_command"
+    },
+    {
+      "definition": "CREATE TRIGGER immutable_audit BEFORE DELETE OR UPDATE ON public.tenant_admin_actions FOR EACH ROW EXECUTE FUNCTION app_private.reject_audit_mutation()",
+      "function": "app_private.reject_audit_mutation()",
+      "relation": "tenant_admin_actions",
+      "tgname": "immutable_audit"
+    },
+    {
+      "definition": "CREATE TRIGGER validate_details BEFORE INSERT ON public.tenant_admin_actions FOR EACH ROW EXECUTE FUNCTION app_private.validate_command_details()",
+      "function": "app_private.validate_command_details()",
+      "relation": "tenant_admin_actions",
+      "tgname": "validate_details"
+    },
+    {
+      "definition": "CREATE TRIGGER a_invariants BEFORE INSERT OR DELETE OR UPDATE ON public.tenant_settings FOR EACH ROW EXECUTE FUNCTION app_private.protect_invariants()",
+      "function": "app_private.protect_invariants()",
+      "relation": "tenant_settings",
+      "tgname": "a_invariants"
+    },
+    {
+      "definition": "CREATE TRIGGER log_admin_action AFTER INSERT OR DELETE OR UPDATE ON public.tenant_settings FOR EACH ROW EXECUTE FUNCTION app_private.append_admin_action()",
+      "function": "app_private.append_admin_action()",
+      "relation": "tenant_settings",
+      "tgname": "log_admin_action"
+    },
+    {
+      "definition": "CREATE CONSTRAINT TRIGGER settings_roots AFTER INSERT OR DELETE OR UPDATE ON public.tenant_settings DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.require_tenant_roots()",
+      "function": "app_private.require_tenant_roots()",
+      "relation": "tenant_settings",
+      "tgname": "settings_roots"
+    },
+    {
+      "definition": "CREATE TRIGGER z_audit BEFORE INSERT OR UPDATE ON public.tenant_settings FOR EACH ROW EXECUTE FUNCTION app_private.stamp_audit()",
+      "function": "app_private.stamp_audit()",
+      "relation": "tenant_settings",
+      "tgname": "z_audit"
+    },
+    {
+      "definition": "CREATE TRIGGER a_invariants BEFORE DELETE OR UPDATE ON public.tenant_staff_assignments FOR EACH ROW EXECUTE FUNCTION app_private.protect_staff_assignment()",
+      "function": "app_private.protect_staff_assignment()",
+      "relation": "tenant_staff_assignments",
+      "tgname": "a_invariants"
+    },
+    {
+      "definition": "CREATE CONSTRAINT TRIGGER staff_roots AFTER INSERT OR DELETE OR UPDATE ON public.tenant_staff_assignments DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.require_tenant_roots()",
+      "function": "app_private.require_tenant_roots()",
+      "relation": "tenant_staff_assignments",
+      "tgname": "staff_roots"
+    },
+    {
+      "definition": "CREATE TRIGGER z_audit BEFORE INSERT OR UPDATE ON public.tenant_staff_assignments FOR EACH ROW EXECUTE FUNCTION app_private.stamp_audit()",
+      "function": "app_private.stamp_audit()",
+      "relation": "tenant_staff_assignments",
+      "tgname": "z_audit"
+    },
+    {
+      "definition": "CREATE TRIGGER a_invariants BEFORE INSERT OR DELETE OR UPDATE ON public.tenant_website_content_overrides FOR EACH ROW EXECUTE FUNCTION app_private.protect_invariants()",
+      "function": "app_private.protect_invariants()",
+      "relation": "tenant_website_content_overrides",
+      "tgname": "a_invariants"
+    },
+    {
+      "definition": "CREATE TRIGGER log_admin_action AFTER INSERT OR DELETE OR UPDATE ON public.tenant_website_content_overrides FOR EACH ROW EXECUTE FUNCTION app_private.append_admin_action()",
+      "function": "app_private.append_admin_action()",
+      "relation": "tenant_website_content_overrides",
+      "tgname": "log_admin_action"
+    },
+    {
+      "definition": "CREATE TRIGGER z_audit BEFORE INSERT OR UPDATE ON public.tenant_website_content_overrides FOR EACH ROW EXECUTE FUNCTION app_private.stamp_audit()",
+      "function": "app_private.stamp_audit()",
+      "relation": "tenant_website_content_overrides",
+      "tgname": "z_audit"
+    },
+    {
+      "definition": "CREATE TRIGGER a_configuration BEFORE UPDATE ON public.tenants FOR EACH ROW EXECUTE FUNCTION app_private.guard_configuration_details()",
+      "function": "app_private.guard_configuration_details()",
+      "relation": "tenants",
+      "tgname": "a_configuration"
+    },
+    {
+      "definition": "CREATE TRIGGER a_invariants BEFORE INSERT OR DELETE OR UPDATE ON public.tenants FOR EACH ROW EXECUTE FUNCTION app_private.protect_invariants()",
+      "function": "app_private.protect_invariants()",
+      "relation": "tenants",
+      "tgname": "a_invariants"
+    },
+    {
+      "definition": "CREATE TRIGGER b_normalize BEFORE INSERT OR UPDATE ON public.tenants FOR EACH ROW EXECUTE FUNCTION app_private.normalize_editable_text()",
+      "function": "app_private.normalize_editable_text()",
+      "relation": "tenants",
+      "tgname": "b_normalize"
+    },
+    {
+      "definition": "CREATE TRIGGER log_admin_action AFTER INSERT OR DELETE OR UPDATE ON public.tenants FOR EACH ROW EXECUTE FUNCTION app_private.append_admin_action()",
+      "function": "app_private.append_admin_action()",
+      "relation": "tenants",
+      "tgname": "log_admin_action"
+    },
+    {
+      "definition": "CREATE CONSTRAINT TRIGGER tenant_roots AFTER INSERT OR UPDATE ON public.tenants DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.require_tenant_roots()",
+      "function": "app_private.require_tenant_roots()",
+      "relation": "tenants",
+      "tgname": "tenant_roots"
+    },
+    {
+      "definition": "CREATE TRIGGER z_audit BEFORE INSERT OR UPDATE ON public.tenants FOR EACH ROW EXECUTE FUNCTION app_private.stamp_audit()",
+      "function": "app_private.stamp_audit()",
+      "relation": "tenants",
+      "tgname": "z_audit"
+    },
+    {
+      "definition": "CREATE TRIGGER a_invariants BEFORE INSERT OR DELETE OR UPDATE ON public.user_account_profiles FOR EACH ROW EXECUTE FUNCTION app_private.protect_invariants()",
+      "function": "app_private.protect_invariants()",
+      "relation": "user_account_profiles",
+      "tgname": "a_invariants"
+    },
+    {
+      "definition": "CREATE TRIGGER b_normalize BEFORE INSERT OR UPDATE ON public.user_account_profiles FOR EACH ROW EXECUTE FUNCTION app_private.normalize_editable_text()",
+      "function": "app_private.normalize_editable_text()",
+      "relation": "user_account_profiles",
+      "tgname": "b_normalize"
+    },
+    {
+      "definition": "CREATE TRIGGER z_audit BEFORE INSERT OR UPDATE ON public.user_account_profiles FOR EACH ROW EXECUTE FUNCTION app_private.stamp_audit()",
+      "function": "app_private.stamp_audit()",
+      "relation": "user_account_profiles",
+      "tgname": "z_audit"
+    },
+    {
+      "definition": "CREATE TRIGGER a_invariants BEFORE INSERT OR DELETE OR UPDATE ON public.user_accounts FOR EACH ROW EXECUTE FUNCTION app_private.protect_invariants()",
+      "function": "app_private.protect_invariants()",
+      "relation": "user_accounts",
+      "tgname": "a_invariants"
+    },
+    {
+      "definition": "CREATE TRIGGER z_audit BEFORE INSERT OR UPDATE ON public.user_accounts FOR EACH ROW EXECUTE FUNCTION app_private.stamp_audit()",
+      "function": "app_private.stamp_audit()",
+      "relation": "user_accounts",
+      "tgname": "z_audit"
+    }
+  ],
+  "column_defaults": [
+    {
+      "column": "id",
+      "expression": "gen_random_uuid()",
+      "relation": "app_private.community_account_requests"
+    },
+    {
+      "column": "requested_at",
+      "expression": "clock_timestamp()",
+      "relation": "app_private.community_account_requests"
+    },
+    {
+      "column": "can_post_public_events",
+      "expression": "false",
+      "relation": "public.community_account_permissions"
+    },
+    {
+      "column": "created_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.community_account_permissions"
+    },
+    {
+      "column": "updated_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.community_account_permissions"
+    },
+    {
+      "column": "allow_direct_messages",
+      "expression": "true",
+      "relation": "public.community_account_preferences"
+    },
+    {
+      "column": "allow_private_invitations",
+      "expression": "true",
+      "relation": "public.community_account_preferences"
+    },
+    {
+      "column": "created_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.community_account_preferences"
+    },
+    {
+      "column": "show_global_profile",
+      "expression": "false",
+      "relation": "public.community_account_preferences"
+    },
+    {
+      "column": "updated_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.community_account_preferences"
+    },
+    {
+      "column": "created_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.community_account_profiles"
+    },
+    {
+      "column": "updated_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.community_account_profiles"
+    },
+    {
+      "column": "user_id",
+      "expression": "auth.uid()",
+      "relation": "public.community_account_profiles"
+    },
+    {
+      "column": "created_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.community_accounts"
+    },
+    {
+      "column": "has_disciplinary_restriction",
+      "expression": "false",
+      "relation": "public.community_accounts"
+    },
+    {
+      "column": "revision",
+      "expression": "gen_random_uuid()",
+      "relation": "public.community_accounts"
+    },
+    {
+      "column": "standing",
+      "expression": "'pending'::text",
+      "relation": "public.community_accounts"
+    },
+    {
+      "column": "updated_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.community_accounts"
+    },
+    {
+      "column": "created_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.tenant_admin_actions"
+    },
+    {
+      "column": "details",
+      "expression": "'{}'::jsonb",
+      "relation": "public.tenant_admin_actions"
+    },
+    {
+      "column": "id",
+      "expression": "gen_random_uuid()",
+      "relation": "public.tenant_admin_actions"
+    },
+    {
+      "column": "operation_id",
+      "expression": "gen_random_uuid()",
+      "relation": "public.tenant_admin_actions"
+    },
+    {
+      "column": "allow_public_activity_visibility",
+      "expression": "false",
+      "relation": "public.tenant_settings"
+    },
+    {
+      "column": "allow_public_chat_visibility",
+      "expression": "false",
+      "relation": "public.tenant_settings"
+    },
+    {
+      "column": "allow_public_directory_visibility",
+      "expression": "false",
+      "relation": "public.tenant_settings"
+    },
+    {
+      "column": "auto_approve_users",
+      "expression": "false",
+      "relation": "public.tenant_settings"
+    },
+    {
+      "column": "created_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.tenant_settings"
+    },
+    {
+      "column": "pause_community_events",
+      "expression": "false",
+      "relation": "public.tenant_settings"
+    },
+    {
+      "column": "updated_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.tenant_settings"
+    },
+    {
+      "column": "can_approve_users",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "can_audit_community_accounts",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "can_audit_staff_accounts",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "can_discipline_staff",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "can_discipline_users",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "can_grant_staff",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "can_manage_community_activities",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "can_manage_community_permissions",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "can_manage_official_activities",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "can_manage_settings",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "can_moderate_all_chats",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "can_modify_content",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "can_see_private_events",
+      "expression": "false",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "created_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "required_account_standing",
+      "expression": "\nCASE\n    WHEN (status = 'active'::text) THEN 'approved'::text\n    ELSE NULL::text\nEND",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "status",
+      "expression": "'active'::text",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "updated_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.tenant_staff_assignments"
+    },
+    {
+      "column": "created_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.tenant_website_content_overrides"
+    },
+    {
+      "column": "updated_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.tenant_website_content_overrides"
+    },
+    {
+      "column": "created_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.tenants"
+    },
+    {
+      "column": "id",
+      "expression": "gen_random_uuid()",
+      "relation": "public.tenants"
+    },
+    {
+      "column": "operational_status",
+      "expression": "'active'::text",
+      "relation": "public.tenants"
+    },
+    {
+      "column": "updated_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.tenants"
+    },
+    {
+      "column": "blocker_user_id",
+      "expression": "app_private.verified_user()",
+      "relation": "public.user_account_blocks"
+    },
+    {
+      "column": "created_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.user_account_blocks"
+    },
+    {
+      "column": "created_by",
+      "expression": "app_private.verified_user()",
+      "relation": "public.user_account_blocks"
+    },
+    {
+      "column": "created_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.user_account_profiles"
+    },
+    {
+      "column": "updated_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.user_account_profiles"
+    },
+    {
+      "column": "user_id",
+      "expression": "auth.uid()",
+      "relation": "public.user_account_profiles"
+    },
+    {
+      "column": "allow_direct_messages",
+      "expression": "true",
+      "relation": "public.user_accounts"
+    },
+    {
+      "column": "created_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.user_accounts"
+    },
+    {
+      "column": "enable_matchmaking",
+      "expression": "true",
+      "relation": "public.user_accounts"
+    },
+    {
+      "column": "updated_at",
+      "expression": "clock_timestamp()",
+      "relation": "public.user_accounts"
+    },
+    {
+      "column": "user_is_discoverable",
+      "expression": "true",
+      "relation": "public.user_accounts"
+    }
+  ],
+  "function_dependencies": [
+    {
+      "dependent": "policy account_archive_boundary on table community_accounts",
+      "deptype": "n",
+      "function": "app_private.active_tenant(uuid)"
+    },
+    {
+      "dependent": "policy api_copy_read on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.active_tenant(uuid)"
+    },
+    {
+      "dependent": "policy api_own_preferences_edit on table community_account_preferences",
+      "deptype": "n",
+      "function": "app_private.active_tenant(uuid)"
+    },
+    {
+      "dependent": "policy api_own_profile_edit on table community_account_profiles",
+      "deptype": "n",
+      "function": "app_private.active_tenant(uuid)"
+    },
+    {
+      "dependent": "policy copy_archive_boundary on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.active_tenant(uuid)"
+    },
+    {
+      "dependent": "policy participant_archive_boundary on table community_account_permissions",
+      "deptype": "n",
+      "function": "app_private.active_tenant(uuid)"
+    },
+    {
+      "dependent": "policy participant_read on table community_account_permissions",
+      "deptype": "n",
+      "function": "app_private.active_tenant(uuid)"
+    },
+    {
+      "dependent": "policy preference_archive_boundary on table community_account_preferences",
+      "deptype": "n",
+      "function": "app_private.active_tenant(uuid)"
+    },
+    {
+      "dependent": "policy profile_archive_boundary on table community_account_profiles",
+      "deptype": "n",
+      "function": "app_private.active_tenant(uuid)"
+    },
+    {
+      "dependent": "policy settings_archive_boundary on table tenant_settings",
+      "deptype": "n",
+      "function": "app_private.active_tenant(uuid)"
+    },
+    {
+      "dependent": "policy staff_archive_boundary on table tenant_staff_assignments",
+      "deptype": "n",
+      "function": "app_private.active_tenant(uuid)"
+    },
+    {
+      "dependent": "trigger log_admin_action on table tenant_settings",
+      "deptype": "n",
+      "function": "app_private.append_admin_action()"
+    },
+    {
+      "dependent": "trigger log_admin_action on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.append_admin_action()"
+    },
+    {
+      "dependent": "trigger log_admin_action on table tenants",
+      "deptype": "n",
+      "function": "app_private.append_admin_action()"
+    },
+    {
+      "dependent": "trigger attribute_command on table tenant_admin_actions",
+      "deptype": "n",
+      "function": "app_private.attribute_command()"
+    },
+    {
+      "dependent": "policy own_blocks_insert on table user_account_blocks",
+      "deptype": "n",
+      "function": "app_private.can_block_from_profile(uuid)"
+    },
+    {
+      "dependent": "policy api_discoverable_profile on table user_account_profiles",
+      "deptype": "n",
+      "function": "app_private.can_discover_global_profile(uuid)"
+    },
+    {
+      "dependent": "policy api_copy_delete on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.can_edit_configuration(uuid,text)"
+    },
+    {
+      "dependent": "policy api_copy_insert on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.can_edit_configuration(uuid,text)"
+    },
+    {
+      "dependent": "policy api_copy_read on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.can_edit_configuration(uuid,text)"
+    },
+    {
+      "dependent": "policy api_copy_update on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.can_edit_configuration(uuid,text)"
+    },
+    {
+      "dependent": "policy api_copy_update on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.can_edit_configuration(uuid,text)"
+    },
+    {
+      "dependent": "policy configuration_settings_edit on table tenant_settings",
+      "deptype": "n",
+      "function": "app_private.can_edit_configuration(uuid,text)"
+    },
+    {
+      "dependent": "policy configuration_settings_edit on table tenant_settings",
+      "deptype": "n",
+      "function": "app_private.can_edit_configuration(uuid,text)"
+    },
+    {
+      "dependent": "policy participant_edit on table community_account_permissions",
+      "deptype": "n",
+      "function": "app_private.can_manage_account_records(uuid,text)"
+    },
+    {
+      "dependent": "policy participant_edit on table community_account_permissions",
+      "deptype": "n",
+      "function": "app_private.can_manage_account_records(uuid,text)"
+    },
+    {
+      "dependent": "policy participant_read on table community_account_permissions",
+      "deptype": "n",
+      "function": "app_private.can_manage_account_records(uuid,text)"
+    },
+    {
+      "dependent": "policy history_read on table tenant_admin_actions",
+      "deptype": "n",
+      "function": "app_private.can_read_account_action(uuid,uuid)"
+    },
+    {
+      "dependent": "trigger classify_command on table tenant_admin_actions",
+      "deptype": "n",
+      "function": "app_private.classify_command()"
+    },
+    {
+      "dependent": "policy api_copy_delete on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy api_copy_insert on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy api_copy_read on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy api_copy_update on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy api_copy_update on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_create on table community_account_permissions",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_insert on table community_account_preferences",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_insert on table community_account_profiles",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_insert on table tenant_admin_actions",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_scope on table app_private.community_account_requests",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_scope on table app_private.community_account_requests",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_scope on table community_accounts",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_scope on table community_accounts",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_scope on table tenant_settings",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_scope on table tenant_settings",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_scope on table tenant_staff_assignments",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_scope on table tenant_staff_assignments",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_scope on table tenants",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy command_scope on table tenants",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy history_read on table tenant_admin_actions",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "policy participant_read on table community_account_permissions",
+      "deptype": "n",
+      "function": "app_private.command_scope()"
+    },
+    {
+      "dependent": "trigger clear_inactive_sharing on table community_accounts",
+      "deptype": "n",
+      "function": "app_private.guard_community_sharing()"
+    },
+    {
+      "dependent": "trigger validate_sharing on table community_account_preferences",
+      "deptype": "n",
+      "function": "app_private.guard_community_sharing()"
+    },
+    {
+      "dependent": "trigger a_configuration on table tenants",
+      "deptype": "n",
+      "function": "app_private.guard_configuration_details()"
+    },
+    {
+      "dependent": "policy account_archive_boundary on table community_accounts",
+      "deptype": "n",
+      "function": "app_private.is_approved_owner(uuid)"
+    },
+    {
+      "dependent": "policy copy_archive_boundary on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.is_approved_owner(uuid)"
+    },
+    {
+      "dependent": "policy participant_archive_boundary on table community_account_permissions",
+      "deptype": "n",
+      "function": "app_private.is_approved_owner(uuid)"
+    },
+    {
+      "dependent": "policy preference_archive_boundary on table community_account_preferences",
+      "deptype": "n",
+      "function": "app_private.is_approved_owner(uuid)"
+    },
+    {
+      "dependent": "policy profile_archive_boundary on table community_account_profiles",
+      "deptype": "n",
+      "function": "app_private.is_approved_owner(uuid)"
+    },
+    {
+      "dependent": "policy settings_archive_boundary on table tenant_settings",
+      "deptype": "n",
+      "function": "app_private.is_approved_owner(uuid)"
+    },
+    {
+      "dependent": "policy staff_archive_boundary on table tenant_staff_assignments",
+      "deptype": "n",
+      "function": "app_private.is_approved_owner(uuid)"
+    },
+    {
+      "dependent": "policy api_own_summary on table tenants",
+      "deptype": "n",
+      "function": "app_private.my_community_relationships()"
+    },
+    {
+      "dependent": "trigger b_normalize on table community_account_profiles",
+      "deptype": "n",
+      "function": "app_private.normalize_editable_text()"
+    },
+    {
+      "dependent": "trigger b_normalize on table tenants",
+      "deptype": "n",
+      "function": "app_private.normalize_editable_text()"
+    },
+    {
+      "dependent": "trigger b_normalize on table user_account_profiles",
+      "deptype": "n",
+      "function": "app_private.normalize_editable_text()"
+    },
+    {
+      "dependent": "trigger a_invariants on table community_account_profiles",
+      "deptype": "n",
+      "function": "app_private.protect_invariants()"
+    },
+    {
+      "dependent": "trigger a_invariants on table community_accounts",
+      "deptype": "n",
+      "function": "app_private.protect_invariants()"
+    },
+    {
+      "dependent": "trigger a_invariants on table tenant_settings",
+      "deptype": "n",
+      "function": "app_private.protect_invariants()"
+    },
+    {
+      "dependent": "trigger a_invariants on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.protect_invariants()"
+    },
+    {
+      "dependent": "trigger a_invariants on table tenants",
+      "deptype": "n",
+      "function": "app_private.protect_invariants()"
+    },
+    {
+      "dependent": "trigger a_invariants on table user_account_profiles",
+      "deptype": "n",
+      "function": "app_private.protect_invariants()"
+    },
+    {
+      "dependent": "trigger a_invariants on table user_accounts",
+      "deptype": "n",
+      "function": "app_private.protect_invariants()"
+    },
+    {
+      "dependent": "trigger a_invariants on table tenant_staff_assignments",
+      "deptype": "n",
+      "function": "app_private.protect_staff_assignment()"
+    },
+    {
+      "dependent": "trigger crowded_table_user_created on table auth.users",
+      "deptype": "n",
+      "function": "app_private.provision_user_account()"
+    },
+    {
+      "dependent": "trigger immutable_audit on table tenant_admin_actions",
+      "deptype": "n",
+      "function": "app_private.reject_audit_mutation()"
+    },
+    {
+      "dependent": "trigger immutable_category on table app_private.tenant_admin_action_categories",
+      "deptype": "n",
+      "function": "app_private.reject_audit_mutation()"
+    },
+    {
+      "dependent": "trigger settings_roots on table tenant_settings",
+      "deptype": "n",
+      "function": "app_private.require_tenant_roots()"
+    },
+    {
+      "dependent": "trigger staff_roots on table tenant_staff_assignments",
+      "deptype": "n",
+      "function": "app_private.require_tenant_roots()"
+    },
+    {
+      "dependent": "trigger tenant_roots on table tenants",
+      "deptype": "n",
+      "function": "app_private.require_tenant_roots()"
+    },
+    {
+      "dependent": "trigger z_audit on table community_account_permissions",
+      "deptype": "n",
+      "function": "app_private.stamp_audit()"
+    },
+    {
+      "dependent": "trigger z_audit on table community_account_preferences",
+      "deptype": "n",
+      "function": "app_private.stamp_audit()"
+    },
+    {
+      "dependent": "trigger z_audit on table community_account_profiles",
+      "deptype": "n",
+      "function": "app_private.stamp_audit()"
+    },
+    {
+      "dependent": "trigger z_audit on table community_accounts",
+      "deptype": "n",
+      "function": "app_private.stamp_audit()"
+    },
+    {
+      "dependent": "trigger z_audit on table tenant_settings",
+      "deptype": "n",
+      "function": "app_private.stamp_audit()"
+    },
+    {
+      "dependent": "trigger z_audit on table tenant_staff_assignments",
+      "deptype": "n",
+      "function": "app_private.stamp_audit()"
+    },
+    {
+      "dependent": "trigger z_audit on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.stamp_audit()"
+    },
+    {
+      "dependent": "trigger z_audit on table tenants",
+      "deptype": "n",
+      "function": "app_private.stamp_audit()"
+    },
+    {
+      "dependent": "trigger z_audit on table user_account_profiles",
+      "deptype": "n",
+      "function": "app_private.stamp_audit()"
+    },
+    {
+      "dependent": "trigger z_audit on table user_accounts",
+      "deptype": "n",
+      "function": "app_private.stamp_audit()"
+    },
+    {
+      "dependent": "trigger b_revision on table community_accounts",
+      "deptype": "n",
+      "function": "app_private.stamp_community_revision()"
+    },
+    {
+      "dependent": "trigger b_first_approval on table community_accounts",
+      "deptype": "n",
+      "function": "app_private.stamp_first_approval()"
+    },
+    {
+      "dependent": "trigger validate_details on table tenant_admin_actions",
+      "deptype": "n",
+      "function": "app_private.validate_command_details()"
+    },
+    {
+      "dependent": "default value for column blocker_user_id of table user_account_blocks",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "default value for column created_by of table user_account_blocks",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_community_account_facts on table community_accounts",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_community_profile_read on table community_account_profiles",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_copy_read on table tenant_website_content_overrides",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_own_preferences_edit on table community_account_preferences",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_own_preferences_edit on table community_account_preferences",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_own_preferences_read on table community_account_preferences",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_own_profile_edit on table community_account_profiles",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_own_profile_edit on table community_account_profiles",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_self_edit on table user_accounts",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_self_edit on table user_accounts",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_self_profile on table user_account_profiles",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_self_profile on table user_account_profiles",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy api_self_read on table user_accounts",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy own_blocks_delete on table user_account_blocks",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy own_blocks_insert on table user_account_blocks",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy own_blocks_read on table user_account_blocks",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    },
+    {
+      "dependent": "policy participant_read on table community_account_permissions",
+      "deptype": "n",
+      "function": "app_private.verified_user()"
+    }
+  ]
+}

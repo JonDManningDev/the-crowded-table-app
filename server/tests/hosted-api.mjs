@@ -2,11 +2,12 @@ import { directoryCursors } from '../src/directory-cursors.ts'
 // Opted-in hosted development verification. The HTTP server runs on loopback.
 import assert from 'node:assert/strict'
 import { randomUUID, randomBytes } from 'node:crypto'
-import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { hostedTools, projectRef } from '../../supabase/tests/hosted-tools.mjs'
-import { accessCatalog } from '../../supabase/tests/access-catalog.mjs'
+import { policyCatalog, applicationSnapshot, normalizedCatalog } from '../../supabase/tests/policy-catalog-data.mjs'
+import { focusedPolicyChecks } from './helpers/hosted-policy-checks.mjs'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { connectDatabase, checkRuntime } from '../src/database.ts'
@@ -17,6 +18,7 @@ assert.equal(process.env.SUPABASE_URL,projectUrl)
 const endpoint=new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.username,'ct_api.'+projectRef)
 assert.equal(endpoint.port,'5432');assert.equal(endpoint.searchParams.get('sslmode'),'verify-full')
+assert.ok(endpoint.hostname.endsWith('.pooler.supabase.com'))
 const keys=cli(['projects','api-keys','--project-ref',projectRef,'--output','json'])
 const anonKey=keys.find(k=>k.name==='anon').api_key,serviceKey=keys.find(k=>k.name==='service_role').api_key
 const options={auth:{persistSession:false,autoRefreshToken:false}}
@@ -24,10 +26,13 @@ const authAdmin=createClient(projectUrl,serviceKey,options).auth.admin
 const db=connectDatabase(endpoint.href)
 const app=buildApi({ db, verify: verifyBearer(projectUrl,anonKey), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const users=[],tenants=[]
-let base,checks=0
-const evidence=new URL('../../docs/evidence/hosted-api-cutover-2026-11-03/',import.meta.url)
+let base,checks=0,verificationError
+const evidence=new URL('../../docs/evidence/hosted-policy-migration-2026-11-10/',import.meta.url)
+mkdirSync(evidence,{recursive:true})
 function normalized(runtime){return {...runtime,relations:runtime.relations.map(row=>({...row,...Object.fromEntries(['select','insert','update'].map(k=>[k,Array.isArray(row[k])?row[k]:row[k].slice(1,-1).split(',').filter(Boolean)]))}))}}
-async function capture(){return accessCatalog({query:async text=>({rows:query(text)})})}
+async function capture(){return policyCatalog(query)}
+const baseline=await applicationSnapshot(query)
+assert.deepEqual(baseline,JSON.parse(readFileSync(new URL('before-data.json',evidence))),'migration baseline must be preserved before fixtures')
 async function actor(){
   const email=randomUUID()+'@example.test',password=randomUUID()+'Aa1!'
   const made=await authAdmin.createUser({email,password,email_confirm:true});assert.ifError(made.error);users.push(made.data.user.id)
@@ -44,6 +49,10 @@ async function http(actor,path,method='GET',body,expected=200){
 try {
   await checkRuntime(db)
   const catalog=await capture()
+  const reviewed=JSON.parse(readFileSync(new URL('../../docs/evidence/policy-migration-2026-11-10/local-catalog.json',import.meta.url)))
+  for(const key of ['runtime','functions','relations','definitions','policies','triggers','column_defaults','function_dependencies','schema_permissions']) {
+    assert.deepEqual(normalizedCatalog(catalog[key]),normalizedCatalog(reviewed[key]),key)
+  }
   assert.deepEqual(normalized(catalog.runtime),normalized(JSON.parse(readFileSync(new URL('../access-runtime-manifest.json',import.meta.url),'utf8'))))
   assert.deepEqual(catalog.external_relation_grants,[]);assert.deepEqual(catalog.external_function_grants,[])
   assert.ok(catalog.relations.every(r=>r.owner==='postgres'&&r.rls))
@@ -100,6 +109,7 @@ try {
   await http(member,path+'/directory','GET',undefined,404)
   await http(owner,path+'/accounts')
   await http(owner,path+'/commands','POST',{kind:'archive',archived:false})
+  await focusedPolicyChecks({db,endpoint:endpoint.href,owner,member,other,tenant:made.tenantId,slug,http,query,anonKey,projectUrl})
   console.log('PASS real Auth/local HTTP reads, writes, isolation, blocks and archive')
   for(const [key,token] of [[anonKey,anonKey],[anonKey,owner.token],[serviceKey,serviceKey]]){
     const headers={apikey:key,Authorization:'Bearer '+token}
@@ -109,6 +119,17 @@ try {
     }
     const privateRead=await fetch(projectUrl+'/rest/v1/community_account_requests?select=*',{headers:{...headers,'Accept-Profile':'app_private'}})
     assert.equal(privateRead.status,406);checks++
+    for(const name of ['lookup_tenant','join_community','save_user_account_profile','inspect_global_profile']) {
+      const retired=await fetch(projectUrl+'/rest/v1/rpc/'+name,{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:'{}'})
+      assert.ok(!retired.ok,'retired RPC must remain unavailable');checks++
+    }
+    for(const [relation,filter,body] of [
+      ['user_account_profiles','user_id=eq.'+owner.id,{display_name:'Denied external edit'}],
+      ['tenants','id=eq.'+made.tenantId,{name:'Denied external edit'}],
+    ]) {
+      const denied=await fetch(projectUrl+'/rest/v1/'+relation+'?'+filter,{method:'PATCH',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify(body)})
+      assert.ok(!denied.ok);assert.equal((await denied.json()).code,'42501');checks++
+    }
     const schemaResponse=await fetch(projectUrl+'/rest/v1/',{headers:{...headers,Accept:'application/openapi+json'}})
     // Hosted gateway reserves OpenAPI metadata for service_role; its metadata
     // mode lists relations independently of effective DML grants checked above.
@@ -124,9 +145,10 @@ try {
   const graphqlProbe=await fetch(projectUrl+'/graphql/v1',{method:'POST',headers:{apikey:anonKey,Authorization:'Bearer '+owner.token,'Content-Type':'application/json'},body:JSON.stringify({query:'{__typename}'})})
   assert.deepEqual(await graphqlProbe.json(),{errors:[{message:'pg_graphql extension is not enabled.'}]})
   assert.deepEqual(query("select extname from pg_extension where extname='pg_graphql'"),[]);checks++
-  const before=query("select count(*)::int as accounts from public.community_accounts where tenant_id not in ('"+tenants.join("','")+"')")[0]
-  assert.equal(before.accounts,1)
   console.log('PASS hosted runtime manifest, verified TLS/session pooler, real Auth/local HTTP operations, projections, isolation, blocks/archive and REST/OpenAPI/GraphQL denials ('+checks+' checks)')
+} catch(error) {
+  verificationError=error
+  throw error
 } finally {
   try {
     if(users.length){
@@ -138,10 +160,21 @@ try {
         ${['community_account_permissions','community_account_preferences','tenant_admin_actions','tenant_website_content_overrides','community_account_profiles','community_accounts','tenant_staff_assignments','tenant_settings'].map(t=>`delete from public.${t} where tenant_id in (${tenantIds});`).join('\n')}
         delete from public.tenants where id in (${tenantIds});
         delete from public.user_account_blocks where blocker_user_id in (${ids}) or blocked_user_id in (${ids});
+        delete from public.user_account_profiles where user_id in (${ids});
         delete from public.user_accounts where user_id in (${ids});commit;select true as cleaned`,false)
       for(const id of users)assert.ifError((await authAdmin.deleteUser(id)).error)
       assert.equal(query(`select count(*)::int as remaining from auth.users where id in (${ids})`)[0].remaining,0)
     }
+    const finalData=await applicationSnapshot(query)
+    assert.deepEqual(finalData,baseline,'all existing application data/history must survive fixture cleanup')
+    const integrity=query(readFileSync(new URL('../../supabase/preflight/hosted_cutover_postflight.sql',import.meta.url),'utf8'))[0].postflight
+    assert.deepEqual(integrity,JSON.parse(readFileSync(new URL('before-integrity.json',evidence))))
+    writeFileSync(new URL('after-cleanup-data.json',evidence),JSON.stringify(finalData,null,2)+'\n')
+    writeFileSync(new URL('after-cleanup-integrity.json',evidence),JSON.stringify(integrity,null,2)+'\n')
+    writeFileSync(new URL('cleanup.json',evidence),JSON.stringify({captured_at:new Date().toISOString(),fixtures_cleaned:true,original_data_preserved:true,scenarios_passed:!verificationError},null,2)+'\n')
+  } catch(cleanupError) {
+    if(verificationError) throw new AggregateError([verificationError,cleanupError],'Hosted verification and cleanup/preservation both failed')
+    throw cleanupError
   } finally {await app.close()}
 }
 const final=await capture()

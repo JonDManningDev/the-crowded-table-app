@@ -1,0 +1,13 @@
+{
+  "accounts": 1,
+  "community_preferences": 1,
+  "community_profiles": 1,
+  "copied_profile_matches_source": 1,
+  "invalid_owners": 0,
+  "missing_dependents": 0,
+  "missing_first_approval": 0,
+  "participant_permissions": 1,
+  "pending_requests": 0,
+  "synthetic_auth_remaining": 0,
+  "tenants": 1
+}
