@@ -30,7 +30,9 @@ This plan governs the structural refactor of the existing persistent API. The [a
 
 ## 1. Scope and target structure
 
-The completed five-phase refactor established frontend-aligned three-file features. The [accepted four-file follow-up](#7-four-file-feature-follow-up--2026-11-10) now governs communities and user accounts; health retains `routes.ts`, `service.ts`, and `schema.ts`. Preserve all 41 explicit HTTP operations, 28 automatic HEAD operations, and existing security/database behavior.
+The completed five-phase refactor established frontend-aligned three-file features. The [accepted four-file follow-up](#7-four-file-feature-follow-up--2026-11-10) now governs communities and user accounts; health retains `routes.ts`, `service.ts`, and `json-schema.ts` (filename aligned on 2026-11-11). Preserve all 41 explicit HTTP operations, 28 automatic HEAD operations, and existing security/database behavior.
+
+Health filename alignment — locally verified 2026-11-11: renamed `schema.ts` to `json-schema.ts` at the user's request for consistency with other features and updated its type-only route import. Reply definitions and the absence of runtime health schemas are unchanged. Server TypeScript, root lint, and all 26 health/HTTP-baseline tests passed. No deployment is included or remaining work required for this rename.
 
 Phase 1 changed tests/documentation, Phase 2 changed shared facilities/callers, Phase 3 moved user-account operations into their triad, Phase 4 migrated all eight community groups, and Phase 5 completed health, transport typing and final reconciliation. All preserve the HTTP contract. No shared browser contract, database migration, runtime privilege or frontend change is included.
 
@@ -57,7 +59,7 @@ server/src/
 └── health/
     ├── routes.ts
     ├── service.ts
-    └── schema.ts
+    └── json-schema.ts
 ```
 
 The authentication/error filenames resolve concrete responsibility overlap without adding runtime layers.
@@ -227,7 +229,7 @@ Normal cleanup belongs to `app.close()` after `buildApi` successfully returns. S
 - Has no Fastify imports or runtime imports from HTTP schemas or HTTP utility modules.
 - Uses explicit database projections independent of response schemas.
 
-**`json-schema.ts` (communities/user accounts); `schema.ts` (health)**
+**`json-schema.ts` (all features)**
 
 - Owns HTTP validation/serialization schema composition. Fastify infers handler inputs and replies from attached schemas. For communities/user accounts, declared schema-derived transport aliases belong in `types.ts` through erased references; health retains schema-owned reply types without attaching runtime schemas.
 - Uses TypeBox. The feature plugins use Fastify's matching type provider to infer request and reply types from attached schemas. AJV and the Fastify response serializer consume the emitted JSON Schema. The [TypeBox adoption decision](08-decisions-and-open-questions.md#typebox-for-fastify-http-schemas--accepted-direction-2026-11-09) supersedes the plain JSON Schema and `json-schema-to-ts` tooling used at Phase 5 completion.
