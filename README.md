@@ -1,6 +1,6 @@
 # The Crowded Table
 
-A React/TypeScript gaming-community app with a persistent TypeScript API and Supabase Auth/PostgreSQL. The frontend and API run locally. The completed policy migration is verified against local Supabase through `20261110000800`; the hosted development database remains at the earlier deployment milestone and requires a separately authorized migration before using current source. Preview community screens still include mock features. See [final local evidence](docs/evidence/policy-migration-2026-11-10/README.md) and [implementation status](docs/12-implementation-status.md).
+A React/TypeScript gaming-community app with a persistent TypeScript API and Supabase Auth/PostgreSQL. The frontend and API run locally. The completed policy migration is verified against local Supabase through `20261110000800`; the hosted development database remains at the earlier deployment milestone and requires a separately authorized migration before using current source. Preview community screens still include mock features. See [policy migration verification summary](docs/12-implementation-status.md#policy-migration-verification-summary) and [implementation status](docs/12-implementation-status.md).
 
 ## Source layout
 
@@ -31,7 +31,7 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173). Vite forwards `/api` to the local API at `http://127.0.0.1:3001`. Keep port 5173 for the configured Auth redirects. Both application processes run on this computer.
 
-Browser configuration lives in ignored `client/.env.hosted-db.local`; `client/.env.example` lists its public settings. The server reads ignored `server/.env.hosted-db.local`, including its restricted database connection and cursor key. Database credentials and service-role keys never belong in Vite variables. Existing environment files move with the workspace; no credentials need rotation. See the [Supabase runbook](supabase/README.md#hosted-development-database-local-application--2026-11-03) for initial setup and certificate handling. Restart the relevant process after changing its configuration.
+Browser configuration lives in ignored `client/.env.hosted-db.local`; `client/.env.example` lists its public settings. The server reads ignored `server/.env.hosted-db.local`, including its restricted database connection and cursor key. Database credentials and service-role keys never belong in Vite variables. Existing environment files move with the workspace; no credentials need rotation. See the [Supabase runbook](supabase/README.md#hosted-development-database-local-application--updated-2026-11-10) for initial setup and certificate handling. Restart the relevant process after changing its configuration.
 
 ## Independent local Supabase target
 

@@ -9,10 +9,10 @@ import { sql } from 'kysely'
 const mode = process.argv[2]
 assert.ok(['before','after'].includes(mode))
 const { query } = hostedTools()
-const evidence = new URL('../../docs/evidence/hosted-policy-migration-2026-11-10/', import.meta.url)
-mkdirSync(evidence, { recursive: true })
+const baseline = new URL('../tests/fixtures/hosted-policy-baseline/', import.meta.url)
+const results = new URL('../test-results/hosted-policy/', import.meta.url)
 if (mode === 'before') for (const name of ['catalog','data','integrity']) {
-  assert.ok(!existsSync(new URL(`before-${name}.json`, evidence)), 'Do not overwrite the migration baseline')
+  assert.ok(!existsSync(new URL(`before-${name}.json`, baseline)), 'Do not overwrite the migration baseline')
 }
 const endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.username, 'ct_api.fsnipgsrlclbnfepcbvz')
@@ -34,17 +34,19 @@ if (mode === 'before') {
 } else {
   assert.equal(catalog.migrations.length, 33)
   assert.equal(catalog.migrations.at(-1).version, '20261110000800')
-  assert.deepEqual(snapshot, JSON.parse(readFileSync(new URL('before-data.json', evidence))))
-  assert.deepEqual(integrity, JSON.parse(readFileSync(new URL('before-integrity.json', evidence))))
-  const local = JSON.parse(readFileSync(new URL('../../docs/evidence/policy-migration-2026-11-10/local-catalog.json', import.meta.url)))
+  assert.deepEqual(snapshot, JSON.parse(readFileSync(new URL('before-data.json', baseline))))
+  assert.deepEqual(integrity, JSON.parse(readFileSync(new URL('before-integrity.json', baseline))))
+  const local = JSON.parse(readFileSync(new URL('../tests/fixtures/policy-catalog.json', import.meta.url)))
   for (const key of ['runtime','functions','relations','definitions','policies','triggers','column_defaults','function_dependencies','schema_permissions']) {
     assert.deepEqual(normalizedCatalog(catalog[key]), normalizedCatalog(local[key]), key + ' differs from reviewed local catalog')
   }
   assert.deepEqual(catalog.external_relation_grants, [])
   assert.deepEqual(catalog.external_function_grants, [])
 }
+const output = mode === 'before' ? baseline : results
+mkdirSync(output, { recursive: true })
 for (const [name, value] of Object.entries({ catalog, data: snapshot, integrity })) {
-  const file = new URL(`${mode}-${name}.json`, evidence)
+  const file = new URL(`${mode}-${name}.json`, output)
   writeFileSync(file, JSON.stringify(value, null, 2) + '\n')
 }
 console.log('PASS ' + mode + ' hosted checkpoint: ledger, TLS runtime, catalog, data preservation and integrity')

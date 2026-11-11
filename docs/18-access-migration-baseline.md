@@ -4,6 +4,8 @@
 
 Verified 2026-10-31 against hosted testing project `fsnipgsrlclbnfepcbvz` and repository HEAD `7a18d7f79c8aeeff73c97322e5754ef76487c0ef`, including the existing uncommitted requirements documents. This is the current-state inventory and change list, not the package 2/3 migration specification or authorization to deploy it. Intended behavior comes from [the access matrix](16-intended-access-matrix.md) and [flag inventory](17-database-flag-inventory.md), not these deployed restrictions.
 
+Historical artifact cleanup (2026-11-10): the detailed captures and one-off replay/probe scripts were removed at the user's request. The counts, outcomes and limits below summarize the original October 31 observations; no new comparison was run by this cleanup. These retired script names are historical descriptions, not current runnable tools.
+
 ## Result and evidence
 
 **No application-schema drift was found within the compared scope.** All eight migration versions and their recorded SQL match the repository; an isolated replay also matches the hosted application catalogs and effective privileges. The database still implements the earlier milestone, with substantial differences from the accepted product requirements.
@@ -12,23 +14,23 @@ The dashboard's earlier “API disabled” labels do **not** establish that thes
 
 | Evidence | Result / boundary |
 | --- | --- |
-| [Hosted catalog](evidence/access-baseline-2026-10-31/hosted-catalog.json) | Captured 15:33 UTC; PostgreSQL 17.11; 9 tables, 3 views, 93 columns including 19 view columns, 19 policies, 21 functions, 29 application triggers, 57 constraints and 34 indexes |
-| [Replay comparison](evidence/access-baseline-2026-10-31/comparison.json) | All 8 source/ledger checks and all 13 catalog comparison categories match; source file hashes included |
-| [Replayed catalog](evidence/access-baseline-2026-10-31/replayed-catalog.json) | Fresh application migrations in a disposable local database; empty minimal Auth stub and explicitly reproduced hosted postgres/public defaults |
-| [Security Advisor](evidence/access-baseline-2026-10-31/security-advisors.json) | 4 errors and 11 warnings; original Auth-exposure and three definer-view errors remain |
-| [Anonymous REST probes](evidence/access-baseline-2026-10-31/rest-probes.json) | All 12 zero-row relation requests: HTTP 401 / 42501; lookup of random nonexistent slug: 200 / empty; app_private profile: 406 / PGRST106 |
-| [Deployed Edge Functions](evidence/access-baseline-2026-10-31/hosted-edge-functions.json) | Empty list |
-| [Transition preflight](evidence/access-baseline-2026-10-31/transition-preflight.json) | Aggregate-only data check, captured 16:06 UTC; identifies one existing community account without its curated profile |
+| Hosted catalog | Captured 15:33 UTC; PostgreSQL 17.11; 9 tables, 3 views, 93 columns including 19 view columns, 19 policies, 21 functions, 29 application triggers, 57 constraints and 34 indexes |
+| Replay comparison | All 8 source/ledger checks and all 13 catalog comparison categories match; source file hashes included |
+| Replayed catalog | Fresh application migrations in a disposable local database; empty minimal Auth stub and explicitly reproduced hosted postgres/public defaults |
+| Security Advisor | 4 errors and 11 warnings; original Auth-exposure and three definer-view errors remain |
+| Anonymous REST probes | All 12 zero-row relation requests: HTTP 401 / 42501; lookup of random nonexistent slug: 200 / empty; app_private profile: 406 / PGRST106 |
+| Deployed Edge Functions | Empty list |
+| Transition preflight | Aggregate-only data check, captured 16:06 UTC; identifies one existing community account without its curated profile |
 
 No hosted application rows, schema, grants, policies, Auth settings or migration history were changed. No synthetic hosted users were created. Docker was started; each uniquely named scratch database was removed after comparison, and the preexisting local application database was not reset or migrated. The Supabase CLI used its existing credentials and normal connection setup; no secret values were saved. This is not an incident investigation or proof of historic non-exposure.
 
 ### Reproducibility and comparison limits
 
-[catalog.sql](evidence/access-baseline-2026-10-31/catalog.sql) reads catalogs and migration SQL only. [replay.py](evidence/access-baseline-2026-10-31/replay.py) applies the repository migrations to a unique local database, compares catalogs and drops that database in cleanup. It checks relations/ownership/options, columns/defaults/ACLs, RLS, function definitions/security/configuration/ACLs, triggers, constraints, indexes, schema privileges, role-effective table/column/function permissions and view dependencies. The initial function-only differences were Windows newline translation in the runner; byte-preserving SQL input fixed the runner and all definitions then matched.
+`catalog.sql` reads catalogs and migration SQL only. `replay.py` applies the repository migrations to a unique local database, compares catalogs and drops that database in cleanup. It checks relations/ownership/options, columns/defaults/ACLs, RLS, function definitions/security/configuration/ACLs, triggers, constraints, indexes, schema privileges, role-effective table/column/function permissions and view dependencies. The initial function-only differences were Windows newline translation in the runner; byte-preserving SQL input fixed the runner and all definitions then matched.
 
 The replay's Auth table/function are minimal empty dependencies, not a full Auth implementation. Hosted postgres/public default grants are explicitly supplied by the replay bootstrap, so their match confirms the observed environment, **not that the migrations establish safe defaults**. Full platform-role/configuration/extension parity is not claimed. No fresh authenticated SDK hostile-role suite, concurrency suite, frontend test suite or clean Supabase-stack reset was run; those belong to implementation verification. Catalog comparison proves schema equivalence, not every behavioral property.
 
-[probe-rest.mjs](evidence/access-baseline-2026-10-31/probe-rest.mjs) uses the existing browser-safe key only in memory and performs anonymous GETs with limit zero. [transition-preflight.sql](evidence/access-baseline-2026-10-31/transition-preflight.sql) returns only counts, not user identities or profile text. Evidence timestamps differ; this is a sequence of read-only observations, not one global transactional snapshot.
+`probe-rest.mjs` uses the existing browser-safe key only in memory and performs anonymous GETs with limit zero. `transition-preflight.sql` returns only counts, not user identities or profile text. Evidence timestamps differ; this is a sequence of read-only observations, not one global transactional snapshot.
 
 ## Applied migrations
 

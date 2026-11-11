@@ -42,7 +42,8 @@ try {
   assert.deepEqual(catalog.external_relation_grants, [])
   assert.deepEqual(catalog.external_function_grants, [])
   assert.equal(catalog.migrations.at(-1).version, '20261110000800')
-  const directory = new URL('../../docs/evidence/policy-migration-2026-11-10/', import.meta.url)
+  // Export a review candidate without overwriting the checked-in test fixture.
+  const directory = new URL('../../server/test-results/policy/', import.meta.url)
   mkdirSync(directory, { recursive: true })
   writeFileSync(new URL('local-catalog.json', directory), JSON.stringify(catalog, null, 2) + '\n')
   console.log('PASS final local catalog: 18 reviewed functions, exact runtime manifest, zero external grants; all trigger/RLS/default dependencies exported')

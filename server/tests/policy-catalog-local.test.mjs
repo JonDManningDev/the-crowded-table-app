@@ -10,7 +10,7 @@ test('checkpoint metadata matches the reviewed local catalog and data snapshots 
   await db.connect()
   const query = async text => { const result = await db.query(text); return (Array.isArray(result) ? result.at(-1) : result).rows }
   try {
-    const expected = JSON.parse(readFileSync(new URL('../../docs/evidence/policy-migration-2026-11-10/local-catalog.json', import.meta.url)))
+    const expected = JSON.parse(readFileSync(new URL('./fixtures/policy-catalog.json', import.meta.url)))
     const actual = await policyCatalog(query)
     for (const key of ['runtime','functions','relations','definitions','policies','triggers','column_defaults','function_dependencies','schema_permissions']) {
       assert.deepEqual(normalizedCatalog(actual[key]), normalizedCatalog(expected[key]), key)

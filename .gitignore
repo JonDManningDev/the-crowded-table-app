@@ -27,3 +27,6 @@ lerna-debug.log*
 # Supabase local runtime state (migrations/configuration remain versioned)
 supabase/.temp/
 supabase/.branches/
+
+# Generated verification reports; reviewed inputs belong in server/tests/fixtures/.
+/server/test-results/

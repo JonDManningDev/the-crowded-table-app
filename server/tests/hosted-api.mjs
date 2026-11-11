@@ -28,12 +28,13 @@ const db=rootQueries.db
 const app=buildApi({ db, verify: verifyBearer(projectUrl,anonKey), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const users=[],tenants=[]
 let base,checks=0,verificationError,races
-const evidence=new URL('../../docs/evidence/hosted-policy-migration-2026-11-10/',import.meta.url)
-mkdirSync(evidence,{recursive:true})
+const baselineFiles=new URL('./fixtures/hosted-policy-baseline/',import.meta.url)
+const results=new URL('../test-results/hosted-policy/',import.meta.url)
+mkdirSync(results,{recursive:true})
 function normalized(runtime){return {...runtime,relations:runtime.relations.map(row=>({...row,...Object.fromEntries(['select','insert','update'].map(k=>[k,Array.isArray(row[k])?row[k]:row[k].slice(1,-1).split(',').filter(Boolean)]))}))}}
 async function capture(){return policyCatalog(query)}
 const baseline=await applicationSnapshot(query)
-assert.deepEqual(baseline,JSON.parse(readFileSync(new URL('before-data.json',evidence))),'migration baseline must be preserved before fixtures')
+assert.deepEqual(baseline,JSON.parse(readFileSync(new URL('before-data.json',baselineFiles))),'migration baseline must be preserved before fixtures')
 async function actor(){
   const email=randomUUID()+'@example.test',password=randomUUID()+'Aa1!'
   const made=await authAdmin.createUser({email,password,email_confirm:true});assert.ifError(made.error);users.push(made.data.user.id)
@@ -50,7 +51,7 @@ async function http(actor,path,method='GET',body,expected=200){
 try {
   await checkRuntime(db)
   const catalog=await capture()
-  const reviewed=JSON.parse(readFileSync(new URL('../../docs/evidence/policy-migration-2026-11-10/local-catalog.json',import.meta.url)))
+  const reviewed=JSON.parse(readFileSync(new URL('./fixtures/policy-catalog.json',import.meta.url)))
   for(const key of ['runtime','functions','relations','definitions','policies','triggers','column_defaults','function_dependencies','schema_permissions']) {
     assert.deepEqual(normalizedCatalog(catalog[key]),normalizedCatalog(reviewed[key]),key)
   }
@@ -176,16 +177,16 @@ try {
     const finalData=await applicationSnapshot(query)
     assert.deepEqual(finalData,baseline,'all existing application data/history must survive fixture cleanup')
     const integrity=query(readFileSync(new URL('../../supabase/preflight/hosted_cutover_postflight.sql',import.meta.url),'utf8'))[0].postflight
-    assert.deepEqual(integrity,JSON.parse(readFileSync(new URL('before-integrity.json',evidence))))
-    writeFileSync(new URL('after-cleanup-data.json',evidence),JSON.stringify(finalData,null,2)+'\n')
-    writeFileSync(new URL('after-cleanup-integrity.json',evidence),JSON.stringify(integrity,null,2)+'\n')
-    writeFileSync(new URL('cleanup.json',evidence),JSON.stringify({captured_at:new Date().toISOString(),fixtures_cleaned:true,original_data_preserved:true,scenarios_passed:!verificationError,cleanup_warnings:cleanupWarnings},null,2)+'\n')
+    assert.deepEqual(integrity,JSON.parse(readFileSync(new URL('before-integrity.json',baselineFiles))))
+    writeFileSync(new URL('after-cleanup-data.json',results),JSON.stringify(finalData,null,2)+'\n')
+    writeFileSync(new URL('after-cleanup-integrity.json',results),JSON.stringify(integrity,null,2)+'\n')
+    writeFileSync(new URL('cleanup.json',results),JSON.stringify({captured_at:new Date().toISOString(),fixtures_cleaned:true,original_data_preserved:true,scenarios_passed:!verificationError,cleanup_warnings:cleanupWarnings},null,2)+'\n')
   } catch(cleanupError) {
     if(verificationError) throw new AggregateError([verificationError,cleanupError],'Hosted verification and cleanup/preservation both failed')
     throw cleanupError
   } finally {await app.close()}
 }
 const final=await capture()
-writeFileSync(new URL('hosted-catalog.json',evidence),JSON.stringify(final,null,2)+'\n')
-writeFileSync(new URL('verification.json',evidence),JSON.stringify({captured_at:new Date().toISOString(),checks,races,project:projectRef,api:'loopback',frontend:'loopback',fixtures_cleaned:true},null,2)+'\n')
+writeFileSync(new URL('hosted-catalog.json',results),JSON.stringify(final,null,2)+'\n')
+writeFileSync(new URL('verification.json',results),JSON.stringify({captured_at:new Date().toISOString(),checks,races,project:projectRef,api:'loopback',frontend:'loopback',fixtures_cleaned:true},null,2)+'\n')
 console.log('PASS fixture cleanup and final metadata capture')
