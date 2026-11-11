@@ -235,3 +235,56 @@ export function communityHistoryAudience(facts: HistoryFacts) {
     and ((c.category='community_account' and ${Boolean(staff?.can_audit_community_accounts)})
       or (c.category='staff_account' and ${Boolean(staff?.can_audit_staff_accounts)}))))`
 }
+
+// Community profiles and preferences. These predicates use operation-local
+// statement snapshots; ordinary community identity is independent of blocks.
+// The caller supplies the tenant `t` alias. Archive RLS independently protects
+// underlying account/profile content even if a trusted writer omits a predicate.
+function approvedCommunityOwnerAudience(actor: string) {
+  return sql<boolean>`exists(select from public.tenant_staff_assignments owner_staff
+    join public.community_accounts owner_account using(tenant_id,user_id)
+    where owner_staff.tenant_id=t.id and owner_staff.user_id=${actor}
+      and owner_staff.role='owner' and owner_staff.status='active' and owner_account.standing='approved')`
+}
+// Narrow source-access export for exact community profiles and later block-source
+// composition. Requires p/target/viewer/t aliases with the same tenant linkage.
+export function communityProfileSourceAudience(actor: string) {
+  return sql<boolean>`((t.operational_status='active' and (
+    (p.user_id=${actor} and viewer.standing='pending') or
+    (viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended','inactive'))))
+    or (t.operational_status='archived' and ${approvedCommunityOwnerAudience(actor)}))`
+}
+export function ownCommunityProfileEditAudience(actor: string) {
+  return sql<boolean>`p.user_id=${actor} and exists(select from public.community_accounts c
+    join public.tenants t on t.id=c.tenant_id where c.tenant_id=p.tenant_id and c.user_id=p.user_id
+    and t.operational_status='active' and c.standing in ('pending','approved','suspended'))`
+}
+export function ownCommunityPreferencesReadAudience(actor: string) {
+  return sql<boolean>`user_id=${actor} and exists(select from public.tenants t
+    where t.id=community_account_preferences.tenant_id and
+    (t.operational_status='active' or ${approvedCommunityOwnerAudience(actor)}))`
+}
+export function ownCommunityPreferencesEditAudience(actor: string) {
+  return sql<boolean>`user_id=${actor} and exists(select from public.community_accounts c
+    join public.tenants t on t.id=c.tenant_id
+    where c.tenant_id=community_account_preferences.tenant_id and c.user_id=community_account_preferences.user_id
+      and t.operational_status='active' and c.standing in ('pending','approved'))`
+}
+
+// Member-directory services hold the tenant SHARE lock before loading facts.
+export function loadMemberDirectoryFacts(tx: Tx, actor: string, tenant: string) {
+  return tx.selectFrom('tenants as t').leftJoin('community_accounts as c', join => join
+    .onRef('c.tenant_id', '=', 't.id').on('c.user_id', '=', actor))
+    .select(['t.operational_status','c.standing']).where('t.id', '=', tenant).executeTakeFirst()
+}
+type MemberDirectoryFacts = Awaited<ReturnType<typeof loadMemberDirectoryFacts>>
+export function canReadMemberDirectory(facts: MemberDirectoryFacts): Decision {
+  return facts?.operational_status === 'active'
+    && (facts.standing === 'approved' || facts.standing === 'suspended') ? 'allowed' : 'missing'
+}
+export function requireCanReadMemberDirectory(facts: MemberDirectoryFacts) {
+  requireDecision(canReadMemberDirectory(facts))
+}
+export function communityMemberDirectoryTargetAudience() {
+  return sql<boolean>`c.standing in ('approved','suspended')`
+}

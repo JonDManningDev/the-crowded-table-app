@@ -78,6 +78,8 @@ export async function checkRuntime(db: AppDatabase) {
       and to_regprocedure('app_private.append_admin_action()') is null
       and has_column_privilege(current_user,'public.user_account_profiles','display_name','UPDATE')
       and to_regclass('public.my_community_summaries') is null
+      and to_regprocedure('app_private.normalize_editable_text()') is null
+      and has_function_privilege(current_user,'app_private.my_community_relationships()','EXECUTE')
       and to_regprocedure('public.lookup_tenant(text)') is null
       and to_regprocedure('app_private.can_edit_configuration(uuid,text)') is null
       and to_regprocedure('app_private.guard_configuration_details()') is null

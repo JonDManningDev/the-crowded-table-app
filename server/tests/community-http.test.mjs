@@ -255,11 +255,11 @@ test('public service retains its projections, single-query bindings and absence 
 
 test('exact profile service projects the same eight columns independently of HTTP schemas', async t => {
   const h = createHttpHarness(t), operation = operations.find(operation => operation.name === 'readProfile')
-  h.eligible([response(operation).dto])
+  h.eligible([], [response(operation).dto])
   assert.equal((await h.app.inject(input(operation))).statusCode, 200)
   assert.equal(/^select (.*?) from /.exec(h.queries.at(-1).sql)?.[1],
     '"p"."tenant_id", "p"."user_id", "p"."display_name", "p"."bio", "p"."created_at", "p"."updated_at", "p"."created_by", "p"."updated_by"')
-  assert.deepEqual(h.queries.at(-1).parameters, [actorId, tenantId, targetId, actorId, 'pending', 'approved', 'suspended', 'approved', 'suspended', 'inactive'])
+  assert.deepEqual(h.queries.at(-1).parameters, [actorId, tenantId, targetId, actorId, actorId])
 })
 
 test('directory and exact/owner facts retain ordered projections and bound parameters', async t => {
@@ -268,7 +268,7 @@ test('directory and exact/owner facts retain ordered projections and bound param
   const profile = ['tenant_id', 'user_id', 'display_name', 'bio', 'created_at', 'updated_at', 'created_by', 'updated_by']
   for (const name of ['memberDirectory', 'ownerAccounts', 'accountFacts']) {
     const operation = operations.find(operation => operation.name === name), dto = response(operation).dto
-    if (name === 'memberDirectory') h.eligible([], [{ id: tenantId }], [{ active: true, owner: true, member: true }], dto.rows)
+    if (name === 'memberDirectory') h.eligible([], [{ id: tenantId }], [{ operational_status: 'active', standing: 'approved' }], dto.rows)
     else h.eligible([], [{ id: tenantId }], [{ operational_status: 'active' }], [{ standing: 'approved' }],
       [{ role: 'owner', status: 'active' }], name === 'accountFacts' ? [dto] : dto.rows)
     assert.equal((await h.app.inject(input(operation))).statusCode, 200)

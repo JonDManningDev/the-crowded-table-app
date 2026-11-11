@@ -8,7 +8,9 @@ import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActio
   communityPendingRequestAudience, loadConfigurationFacts, requireCanReadConfiguration, requireCanEditConfiguration,
   loadAccountRecordFacts, requireCanReadAccountRecord, requireCanManageAccountRecords,
   requireCanListCommunityAccounts, requireCanReadCommunityAccountFacts, communityAccountFactsTargetAudience,
-  loadHistoryFacts, communityHistoryAudience, type Account, type Staff, type Pending } from './policies.ts'
+  loadHistoryFacts, communityHistoryAudience, communityProfileSourceAudience, ownCommunityProfileEditAudience,
+  ownCommunityPreferencesReadAudience, ownCommunityPreferencesEditAudience, loadMemberDirectoryFacts,
+  requireCanReadMemberDirectory, communityMemberDirectoryTargetAudience, type Account, type Staff, type Pending } from './policies.ts'
 import { sql } from 'kysely'
 import { type AppDatabase, withEligibleActorTransaction, withTransactionRetry, type AuthenticatedContext } from '../database.ts'
 import { ApplicationError } from '../http-errors.ts'
@@ -58,13 +60,13 @@ import {
   type CopyParams,
   type CopyInput,
   type CopyChange,
-  type DirectoryAccess,
   type RecordKind,
   type Records,
   type ParticipantPermissionInput,
   type Position,
   type Tx,
   type TenantParams,
+  type CommunityRelationship,
   type CommunityDependencies,
 } from './types.ts'
 
@@ -426,50 +428,43 @@ function readProfile(db: AppDatabase, context: AuthenticatedContext, params: Acc
   const tenantId = params.tenantId;
   const userId = params.userId;
   return withEligibleActorTransaction(db, context, async tx => {
-    // Resolve viewer, target and curated profile in the same snapshot.
+    await scope(tx, tenantId)
+    // Resolve viewer, target, lifecycle and curated profile in one snapshot.
     const profile = await tx.selectFrom('community_account_profiles as p')
       .innerJoin('community_accounts as target', join => join
         .onRef('target.tenant_id', '=', 'p.tenant_id').onRef('target.user_id', '=', 'p.user_id'))
       .innerJoin('community_accounts as viewer', join => join
         .onRef('viewer.tenant_id', '=', 'p.tenant_id').on('viewer.user_id', '=', actor))
       .where('p.tenant_id', '=', tenantId).where('p.user_id', '=', userId)
-      .where(eb => eb.or([
-        eb.and([sql<boolean>`app_private.active_tenant(p.tenant_id)`, eb.or([
-          eb.and([eb('p.user_id', '=', actor), eb('viewer.standing', '=', 'pending')]),
-          eb.and([eb('viewer.standing', 'in', ['approved', 'suspended']),
-          eb('target.standing', 'in', ['approved', 'suspended', 'inactive'])]),
-        ])]),
-        eb.and([sql<boolean>`not app_private.active_tenant(p.tenant_id)`, sql<boolean>`app_private.is_approved_owner(p.tenant_id)`]),
-      ]))
+      .innerJoin('tenants as t', 't.id', 'p.tenant_id')
+      .where(communityProfileSourceAudience(actor))
       .select(communityProfileColumns.map(field => `p.${field}` as const)).executeTakeFirst()
     return profile ? { status: 200 as const, profile } : { status: 404 as const }
   })
 }
 export async function ownCommunityProfile(tx: Tx, actor: string, tenant: string, input: CommunityProfileInput) {
   // Independent self edits have statement-time lifecycle checks and no tenant lock.
+  await scope(tx, tenant)
   const result = await sql`update public.community_account_profiles p set display_name=${input.display_name.trim()},bio=${input.bio?.trim() || null}
-    where p.tenant_id=${tenant} and p.user_id=${actor} and app_private.active_tenant(p.tenant_id)
-      and exists(select from public.community_accounts c join public.community_standing s using(standing)
-        where c.tenant_id=p.tenant_id and c.user_id=p.user_id and s.enable_own_profile_management)
+    where p.tenant_id=${tenant} and ${ownCommunityProfileEditAudience(actor)}
     returning p.tenant_id`.execute(tx)
   if (!result.rows.length) throw new ApplicationError(404, 'missing')
   return { tenantId: tenant }
 }
 export async function ownCommunityPreferences(tx: Tx, actor: string, tenant: string, input?: Partial<CommunityPreferences>) {
+  await scope(tx, tenant)
   if (input) {
     // Account then preference is also the lifecycle writer's order. Do not take
     // a tenant lock: other members' independent saves must remain concurrent.
-    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     const account = (await sql<AccountStanding>`select standing from public.community_accounts
       where tenant_id=${tenant} and user_id=${actor} for update`.execute(tx)).rows[0]
-    if (!account || !['pending', 'approved'].includes(account.standing)) throw new ApplicationError(404, 'missing')
+    if (!account) throw new ApplicationError(404, 'missing')
   }
   const fields = sql.join(communityPreferenceFields.map(field => sql.id(field)))
   const result = input
     ? await sql<CommunityPreferences>`update public.community_account_preferences set ${sql.join(Object.entries(input).map(([key, value]) => sql`${sql.id(key)}=${value}`))}
-        where tenant_id=${tenant} and user_id=${actor} and app_private.active_tenant(tenant_id) returning ${fields}`.execute(tx)
-    : await sql<CommunityPreferences>`select ${fields} from public.community_account_preferences where tenant_id=${tenant} and user_id=${actor}
-        and (app_private.active_tenant(tenant_id) or app_private.is_approved_owner(tenant_id))`.execute(tx)
+        where tenant_id=${tenant} and ${ownCommunityPreferencesEditAudience(actor)} returning ${fields}`.execute(tx)
+    : await sql<CommunityPreferences>`select ${fields} from public.community_account_preferences where tenant_id=${tenant} and ${ownCommunityPreferencesReadAudience(actor)}`.execute(tx)
   if (!result.rows[0]) throw new ApplicationError(404, 'missing')
   return result.rows[0]
 }
@@ -536,27 +531,20 @@ export async function configurationCopy(tx: Tx, actor: string, tenant: string, c
 const factsFields = ['tenant_id', 'user_id', 'standing', 'first_approved_at', 'has_disciplinary_restriction', 'created_at', 'updated_at', 'created_by', 'updated_by']
 const profileFields = ['tenant_id', 'user_id', 'display_name', 'bio', 'created_at', 'updated_at', 'created_by', 'updated_by']
 const jsonProjection = (alias: string, fields: string[]) => sql`jsonb_build_object(${sql.join(fields.flatMap(key => [sql`${key}::text`, sql.ref(alias + '.' + key)]))})`
-async function lockDirectoryTenant(tx: Tx, actor: string, tenant: string) {
-  await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
-  if (!(await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows[0]) throw new ApplicationError(404, 'missing')
-  // Recheck after waiting on any configuration/lifecycle writer, not in its old snapshot.
-  return (await sql<DirectoryAccess>`select app_private.active_tenant(${tenant}) as active,
-    app_private.is_approved_owner(${tenant}) as owner, exists(select from public.community_accounts where tenant_id=${tenant}
-      and user_id=${actor} and standing in ('approved','suspended')) as member`.execute(tx)).rows[0]
-}
 export async function readMemberDirectory(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<MemberDirectoryRow>> {
-  const access = await lockDirectoryTenant(tx, actor, tenant)
-  if (!access.active || !access.member) throw new ApplicationError(404, 'missing')
-  const scope = ['member-directory', actor, tenant], after = cursors.decode(scope, query.cursor), limit = Number(query.limit ?? 50)
+  await scope(tx, tenant)
+  if (!(await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows[0]) throw new ApplicationError(404, 'missing')
+  requireCanReadMemberDirectory(await loadMemberDirectoryFacts(tx, actor, tenant))
+  const cursorScope = ['member-directory', actor, tenant], after = cursors.decode(cursorScope, query.cursor), limit = Number(query.limit ?? 50)
   const rows = (await sql<MemberDirectoryRow>`select ${jsonProjection('c', factsFields)} as account,
     case when p.user_id is not null then ${jsonProjection('p', profileFields)} end as profile,
     case when c.standing='approved' and s.status='active' then s.role end as staff_role
     from public.community_accounts c left join public.community_account_profiles p using(tenant_id,user_id)
     left join public.tenant_staff_assignments s using(tenant_id,user_id)
-    where c.tenant_id=${tenant} and c.standing in ('approved','suspended') and (${after}::uuid is null or c.user_id>${after}::uuid)
+    where c.tenant_id=${tenant} and ${communityMemberDirectoryTargetAudience()} and (${after}::uuid is null or c.user_id>${after}::uuid)
     order by c.user_id limit ${limit + 1}`.execute(tx)).rows
   const visible = rows.slice(0, limit), last = visible.at(-1)
-  return { rows: visible, next: rows.length > limit && last ? cursors.encode(scope, last.account.user_id) : null }
+  return { rows: visible, next: rows.length > limit && last ? cursors.encode(cursorScope, last.account.user_id) : null }
 }
 export async function listOwnerAccounts(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<AccountFacts>> {
   const facts = await lockAccountFacts(tx, actor, tenant)
@@ -697,4 +685,11 @@ async function run<T>(db: AppDatabase, context: AuthenticatedContext, work: (tx:
   const result = await withEligibleActorTransaction(db, context, work)
   if (!result.eligible) throw new ApplicationError(403, 'ineligible')
   return result.value
+}
+
+// Community-owned adapter for the explicitly retained archived-card projection.
+// The database function binds the caller; personal summary filtering stays with
+// user accounts. Returning a query keeps admission and projection in one statement.
+export function myCommunityRelationships(tx: Tx) {
+  return tx.selectFrom(sql<CommunityRelationship>`app_private.my_community_relationships()`.as('r'))
 }

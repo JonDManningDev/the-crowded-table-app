@@ -212,7 +212,13 @@ try {
     rollback;`)), 't');
   checkCommunityUpgradeInputs(tenant);
   verifyCommunityBackfill(tenant);
+  const profileSnapshot = sql(`select jsonb_agg(to_jsonb(p) order by tenant_id,user_id) from public.community_account_profiles p`);
   apply(...files.filter(file => file > cutover));
+  assert.equal(sql(`select jsonb_agg(to_jsonb(p) order by tenant_id,user_id) from public.community_account_profiles p`),
+    profileSnapshot, 'later policy migrations preserve existing profile bytes and attribution');
+  assert.equal(sql(`select bio='  Original bio  ' from public.community_account_profiles where tenant_id='${tenant}' and user_id='${owner}'`), 't');
+  assert.throws(() => sql(`update public.community_account_profiles set bio='  New padded bio  '
+    where tenant_id='${tenant}' and user_id='${owner}'`), /community_profile_canonical_bio/);
   await verifySharingRace();
   console.log('PASS two-session deactivation and profile-sharing race in both lock orders');
   console.log('PASS clean migration replay and populated upgrade: owner backfill, preserved data/grants, legacy permission callers, new owner invariants');

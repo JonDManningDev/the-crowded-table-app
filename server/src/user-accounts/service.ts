@@ -1,3 +1,5 @@
+import { ownAccountPreferencesAudience, ownGlobalProfileAudience, myCommunitySummaryAudience } from './policies.ts'
+import { myCommunityRelationships } from '../communities/service.ts'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, type AuthenticatedContext, type AppDatabase } from '../database.ts'
 import { ApplicationError } from '../http-errors.ts'
@@ -45,8 +47,8 @@ function saveAccountPreferences(db: AppDatabase, context: AuthenticatedContext, 
 async function accountPreferences(tx: Tx, actor: string, input?: AccountPreferences) {
   const fields = ['user_is_discoverable', 'enable_matchmaking', 'allow_direct_messages'] as const
   const row = input
-    ? await tx.updateTable('user_accounts').set(input).where('user_id', '=', actor).returning(fields).executeTakeFirst()
-    : await tx.selectFrom('user_accounts').select(fields).where('user_id', '=', actor).executeTakeFirst()
+    ? await tx.updateTable('user_accounts').set(input).where(ownAccountPreferencesAudience(actor)).returning(fields).executeTakeFirst()
+    : await tx.selectFrom('user_accounts').select(fields).where(ownAccountPreferencesAudience(actor)).executeTakeFirst()
   return row ? { status: 200 as const, row } : { status: 404 as const }
 }
 
@@ -61,8 +63,9 @@ export async function ownProfile(tx: Tx, actor: string, input?: ProfileInput) {
   const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
   const result = input
     ? await sql<OwnProfile>`insert into public.user_account_profiles(display_name,bio) values(${input.display_name.trim()},${input.bio?.trim() || null})
-        on conflict(user_id) do update set display_name=excluded.display_name,bio=excluded.bio returning ${fields}`.execute(tx)
-    : await sql<OwnProfile>`select ${fields} from public.user_account_profiles where user_id=${actor}`.execute(tx)
+        on conflict(user_id) do update set display_name=excluded.display_name,bio=excluded.bio
+        where ${ownGlobalProfileAudience(actor)} returning ${fields}`.execute(tx)
+    : await sql<OwnProfile>`select ${fields} from public.user_account_profiles where ${ownGlobalProfileAudience(actor)}`.execute(tx)
   return { profile: result.rows[0] ?? null }
 }
 
@@ -85,15 +88,17 @@ async function myCommunities(tx: Tx, actor: string, query: CommunitySummaryQuery
     } catch { throw new ApplicationError(400,'invalid_cursor') }
   }
   const limit = Number(query.limit ?? 50)
-  const result = await sql<CommunitySummary>`select t.id,t.name,t.city,t.state_province,t.country_code,t.operational_status,
-    to_char(t.created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,r.is_owned,r.is_managed,r.is_member
-    from app_private.my_community_relationships() r join public.tenants t on t.id=r.tenant_id
-    where ${filter === 'owned' ? sql`r.is_owned` : filter === 'managed' ? sql`r.is_managed` : sql`(r.is_owned or r.is_member)`}
-      and (${position?.time ?? null}::timestamptz is null or t.created_at<${position?.time ?? null}::timestamptz
-        or (t.created_at=${position?.time ?? null}::timestamptz and t.id>${position?.id ?? null}::uuid))
-    order by t.created_at desc,t.id asc limit ${limit+1}`.execute(tx)
-  const rows = result.rows.slice(0,limit), last = rows.at(-1)
-  return { rows, next: result.rows.length>limit && last ? Buffer.from(JSON.stringify([...scope,last.created_at,last.id])).toString('base64url') : null }
+  const rowsResult = await myCommunityRelationships(tx).innerJoin('tenants as t', 't.id', 'r.tenant_id')
+    .select(['t.id','t.name','t.city','t.state_province','t.country_code','t.operational_status',
+      'r.is_owned','r.is_managed','r.is_member'])
+    .select(sql<string>`to_char(t.created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`.as('created_at'))
+    .where(myCommunitySummaryAudience(filter))
+    .where(sql<boolean>`(${position?.time ?? null}::timestamptz is null or t.created_at<${position?.time ?? null}::timestamptz
+      or (t.created_at=${position?.time ?? null}::timestamptz and t.id>${position?.id ?? null}::uuid))`)
+    .orderBy('t.created_at','desc').orderBy('t.id','asc').limit(limit+1)
+    .$narrowType<Pick<CommunitySummary, 'operational_status'>>().execute()
+  const rows = rowsResult.slice(0,limit), last = rows.at(-1)
+  return { rows, next: rowsResult.length>limit && last ? Buffer.from(JSON.stringify([...scope,last.created_at,last.id])).toString('base64url') : null }
 }
 
 // Global profiles

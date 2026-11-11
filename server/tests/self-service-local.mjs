@@ -44,7 +44,7 @@ async function send(viewer, path, body, expected = 200, method = body ? 'POST' :
 }
 async function community(owner) {
   const data = await send(owner, '/api/communities', { slug: 'test-' + randomUUID(), name: 'API fixture',
-    country: 'HN', timezone: 'UTC', region: '', city: '', profile: { displayName: 'Owner', bio: null } }, 201)
+    country: 'HN', timezone: 'UTC', region: '', city: '', profile: { displayName: '  Owner  ', bio: '  Owner bio  ' } }, 201)
   tenants.push(data.tenantId)
   return data.tenantId
 }
@@ -67,11 +67,15 @@ try {
   const summaries=(actor,query={},status=200)=>http(actor,'/api/me/communities?'+new URLSearchParams(query),'GET',undefined,status)
   const global=(actor,body,status=200)=>http(actor,'/api/me/profile',body?'PUT':'GET',body,status)
   const review=actor=>send(owner,'/api/communities/'+tenant+'/accounts/'+actor.id+'/review')
-  const join={kind:'join',profile:{displayName:'Initial curated',bio:null}}
+  const join={kind:'join',profile:{displayName:'  Initial curated  ',bio:'  Join bio  '}}
   await command(pending,join)
   await send(owner,'/api/communities/'+tenant+'/settings',{auto_approve_users:true},200,'PATCH')
   await command(member,join)
   await command(other,join)
+  const initialOwner=await http(owner,'/api/communities/'+tenant+'/accounts/'+owner.id+'/profile')
+  assert.equal(initialOwner.display_name,'Owner');assert.equal(initialOwner.bio,'Owner bio')
+  const initialMember=await http(member,'/api/communities/'+tenant+'/accounts/'+member.id+'/profile')
+  assert.equal(initialMember.display_name,'Initial curated');assert.equal(initialMember.bio,'Join bio')
   assert.deepEqual(await global(member),{profile:null})
   const first=(await global(member,{display_name:'  Global Name  ',bio:'  Bio  '})).profile
   assert.equal(first.display_name,'Global Name')
@@ -120,6 +124,16 @@ try {
   assert.deepEqual((await summaries(member,{filter:'owned'})).rows,[])
   for(const query of [{filter:'everyone'},{user_id:owner.id},{limit:'0'},{limit:'101'},{cursor:'bad'}]) await summaries(member,query,400)
 
+  // Raw runtime storage rejects noncanonical inputs rather than silently
+  // normalizing them. API creation/join/edit entry points own normalization.
+  for(const table of ['user_account_profiles','community_account_profiles']) {
+    for(const patch of [sql`display_name='  Raw name  '`,sql`bio='  Raw bio  '`,sql`bio=''`]) {
+      await assert.rejects(withEligibleActorTransaction(db,{actorId:member.id,requestId:randomUUID()},async tx=>{
+        await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+        await sql`update ${sql.table('public.'+table)} set ${patch} where user_id=${member.id}`.execute(tx)
+      }),error=>error.code==='23514')
+    }
+  }
   // Native role checks omit the application's self predicates deliberately.
   assert.equal((await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     // Global discovery has its own peer audience; the self operation stays exact.
@@ -168,6 +182,19 @@ try {
   await command(member,{kind:'deactivate'})
   await profile(member,{display_name:'Inactive',bio:null},404)
   await prefs(member,{show_global_profile:true},404)
+  // Standing/edit authority moved to API policy. A defective scoped runtime
+  // writer may edit canonical own text/preferences while inactive; the API may
+  // not. Self scope, archive RLS and inactive-sharing rejection still apply.
+  await assert.rejects(withEligibleActorTransaction(db,{actorId:member.id,requestId:randomUUID()},async tx=>{
+    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+    assert.equal((await sql`update public.community_account_profiles set bio='Runtime canonical'
+      where tenant_id=${tenant} and user_id=${member.id} returning user_id`.execute(tx)).rows.length,1)
+    assert.equal((await sql`update public.community_account_preferences set allow_direct_messages=false
+      where tenant_id=${tenant} and user_id=${member.id} returning user_id`.execute(tx)).rows.length,1)
+    assert.equal((await sql`update public.community_account_profiles set bio='Cross-user'
+      where tenant_id=${tenant} and user_id=${other.id} returning user_id`.execute(tx)).rows.length,0)
+    throw Error('rollback runtime standing probe')
+  }),/rollback runtime standing probe/)
   assert.equal((await prefs(member)).show_global_profile,false)
   assert.deepEqual((await summaries(member)).rows,[])
   await command(member,{kind:'reactivate'})

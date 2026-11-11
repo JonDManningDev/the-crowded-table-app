@@ -240,6 +240,14 @@ try {
   assert.equal((await accounts(owner)).rows.length,9)
   assert.equal((await facts(owner,inactive.id)).standing,'inactive')
   assert.equal((await http(owner,path+'/accounts/'+inactive.id+'/profile')).user_id,inactive.id)
+  // The archived-owner branch must stay inside the exact tenant/target filter.
+  for(const target of [owner,manager,member,pending,suspended,inactive,paused,revoked]) {
+    const archivedProfile=await http(owner,path+'/accounts/'+target.id+'/profile')
+    assert.equal(archivedProfile.user_id,target.id);assert.equal(archivedProfile.tenant_id,tenant)
+  }
+  for(const target of [missing,outsider,{id:randomUUID()}]) {
+    await http(owner,path+'/accounts/'+target.id+'/profile','GET',undefined,404)
+  }
   assert.equal((await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     assert.deepEqual((await sql`select user_id from public.community_accounts where tenant_id=${tenant}`.execute(tx)).rows,[])

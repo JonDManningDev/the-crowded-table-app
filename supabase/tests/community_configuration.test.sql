@@ -22,10 +22,8 @@ select ok(not exists(select from pg_policies where schemaname='public' and polic
   ('configuration_settings_edit','api_copy_read','api_copy_insert','api_copy_update','api_copy_delete')),'business configuration policies retired');
 select ok(exists(select from pg_policies where schemaname='public' and tablename='tenant_website_content_overrides'
   and policyname='command_scope' and cmd='ALL'),'copy retains tenant scope');
-select ok(position('new.name' in pg_get_functiondef('app_private.normalize_editable_text()'::regprocedure))=0,
-  'normalization retains only profile callers');
-select is((select count(*)::int from pg_trigger where not tgisinternal
-  and tgfoid='app_private.normalize_editable_text()'::regprocedure),2,'both profile normalization triggers remain');
+select ok(to_regprocedure('app_private.normalize_editable_text()') is null,
+  'normalization is fully API-owned after the profile checkpoint');
 select ok(exists(select from pg_policies where tablename=t and policyname=p and permissive='RESTRICTIVE'),'independent archive guard on '||t)
   from (values ('tenant_settings','settings_archive_boundary'),('tenant_website_content_overrides','copy_archive_boundary')) guards(t,p);
 select * from finish();

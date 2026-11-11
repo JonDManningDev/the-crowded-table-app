@@ -122,7 +122,6 @@ export type MemberDirectoryRow = { account: JsonAccountFacts; profile: JsonCommu
 export type PublicDirectoryRow = { display_name: string; staff_role: RoleBadge }
 export type DirectoryQuery = { limit?: string; cursor?: string }
 export type DirectoryPage<T> = { rows: T[]; next: string | null }
-export type DirectoryAccess = { active: boolean; owner: boolean; member: boolean }
 
 // Staff and participant permissions
 type Identity = { tenant_id: string; user_id: string }
@@ -194,3 +193,6 @@ export type ProtectedCommunityOperations = Pick<CommunityService,
   | "readParticipantPermissions"
   | "saveParticipantPermissions"
   | "history">
+
+// Caller-only archive-safe card facts; no account/profile/private fields.
+export type CommunityRelationship = { tenant_id: string; is_owned: boolean; is_managed: boolean; is_member: boolean }

@@ -17,5 +17,12 @@ select ok(not exists(select from pg_policies where schemaname='public' and table
   and cmd='ALL' and 'ct_api'=any(roles)),'new self edits cannot inherit a broad command policy');
 select ok(exists(select from pg_policies where tablename='community_account_preferences' and policyname='preference_archive_boundary'
   and permissive='RESTRICTIVE'),'private preference archive guard remains independent');
+select ok(to_regprocedure('app_private.normalize_editable_text()') is null,'normalizer retired');
+select ok(not exists(select from pg_trigger where tgname='b_normalize' and not tgisinternal),'no remaining normalization triggers');
+select ok(exists(select from pg_constraint where conrelid=t::regclass and conname=c),'canonical bio storage constraint '||c)
+from (values ('public.user_account_profiles','global_profile_canonical_bio'),
+  ('public.community_account_profiles','community_profile_canonical_bio')) x(t,c);
+select ok(not exists(select from pg_policies where policyname in ('api_own_profile_edit','api_own_preferences_edit')),
+  'self-edit standing/lifecycle decisions retired from business RLS');
 select * from finish();
 rollback;
