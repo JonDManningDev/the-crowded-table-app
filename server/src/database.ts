@@ -85,7 +85,10 @@ export async function checkRuntime(db: AppDatabase) {
       and to_regprocedure('app_private.guard_configuration_details()') is null
       and to_regprocedure('app_private.community_landing(text)') is null
       and not has_any_column_privilege('authenticated','public.user_account_profiles','SELECT,INSERT,UPDATE')
-      and has_function_privilege(current_user,'app_private.inspect_global_profile(uuid)','EXECUTE')
+      and to_regprocedure('app_private.inspect_global_profile(uuid)') is null
+      and to_regprocedure('app_private.can_discover_global_profile(uuid)') is null
+      and to_regprocedure('app_private.can_inspect_global_profile(uuid)') is null
+      and to_regprocedure('app_private.can_block_from_profile(uuid)') is null
       and not has_any_column_privilege('authenticated','public.user_account_blocks','SELECT,INSERT,UPDATE')
       and not has_any_column_privilege('authenticated','public.community_accounts','SELECT')
       and to_regprocedure('app_private.public_community_directory(text,uuid,integer)') is null

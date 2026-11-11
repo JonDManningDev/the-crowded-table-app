@@ -1,4 +1,5 @@
-import { ownAccountPreferencesAudience, ownGlobalProfileAudience, myCommunitySummaryAudience } from './policies.ts'
+import { ownAccountPreferencesAudience, ownGlobalProfileAudience, myCommunitySummaryAudience, globalProfileDiscoveryAudience, exactGlobalProfileAudience, ownOutgoingBlocksAudience, blockProfileSourceAudience, loadOwnBlockFacts } from './policies.ts'
+import { loadGlobalProfileSharingRoots } from '../communities/policies.ts'
 import { myCommunityRelationships } from '../communities/service.ts'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, type AuthenticatedContext, type AppDatabase } from '../database.ts'
@@ -12,6 +13,7 @@ import type {
   CommunitySummaryPage,
   CommunitySummaryQuery,
   BlockInput,
+  BlockSource,
   DiscoveryQuery,
   GlobalProfile,
   OutgoingBlock,
@@ -108,20 +110,21 @@ function discoverGlobalProfiles(db: AppDatabase, cursors: DirectoryCursors, cont
 async function discoverProfiles(tx: Tx, actor: string, query: DiscoveryQuery, cursors: DirectoryCursors): Promise<ProfilePage<GlobalProfile>> {
   const term = (query.q ?? '').trim().toLowerCase(), scope = ['global-discovery',actor,term]
   const after = cursors.decode(scope,query.cursor), limit = Number(query.limit ?? 50)
-  // RLS also enforces discoverability/blocking; explicitly exclude a hidden self.
-  // This statement performs admission and projection together, with no cached check.
-  const rows = (await sql<GlobalProfile>`select ${fields} from public.user_account_profiles
-    where app_private.can_discover_global_profile(user_id) and strpos(lower(display_name),${term})>0
+  // Admission and projection share a fresh statement snapshot, before pagination.
+  const rows = (await sql<GlobalProfile>`select ${fields} from public.user_account_profiles p
+    where ${globalProfileDiscoveryAudience(actor,sql<string>`p.user_id`)} and strpos(lower(display_name),${term})>0
       and (${after}::uuid is null or user_id>${after}::uuid) order by user_id limit ${limit+1}`.execute(tx)).rows
   const visible=rows.slice(0,limit), last=visible.at(-1)
   return {rows:visible,next:rows.length>limit && last ? cursors.encode(scope,last.user_id):null}
 }
 function readGlobalProfile(db: AppDatabase, context: AuthenticatedContext, target: string) {
-  return run(db, context, tx => inspectGlobalProfile(tx, target))
+  return run(db, context, tx => inspectGlobalProfile(tx, context.actorId, target))
 }
 const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
-export async function inspectGlobalProfile(tx: Tx, target: string): Promise<GlobalProfile> {
-  const row = (await sql<GlobalProfile>`select ${fields} from app_private.inspect_global_profile(${target})`.execute(tx)).rows[0]
+export async function inspectGlobalProfile(tx: Tx, actor: string, target: string): Promise<GlobalProfile> {
+  await sql`select set_config('ct.profile_target',${target},true)`.execute(tx)
+  const row = (await sql<GlobalProfile>`select ${fields} from public.user_account_profiles p
+    where p.user_id=${target} and ${exactGlobalProfileAudience(actor,sql<string>`p.user_id`)}`.execute(tx)).rows[0]
   if (!row) throw new ApplicationError(404,'missing')
   return row
 }
@@ -133,7 +136,7 @@ function listAccountBlocks(db: AppDatabase, cursors: DirectoryCursors, context: 
 const blockFields = sql`blocker_user_id,blocked_user_id,created_at,created_by`
 async function listOwnBlocks(tx: Tx, actor: string, query: DiscoveryQuery, cursors: DirectoryCursors): Promise<ProfilePage<OutgoingBlock>> {
   const scope=['outgoing-blocks',actor],after=cursors.decode(scope,query.cursor),limit=Number(query.limit??50)
-  const rows=(await sql<OutgoingBlock>`select ${blockFields} from public.user_account_blocks where blocker_user_id=${actor}
+  const rows=(await sql<OutgoingBlock>`select ${blockFields} from public.user_account_blocks where ${ownOutgoingBlocksAudience(actor)}
     and (${after}::uuid is null or blocked_user_id>${after}::uuid) order by blocked_user_id limit ${limit+1}`.execute(tx)).rows
   const visible=rows.slice(0,limit),last=visible.at(-1)
   return {rows:visible,next:rows.length>limit && last?cursors.encode(scope,last.blocked_user_id):null}
@@ -144,23 +147,52 @@ function blockAccount(db: AppDatabase, context: AuthenticatedContext, target: st
 function unblockAccount(db: AppDatabase, context: AuthenticatedContext, target: string) {
   return run(db, context, tx => setOwnBlock(tx, context.actorId, target))
 }
+// These are the existing source writers' roots: lifecycle/archive commands
+// lock tenant then account; independent sharing saves lock account first. All
+// source row locks are held through INSERT/commit, using those same roots.
+async function lockCommunityBlockSource(tx: Tx, actor: string, target: string, tenant: string) {
+  await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+  await tx.selectFrom('tenants').select('id').where('id','=',tenant).forShare().execute()
+  await tx.selectFrom('community_accounts').select('user_id').where('tenant_id','=',tenant)
+    .where('user_id','in',[actor,target]).orderBy('user_id').forShare().execute()
+}
+async function lockBlockSource(tx: Tx, actor: string, target: string, source: BlockSource): Promise<string[]> {
+  if (source.kind === 'community_profile') {
+    await lockCommunityBlockSource(tx,actor,target,source.tenantId)
+    return []
+  }
+  // FOR SHARE conflicts with a target's preference UPDATE, including a writer
+  // already waiting/holding the row. Re-read source gates in the later INSERT.
+  const account = await tx.selectFrom('user_accounts').select('user_is_discoverable')
+    .where('user_id','=',target).forShare().executeTakeFirst()
+  if (!account) throw new ApplicationError(404,'missing')
+  if (account.user_is_discoverable) return []
+  const roots = await loadGlobalProfileSharingRoots(tx,actor,target)
+  for (const root of roots) await lockCommunityBlockSource(tx,actor,target,root.tenant_id)
+  // Restrict the mutation's sharing alternative to roots actually locked. A
+  // newly created sharing path cannot become an unlocked authorization source.
+  return roots.map(root => root.tenant_id)
+}
 export async function setOwnBlock(tx: Tx, actor: string, target: string, input?: BlockInput) {
-  if (actor===target) throw new ApplicationError(400,'invalid_target')
+  if (actor.toLowerCase()===target.toLowerCase()) throw new ApplicationError(400,'invalid_target')
   // Serialize one caller's retries/unblocks so conflict readback cannot lose
   // its row to another command between INSERT and SELECT.
   await sql`select pg_advisory_xact_lock(hashtextextended('ct.profile-block:' || ${actor}::text,0))`.execute(tx)
+  const pair = [actor,target].map(id => id.toLowerCase()).sort().join(':')
+  await sql`select pg_advisory_xact_lock(hashtextextended('ct.profile-block-pair:' || ${pair}::text,0))`.execute(tx)
   if (!input) {
-    await sql`delete from public.user_account_blocks where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)
+    await sql`delete from public.user_account_blocks where ${ownOutgoingBlocksAudience(actor)} and blocked_user_id=${target}`.execute(tx)
     return {blocked:false}
   }
-  await sql`select set_config('ct.block_source',${input.source.kind},true),
-    set_config('ct.block_tenant',${input.source.kind==='community_profile'?input.source.tenantId:''},true)`.execute(tx)
-  // The predicate is repeated by INSERT RLS in the same mutation statement.
+  if (await loadOwnBlockFacts(tx,actor,target)) return {blocked:true}
+  // Selectors grant runtime fact/lock scope, never product authority.
+  await sql`select set_config('ct.profile_target',${target},true)`.execute(tx)
+  const lockedTenants = await lockBlockSource(tx,actor,target,input.source)
   const rows=(await sql<OutgoingBlock>`insert into public.user_account_blocks(blocked_user_id)
-    select ${target}::uuid where app_private.can_block_from_profile(${target})
+    select ${target}::uuid where ${blockProfileSourceAudience(actor,target,input.source,lockedTenants)}
     on conflict(blocker_user_id,blocked_user_id) do nothing returning ${blockFields}`.execute(tx)).rows
   const row=rows[0]??(await sql<OutgoingBlock>`select ${blockFields} from public.user_account_blocks
-    where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)).rows[0]
+    where ${ownOutgoingBlocksAudience(actor)} and blocked_user_id=${target}`.execute(tx)).rows[0]
   if (!row) throw new ApplicationError(404,'missing')
   return {blocked:true}
 }

@@ -253,6 +253,35 @@ test('real local operations retry with fresh authorization and one committed out
       assert.ok(result.queries.every(query => !query.text.includes('lock_eligible_actor') && !query.text.includes('request.jwt.claim.sub') && !query.text.includes('ct.operation_id')))
       assert.deepEqual(result.value, before)
     })
+
+    await t.test('block retries rebuild source admission and preserve repeated/unblock outcomes', async()=>{
+      await request(controlApp,manager,'/api/me/profile',{display_name:'Block target',bio:null},200,'PUT')
+      const url='/api/me/blocks/'+manager.id, input={confirmed:true,source:{kind:'global_profile'}}
+      const result=await faulted(owner,url,input,{match:/insert into public.user_account_blocks/,codes:['40001','40P01']},200,'PUT')
+      assert.equal(result.attempts,3)
+      assert.equal(result.queries.filter(q=>q.text.includes('ct.profile-block:')).length,3)
+      assert.equal((await request(controlApp,owner,'/api/me/blocks')).rows.length,1)
+      await request(controlApp,owner,url,undefined,200,'DELETE')
+      const denied=await faulted(owner,url,input,{match:/insert into public.user_account_blocks/,codes:['40001'],
+        afterRollback:()=>request(controlApp,manager,'/api/me/preferences',{
+          user_is_discoverable:false,enable_matchmaking:true,allow_direct_messages:true},200,'PUT')},404,'PUT')
+      assert.equal(denied.attempts,2)
+      assert.equal((await request(controlApp,owner,'/api/me/blocks')).rows.length,0)
+      const missing=await faulted(owner,url,input,{match:/insert into public.user_account_blocks/,codes:[]},404,'PUT')
+      assert.equal(missing.attempts,1)
+      await request(controlApp,manager,'/api/me/preferences',{
+        user_is_discoverable:true,enable_matchmaking:true,allow_direct_messages:true},200,'PUT')
+      const arbitrary=await faulted(owner,url,input,{match:/insert into public.user_account_blocks/,codes:['23505']},503,'PUT')
+      assert.equal(arbitrary.attempts,1)
+      assert.equal((await request(controlApp,owner,'/api/me/blocks')).rows.length,0)
+      const uncertain=await faulted(owner,url,input,{match:/^never$/,codes:[],loseCommitAcknowledgement:true},503,'PUT')
+      assert.equal(uncertain.attempts,1)
+      assert.equal((await request(controlApp,owner,'/api/me/blocks')).rows.length,1)
+      await request(controlApp,owner,url,input,200,'PUT')
+      assert.equal((await request(controlApp,owner,'/api/me/blocks')).rows.length,1)
+      await request(controlApp,owner,url,undefined,200,'DELETE')
+      await request(controlApp,owner,url,undefined,200,'DELETE')
+    })
   } finally {
     pool.fault = null
     pool.afterRollback = null
@@ -265,6 +294,8 @@ test('real local operations retry with fresh authorization and one committed out
         'community_account_profiles', 'community_accounts', 'tenant_staff_assignments', 'tenant_settings', 'tenants']) {
         await admin.query(`delete from public.${table} where ${table === 'tenants' ? 'id' : 'tenant_id'}=any($1::uuid[])`, [tenants])
       }
+      await admin.query('delete from public.user_account_blocks where blocker_user_id=any($1::uuid[]) or blocked_user_id=any($1::uuid[])',[users])
+      await admin.query('delete from public.user_account_profiles where user_id=any($1::uuid[])',[users])
       await admin.query('delete from public.user_accounts where user_id=any($1::uuid[])', [users])
       await admin.query('commit')
       for (const id of users) assert.ifError((await authAdmin.deleteUser(id)).error)

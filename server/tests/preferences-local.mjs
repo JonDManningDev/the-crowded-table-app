@@ -70,7 +70,7 @@ try {
   assert.ok(graph.errors?.length && !graph.data?.user_accountsCollection)
   await assert.rejects(db.transaction().execute(async tx => {
     await sql`select set_config('request.jwt.claim.sub', ${a.id}, true)`.execute(tx)
-    assert.equal((await tx.selectFrom('user_accounts').select('user_id').execute())[0].user_id, a.id)
+    assert.equal((await tx.selectFrom('user_accounts').select('user_id').where('user_id','=',a.id).execute())[0].user_id, a.id)
     assert.equal((await tx.updateTable('user_accounts').set(allOn).where('user_id','=', b.id).executeTakeFirst()).numUpdatedRows, 0n)
     throw new Error('rollback probe')
   }), /rollback probe/)

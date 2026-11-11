@@ -57,6 +57,7 @@ async function http(viewer,path,method='GET',body,status=200) {
 try {
   await admin.connect();base=await app.listen({host:'127.0.0.1',port:0})
   assert.equal((await fetch(base+'/health/ready')).status,200)
+  assert.equal((await sql`select to_regprocedure('app_private.can_inspect_global_profile(uuid)') as fn`.execute(db)).rows[0].fn,null)
   const owner=await user(),viewer=await user(),target=await user(),stranger=await user(),pending=await user(),missing=await user()
   const prefix='Global-'+randomUUID()
   for(const actor of [owner,viewer,target,stranger,pending]) await http(actor,'/api/me/profile','PUT',{display_name:prefix+' Same',bio:'Global biography'})
@@ -108,11 +109,17 @@ try {
   await http(owner,'/api/communities/'+second+'/settings','PATCH',{auto_approve_users:false})
   await cmd(pending,second,{kind:'join',profile:{displayName:'Pending',bio:null}})
   await inspect(pending,target.id,404)
-  // Other users' preferences and context-only profiles are not raw runtime rows.
+  // Product profile/account audiences now belong to API predicates. Runtime
+  // facts retain their granted columns, self writes and explicit sharing scope.
   assert.equal((await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
-    assert.deepEqual((await sql`select user_id from public.user_accounts where user_id=${target.id}`.execute(tx)).rows,[])
+    assert.deepEqual((await sql`select user_id from public.user_accounts where user_id=${target.id}`.execute(tx)).rows,[{user_id:target.id}])
+    await sql`select set_config('ct.profile_target',${target.id},true)`.execute(tx)
+    await sql`savepoint peer_write`.execute(tx)
+    await assert.rejects(sql`update public.user_accounts set user_is_discoverable=true where user_id=${target.id}`.execute(tx),e=>e.code==='42501')
+    await sql`rollback to savepoint peer_write`.execute(tx)
+    await sql`select set_config('ct.profile_target','',true)`.execute(tx)
     assert.deepEqual((await sql`select user_id from public.community_account_preferences where user_id=${target.id}`.execute(tx)).rows,[])
-    assert.deepEqual((await sql`select user_id from public.user_account_profiles where user_id=${target.id}`.execute(tx)).rows,[])
+    assert.deepEqual((await sql`select user_id from public.user_account_profiles where user_id=${target.id}`.execute(tx)).rows,[{user_id:target.id}])
   })).eligible, true)
   const source={kind:'community_profile',tenantId:second}
   await prefs(viewer,true)
@@ -127,6 +134,10 @@ try {
   assert.deepEqual(await list(target),{rows:[],next:null})
   await Promise.all([block(viewer,target.id),block(viewer,target.id)])
   assert.deepEqual((await list(viewer)).rows,[saved])
+  await sharing(target,second,false)
+  await block(viewer,target.id)
+  assert.deepEqual((await list(viewer)).rows,[saved])
+  await sharing(target,second,true)
   await block(target,viewer.id,{kind:'global_profile'},404)
   await block(target,viewer.id,source)
   await Promise.all([unblock(viewer,target.id),unblock(viewer,target.id)])
@@ -138,6 +149,7 @@ try {
   await prefs(viewer,false)
   // Encounter selectors must resolve a real, currently readable profile.
   await block(viewer,viewer.id,source,400)
+  assert.equal((await block(viewer,viewer.id.toUpperCase(),source,400)).code,'invalid_target')
   await block(viewer,randomUUID(),{kind:'global_profile'},404)
   await block(viewer,missing.id,{kind:'global_profile'},404)
   await block(viewer,target.id,{kind:'community_profile',tenantId:other},404)
@@ -167,36 +179,148 @@ try {
   await block(target,viewer.id,source)
   assert.ok(!(await search(viewer)).rows.some(row=>row.user_id===target.id))
   assert.equal((await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
-    assert.deepEqual((await sql`select user_id from public.user_account_profiles where user_id=${target.id}`.execute(tx)).rows,[])
-    assert.deepEqual((await sql`select blocked_user_id from public.user_account_blocks`.execute(tx)).rows,[])
+    assert.deepEqual((await sql`select user_id from public.user_account_profiles where user_id=${target.id}`.execute(tx)).rows,[{user_id:target.id}])
+    assert.deepEqual((await sql`select blocker_user_id,blocked_user_id from public.user_account_blocks`.execute(tx)).rows,[{blocker_user_id:target.id,blocked_user_id:viewer.id}])
     assert.equal((await sql`delete from public.user_account_blocks where blocker_user_id=${target.id}`.execute(tx)).numAffectedRows,0n)
   })).eligible, true)
+  assert.equal((await withEligibleActorTransaction(db,{actorId:stranger.id,requestId:randomUUID()},async tx=>{
+    assert.deepEqual((await sql`select blocked_user_id from public.user_account_blocks`.execute(tx)).rows,[])
+  })).eligible,true)
   await unblock(target,viewer.id)
   await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     await setOwnBlock(tx,viewer.id,target.id,{confirmed:true,source});throw Error('injected rollback')
   }),/injected rollback/)
   assert.equal((await inspect(viewer,target.id)).user_id,target.id)
+  // A trusted runtime can insert its own block without product source proof;
+  // the API is now the sole owner of that decision. Roll this bypass back.
   await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     await sql`insert into public.user_account_blocks(blocked_user_id) values(${target.id})`.execute(tx)
-  }),error=>error.code==='42501')
+    throw Error('trusted writer rollback')
+  }),/trusted writer rollback/)
   await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     await sql`insert into public.user_account_blocks(blocker_user_id,blocked_user_id) values(${stranger.id},${target.id})`.execute(tx)
   }),error=>error.code==='42501')
   assert.equal((await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     assert.equal((await sql`update public.user_account_profiles set bio='Bypass' where user_id=${target.id}`.execute(tx)).numAffectedRows,0n)
   })).eligible, true)
-  // The insert policy rechecks a stale source selector at the mutation statement.
+  // Source revocation is re-evaluated in the API mutation, not database RLS.
   await prefs(target,false);await sharing(target,second,false)
   await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
-    await sql`select set_config('ct.block_source','global_profile',true)`.execute(tx)
-    await sql`insert into public.user_account_blocks(blocked_user_id) values(${target.id})`.execute(tx)
-  }),error=>error.code==='42501')
+    await setOwnBlock(tx,viewer.id,target.id,{confirmed:true,source:{kind:'global_profile'}})
+  }),error=>error.statusCode===404)
+  // Source proof is loaded after the caller lock wait, in the INSERT snapshot.
+  async function afterCallerWait(change,read) {
+    await admin.query('begin')
+    let operation
+    try {
+      await admin.query("select pg_advisory_xact_lock(hashtextextended('ct.profile-block:'||$1::text,0))",[viewer.id])
+      operation=read();operation.catch(()=>{})
+      const deadline=Date.now()+1800
+      while(!(await admin.query("select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as waiting")).rows[0].waiting) {
+        assert.ok(Date.now()<deadline,'block must wait for caller coordination')
+        await new Promise(resolve=>setTimeout(resolve,10))
+      }
+      await change()
+      await admin.query('commit')
+    } finally {await admin.query('rollback')}
+    return operation
+  }
+  await prefs(target,true)
+  await afterCallerWait(()=>prefs(target,false),()=>block(viewer,target.id,{kind:'global_profile'},404))
+  await sharing(target,second,true)
+  await afterCallerWait(()=>sharing(target,second,false),()=>block(viewer,target.id,{kind:'global_profile'},404))
+  await afterCallerWait(()=>cmd(target,second,{kind:'deactivate'}),()=>block(viewer,target.id,source))
+  // Inactive target links still authorize the exact community source.
+  await unblock(viewer,target.id)
+  await cmd(target,second,{kind:'reactivate'})
+  await afterCallerWait(()=>cmd(viewer,second,{kind:'deactivate'}),()=>block(viewer,target.id,source,404))
+  await cmd(viewer,second,{kind:'reactivate'})
+  await afterCallerWait(()=>cmd(owner,second,{kind:'archive',archived:true}),()=>block(viewer,target.id,source,404))
+  assert.equal((await withEligibleActorTransaction(db,{actorId:viewer.id,requestId:randomUUID()},async tx=>{
+    await sql`select set_config('ct.profile_target',${target.id},true),set_config('ct.tenant_id',${second},true)`.execute(tx)
+    for(const table of ['community_account_preferences','community_accounts','community_account_profiles']) {
+      assert.deepEqual((await sql`select tenant_id from ${sql.table(table)} where tenant_id=${second}`.execute(tx)).rows,[])
+    }
+  })).eligible,true)
+  await block(owner,target.id,source)
+  await unblock(owner,target.id)
+  await cmd(owner,second,{kind:'archive',archived:false})
+  await prefs(target,true)
+  // Source-root changes wait for an admitted write to commit. This is stronger
+  // than the former statement-only admission and matches the accepted plan.
+  async function admittedBlock(input,change) {
+    let release,ready
+    const gate=new Promise(resolve=>{release=resolve}),started=new Promise(resolve=>{ready=resolve})
+    const write=withEligibleActorTransaction(db,{actorId:viewer.id,requestId:randomUUID()},async tx=>{
+      const result=await setOwnBlock(tx,viewer.id,target.id,input)
+      ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
+      await gate;return result
+    })
+    const holder=await Promise.race([started,write.then(()=>{throw Error('block ended before barrier')})])
+    const transition=change();transition.catch(()=>{})
+    try {
+      const deadline=Date.now()+1800
+      while(!(await admin.query('select exists(select from pg_stat_activity where $1=any(pg_blocking_pids(pid))) as waiting',[holder])).rows[0].waiting) {
+        assert.ok(Date.now()<deadline,'source transition must wait for admitted block')
+        await new Promise(resolve=>setTimeout(resolve,10))
+      }
+    } finally {release()}
+    assert.deepEqual((await write).value,{blocked:true})
+    await transition
+    assert.equal((await list(viewer)).rows.length,1)
+    await unblock(viewer,target.id)
+  }
+  await prefs(viewer,true)
+  await admittedBlock({confirmed:true,source:{kind:'global_profile'}},()=>block(target,viewer.id.toUpperCase(),{kind:'global_profile'},404))
+  await prefs(viewer,false)
+  await admittedBlock({confirmed:true,source:{kind:'global_profile'}},()=>prefs(target,false))
+  await inspect(viewer,target.id,404)
+  await sharing(target,second,true)
+  await admittedBlock({confirmed:true,source:{kind:'global_profile'}},()=>sharing(target,second,false))
+  await inspect(viewer,target.id,404)
+  await admittedBlock({confirmed:true,source},()=>cmd(viewer,second,{kind:'deactivate'}))
+  await cmd(viewer,second,{kind:'reactivate'})
+  await admittedBlock({confirmed:true,source},()=>cmd(owner,second,{kind:'archive',archived:true}))
+  await cmd(owner,second,{kind:'archive',archived:false})
+  // In the reverse order, the block waits on the actual source writer and
+  // re-evaluates committed discoverability/sharing/standing/archive facts.
+  async function afterSourceWrite(change,read) {
+    await admin.query('begin')
+    let operation
+    try {
+      await change()
+      operation=read();operation.catch(()=>{})
+      const deadline=Date.now()+1800
+      while(!(await admin.query("select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as waiting")).rows[0].waiting) {
+        assert.ok(Date.now()<deadline,'block must wait for source writer')
+        await new Promise(resolve=>setTimeout(resolve,10))
+      }
+      await admin.query('commit')
+    } finally {await admin.query('rollback')}
+    return operation
+  }
+  await prefs(target,true)
+  await afterSourceWrite(()=>admin.query('update public.user_accounts set user_is_discoverable=false where user_id=$1',[target.id]),
+    ()=>block(viewer,target.id,{kind:'global_profile'},404))
+  await sharing(target,second,true)
+  await afterSourceWrite(async()=>{
+    await admin.query('select user_id from public.community_accounts where tenant_id=$1 and user_id=$2 for update',[second,target.id])
+    await admin.query('update public.community_account_preferences set show_global_profile=false where tenant_id=$1 and user_id=$2',[second,target.id])
+  },()=>block(viewer,target.id,{kind:'global_profile'},404))
+  await afterSourceWrite(async()=>{
+    await admin.query('select id from public.tenants where id=$1 for update',[second])
+    await admin.query("update public.community_accounts set standing='inactive' where tenant_id=$1 and user_id=$2",[second,viewer.id])
+  },()=>block(viewer,target.id,source,404))
+  await cmd(viewer,second,{kind:'reactivate'})
+  await afterSourceWrite(()=>admin.query("update public.tenants set operational_status='archived' where id=$1",[second]),
+    ()=>block(viewer,target.id,source,404))
+  await cmd(owner,second,{kind:'archive',archived:false})
   await prefs(target,true)
   // A read already admitted by its statement may finish; the next read is denied.
   let release,ready
   const gate=new Promise(resolve=>{release=resolve}),started=new Promise(resolve=>{ready=resolve})
   const read=withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
-    const profile=await inspectGlobalProfile(tx,target.id);ready();await gate;return profile
+    const profile=await inspectGlobalProfile(tx,viewer.id,target.id);ready();await gate;return profile
   })
   await Promise.race([started,read.then(()=>{throw Error('read ended before barrier')})])
   try {await block(target,viewer.id,source)} finally {release()}

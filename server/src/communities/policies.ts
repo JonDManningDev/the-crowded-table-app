@@ -1,4 +1,4 @@
-import { sql } from 'kysely'
+import { sql, type RawBuilder } from 'kysely'
 import { ApplicationError } from '../http-errors.ts'
 import { staffFlags, type CommunityCommand, type ConfigurationKind, type RecordKind, type StaffPermissions, type Tx } from './types.ts'
 
@@ -272,6 +272,32 @@ export function communityProfileSourceAudience(actor: string) {
     (p.user_id=${actor} and viewer.standing='pending') or
     (viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended','inactive'))))
     or (t.operational_status='archived' and ${approvedCommunityOwnerAudience(actor)}))`
+}
+// Global sharing is a separate audience from ordinary community identity.
+// A single qualifying active shared community suffices; no affiliation is returned.
+export function communityGlobalSharingAudience(actor: string, target: RawBuilder<string>, lockedTenants?: readonly string[]) {
+  return sql<boolean>`exists(select from public.community_accounts viewer
+    join public.community_accounts target using(tenant_id)
+    join public.community_account_preferences prefs on (prefs.tenant_id,prefs.user_id)=(target.tenant_id,target.user_id)
+    join public.tenants t on t.id=target.tenant_id
+    where viewer.user_id=${actor} and target.user_id=${target}
+      and viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended')
+      and t.operational_status='active' and prefs.show_global_profile
+      and ${lockedTenants === undefined ? sql<boolean>`true` : sql<boolean>`t.id=any(${lockedTenants}::uuid[])`})`
+}
+// Candidate roots are facts, not admission. Block services lock these tenant
+// and account roots, then re-evaluate sharing against only the locked set.
+export async function loadGlobalProfileSharingRoots(tx: Tx, actor: string, target: string) {
+  return tx.selectFrom('community_accounts as viewer').innerJoin('community_accounts as target', 'target.tenant_id', 'viewer.tenant_id')
+    .select('target.tenant_id').where('viewer.user_id', '=', actor).where('target.user_id', '=', target)
+    .orderBy('target.tenant_id').execute()
+}
+export function communityBlockProfileSourceAudience(actor: string, target: string, tenant: string) {
+  return sql<boolean>`exists(select from public.community_account_profiles p
+    join public.community_accounts target on (target.tenant_id,target.user_id)=(p.tenant_id,p.user_id)
+    join public.community_accounts viewer on viewer.tenant_id=p.tenant_id and viewer.user_id=${actor}
+    join public.tenants t on t.id=p.tenant_id
+    where t.id=${tenant} and p.user_id=${target} and ${communityProfileSourceAudience(actor)})`
 }
 export function ownCommunityProfileEditAudience(actor: string) {
   return sql<boolean>`p.user_id=${actor} and exists(select from public.community_accounts c
