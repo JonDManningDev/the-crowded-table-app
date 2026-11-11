@@ -1,11 +1,11 @@
 # The Crowded Table
 
-A React/TypeScript gaming-community app with a persistent TypeScript API and Supabase Auth/PostgreSQL. The frontend and API run locally; the development database is hosted. Preview community screens still include mock features. See [implementation status](docs/12-implementation-status.md) for verified boundaries.
+A React/TypeScript gaming-community app with a persistent TypeScript API and Supabase Auth/PostgreSQL. The frontend and API run locally. The completed policy migration is verified against local Supabase through `20261110000800`; the hosted development database remains at the earlier deployment milestone and requires a separately authorized migration before using current source. Preview community screens still include mock features. See [final local evidence](docs/evidence/policy-migration-2026-11-10/README.md) and [implementation status](docs/12-implementation-status.md).
 
 ## Source layout
 
 - `client/`: the `@crowded-table/client` workspace: React source, public assets, HTML, Vite/Vitest and frontend TypeScript configuration.
-- `server/`: the API workspace: Fastify services, generated public-schema database types, startup configuration, setup scripts and integration tests.
+- `server/`: the API workspace: Fastify services/policies, generated public/private Kysely database types, startup configuration, setup scripts and integration tests.
 - `supabase/`: migrations, database configuration, preflight queries and access-verification tooling.
 - `docs/`: product decisions, architecture, implementation evidence and operational instructions.
 
@@ -18,6 +18,8 @@ In Codex's project menu, choose **Edit project**, attach the complete Git reposi
 After relocating a checkout, update the project's folder attachment and remove the obsolete attachment without deleting its files. Verify the chat's working directory and workspace roots point to the checkout: `git rev-parse --show-toplevel` should report the repository root. If an existing chat retains the old location after reopening, continue in a new chat opened from the corrected project with the task context carried over.
 
 ## Run locally against the hosted development database
+
+This records the earlier hosted setup. Use the independent local target below for current source until hosted migrations and verification are separately authorized and completed. Readiness deliberately rejects the old hosted schema.
 
 From the repository root, run the API and frontend in separate terminals after installation:
 
@@ -42,7 +44,7 @@ npm run dev:api:local
 npm run dev:local
 ```
 
-These use `server/.env.local` and `client/.env.local-api.local`. Initial local setup remains `npm run setup:local -w server`. Local fixture suites enforce loopback endpoints. This machine uses forwarded Supabase API/database ports 15421/15422, as described in the runbook.
+These use `server/.env.local` and `client/.env.local-api.local`. Initial local setup remains `npm run setup:local -w server`. Local fixture suites enforce loopback endpoints. Obtain current endpoints from `npx supabase status`; do not assume older forwarded ports 15421/15422. The final checkpoint used API 54321/database 54322. Reconcile existing local environment endpoints while preserving credentials; setup is not a credential-rotation command.
 
 ## Verification and build
 

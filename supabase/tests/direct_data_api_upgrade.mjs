@@ -173,6 +173,13 @@ async function verifySharingRace() {
 function apply(...names) {
   sql(names.map(file => readFileSync(new URL(file, migrations), 'utf8')).join('\n'));
 }
+function applicationSnapshot() {
+  const relations = JSON.parse(sql(`select jsonb_agg(format('%I.%I',n.nspname,c.relname) order by n.nspname,c.relname)
+    from pg_class c join pg_namespace n on n.oid=c.relnamespace
+    where n.nspname in ('public','app_private') and c.relkind in ('r','p')`));
+  return Object.fromEntries(relations.map(relation => [relation,
+    sql(`select coalesce(jsonb_agg(row order by row::text),'[]'::jsonb) from (select to_jsonb(t) as row from ${relation} t) snapshot`)]));
+}
 try {
   init();
   apply(...legacy);
@@ -213,7 +220,13 @@ try {
   checkCommunityUpgradeInputs(tenant);
   verifyCommunityBackfill(tenant);
   const profileSnapshot = sql(`select jsonb_agg(to_jsonb(p) order by tenant_id,user_id) from public.community_account_profiles p`);
-  apply(...files.filter(file => file > cutover));
+  apply(...files.filter(file => file > cutover && file < '20261110000100'));
+  const policySnapshot = applicationSnapshot();
+  assert.ok(JSON.parse(policySnapshot['public.tenant_admin_actions']).length > 0, 'upgrade has retained history');
+  assert.ok(JSON.parse(policySnapshot['app_private.tenant_admin_action_categories']).length > 0, 'upgrade has retained history categories');
+  apply(...files.filter(file => file >= '20261110000100'));
+  assert.deepEqual(applicationSnapshot(), policySnapshot, 'policy migration preserves all application rows, history/categories and attribution');
+  console.log('PASS populated policy upgrade preserves every application table, historical events/categories and metadata');
   assert.equal(sql(`select jsonb_agg(to_jsonb(p) order by tenant_id,user_id) from public.community_account_profiles p`),
     profileSnapshot, 'later policy migrations preserve existing profile bytes and attribution');
   assert.equal(sql(`select bio='  Original bio  ' from public.community_account_profiles where tenant_id='${tenant}' and user_id='${owner}'`), 't');
