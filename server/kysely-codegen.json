@@ -1,0 +1,10 @@
+{
+  "defaultSchemas": ["public"],
+  "includePattern": "{public,app_private}.*",
+  "typeOnlyImports": true,
+  "overrides": {
+    "columns": {
+      "public.tenant_staff_assignments.required_account_standing": "ColumnType<string | null, never, never>"
+    }
+  }
+}

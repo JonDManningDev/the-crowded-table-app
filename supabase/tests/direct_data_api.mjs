@@ -1,5 +1,4 @@
-import { connectDatabase } from '../../server/src/database.ts';
-import { withEligibleActorTransaction } from '../../server/src/actor-transaction.ts';
+import { connectDatabase, withEligibleActorTransaction } from '../../server/src/database.ts';
 import { configurationSettings, createCommunity, communityCommand } from '../../server/src/communities/service.ts';
 // Real Supabase SDK/PostgREST and concurrent SQL checks. Local Docker only.
 // Creates uniquely identified synthetic fixtures and removes only those fixtures.

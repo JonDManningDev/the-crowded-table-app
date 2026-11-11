@@ -15,8 +15,9 @@
     "dev:api:local": "npm start -w server",
     "build": "npm run check -w server && npm run build -w client",
     "lint": "eslint .",
-    "regen:types": "npx --yes supabase gen types typescript --local --schema public > server/src/database.types.ts",
-    "preview": "npm run preview -w client"
+    "regen:types": "npm run regen:types -w server",
+    "preview": "npm run preview -w client",
+    "verify:types": "npm run verify:types -w server"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

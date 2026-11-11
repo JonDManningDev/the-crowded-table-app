@@ -274,3 +274,12 @@ test('actual account service SELECT and RETURNING use exactly the approved prefe
   assert.equal(saved.statusCode, 200)
   assert.equal(/ returning (.*)$/.exec(h.queries.at(-1).sql)?.[1], projection)
 })
+
+test('actual profile query Dates serialize as ISO strings with nulls and projection preserved', async t => {
+  const h = createHttpHarness(t)
+  h.eligible([{ ...profile, created_at: new Date(profile.created_at), updated_at: new Date(profile.updated_at),
+    internal_secret: 'omit' }])
+  const received = await h.app.inject({ url: '/api/me/profile', headers: authorization })
+  assert.equal(received.statusCode, 200)
+  assert.deepEqual(received.json(), { profile })
+})

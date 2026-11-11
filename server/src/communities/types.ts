@@ -1,5 +1,6 @@
 import type { Transaction } from 'kysely'
-import type { ApiTables, AppDatabase } from '../database.ts'
+import type { AppDatabase } from '../database.ts'
+import type { DB } from '../database.types.ts'
 import type { DirectoryCursors } from '../directory-cursors.ts'
 import type { createCommunityService } from './service.ts'
 
@@ -61,8 +62,8 @@ export type OwnCommunityRequestResponse = { request: OwnCommunityRequest | null 
 export type AccountReview = { standing: 'pending' | 'approved' | 'suspended' | 'inactive'; revision: string; request_id: string | null }
 export type StaffCandidate = { tenant_id: string; user_id: string; standing: 'approved'; display_name: string | null;
   staff_role: 'owner' | 'admin' | null; staff_status: 'active' | 'paused' | 'revoked' | null }
-export type CommunityRequest = { id: string; kind: 'join' | 'reactivation'; user_id: string; requested_at: string;
-  revision: string; standing: AccountReview['standing']; first_approved_at: string | null;
+export type CommunityRequest = { id: string; kind: 'join' | 'reactivation'; user_id: string; requested_at: Date;
+  revision: string; standing: AccountReview['standing']; first_approved_at: Date | null;
   has_disciplinary_restriction: boolean; display_name: string | null }
 export type CommunityReadPage<T> = { rows: T[]; next: string | null }
 export type ReviewParams = { tenantId: string; target: string }
@@ -72,7 +73,7 @@ export type MissingRequest = { status: 404 }
 // Profiles and preferences
 export type CommunityProfileInput = { display_name: string; bio: string | null }
 export type CommunityProfile = CommunityProfileInput & {
-  tenant_id: string; user_id: string; created_at: string; updated_at: string
+  tenant_id: string; user_id: string; created_at: Date; updated_at: Date
   created_by: string | null; updated_by: string | null
 }
 
@@ -96,7 +97,7 @@ export type CopyKey = keyof typeof copySlots
 export type CommunityDetailsInput = {
   name: string; country_code: string; state_province: string | null; city: string | null; timezone: string
 }
-export type Attribution = { created_at: string; updated_at: string; created_by: string | null; updated_by: string | null }
+export type Attribution = { created_at: Date; updated_at: Date; created_by: string | null; updated_by: string | null }
 export type CommunityDetails = CommunityDetailsInput & Attribution & { id: string; slug: string; operational_status: 'active' | 'archived' }
 export type CommunitySettingsRecord = CommunitySettings & Attribution & { tenant_id: string }
 export type PublicCopy = { tenant_id: string; content_key: CopyKey; text_value: string }
@@ -111,11 +112,18 @@ export type CopyChange = { key: CopyKey; text?: string }
 // Directories and account facts
 export type AccountFacts = {
   tenant_id: string; user_id: string; standing: 'pending' | 'approved' | 'suspended' | 'inactive'
-  first_approved_at: string | null; has_disciplinary_restriction: boolean
-  created_at: string; updated_at: string; created_by: string | null; updated_by: string | null
+  first_approved_at: Date | null; has_disciplinary_restriction: boolean
+  created_at: Date; updated_at: Date; created_by: string | null; updated_by: string | null
 }
 export type RoleBadge = 'owner' | 'admin' | null
-export type MemberDirectoryRow = { account: AccountFacts; profile: CommunityProfile | null; staff_role: RoleBadge }
+// jsonb_build_object timestamps are strings; top-level pg timestamps are Dates.
+type JsonAccountFacts = Omit<AccountFacts, 'created_at' | 'updated_at' | 'first_approved_at'> & {
+  created_at: string; updated_at: string; first_approved_at: string | null
+}
+type JsonCommunityProfile = Omit<CommunityProfile, 'created_at' | 'updated_at'> & {
+  created_at: string; updated_at: string
+}
+export type MemberDirectoryRow = { account: JsonAccountFacts; profile: JsonCommunityProfile | null; staff_role: RoleBadge }
 export type PublicDirectoryRow = { display_name: string; staff_role: RoleBadge }
 export type DirectoryQuery = { limit?: string; cursor?: string }
 export type DirectoryPage<T> = { rows: T[]; next: string | null }
@@ -160,7 +168,7 @@ export type Position = { time: string; id: string }
 export type AuditAuthority = { role: string; can_audit_community_accounts: boolean; can_audit_staff_accounts: boolean }
 
 // Internal helpers
-export type Tx = Transaction<ApiTables>
+export type Tx = Transaction<DB>
 export type TenantParams = { tenantId: string }
 export interface CommunityDependencies { db: AppDatabase; cursors: DirectoryCursors }
 export type CommunityService = ReturnType<typeof createCommunityService>

@@ -1,5 +1,7 @@
 # Account and navigation implementation audit — 2026-10-16
 
+**Issue #6 query-schema checkpoint - 2026-11-10.** The user authorized implementation of issue #6. Complete Kysely-native public/private application types, local-only generation and drift verification, generated-column compiler checks and driver-accurate query declarations are implemented. See [checkpoint evidence](evidence/database-types-2026-11-10/README.md) for verification and run commands. This checkpoint leaves product authorization, workflow/audit placement and retries at their existing boundaries; issues #7-#15 and hosted work remain pending. Earlier statements that implementation had not begun describe the design/publication stage.
+
 ## Four-file server feature consolidation — 2026-11-10
 
 Implemented and locally verified [issue #4](https://github.com/JonDManningDev/the-crowded-table-app/issues/4) after recording the accepted design and reconciling agent/architecture guidance before application edits. Communities and user accounts each contain exactly `routes.ts`, `json-schema.ts`, `types.ts`, and `service.ts`. Removed the ten supporting modules; moved service/dependency/helper contracts and associated declarative constants to types, endpoint paths to routes, and updated all source/test/runbook links directly. Independent command/block contracts and erased factory-derived service facades remain intact. TypeBox inference, nullable projection/serializer exceptions and open audit details are preserved. Health and shared infrastructure are unchanged.

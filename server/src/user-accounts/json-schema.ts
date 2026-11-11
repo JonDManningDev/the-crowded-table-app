@@ -7,7 +7,9 @@ const closed = { additionalProperties: false }
 const uuid = Type.String({ format: 'uuid' })
 const nullableUuid = Type.Union([uuid, Type.Null()])
 const nullableText = Type.Union([Type.String(), Type.Null()])
-const timestamp = Type.String({ format: 'date-time' })
+// Reply serializers accept pg Dates as well as SQL-formatted timestamp text.
+// The wire contract remains a date-time string; this is reply-only typing.
+const timestamp = Type.Unsafe<string | Date>(Type.String({ format: 'date-time' }))
 const noQuery = Type.Object({}, closed)
 const emptyQuery = Type.Object({}, { ...closed, required: [] })
 const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse }

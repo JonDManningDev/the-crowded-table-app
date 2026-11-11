@@ -1,24 +1,6 @@
 import { Kysely, PostgresDialect, sql, type Transaction } from 'kysely'
 import pg from 'pg'
-import type { Database } from './database.types.ts'
-
-/*
- * Available Database Types
- * (By convention, we align the API's table and column availability according to the configured PostgreSQL grants.)
- */
-
-type Tables = Database['public']['Tables']
-
-export type ApiTables = {
-  user_accounts: Pick<Tables["user_accounts"]["Row"],
-    "user_id" | "user_is_discoverable" | "enable_matchmaking" | "allow_direct_messages"
-  >;
-  community_standing: Tables["community_standing"]["Row"];
-  community_accounts: Pick<Tables["community_accounts"]["Row"],
-    "tenant_id" | "user_id" | "standing"
-  >;
-  community_account_profiles: Tables["community_account_profiles"]["Row"];
-};
+import type { DB } from './database.types.ts'
 
 /*
  * Database Connection
@@ -32,7 +14,7 @@ export function connectDatabase(connectionString: string, max = 4) {
   const pool = new pg.Pool({ connectionString, max, connectionTimeoutMillis: 4000,
     statement_timeout: 5000, lock_timeout: 2000, idle_in_transaction_session_timeout: 8000 })
   pool.on('error', () => console.error('An idle database connection failed.'))
-  return new Kysely<ApiTables>({ dialect: new PostgresDialect({ pool }) })
+  return new Kysely<DB>({ dialect: new PostgresDialect({ pool }) })
 }
 
 export type AppDatabase = ReturnType<typeof connectDatabase>
@@ -45,7 +27,7 @@ export type AuthenticatedContext = Readonly<{ actorId: string; requestId: string
 export type EligibleActorTransactionResult<T> = { eligible: false } | { eligible: true; value: T }
 
 export async function withEligibleActorTransaction<T>(db: AppDatabase, context: AuthenticatedContext,
-  work: (tx: Transaction<ApiTables>) => Promise<T>): Promise<EligibleActorTransactionResult<T>> {
+  work: (tx: Transaction<DB>) => Promise<T>): Promise<EligibleActorTransactionResult<T>> {
   const { actorId: actor, requestId } = context
   return db.transaction().execute(async tx => {
     await sql`select set_config('request.jwt.claim.sub', ${actor}, true),

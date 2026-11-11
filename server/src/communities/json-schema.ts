@@ -7,7 +7,9 @@ const closed = { additionalProperties: false }
 const optionalFields = { ...closed, required: [] }
 const uuid = Type.String({ format: 'uuid' })
 const nullableUuid = Type.Union([uuid, Type.Null()])
-const timestamp = Type.String({ format: 'date-time' })
+// Reply serializers accept pg Dates as well as SQL/JSON timestamp text.
+// The wire contract remains a date-time string; this is reply-only typing.
+const timestamp = Type.Unsafe<string | Date>(Type.String({ format: 'date-time' }))
 const nullableTimestamp = Type.Union([timestamp, Type.Null()])
 const nullableText = Type.Union([Type.String(), Type.Null()])
 const tenantParams = Type.Object({ tenantId: uuid }, closed)

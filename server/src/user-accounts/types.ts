@@ -1,5 +1,6 @@
 import type { Transaction } from 'kysely'
-import type { ApiTables, AppDatabase } from '../database.ts'
+import type { AppDatabase } from '../database.ts'
+import type { DB } from '../database.types.ts'
 import type { DirectoryCursors } from '../directory-cursors.ts'
 import type { createUserAccountService } from './service.ts'
 
@@ -10,7 +11,7 @@ export type AccountPreferences = Record<(typeof accountPreferenceFields)[number]
 // Own profile
 export type ProfileInput = { display_name: string; bio: string | null }
 export type OwnProfile = ProfileInput & {
-  user_id: string; created_at: string; updated_at: string; created_by: string | null; updated_by: string | null
+  user_id: string; created_at: Date; updated_at: Date; created_by: string | null; updated_by: string | null
 }
 
 // My communities
@@ -30,12 +31,12 @@ export type DiscoveryQuery = { q?: string; cursor?: string; limit?: string }
 export type ProfilePage<T> = { rows: T[]; next: string | null }
 
 // Account blocks
-export type OutgoingBlock = { blocker_user_id: string; blocked_user_id: string; created_at: string; created_by: string }
+export type OutgoingBlock = { blocker_user_id: string; blocked_user_id: string; created_at: Date; created_by: string }
 export type BlockSource = { kind: 'global_profile' } | { kind: 'community_profile'; tenantId: string }
 export type BlockInput = { confirmed: true; source: BlockSource }
 
 // Internal helpers
-export type Tx = Transaction<ApiTables>
+export type Tx = Transaction<DB>
 export interface UserAccountDependencies { db: AppDatabase; cursors: DirectoryCursors }
 export type UserAccountService = ReturnType<typeof createUserAccountService>
 export interface UserAccountRoutesOptions { service: UserAccountService }

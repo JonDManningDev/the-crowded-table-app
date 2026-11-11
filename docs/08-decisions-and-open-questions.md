@@ -1,5 +1,7 @@
 # Decisions and open questions
 
+**Issue #6 query-schema checkpoint - 2026-11-10.** The user authorized implementation of issue #6. Complete Kysely-native public/private application types, local-only generation and drift verification, generated-column compiler checks and driver-accurate query declarations are implemented. See [checkpoint evidence](evidence/database-types-2026-11-10/README.md) for verification and run commands. This checkpoint leaves product authorization, workflow/audit placement and retries at their existing boundaries; issues #7-#15 and hosted work remain pending. Earlier statements that implementation had not begun describe the design/publication stage.
+
 **Pending join backfill (accepted 2026-11-03).** Preserve each existing pending join application as one pending request. Copy `community_accounts.created_at` into `requested_at` as an approximation. Link the request UUID to an immutable migration audit event identifying the source column and the approximate nature of the timestamp. Keep the account pending and its first approval date null.
 
 **Restricted-return queue visibility (accepted).** Effective staff with `can_discipline_users` may browse pending reactivation requests for currently restricted accounts in their active community, including the optional community display name. Ordinary join requests require `can_approve_users`. Staff with both permissions see the union once. Audit history requires its own permission.
