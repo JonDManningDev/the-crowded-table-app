@@ -5,7 +5,8 @@ import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActio
   requireCanApproveCommunityRequest, requireCanReturnToCommunity, loadJoinCommunityFacts, decideCommunityEntry,
   requireCanChangeCommunityStanding, loadStaffGrantFacts, requireCanManageCommunityStaff,
   ownCommunityRequestAudience, communityAccountReviewAudience, communityStaffCandidateAudience,
-  communityPendingRequestAudience, type Account, type Staff, type Pending } from './policies.ts'
+  communityPendingRequestAudience, loadConfigurationFacts, requireCanReadConfiguration, requireCanEditConfiguration,
+  type Account, type Staff, type Pending } from './policies.ts'
 import { sql } from 'kysely'
 import { type AppDatabase, withEligibleActorTransaction, withTransactionRetry, type AuthenticatedContext } from '../database.ts'
 import { ApplicationError } from '../http-errors.ts'
@@ -469,12 +470,9 @@ async function authorizeConfiguration(tx: Tx, actor: string, tenant: string, kin
   // revoked between the check and the full-row projection.
   const site = (await sql`select id from public.tenants where id=${tenant} ${write ? sql`for update` : sql`for share`}`.execute(tx)).rows[0]
   if (!site) throw new ApplicationError(404, 'missing')
-  const allowed = (await sql<AuthorizationResult>`select ${write
-    ? sql`app_private.can_edit_configuration(${tenant},${kind})`
-    : sql`app_private.is_approved_owner(${tenant}) or (app_private.active_tenant(${tenant}) and exists(
-        select from public.community_accounts c where c.tenant_id=${tenant} and c.user_id=${actor} and c.standing in ('approved','suspended')))`
-    } as allowed`.execute(tx)).rows[0]?.allowed
-  if (!allowed) throw new ApplicationError(write ? 403 : 404, write ? 'forbidden' : 'missing')
+  const facts = await loadConfigurationFacts(tx, actor, tenant)
+  if (write) requireCanEditConfiguration(facts, kind)
+  else requireCanReadConfiguration(facts)
 }
 export async function configurationDetails(tx: Tx, actor: string, tenant: string, input?: Partial<CommunityDetailsInput>) {
   await authorizeConfiguration(tx, actor, tenant, 'details', Boolean(input))

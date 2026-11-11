@@ -127,9 +127,6 @@
       "signature": "app_private.can_discover_global_profile(uuid)"
     },
     {
-      "signature": "app_private.can_edit_configuration(uuid,text)"
-    },
-    {
       "signature": "app_private.can_inspect_global_profile(uuid)"
     },
     {

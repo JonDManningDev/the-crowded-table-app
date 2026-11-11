@@ -5,7 +5,7 @@ import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
-import { configurationDetails, configurationSettings, configurationCopy } from '../src/communities/service.ts'
+import { configurationDetails, configurationSettings, configurationCopy, communityCommand } from '../src/communities/service.ts'
 import { copySlots } from '../src/communities/types.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
@@ -42,7 +42,7 @@ async function send(viewer, path, body, expected = 200, method = body ? 'POST' :
 }
 async function community(owner) {
   const data = await send(owner, '/api/communities', { slug: 'test-' + randomUUID(), name: 'API fixture',
-    country: 'HN', timezone: 'UTC', region: '', city: '', profile: { displayName: 'Owner', bio: null } }, 201)
+    country: 'HN', timezone: 'UTC', region: '  Region  ', city: '  ', profile: { displayName: 'Owner', bio: null } }, 201)
   tenants.push(data.tenantId)
   return data.tenantId
 }
@@ -62,11 +62,18 @@ try {
   const tenant=await community(owner), otherTenant=await community(outsider)
   const slug=(await admin.query('select slug from public.tenants where id=$1',[tenant])).rows[0].slug
   const path='/api/communities/'+tenant
+  // Canonical tenant storage rejects invalid values; only the API normalizes.
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },async tx=>{
+    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+    await sql`update public.tenants set name='  Noncanonical  ' where id=${tenant}`.execute(tx)
+  }),error=>error.code==='23514')
   const cmd=(actor,body,status=200)=>send(actor,path+'/commands',body,status)
   const details=(actor,body,status=200)=>http(actor,path+'/details',body?'PATCH':'GET',body,status)
   const config=(actor,body,status=200)=>http(actor,path+'/settings',body?'PATCH':'GET',body,status)
   const copy=(actor,key,text,status=200)=>http(actor,path+'/copy'+(key?'/'+encodeURIComponent(key):''),key?(text===undefined?'DELETE':'PUT'):'GET',text===undefined?undefined:{text_value:text},status)
   const landing=(actor=null,handle=slug,status=200)=>http(actor,'/api/public/communities/'+handle,'GET',undefined,status)
+  assert.equal((await details(owner)).state_province,'Region')
+  assert.equal((await details(owner)).city,null)
   const join={kind:'join',profile:{displayName:'Configuration fixture',bio:null}}
   const requested=await cmd(pending,join)
   await config(owner,{auto_approve_users:true})
@@ -91,6 +98,11 @@ try {
   await details(settings,{name:'Not ownership'},403)
   await config(editor,{auto_approve_users:false},403)
   await copy(settings,'community.hero.heading','No content flag',403)
+  for(const actor of [settings,editor,member,pending,outsider]) await cmd(actor,{kind:'archive',archived:true},403)
+  await details(owner,{name:'Mixed forbidden patch',slug:'changed'},400)
+  await config(settings,{pause_community_events:true,operational_status:'archived'},400)
+  assert.equal((await details(owner)).name,'API fixture')
+  assert.equal((await config(owner)).pause_community_events,false)
   const changed=await details(owner,{name:'  Updated Community  ',city:'  ',state_province:'  Region  ',country_code:'GT',timezone:'America/Guatemala'})
   assert.equal(changed.name,'Updated Community');assert.equal(changed.city,null);assert.equal(changed.state_province,'Region')
   assert.equal(changed.created_by,owner.id);assert.equal(changed.updated_by,owner.id);assert.equal(changed.slug,slug)
@@ -152,16 +164,25 @@ try {
   assert.equal((await details(owner)).name,'Updated Community')
   assert.equal(await count(),before+1)
 
-  // Real runtime-role bypass probes omit service-level write authorization.
+  // Product authority belongs to the API. A scoped trusted runtime writer can
+  // bypass it, but not canonical storage, protected columns or archive fences.
   await assert.rejects(withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
-    await sql`update public.tenants set name='Bypass' where id=${tenant}`.execute(tx)
-  }),error=>error.code==='42501')
-  assert.equal((await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
-    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
-    assert.equal((await sql`update public.tenant_settings set pause_community_events=false where tenant_id=${tenant}`.execute(tx)).numAffectedRows,0n)
-    assert.equal((await sql`delete from public.tenant_website_content_overrides where tenant_id=${tenant}`.execute(tx)).numAffectedRows,0n)
-  })).eligible, true)
+    assert.equal((await sql`update public.tenants set name='Scoped runtime' where id=${tenant}`.execute(tx)).numAffectedRows,1n)
+    assert.equal((await sql`update public.tenant_settings set pause_community_events=false where tenant_id=${tenant}`.execute(tx)).numAffectedRows,1n)
+    assert.equal((await sql`delete from public.tenant_website_content_overrides where tenant_id=${tenant}`.execute(tx)).numAffectedRows,6n)
+    await sql`insert into public.tenant_website_content_overrides(tenant_id,content_key,text_value)
+      values(${tenant},'community.hero.heading','Scoped runtime')`.execute(tx)
+    assert.equal((await sql`update public.tenant_website_content_overrides set text_value='Changed' where tenant_id=${tenant}`.execute(tx)).numAffectedRows,1n)
+    assert.equal((await sql`update public.tenants set name='Wrong scope' where id=${otherTenant}`.execute(tx)).numAffectedRows,0n)
+    throw Error('rollback trusted-writer probe')
+  }),/rollback trusted-writer probe/)
+  for(const patch of [sql`name='  noncanonical  '`,sql`city=''`,sql`state_province=' Region '`,sql`timezone='Not/AZone'`]) {
+    await assert.rejects(withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },async tx=>{
+      await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+      await sql`update public.tenants set ${patch} where id=${tenant}`.execute(tx)
+    }),error=>error.code==='23514')
+  }
   await assert.rejects(withEligibleActorTransaction(db, { actorId: editor.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     await sql`update public.tenant_website_content_overrides set content_key='community.hero.heading' where tenant_id=${tenant}`.execute(tx)
@@ -213,6 +234,10 @@ try {
     return response
   }
   await afterLockedChange(
+    ()=>admin.query('update public.tenant_staff_assignments set can_modify_content=false where tenant_id=$1 and user_id=$2',[tenant,editor.id]),
+    ()=>copy(editor,'community.hero.heading','Revoked content race',403))
+  await cmd(owner,{kind:'permissions',target:editor.id,permissions:{can_modify_content:true}})
+  await afterLockedChange(
     ()=>admin.query('update public.tenant_staff_assignments set can_manage_settings=false where tenant_id=$1 and user_id=$2',[tenant,settings.id]),
     ()=>config(settings,{auto_approve_users:false},403))
   assert.equal((await config(owner)).auto_approve_users,true)
@@ -233,6 +258,18 @@ try {
     assert.deepEqual((await sql`select tenant_id from public.tenant_website_content_overrides where tenant_id=${tenant}`.execute(tx)).rows,[])
   })).eligible, true)
   await cmd(owner,{kind:'archive',archived:false})
+  const beforeArchive=await count()
+  await cmd(owner,{kind:'archive',archived:true})
+  await cmd(owner,{kind:'archive',archived:true})
+  for(const actor of [member,editor,settings,pending,outsider]) {
+    await cmd(actor,{kind:'archive',archived:false},403)
+    await details(actor,{name:'Archived denial'},403)
+    await config(actor,{auto_approve_users:true},403)
+    await copy(actor,'community.hero.heading','Archived denial',403)
+  }
+  await cmd(owner,{kind:'archive',archived:false})
+  await cmd(owner,{kind:'archive',archived:false})
+  assert.equal(await count(),beforeArchive+2,'archive/restore no-ops preserve one event per change')
   assert.equal((await landing()).name,'Archived owner detail')
   assert.equal((await landing()).overrides.find(r=>r.content_key==='community.hero.heading').text_value,'Archived owner copy')
 
@@ -257,6 +294,38 @@ try {
   await write;await revoke
   assert.equal((await config(owner)).pause_community_events,true)
   await config(settings,{pause_community_events:false},403)
+  // Real runtime transactions on either side of a root lock, with competing
+  // operations sent over HTTP. Archive and copy decisions reload after waits.
+  async function committedBefore(work,compete) {
+    let unlock,entered
+    const gate=new Promise(resolve=>{unlock=resolve}),started=new Promise(resolve=>{entered=resolve})
+    const transaction=withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },async tx=>{
+      await work(tx)
+      entered((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
+      await gate
+    })
+    const holder=await Promise.race([started,transaction.then(()=>{throw Error('writer exited before barrier')})])
+    const competing=compete();competing.catch(()=>{})
+    try {
+      const deadline=Date.now()+1800
+      while(!(await admin.query('select exists(select from pg_stat_activity where $1=any(pg_blocking_pids(pid))) as waiting',[holder])).rows[0].waiting) {
+        assert.ok(Date.now()<deadline,'competing archive/copy operation must wait for root holder')
+        await new Promise(resolve=>setTimeout(resolve,10))
+      }
+    } finally {unlock()}
+    await transaction
+    return competing
+  }
+  await committedBefore(
+    tx=>configurationCopy(tx,owner.id,tenant,{key:'community.hero.heading',text:'Committed before archive'}),
+    ()=>cmd(owner,{kind:'archive',archived:true}))
+  assert.equal((await copy(owner)).rows.find(r=>r.content_key==='community.hero.heading').text_value,'Committed before archive')
+  await cmd(owner,{kind:'archive',archived:false})
+  await committedBefore(
+    tx=>communityCommand(tx,owner.id,tenant,{kind:'archive',archived:true}),
+    ()=>copy(editor,'community.hero.heading','Stale pre-archive authority',403))
+  assert.equal((await copy(owner)).rows.find(r=>r.content_key==='community.hero.heading').text_value,'Committed before archive')
+  await cmd(owner,{kind:'archive',archived:false})
   console.log('PASS public exact-slug landing, safe copy projection, full configuration audience/field matrix, archive and eligibility boundaries, immutable attribution, no-op/retry/reset, rollback, raw bypasses and both authority serialization orders')
 } finally {
   try {

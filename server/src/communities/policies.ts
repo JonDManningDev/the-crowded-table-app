@@ -1,6 +1,6 @@
 import { sql } from 'kysely'
 import { ApplicationError } from '../http-errors.ts'
-import { staffFlags, type CommunityCommand, type StaffPermissions, type Tx } from './types.ts'
+import { staffFlags, type CommunityCommand, type ConfigurationKind, type StaffPermissions, type Tx } from './types.ts'
 
 // Creation and lifecycle. Services call these loaders in tenant-root, target
 // account, target Auth order; facts never survive the operation/transaction.
@@ -39,7 +39,7 @@ export async function loadCommunityActionFacts(tx: Tx, actor: string, tenant: st
 export function canEnterCommunityAction(facts: CommunityActionFacts, command: CommunityCommand): Decision {
   if (!facts.site) return 'missing'
   const effective = facts.assignment?.status === 'active' ? facts.assignment : undefined
-  if (command.kind === 'archive') return effective?.role === 'owner' ? 'allowed' : 'forbidden'
+  if (command.kind === 'archive') return canArchiveCommunity(facts)
   if (facts.site.operational_status !== 'active') return 'missing'
   if (command.kind === 'approve' && !effective?.can_approve_users) return 'forbidden'
   if (['suspend', 'remove', 'clear'].includes(command.kind) && !effective?.can_discipline_users) return 'forbidden'
@@ -50,6 +50,10 @@ export function canEnterCommunityAction(facts: CommunityActionFacts, command: Co
 }
 export function requireCanEnterCommunityAction(facts: CommunityActionFacts, command: CommunityCommand) {
   requireDecision(canEnterCommunityAction(facts, command))
+}
+export function canArchiveCommunity(facts: CommunityActionFacts): Decision {
+  if (!facts.site) return 'missing'
+  return facts.assignment?.status === 'active' && facts.assignment.role === 'owner' ? 'allowed' : 'forbidden'
 }
 export async function loadLifecycleAccountFacts(tx: Tx, tenant: string, user: string) {
   return (await sql<Account>`select standing,revision,first_approved_at is not null as approved,
@@ -151,3 +155,28 @@ export function communityPendingRequestAudience(actor: string) {
     where s.tenant_id=r.tenant_id and s.user_id=${actor} and s.status='active' and t.operational_status='active'
     and (s.can_approve_users or (s.can_discipline_users and r.kind='reactivation' and c.standing='inactive' and c.has_disciplinary_restriction)))`
 }
+
+// Configuration and copy. Services lock the tenant root before loading facts,
+// so each statement sees the authority committed by any preceding lock holder.
+export async function loadConfigurationFacts(tx: Tx, actor: string, tenant: string) {
+  const site = await tx.selectFrom('tenants').select('operational_status').where('id', '=', tenant).executeTakeFirst()
+  const account = await tx.selectFrom('community_accounts').select('standing')
+    .where('tenant_id', '=', tenant).where('user_id', '=', actor).executeTakeFirst()
+  return { site, account, assignment: await loadStaffAssignmentFacts(tx, tenant, actor) }
+}
+type ConfigurationFacts = Awaited<ReturnType<typeof loadConfigurationFacts>>
+export function canReadConfiguration(facts: ConfigurationFacts): Decision {
+  if (!facts.site) return 'missing'
+  const owner = facts.account?.standing === 'approved' && facts.assignment?.status === 'active' && facts.assignment.role === 'owner'
+  return owner || (facts.site.operational_status === 'active'
+    && (facts.account?.standing === 'approved' || facts.account?.standing === 'suspended')) ? 'allowed' : 'missing'
+}
+export function canEditConfiguration(facts: ConfigurationFacts, kind: ConfigurationKind): Decision {
+  if (!facts.site) return 'missing'
+  const staff = facts.account?.standing === 'approved' && facts.assignment?.status === 'active' ? facts.assignment : undefined
+  if (!staff || (facts.site.operational_status !== 'active' && staff.role !== 'owner')) return 'forbidden'
+  return (kind === 'details' ? staff.role === 'owner' : kind === 'settings' ? staff.can_manage_settings : staff.can_modify_content)
+    ? 'allowed' : 'forbidden'
+}
+export function requireCanReadConfiguration(facts: ConfigurationFacts) { requireDecision(canReadConfiguration(facts)) }
+export function requireCanEditConfiguration(facts: ConfigurationFacts, kind: ConfigurationKind) { requireDecision(canEditConfiguration(facts, kind)) }
