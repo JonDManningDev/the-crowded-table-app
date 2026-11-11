@@ -1,0 +1,50 @@
+{
+  "captured_at": "2026-11-11T04:20:11.892Z",
+  "checks": 174,
+  "races": [
+    {
+      "request_setup_ms": 2063,
+      "lock_observation_ms": 1043,
+      "actual_wait_observed": true
+    },
+    {
+      "request_setup_ms": 592,
+      "lock_observation_ms": 152,
+      "actual_wait_observed": true
+    },
+    {
+      "request_setup_ms": 1034,
+      "lock_observation_ms": 319,
+      "actual_wait_observed": true
+    },
+    {
+      "request_setup_ms": 445,
+      "lock_observation_ms": 153,
+      "actual_wait_observed": true
+    },
+    {
+      "request_setup_ms": 600,
+      "lock_observation_ms": 322,
+      "actual_wait_observed": true
+    },
+    {
+      "request_setup_ms": 632,
+      "lock_observation_ms": 413,
+      "actual_wait_observed": true
+    },
+    {
+      "request_setup_ms": 591,
+      "lock_observation_ms": 154,
+      "actual_wait_observed": true
+    },
+    {
+      "request_setup_ms": 598,
+      "lock_observation_ms": 152,
+      "actual_wait_observed": true
+    }
+  ],
+  "project": "fsnipgsrlclbnfepcbvz",
+  "api": "loopback",
+  "frontend": "loopback",
+  "fixtures_cleaned": true
+}

@@ -1,0 +1,35 @@
+{
+  "captured_at": "2026-11-11T04:18:02.133Z",
+  "failures": [
+    {
+      "run": "original handoff run",
+      "scenario": "First sharing/deactivation race",
+      "assertion": "competing operation must wait on the actual held root",
+      "cleanup": "CLI reported db query failure; all original application checksums restored, three synthetic Auth users remained; recovered separately"
+    },
+    {
+      "run": "reproduction",
+      "scenario": "First sharing/deactivation race",
+      "deadline_ms": 1800,
+      "observed_elapsed_ms": 1844,
+      "cleanup": "passed"
+    },
+    {
+      "run": "reduced lock-state diagnostic",
+      "scenario": "First sharing/deactivation race",
+      "observed_elapsed_ms": 2007,
+      "actual_competitor_wait_at_diagnostic": true,
+      "wait_event": "transactionid",
+      "blocked_by_actual_holder": true,
+      "cleanup": "passed"
+    },
+    {
+      "run": "authentication-only boundary experiment",
+      "scenario": "First sharing/deactivation race",
+      "assertion": "competing operation must wait on the actual held root after authentication",
+      "result": "failed; transaction/policy query lead-in also consumed the deadline",
+      "cleanup": "passed"
+    }
+  ],
+  "fix": "Start unchanged 1800ms lock-observation deadline at exact competing root-query compilation; retain actual pg_blocking_pids assertion and settle all requests before teardown."
+}

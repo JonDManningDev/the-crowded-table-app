@@ -1,0 +1,23 @@
+{
+  "captured_at": "2026-11-11T04:08:13.678Z",
+  "original_failure": {
+    "race": "competing operation must wait on the actual held root",
+    "cleanup": "Hosted CLI operation failed: db query"
+  },
+  "synthetic_auth_removed": 3,
+  "identity_proof": "UUID-address synthetic identities created after immutable baseline; zero baseline synthetic identities",
+  "original_data_preserved": true,
+  "integrity": {
+    "accounts": 1,
+    "community_preferences": 1,
+    "community_profiles": 1,
+    "copied_profile_matches_source": 1,
+    "invalid_owners": 0,
+    "missing_dependents": 0,
+    "missing_first_approval": 0,
+    "participant_permissions": 1,
+    "pending_requests": 0,
+    "synthetic_auth_remaining": 0,
+    "tenants": 1
+  }
+}

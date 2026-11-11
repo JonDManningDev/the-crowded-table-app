@@ -1,0 +1,23 @@
+{
+  "upToDate": false,
+  "dryRun": true,
+  "migrations": [
+    "20261110000100_community_action_policies.sql",
+    "20261110000200_lifecycle_sharing_scope.sql",
+    "20261110000300_configuration_policies.sql",
+    "20261110000400_account_record_policies.sql",
+    "20261110000500_semantic_audit_api.sql",
+    "20261110000600_profile_self_service_policies.sql",
+    "20261110000700_public_community_queries.sql",
+    "20261110000800_global_profile_block_policies.sql"
+  ],
+  "seeds": [],
+  "roles": [],
+  "message": "Finished supabase db push.",
+  "target": {
+    "kind": "linked",
+    "project_ref": "fsnipgsrlclbnfepcbvz",
+    "project_name": "the-crowded-table-app",
+    "environment": "production"
+  }
+}

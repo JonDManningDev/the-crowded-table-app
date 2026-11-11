@@ -1,0 +1,90 @@
+[
+  {
+    "name": "auth_leaked_password_protection",
+    "title": "Leaked Password Protection Disabled",
+    "level": "WARN",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Leaked password protection is currently disabled.",
+    "detail": "Supabase Auth prevents the use of compromised passwords by checking against HaveIBeenPwned.org. Enable this feature to enhance security.",
+    "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection",
+    "metadata": {
+      "entity": "Auth",
+      "type": "auth"
+    },
+    "cache_key": "auth_leaked_password_protection"
+  },
+  {
+    "name": "auth_insufficient_mfa_options",
+    "title": "Insufficient MFA Options",
+    "level": "WARN",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "This project has too few multi-factor authentication (MFA) options enabled.",
+    "detail": "Your project has too few MFA options enabled, which may weaken account security. Enable more MFA methods to enhance security.",
+    "remediation": "https://supabase.com/docs/guides/auth/auth-mfa",
+    "metadata": {
+      "entity": "Auth",
+      "type": "auth"
+    },
+    "cache_key": "auth_insufficient_mfa_options"
+  },
+  {
+    "name": "multiple_permissive_policies",
+    "title": "Multiple Permissive Policies",
+    "level": "WARN",
+    "facing": "EXTERNAL",
+    "categories": [
+      "PERFORMANCE"
+    ],
+    "description": "Detects if multiple permissive row level security policies are present on a table for the same \\`role\\` and \\`action\\` (e.g. insert). Multiple permissive policies are suboptimal for performance as each policy must be executed for every relevant query.",
+    "detail": "Table \\`public.community_accounts\\` has multiple permissive policies for role \\`ct_api\\` for action \\`SELECT\\`. Policies include \\`{api_community_account_facts,command_scope}\\`",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies",
+    "metadata": {
+      "name": "community_accounts",
+      "schema": "public",
+      "type": "table"
+    },
+    "cache_key": "multiple_permissive_policies_public_community_accounts_ct_api_SELECT"
+  },
+  {
+    "name": "multiple_permissive_policies",
+    "title": "Multiple Permissive Policies",
+    "level": "WARN",
+    "facing": "EXTERNAL",
+    "categories": [
+      "PERFORMANCE"
+    ],
+    "description": "Detects if multiple permissive row level security policies are present on a table for the same \\`role\\` and \\`action\\` (e.g. insert). Multiple permissive policies are suboptimal for performance as each policy must be executed for every relevant query.",
+    "detail": "Table \\`public.tenants\\` has multiple permissive policies for role \\`ct_api\\` for action \\`SELECT\\`. Policies include \\`{api_own_summary,command_scope}\\`",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies",
+    "metadata": {
+      "name": "tenants",
+      "schema": "public",
+      "type": "table"
+    },
+    "cache_key": "multiple_permissive_policies_public_tenants_ct_api_SELECT"
+  },
+  {
+    "name": "multiple_permissive_policies",
+    "title": "Multiple Permissive Policies",
+    "level": "WARN",
+    "facing": "EXTERNAL",
+    "categories": [
+      "PERFORMANCE"
+    ],
+    "description": "Detects if multiple permissive row level security policies are present on a table for the same \\`role\\` and \\`action\\` (e.g. insert). Multiple permissive policies are suboptimal for performance as each policy must be executed for every relevant query.",
+    "detail": "Table \\`public.user_account_profiles\\` has multiple permissive policies for role \\`ct_api\\` for action \\`SELECT\\`. Policies include \\`{api_discoverable_profile,api_self_profile}\\`",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies",
+    "metadata": {
+      "name": "user_account_profiles",
+      "schema": "public",
+      "type": "table"
+    },
+    "cache_key": "multiple_permissive_policies_public_user_account_profiles_ct_api_SELECT"
+  }
+]

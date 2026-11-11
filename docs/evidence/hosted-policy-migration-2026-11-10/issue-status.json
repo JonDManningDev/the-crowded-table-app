@@ -1,0 +1,18 @@
+{
+  "issues": [
+    {
+      "issue_number": 5,
+      "state": "closed",
+      "state_reason": "completed",
+      "closed_at": "2026-11-11T03:43:38Z",
+      "url": "https://github.com/JonDManningDev/the-crowded-table-app/issues/5"
+    },
+    {
+      "issue_number": 15,
+      "state": "closed",
+      "state_reason": "completed",
+      "closed_at": "2026-11-11T03:41:05Z",
+      "url": "https://github.com/JonDManningDev/the-crowded-table-app/issues/15"
+    }
+  ]
+}

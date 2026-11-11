@@ -9,12 +9,13 @@ import { connectDatabase } from '../src/database.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { directoryCursors } from '../src/directory-cursors.ts'
-import { focusedPolicyChecks } from './helpers/hosted-policy-checks.mjs'
+import { focusedPolicyChecks, observeRootQuery } from './helpers/hosted-policy-checks.mjs'
 
 const local = localStack(), endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.username, 'ct_api')
-const db = connectDatabase(endpoint.href)
+const rootQueries = observeRootQuery(connectDatabase(endpoint.href))
+const db = rootQueries.db
 const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const options = { auth: { persistSession: false, autoRefreshToken: false } }
@@ -50,7 +51,7 @@ try {
   await http(owner, path + '/commands', 'POST', { kind: 'approve', requestId: joined.requestId, revision: review.revision })
   await http(owner, path + '/commands', 'POST', { kind: 'grant', target: member.id })
   await http(owner, path + '/settings', 'PATCH', { allow_public_directory_visibility: true })
-  await focusedPolicyChecks({ db, endpoint: endpoint.href, owner, member, other, tenant: made.tenantId, slug, http, anonKey: local.ANON_KEY, projectUrl: local.API_URL })
+  await focusedPolicyChecks({ db, endpoint: endpoint.href, owner, member, other, tenant: made.tenantId, slug, http, anonKey: local.ANON_KEY, projectUrl: local.API_URL, nextRootQuery: rootQueries.nextRootQuery })
 } finally {
   try {
     await admin.query('begin'); await admin.query('set local session_replication_role=replica')

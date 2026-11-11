@@ -13,9 +13,12 @@ export function hostedTools() {
   const executable=process.env.CT_SUPABASE_CLI
   assert.ok(executable,'Set CT_SUPABASE_CLI to the installed Supabase CLI executable')
   function cli(args) {
+    let output
     try {
-      return JSON.parse(execFileSync(executable,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:8*1024*1024}))
-    } catch { throw new Error('Hosted CLI operation failed: '+args.slice(0,2).join(' ')+'. Inspect the operation without printing credentials or SQL.') }
+      output=execFileSync(executable,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:8*1024*1024})
+    } catch(error) { throw new Error('Hosted CLI operation failed: '+args.slice(0,2).join(' ')+'. Exit status '+error.status+'; code '+error.code+'. Child output suppressed.') }
+    try { return JSON.parse(output) }
+    catch { throw new Error('Hosted CLI response was not JSON: '+args.slice(0,2).join(' ')+'. Output suppressed.') }
   }
   function query(statement,readOnly=true) {
     const directory=mkdtempSync(join(tmpdir(),'ct-hosted-query-'))

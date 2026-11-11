@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { hostedTools, projectRef } from '../../supabase/tests/hosted-tools.mjs'
 import { policyCatalog, applicationSnapshot, normalizedCatalog } from '../../supabase/tests/policy-catalog-data.mjs'
-import { focusedPolicyChecks } from './helpers/hosted-policy-checks.mjs'
+import { focusedPolicyChecks, observeRootQuery } from './helpers/hosted-policy-checks.mjs'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { connectDatabase, checkRuntime } from '../src/database.ts'
@@ -23,10 +23,11 @@ const keys=cli(['projects','api-keys','--project-ref',projectRef,'--output','jso
 const anonKey=keys.find(k=>k.name==='anon').api_key,serviceKey=keys.find(k=>k.name==='service_role').api_key
 const options={auth:{persistSession:false,autoRefreshToken:false}}
 const authAdmin=createClient(projectUrl,serviceKey,options).auth.admin
-const db=connectDatabase(endpoint.href)
+const rootQueries=observeRootQuery(connectDatabase(endpoint.href))
+const db=rootQueries.db
 const app=buildApi({ db, verify: verifyBearer(projectUrl,anonKey), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const users=[],tenants=[]
-let base,checks=0,verificationError
+let base,checks=0,verificationError,races
 const evidence=new URL('../../docs/evidence/hosted-policy-migration-2026-11-10/',import.meta.url)
 mkdirSync(evidence,{recursive:true})
 function normalized(runtime){return {...runtime,relations:runtime.relations.map(row=>({...row,...Object.fromEntries(['select','insert','update'].map(k=>[k,Array.isArray(row[k])?row[k]:row[k].slice(1,-1).split(',').filter(Boolean)]))}))}}
@@ -109,7 +110,7 @@ try {
   await http(member,path+'/directory','GET',undefined,404)
   await http(owner,path+'/accounts')
   await http(owner,path+'/commands','POST',{kind:'archive',archived:false})
-  await focusedPolicyChecks({db,endpoint:endpoint.href,owner,member,other,tenant:made.tenantId,slug,http,query,anonKey,projectUrl})
+  races=await focusedPolicyChecks({db,endpoint:endpoint.href,owner,member,other,tenant:made.tenantId,slug,http,query,anonKey,projectUrl,nextRootQuery:rootQueries.nextRootQuery})
   console.log('PASS real Auth/local HTTP reads, writes, isolation, blocks and archive')
   for(const [key,token] of [[anonKey,anonKey],[anonKey,owner.token],[serviceKey,serviceKey]]){
     const headers={apikey:key,Authorization:'Bearer '+token}
@@ -151,18 +152,25 @@ try {
   throw error
 } finally {
   try {
+    const cleanupWarnings=[]
     if(users.length){
       const ids=users.map(id=>{assert.match(id,/^[0-9a-f-]{36}$/);return "'"+id+"'"}).join(',')
       const tenantIds=tenants.length?tenants.map(id=>"'"+id+"'").join(','):"'00000000-0000-0000-0000-000000000000'"
-      query(`begin;set local session_replication_role=replica;
+      try { query(`begin;set local session_replication_role=replica;
         delete from app_private.tenant_admin_action_categories where action_id in(select id from public.tenant_admin_actions where tenant_id in (${tenantIds}));
         delete from app_private.community_account_requests where tenant_id in (${tenantIds});
         ${['community_account_permissions','community_account_preferences','tenant_admin_actions','tenant_website_content_overrides','community_account_profiles','community_accounts','tenant_staff_assignments','tenant_settings'].map(t=>`delete from public.${t} where tenant_id in (${tenantIds});`).join('\n')}
         delete from public.tenants where id in (${tenantIds});
         delete from public.user_account_blocks where blocker_user_id in (${ids}) or blocked_user_id in (${ids});
         delete from public.user_account_profiles where user_id in (${ids});
-        delete from public.user_accounts where user_id in (${ids});commit;select true as cleaned`,false)
-      for(const id of users)assert.ifError((await authAdmin.deleteUser(id)).error)
+        delete from public.user_accounts where user_id in (${ids});commit;select true as cleaned`,false) }
+      catch(error) { cleanupWarnings.push(error.message) }
+      // A CLI transport/response failure does not prove that COMMIT failed.
+      // Attempt every recorded Auth deletion, then independently prove state.
+      for(const id of users){
+        const {error}=await authAdmin.deleteUser(id)
+        if(error)cleanupWarnings.push('Recorded Auth fixture deletion failed: '+error.status)
+      }
       assert.equal(query(`select count(*)::int as remaining from auth.users where id in (${ids})`)[0].remaining,0)
     }
     const finalData=await applicationSnapshot(query)
@@ -171,7 +179,7 @@ try {
     assert.deepEqual(integrity,JSON.parse(readFileSync(new URL('before-integrity.json',evidence))))
     writeFileSync(new URL('after-cleanup-data.json',evidence),JSON.stringify(finalData,null,2)+'\n')
     writeFileSync(new URL('after-cleanup-integrity.json',evidence),JSON.stringify(integrity,null,2)+'\n')
-    writeFileSync(new URL('cleanup.json',evidence),JSON.stringify({captured_at:new Date().toISOString(),fixtures_cleaned:true,original_data_preserved:true,scenarios_passed:!verificationError},null,2)+'\n')
+    writeFileSync(new URL('cleanup.json',evidence),JSON.stringify({captured_at:new Date().toISOString(),fixtures_cleaned:true,original_data_preserved:true,scenarios_passed:!verificationError,cleanup_warnings:cleanupWarnings},null,2)+'\n')
   } catch(cleanupError) {
     if(verificationError) throw new AggregateError([verificationError,cleanupError],'Hosted verification and cleanup/preservation both failed')
     throw cleanupError
@@ -179,5 +187,5 @@ try {
 }
 const final=await capture()
 writeFileSync(new URL('hosted-catalog.json',evidence),JSON.stringify(final,null,2)+'\n')
-writeFileSync(new URL('verification.json',evidence),JSON.stringify({captured_at:new Date().toISOString(),checks,project:projectRef,api:'loopback',frontend:'loopback',fixtures_cleaned:true},null,2)+'\n')
+writeFileSync(new URL('verification.json',evidence),JSON.stringify({captured_at:new Date().toISOString(),checks,races,project:projectRef,api:'loopback',frontend:'loopback',fixtures_cleaned:true},null,2)+'\n')
 console.log('PASS fixture cleanup and final metadata capture')

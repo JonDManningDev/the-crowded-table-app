@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { randomUUID, randomBytes } from 'node:crypto'
 import pg from 'pg'
-import { Kysely, PostgresDialect, sql } from 'kysely'
+import { Kysely, PostgresDialect, PostgresQueryCompiler, sql } from 'kysely'
 import { withEligibleActorTransaction } from '../../src/database.ts'
 import { communityCommand, ownCommunityPreferences, configurationSettings } from '../../src/communities/service.ts'
 import { setOwnBlock } from '../../src/user-accounts/service.ts'
@@ -39,7 +39,26 @@ class RetryPool extends pg.Pool {
   }
 }
 
-export async function focusedPolicyChecks({ db, endpoint, owner, member, other, tenant, slug, http, anonKey, projectUrl }) {
+// Observe the actual competing root statement after HTTP/Auth/transaction setup.
+// No service query, verifier or database timeout is replaced by this observer.
+export function observeRootQuery(database) {
+  let notify
+  const compiler = new PostgresQueryCompiler()
+  return {
+    db: database.withPlugin({
+      transformQuery(args) {
+        const text = compiler.compileQuery(args.node, args.queryId).sql.replaceAll('"', '')
+        if (notify?.match.test(text)) { const done = notify.resolve; notify = undefined; done() }
+        return args.node
+      },
+      async transformResult(args) { return args.result },
+    }),
+    nextRootQuery: match => new Promise(resolve => { notify = { match, resolve } }),
+  }
+}
+
+export async function focusedPolicyChecks({ db, endpoint, owner, member, other, tenant, slug, http, anonKey, projectUrl, nextRootQuery }) {
+  const races = []
   const path = '/api/communities/' + tenant
   const command = (actor, body, status = 200) => http(actor, path + '/commands', 'POST', body, status)
   const settings = (actor, body, status = 200) => http(actor, path + '/settings', 'PATCH', body, status)
@@ -49,7 +68,7 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   const transaction = (actor, work) => withEligibleActorTransaction(db, { actorId: actor.id, requestId: randomUUID() }, work)
 
   // A held service operation uses the same locks and actual runtime as HTTP.
-  async function race(actor, work, compete) {
+  async function race(actor, work, compete, root = /from (?:public\.)?tenants\b[\s\S]*for update/) {
     let ready, release
     const started = new Promise(resolve => { ready = resolve })
     const gate = new Promise(resolve => { release = resolve })
@@ -59,15 +78,25 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
       await gate
     })
     const pid = await Promise.race([started, held.then(() => { throw Error('holder exited before barrier') })])
+    const reachingRoot = nextRootQuery(root)
+    const requestStarted = Date.now()
     const waiting = compete()
     waiting.catch(() => {})
+    let arrivalTimer
     try {
+      const arrivalDeadline = new Promise((_, reject) => {
+        arrivalTimer = setTimeout(() => reject(Error('competitor did not reach its root query within 6000ms')), 6000)
+      })
+      await Promise.race([reachingRoot, arrivalDeadline, waiting.then(() => { throw Error('competitor exited before root-query barrier') }), held.then(() => { throw Error('holder exited before competitor reached root') })])
+      const setupMs = Date.now() - requestStarted
+      const start = Date.now()
       const deadline = Date.now() + 1800
       while (!(await sql`select exists(select from pg_stat_activity where ${pid}=any(pg_blocking_pids(pid))) as blocked`.execute(db)).rows[0].blocked) {
-        assert.ok(Date.now() < deadline, 'competing operation must wait on the actual held root')
+        assert.ok(Date.now() < deadline, 'competing operation must wait on the actual held root after reaching its root query')
         await new Promise(resolve => setTimeout(resolve, 10))
       }
-    } finally { release(); await held }
+      races.push({ request_setup_ms: setupMs, lock_observation_ms: Date.now() - start, actual_wait_observed: true })
+    } finally { clearTimeout(arrivalTimer); release(); await Promise.allSettled([held, waiting]); await held }
     return waiting
   }
 
@@ -78,11 +107,11 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   assert.equal(profile.profile.display_name, 'Hosted other'); assert.equal(profile.profile.bio, 'Profile')
   await http(member, path + '/accounts/' + other.id + '/permissions', 'PATCH', { can_post_public_events: true }, 403)
   await race(other, tx => ownCommunityPreferences(tx, other.id, tenant, { show_global_profile: true }),
-    () => command(other, { kind: 'deactivate' }))
+    () => command(other, { kind: 'deactivate' }), /from (?:public\.)?community_accounts\b[\s\S]*for update/)
   assert.equal((await preferences(other)).show_global_profile, false)
   await command(other, { kind: 'reactivate' })
   await race(other, tx => communityCommand(tx, other.id, tenant, { kind: 'deactivate' }),
-    () => preferences(other, { show_global_profile: true }, 404))
+    () => preferences(other, { show_global_profile: true }, 404), /from (?:public\.)?community_accounts\b[\s\S]*for update/)
   await command(other, { kind: 'reactivate' })
   console.log('PASS both hosted sharing/deactivation lock orders')
 
@@ -90,9 +119,9 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   const globalPreferences = value => http(other, '/api/me/preferences', 'PUT', { user_is_discoverable: value, enable_matchmaking: true, allow_direct_messages: true })
   const block = (status = 200) => http(owner, '/api/me/blocks/' + other.id, 'PUT', global, status)
   const unblock = () => http(owner, '/api/me/blocks/' + other.id, 'DELETE')
-  await race(other, tx => sql`update public.user_accounts set user_is_discoverable=false where user_id=${other.id}`.execute(tx), () => block(404))
+  await race(other, tx => sql`update public.user_accounts set user_is_discoverable=false where user_id=${other.id}`.execute(tx), () => block(404), /from (?:public\.)?user_accounts\b[\s\S]*for share/)
   await globalPreferences(true)
-  await race(owner, tx => setOwnBlock(tx, owner.id, other.id, global), () => globalPreferences(false))
+  await race(owner, tx => setOwnBlock(tx, owner.id, other.id, global), () => globalPreferences(false), /update (?:public\.)?user_accounts\b/)
   await unblock()
   await http(owner, '/api/profiles/' + other.id, 'GET', undefined, 404)
   await globalPreferences(true)
@@ -183,4 +212,5 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   }), error => error.code === '23514')
   await http(null, '/api/public/communities/' + slug + '/directory')
   console.log('PASS hosted retry/fresh denial, rollback, no-op/audit categories/privacy, trusted metadata and append-only/inactive-sharing denials')
+  return races
 }

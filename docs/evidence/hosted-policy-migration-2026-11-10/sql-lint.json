@@ -1,0 +1,12 @@
+{
+  "captured_at": "2026-11-11T04:14:36.258Z",
+  "command": "supabase db lint --remote=fsnipgsrlclbnfepcbvz --output json",
+  "exit_status": 0,
+  "schemas": [
+    "app_private",
+    "extensions",
+    "public"
+  ],
+  "result": "No schema errors found",
+  "configuration_warning": "auth.email.enable_signup is deprecated; use auth.email.enabled instead. No configuration changed."
+}
