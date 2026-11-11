@@ -47,12 +47,8 @@ export type CommunityCommand =
   | { kind: 'permissions'; target: string; permissions: Partial<StaffPermissions> }
   | { kind: 'archive'; archived: boolean }
 export type CommandResult = { outcome: string; tenantId: string; revision?: string; requestId?: string }
-export type Staff = StaffPermissions & { role: 'owner' | 'admin'; status: 'active' | 'paused' | 'revoked' }
-export type Account = { standing: 'approved' | 'pending' | 'suspended' | 'inactive'; revision: string; approved: boolean; restricted: boolean }
-export type Pending = { id: string; user_id: string; kind: 'join' | 'reactivation' }
 export type Context = { tx: Tx; tenant: string; actor: string }
 export type Action<K extends CommunityCommand['kind']> = CommunityCommand & { kind: K }
-export type ApprovalSettings = { auto_approve_users: boolean }
 export type AuthorizationResult = { allowed: boolean }
 export type OperationalStatus = { operational_status: string }
 

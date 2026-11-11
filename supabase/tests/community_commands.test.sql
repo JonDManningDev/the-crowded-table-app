@@ -25,7 +25,13 @@ select ok(not has_column_privilege('ct_api','public.community_accounts','first_a
 select ok((select relrowsecurity from pg_class where oid=t::regclass),'RLS on '||t) from unnest(array[
   'public.tenants','public.community_accounts','public.community_account_profiles','public.community_account_permissions',
   'public.community_account_preferences','public.tenant_staff_assignments','app_private.community_account_requests','app_private.tenant_admin_action_categories']) t;
-select ok(not has_function_privilege(r,'app_private.is_staff_candidate(uuid,uuid,boolean)','EXECUTE'),r||' cannot probe private Auth eligibility')
+select ok(to_regprocedure('app_private.is_staff_candidate(uuid,uuid,boolean)') is null,'mixed staff candidate function retired');
+select ok(not has_function_privilege(r,'app_private.auth_identity_eligible(uuid,boolean)','EXECUTE'),r||' cannot probe private Auth eligibility')
 from unnest(array['anon','authenticated']) r;
+select ok(position('can_create_admin' in pg_get_functiondef('app_private.protect_invariants()'::regprocedure))=0,'dormant obsolete staff invariant removed');
+select ok(position('update public.community_account_preferences' in lower(pg_get_functiondef('app_private.guard_community_sharing()'::regprocedure)))=0,'sharing guard has no corrective workflow');
+select ok((select tgdeferrable and tginitdeferred from pg_trigger where tgrelid='public.community_accounts'::regclass and tgname='validate_inactive_sharing'),'account sharing invariant checks final state');
+select ok(exists(select from pg_trigger where tgfoid=('app_private.'||f||'()')::regprocedure),'retained integrity or platform integration '||f)
+from unnest(array['stamp_first_approval','stamp_community_revision','require_tenant_roots','protect_staff_assignment','provision_user_account']) f;
 select * from finish();
 rollback;

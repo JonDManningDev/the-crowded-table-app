@@ -177,13 +177,18 @@ test('malformed JSON and byte limits preserve authentication precedence and comm
     payload: body.padEnd(8193, ' ') }), 413, 'invalid_request')
   errorResponse(h, await h.app.inject({ method: 'PUT', url: '/api/me/preferences', headers: { 'content-type': 'application/json' },
     payload: body.padEnd(8193, ' ') }), 401, 'unauthenticated')
-  h.eligible(...Array.from({ length: 10 }, () => []))
+  h.eligible([{ user_id: actorId }], ...Array.from({ length: 10 }, () => []))
   const created = await h.app.inject({ method: 'POST', url: '/api/communities', headers,
-    payload: JSON.stringify(createInput).padEnd(32768, ' ') })
+    payload: JSON.stringify({ ...createInput, name: '  Test community  ', region: '  ', city: '  Test city  ',
+      profile: { displayName: '  Test owner  ', bio: '  ' } }).padEnd(32768, ' ') })
   assert.equal(created.statusCode, 201)
   assert.deepEqual(Object.keys(created.json()).sort(), ['outcome', 'tenantId'])
   assert.equal(created.json().outcome, 'created')
   assert.match(created.json().tenantId, uuid)
+  const tenantInsert = h.queries.find(query => query.sql.includes('insert into public.tenants'))
+  assert.deepEqual(tenantInsert.parameters.slice(1), ['Test community', createInput.slug, 'HN', 'America/Tegucigalpa', null, 'Test city'])
+  const profileInsert = h.queries.find(query => query.sql.includes('insert into public.community_account_profiles'))
+  assert.deepEqual(profileInsert.parameters.slice(2), ['Test owner', null])
   h.eligible([], [{ operational_status: 'active' }], [{ role: 'owner', status: 'active' }])
   const noOp = await h.app.inject({ method: 'POST', url: `${community}/commands`, headers,
     payload: JSON.stringify({ kind: 'archive', archived: false }).padEnd(32768, ' ') })
@@ -298,7 +303,7 @@ test('root error translation preserves application, PostgreSQL, 4xx and unexpect
     assert.equal(logs.length - before, status === 503 ? 1 : 0)
     if (status === 503) assert.deepEqual(logs.at(-1), ['API request failed', h.requests.at(-1).id, error.code ?? 'internal'])
   }
-  h.eligible([], Object.assign(new Error('private uniqueness detail'), { code: '23505' }))
+  h.eligible([{ user_id: actorId }], [], Object.assign(new Error('private uniqueness detail'), { code: '23505' }))
   errorResponse(h, await h.app.inject({ method: 'POST', url: '/api/communities', headers: authorization, payload: createInput }), 409, 'handle_taken')
   assert.equal(logs.length, 2)
   assert.equal(new Set(h.requests.map(r => r.id)).size, cases.length + 1)

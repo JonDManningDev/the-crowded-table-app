@@ -1,4 +1,11 @@
 import { randomUUID } from 'node:crypto'
+import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActionFacts,
+  loadLifecycleAccountFacts, loadStaffAssignmentFacts, loadCommunityRequestFacts,
+  requireCanEnterCommunityAction, requireCanSelectCommunityRequest, requireCanTargetCommunityAccount,
+  requireCanApproveCommunityRequest, requireCanReturnToCommunity, loadJoinCommunityFacts, decideCommunityEntry,
+  requireCanChangeCommunityStanding, loadStaffGrantFacts, requireCanManageCommunityStaff,
+  ownCommunityRequestAudience, communityAccountReviewAudience, communityStaffCandidateAudience,
+  communityPendingRequestAudience, type Account, type Staff, type Pending } from './policies.ts'
 import { sql } from 'kysely'
 import { type AppDatabase, withEligibleActorTransaction, withTransactionRetry, type AuthenticatedContext } from '../database.ts'
 import { ApplicationError } from '../http-errors.ts'
@@ -36,12 +43,8 @@ import {
   type HistoryQuery,
   type SlugParams,
   type PublicDirectoryResult,
-  type Staff,
-  type Account,
-  type Pending,
   type Context,
   type Action,
-  type ApprovalSettings,
   type AuthorizationResult,
   type OperationalStatus,
   type ReviewParams,
@@ -182,25 +185,21 @@ export async function readPublicDirectory(tx: Tx, slug: string, query: Directory
 }
 
 // Creation and lifecycle
-function deny(): never { throw new ApplicationError(403, 'forbidden') }
 function stale(): never { throw new ApplicationError(409, 'stale_state') }
 async function scope(tx: Tx, tenant: string) {
   await sql`select set_config('ct.tenant_id', ${tenant}, true)`.execute(tx)
-}
-async function account({ tx, tenant }: Context, user: string) {
-  return (await sql<Account>`select standing,revision,first_approved_at is not null as approved,
-    has_disciplinary_restriction as restricted from public.community_accounts
-    where tenant_id=${tenant} and user_id=${user} for update`.execute(tx)).rows[0]
-}
-async function staff({ tx, tenant }: Context, user: string) {
-  return (await sql<Staff>`select role,status,${sql.join(staffFlags.map(key => sql.id(key)))}
-    from public.tenant_staff_assignments where tenant_id=${tenant} and user_id=${user}`.execute(tx)).rows[0]
 }
 async function event({ tx, tenant }: Context, user: string, action: string, details: object = {}, reason?: string) {
   await sql`insert into public.tenant_admin_actions(tenant_id,target_user_id,action,details,reason)
     values(${tenant},${user},${action},${JSON.stringify(details)}::jsonb,${reason?.trim() || null})`.execute(tx)
 }
 async function setStanding({ tx, tenant }: Context, user: string, standing: Account['standing'], restricted = false) {
+  if (standing === 'inactive') {
+    // The caller holds the account row. Clear consent explicitly before changing
+    // standing; PostgreSQL validates the final state without doing this workflow.
+    await sql`update public.community_account_preferences set show_global_profile=false
+      where tenant_id=${tenant} and user_id=${user} and show_global_profile`.execute(tx)
+  }
   await sql`update public.community_accounts set standing=${standing},has_disciplinary_restriction=${restricted}
     where tenant_id=${tenant} and user_id=${user}`.execute(tx)
 }
@@ -213,6 +212,7 @@ async function addAccount(c: Context, standing: 'approved' | 'pending', profile:
   await sql`insert into public.community_account_permissions(tenant_id,user_id) values(${tenant},${actor})`.execute(tx)
 }
 export async function createCommunity(tx: Tx, actor: string, input: CreateCommunityInput): Promise<CommandResult> {
+  requireCanCreateCommunity(await loadCreateCommunityFacts(tx, actor))
   const tenant = randomUUID(), c = { tx, actor, tenant }
   await scope(tx, tenant)
   await sql`insert into public.tenants(id,name,slug,country_code,timezone,state_province,city)
@@ -245,15 +245,15 @@ function result(c: Context, outcome: string): CommandResult { return { outcome, 
 async function joinOrReturn(c: Context, member: Account | undefined, cmd: Action<'join' | 'reactivate'>) {
   const { tx, tenant, actor } = c
   if (cmd.kind === 'join' && member) return result(c, member.standing === 'inactive' ? 'reactivation_required' : 'already_applied')
-  if (cmd.kind === 'reactivate' && member?.standing !== 'inactive') stale()
-  if (member?.restricted) {
-    const existing = (await sql<Pending>`select id from app_private.community_account_requests where tenant_id=${tenant} and user_id=${actor}`.execute(tx)).rows[0]
-    if (existing) return { ...result(c, 'review_requested'), requestId: existing.id }
+  requireCanReturnToCommunity(member, cmd.kind)
+  const facts = await loadJoinCommunityFacts(tx, tenant, actor, member?.restricted ?? false)
+  const decision = decideCommunityEntry(member, facts)
+  if (decision.kind === 'review') {
+    if (decision.requestId) return { ...result(c, 'review_requested'), requestId: decision.requestId }
     await setStanding(c, actor, 'inactive', true)
     return { ...result(c, 'review_requested'), requestId: await request(c, 'reactivation') }
   }
-  const settings = (await sql<ApprovalSettings>`select auto_approve_users from public.tenant_settings where tenant_id=${tenant}`.execute(tx)).rows[0]
-  const standing = member?.approved || settings.auto_approve_users ? 'approved' : 'pending'
+  const standing = decision.standing
   if (cmd.kind === 'join') await addAccount(c, standing, cmd.profile)
   else await setStanding(c, actor, standing)
   if (standing === 'pending') return { ...result(c, standing), requestId: await request(c, 'join') }
@@ -262,10 +262,9 @@ async function joinOrReturn(c: Context, member: Account | undefined, cmd: Action
 }
 async function changeStanding(c: Context, user: string, member: Account, assignment: Staff | undefined,
   effective: Staff | undefined, cmd: Action<'deactivate' | 'suspend' | 'remove' | 'clear'>) {
-  if ((cmd.kind === 'suspend' || cmd.kind === 'remove') && assignment && assignment.status !== 'revoked' && !effective?.can_discipline_staff) deny()
+  requireCanChangeCommunityStanding({ account: member, assignment, actorStaff: effective }, cmd.kind)
   if ((cmd.kind === 'deactivate' && member.standing === 'inactive') || (cmd.kind === 'suspend' && member.standing === 'suspended')
     || (cmd.kind === 'remove' && member.standing === 'inactive' && member.restricted)) return result(c, 'already_applied')
-  if (cmd.kind === 'suspend' && member.standing !== 'approved' || cmd.kind === 'clear' && !member.restricted) stale()
   const after = cmd.kind === 'suspend' ? 'suspended' : cmd.kind === 'clear' && member.standing === 'suspended' ? 'approved' : 'inactive'
   const restricted = cmd.kind === 'deactivate' ? member.restricted : cmd.kind !== 'clear'
   const pending = await closeRequest(c, user)
@@ -284,21 +283,18 @@ async function changeStanding(c: Context, user: string, member: Account, assignm
 async function changeAssignment(c: Context, user: string, member: Account, assignment: Staff | undefined,
   owner: boolean, cmd: Action<'grant' | 'resume' | 'revoke' | 'permissions' | 'reappoint'>) {
   const { tx, tenant, actor } = c
+  const grant = cmd.kind === 'grant' ? await loadStaffGrantFacts(tx, user, member, assignment) : { authEligible: false }
+  requireCanManageCommunityStaff({ account: member, assignment, owner, actor, target: user, ...grant }, cmd)
   if (cmd.kind === 'grant') {
-    if (member.standing !== 'approved' || assignment) stale()
-    const eligible = await sql<AuthorizationResult>`select app_private.is_staff_candidate(${tenant},${user},true) as allowed`.execute(tx)
-    if (!eligible.rows[0].allowed) stale()
     await sql`insert into public.tenant_staff_assignments(tenant_id,user_id,role) values(${tenant},${user},'admin')`.execute(tx)
     await event(c, user, 'staff_created', { after_status: 'active' })
   } else if (cmd.kind === 'resume' || cmd.kind === 'revoke') {
-    if (!assignment || assignment.status === 'revoked') stale()
-    if (cmd.kind === 'resume' && (user === actor || member.standing !== 'approved' || assignment.status !== 'paused')) stale()
+    if (!assignment) stale()
     await setStaffStatus(c, user, assignment.status, cmd.kind === 'resume' ? 'active' : 'revoked',
       cmd.kind === 'resume' ? 'staff_resumed' : 'staff_revoked', 'reason' in cmd ? cmd.reason : undefined)
   } else if (cmd.kind === 'permissions' || cmd.kind === 'reappoint') {
-    if (!assignment || (cmd.kind === 'reappoint' ? assignment.status !== 'revoked' || member.standing !== 'approved' : assignment.status === 'revoked')) stale()
+    if (!assignment) stale()
     const keys = staffFlags.filter(key => Object.hasOwn(cmd.permissions, key))
-    if (!owner && keys.some(k => k !== 'can_audit_community_accounts' && k !== 'can_audit_staff_accounts')) deny()
     const changed = keys.filter(k => cmd.permissions[k] !== assignment[k])
     const sets = changed.map(k => sql`${sql.id(k)}=${cmd.permissions[k]}`)
     if (cmd.kind === 'reappoint') sets.push(sql`status='active'`)
@@ -316,42 +312,30 @@ async function changeAssignment(c: Context, user: string, member: Account, assig
 export async function communityCommand(tx: Tx, actor: string, tenant: string, cmd: CommunityCommand): Promise<CommandResult> {
   const c = { tx, actor, tenant }
   await scope(tx, tenant)
-  const site = (await sql<OperationalStatus>`select operational_status from public.tenants where id=${tenant} for update`.execute(tx)).rows[0]
-  if (!site) throw new ApplicationError(404, 'missing')
-  const me = await staff(c, actor)
-  // The deferred active-assignment FK also requires approved community standing.
-  const effective = me?.status === 'active' ? me : undefined
+  const facts = await loadCommunityActionFacts(tx, actor, tenant)
+  requireCanEnterCommunityAction(facts, cmd)
+  const effective = facts.assignment?.status === 'active' ? facts.assignment : undefined
   const owner = effective?.role === 'owner'
   if (cmd.kind === 'archive') {
-    if (!owner) deny()
     const status = cmd.archived ? 'archived' : 'active'
-    if (site.operational_status === status) return result(c, 'already_applied')
+    if (facts.site?.operational_status === status) return result(c, 'already_applied')
     await sql`update public.tenants set operational_status=${status} where id=${tenant}`.execute(tx)
     return result(c, status)
   }
-  if (site.operational_status !== 'active') throw new ApplicationError(404, 'missing')
-  if (cmd.kind === 'approve' && !effective?.can_approve_users) deny()
-  if (['suspend', 'remove', 'clear'].includes(cmd.kind) && !effective?.can_discipline_users) deny()
-  if (['grant', 'resume', 'permissions'].includes(cmd.kind) && !effective?.can_grant_staff) deny()
-  if (cmd.kind === 'reappoint' && !owner) deny()
-  if (cmd.kind === 'revoke' && !effective?.can_discipline_staff) deny()
   let user = 'target' in cmd ? cmd.target : actor
   if (cmd.kind === 'approve' || cmd.kind === 'withdraw') {
-    const current = (await sql<Pending>`select id,user_id,kind from app_private.community_account_requests
-      where tenant_id=${tenant} and id=${cmd.requestId}`.execute(tx)).rows[0]
-    if (!current || (cmd.kind === 'withdraw' && current.user_id !== actor) || (cmd.kind === 'approve' && current.kind !== 'join')) stale()
+    const current = await loadCommunityRequestFacts(tx, tenant, cmd.requestId)
+    requireCanSelectCommunityRequest(current, actor, cmd.kind)
     user = current.user_id
   }
-  const member = await account(c, user)
+  const member = await loadLifecycleAccountFacts(tx, tenant, user)
   if (cmd.kind === 'join' || cmd.kind === 'reactivate') return joinOrReturn(c, member, cmd)
-  if (!member) stale()
-  if ('revision' in cmd && cmd.revision !== member.revision) stale()
-  const assignment = await staff(c, user)
-  if (assignment?.role === 'owner') deny()
+  const assignment = await loadStaffAssignmentFacts(tx, tenant, user)
+  requireCanTargetCommunityAccount(member, assignment, cmd)
   if (cmd.kind === 'approve' || cmd.kind === 'withdraw') {
     const current = await closeRequest(c, user)
     if (!current || current.id !== cmd.requestId) stale()
-    if (cmd.kind === 'approve' && (member.standing !== 'pending' || member.restricted || member.approved)) stale()
+    if (cmd.kind === 'approve') requireCanApproveCommunityRequest(member)
     if (current.kind === 'join') await setStanding(c, user, cmd.kind === 'approve' ? 'approved' : 'inactive')
     else await setStanding(c, user, 'inactive', true)
     const action = cmd.kind === 'approve' ? 'community_approved' : current.kind === 'join' ? 'community_join_withdrawn' : 'community_reactivation_withdrawn'
@@ -374,7 +358,7 @@ function ownRequest(db: AppDatabase, context: AuthenticatedContext, params: Tena
         jsonb_build_object('request_id',r.id,'kind',r.kind,'requested_at',r.requested_at) end as request
         from public.community_accounts c join public.tenants t on t.id=c.tenant_id
         left join app_private.community_account_requests r using(tenant_id,user_id)
-        where c.tenant_id=${tenant} and c.user_id=${actor} and t.operational_status='active'`.execute(tx)).rows[0]
+        where c.tenant_id=${tenant} and ${ownCommunityRequestAudience(actor)}`.execute(tx)).rows[0]
     return row ?? { status: 404 as const }
   })
 }
@@ -387,9 +371,7 @@ function reviewAccount(db: AppDatabase, context: AuthenticatedContext, params: R
     const row = (await sql<AccountReview>`select c.standing,c.revision,case when c.user_id=${actor} then r.id end as request_id
           from public.community_accounts c join public.tenants t on t.id=c.tenant_id
           left join app_private.community_account_requests r using(tenant_id,user_id)
-          where c.tenant_id=${tenantId} and c.user_id=${target} and t.operational_status='active'
-            and (c.user_id=${actor} or exists(select from public.tenant_staff_assignments s where
-              s.tenant_id=c.tenant_id and s.user_id=${actor} and s.status='active' and s.can_discipline_users))
+          where c.tenant_id=${tenantId} and c.user_id=${target} and ${communityAccountReviewAudience(actor)}
           `.execute(tx)).rows[0]
     return row ? { row } : { status: 404 as const }
   })
@@ -401,7 +383,7 @@ function staffCandidates(db: AppDatabase, context: AuthenticatedContext, params:
     const rows = (await sql<StaffCandidate>`select c.tenant_id,c.user_id,c.standing,p.display_name,s.status as staff_status,s.role as staff_role
           from public.community_accounts c left join public.community_account_profiles p using(tenant_id,user_id)
           left join public.tenant_staff_assignments s using(tenant_id,user_id)
-          where c.tenant_id=${tenantId} and c.standing='approved' and app_private.is_staff_candidate(c.tenant_id,c.user_id,false)
+          where c.tenant_id=${tenantId} and ${communityStaffCandidateAudience(context.actorId)}
             and (${query.after ?? null}::uuid is null or c.user_id>${query.after ?? null}::uuid)
           order by c.user_id limit 51`.execute(tx)).rows
     return { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].user_id : null }
@@ -415,9 +397,7 @@ function pendingRequests(db: AppDatabase, context: AuthenticatedContext, params:
     const rows = (await sql<CommunityRequest>`select r.id,r.kind,r.user_id,r.requested_at,c.revision,c.standing,c.first_approved_at,
           c.has_disciplinary_restriction,p.display_name from app_private.community_account_requests r
           join public.community_accounts c using(tenant_id,user_id) left join public.community_account_profiles p using(tenant_id,user_id)
-          join public.tenant_staff_assignments s on s.tenant_id=r.tenant_id and s.user_id=${actor} and s.status='active'
-          where r.tenant_id=${tenantId} and app_private.active_tenant(r.tenant_id)
-            and (s.can_approve_users or (s.can_discipline_users and r.kind='reactivation' and c.standing='inactive' and c.has_disciplinary_restriction))
+          where r.tenant_id=${tenantId} and ${communityPendingRequestAudience(actor)}
             and (${query.after ?? null}::uuid is null or r.id>${query.after ?? null}::uuid)
           order by r.id limit 51`.execute(tx)).rows
     return { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].id : null }

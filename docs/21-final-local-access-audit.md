@@ -1,5 +1,7 @@
 # Final local access audit — 2026-11-03
 
+**Issue #8 community action-policy checkpoint - 2026-11-10.** Authorized local implementation introduces community lifecycle/staff policies, a fact-only protected Auth primitive, explicit API sharing cleanup and rejection-only database integrity. Local migrations 20261110000100 and 20261110000200 replace the mixed candidate function and enable tenant-scoped lifecycle clearing; external grants and the archive fence remain. See [checkpoint evidence](evidence/community-policies-2026-11-10/README.md) for the exact runtime boundary, verification and review. Issue #7 is complete and closed; #9-#15 and hosted deployment remain pending. Earlier unstarted/four-file statements describe prior stages.
+
 The persistent TypeScript API transition is complete for the currently persisted application foundation in the local environment. This audit closes the remaining application grants and HTTP contract findings. It does not certify a hosted deployment or implement the deferred activity, messaging, matching and competition domains.
 
 The preceding global-profile/block slice is committed as `b9d1183`. This audit adds migration `20261103001700_application_access_seal.sql`, the own-request HTTP projection, fixed response schemas and repeatable access checks. The accepted audiences remain in [16](16-intended-access-matrix.md); the implementation basis is [19](19-access-migration-specification.md) and [20](20-persistent-api-transition-proposal.md).

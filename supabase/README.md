@@ -1,5 +1,7 @@
 # Auth, accounts, and tenants
 
+**Local policy checkpoint, 2026-11-10.** Migrations `20261110000100` and `20261110000200` are applied only locally. Use `npm run dev:api:local` / `npm run dev:local` with this source; the readiness check now expects `auth_identity_eligible(uuid,boolean)` and retirement of `is_staff_candidate`. Hosted database/API verification remains separately authorized work. The [checkpoint evidence](../docs/evidence/community-policies-2026-11-10/README.md) records the rejection-only sharing invariant, tenant-scoped runtime clearing authority and complete verification.
+
 ## Hosted development database, local application — 2026-11-03
 
 The authorized database cutover applies migrations through `20261103001700` to `fsnipgsrlclbnfepcbvz`. Both application processes remain on this computer. There is no hosted frontend or API deployment, no production availability/fallback/recovery work, and no database reset. Existing account/community data is preserved, including the accepted one-time curated-profile backfill.

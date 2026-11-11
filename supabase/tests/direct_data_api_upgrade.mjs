@@ -143,7 +143,11 @@ async function verifySharingRace() {
   const target = sql("select user_id from public.community_accounts where standing='pending'");
   assert.match(target, /^[a-f0-9-]{36}$/);
   const optIn = `update public.community_account_preferences set show_global_profile=true where user_id='${target}'`;
-  const deactivate = `update public.community_accounts set standing='inactive' where user_id='${target}'`;
+  // Rejection-only integrity: legitimate lifecycle writers coordinate account
+  // then preference and explicitly clear consent in the same transaction.
+  const deactivate = `select 1 from public.community_accounts where user_id='${target}' for update;
+    update public.community_account_preferences set show_global_profile=false where user_id='${target}';
+    update public.community_accounts set standing='inactive' where user_id='${target}'`;
   for (const [first, second] of [[optIn, deactivate],[deactivate, optIn]]) {
     const release = await holdLocalTransaction(container, database, first);
     const waiter = promisify(execFile)('docker', ['exec', container, 'psql', '-XqAt', '-U', 'postgres',

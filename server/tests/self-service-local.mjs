@@ -221,6 +221,27 @@ try {
     await profile(member,{display_name:'No tenant lock',bio:null})
     await prefs(other,{allow_direct_messages:false})
   } finally { await admin.query('rollback') }
+  // A raw lifecycle writer must explicitly clear sharing. The database rejects
+  // the invalid final state instead of silently performing that workflow.
+  await prefs(other,{show_global_profile:true})
+  await assert.rejects(withEligibleActorTransaction(db,{actorId:other.id,requestId:randomUUID()},async tx=>{
+    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+    await sql`update public.community_accounts set standing='inactive' where tenant_id=${tenant} and user_id=${other.id}`.execute(tx)
+  }),error=>error.code==='23514' && error.message==='inactive_community_sharing')
+  assert.equal((await prefs(other)).show_global_profile,true)
+  // The account constraint checks the final state, permitting an explicit
+  // compound writer even when it clears consent after the standing statement.
+  await withEligibleActorTransaction(db,{actorId:other.id,requestId:randomUUID()},async tx=>{
+    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+    await sql`update public.community_accounts set standing='inactive' where tenant_id=${tenant} and user_id=${other.id}`.execute(tx)
+    await sql`update public.community_account_preferences set show_global_profile=false where tenant_id=${tenant} and user_id=${other.id}`.execute(tx)
+  })
+  assert.equal((await prefs(other)).show_global_profile,false)
+  await assert.rejects(withEligibleActorTransaction(db,{actorId:other.id,requestId:randomUUID()},async tx=>{
+    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+    await sql`update public.community_account_preferences set show_global_profile=true where tenant_id=${tenant} and user_id=${other.id}`.execute(tx)
+  }),error=>error.code==='23514' && error.message==='inactive_community_sharing')
+  await command(other,{kind:'reactivate'})
   const sharing=await held(member,tx=>ownCommunityPreferences(tx,member.id,tenant,{show_global_profile:true}))
   const deactivate=command(member,{kind:'deactivate'})
   deactivate.catch(()=>{})

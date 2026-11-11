@@ -110,6 +110,13 @@ try {
   await cmd(owner,{kind:'grant',target:member.id},409)
   await admin.query('update auth.users set banned_until=null where id=$1',[member.id])
   assert.deepEqual((await candidates(other)).rows,[])
+  const authFact=await withEligibleActorTransaction(db,{actorId:other.id,requestId:randomUUID()},
+    tx=>sql`select app_private.auth_identity_eligible(${member.id},false) as eligible`.execute(tx))
+  assert.equal(authFact.eligible,true)
+  assert.equal(authFact.value.rows[0].eligible,true,'the private primitive supplies identity facts, not staff authority')
+  await assert.rejects(withEligibleActorTransaction(db,{actorId:other.id,requestId:randomUUID()},
+    tx=>sql`select email from auth.users`.execute(tx)),error=>error.code==='42501')
+  await cmd(other,{kind:'grant',target:member.id},403)
   const candidate = (await candidates(owner)).rows.find(r=>r.user_id===member.id)
   assert.deepEqual(candidate,{ tenant_id:tenant,user_id:member.id,standing:'approved',display_name:'Member',staff_status:null,staff_role:null })
   await cmd(owner, { kind: 'grant', target: member.id })
@@ -176,8 +183,12 @@ try {
   await cmd(owner,{kind:'reappoint',target:member.id,permissions})
   state = await review(owner,member.id)
   await cmd(other,{kind:'remove',target:member.id,revision:state.revision},403)
+  await send(member,'/api/communities/'+tenant+'/me/preferences',
+    {show_global_profile:true,allow_direct_messages:false,allow_private_invitations:false},200,'PATCH')
   await cmd(owner,{kind:'revoke',target:member.id,reason:'Staff change'})
   await cmd(other,{kind:'remove',target:member.id,revision:(await review(other,member.id)).revision})
+  assert.deepEqual((await admin.query('select show_global_profile,allow_direct_messages,allow_private_invitations from public.community_account_preferences where tenant_id=$1 and user_id=$2',[tenant,member.id])).rows[0],
+    {show_global_profile:false,allow_direct_messages:false,allow_private_invitations:false})
   const restricted = await cmd(member,{kind:'reactivate'})
   assert.equal((await cmd(member,{kind:'reactivate'})).requestId,restricted.requestId)
   assert.equal((await queue(other)).rows[0].id,restricted.requestId)
@@ -191,6 +202,51 @@ try {
   await send(owner,'/api/communities/'+tenant+'/settings',{auto_approve_users:true},200,'PATCH')
   const applicant = await user()
   assert.equal((await cmd(applicant,join)).outcome,'approved')
+
+  // The private primitive locks only the protected identity. Product authority
+  // and approved target standing have already been loaded under the tenant root.
+  async function waitForAuthBlocker(pid) {
+    const deadline=Date.now()+1800
+    while (!(await admin.query('select exists(select from pg_stat_activity where $1=any(pg_blocking_pids(pid))) as waiting',[pid])).rows[0].waiting) {
+      assert.ok(Date.now()<deadline,'staff appointment and Auth change must coordinate')
+      await new Promise(resolve=>setTimeout(resolve,10))
+    }
+  }
+  await admin.query('begin')
+  let deniedGrant
+  try {
+    await admin.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1",[applicant.id])
+    const pid=(await admin.query('select pg_backend_pid() as pid')).rows[0].pid
+    deniedGrant=cmd(owner,{kind:'grant',target:applicant.id},409)
+    deniedGrant.catch(()=>{})
+    await waitForAuthBlocker(pid)
+    await admin.query('commit')
+  } finally { await admin.query('rollback') }
+  await deniedGrant
+  assert.ok(!(await candidates(owner)).rows.some(row=>row.user_id===applicant.id))
+  await admin.query('update auth.users set banned_until=null where id=$1',[applicant.id])
+  let releaseGrant,signalGrant
+  const grantGate=new Promise(resolve=>{releaseGrant=resolve})
+  const grantReady=new Promise(resolve=>{signalGrant=resolve})
+  const grantOperation=randomUUID()
+  const heldGrant=withEligibleActorTransaction(db,{actorId:owner.id,requestId:grantOperation},async tx=>{
+    const result=await communityCommand(tx,owner.id,tenant,{kind:'grant',target:applicant.id})
+    signalGrant((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
+    await grantGate
+    return result
+  })
+  const grantPid=await Promise.race([grantReady,heldGrant.then(()=>{throw Error('grant exited before barrier')})])
+  const authWriter=new pg.Client({connectionString:local.DB_URL})
+  await authWriter.connect()
+  let ban
+  try {
+    ban=authWriter.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1",[applicant.id])
+    ban.catch(()=>{})
+    await waitForAuthBlocker(grantPid)
+  } finally { releaseGrant() }
+  try { assert.equal((await heldGrant).eligible,true); await ban } finally { await authWriter.end() }
+  assert.equal((await admin.query("select count(*)::int as n from public.tenant_admin_actions where operation_id=$1 and action='staff_created'",[grantOperation])).rows[0].n,1)
+  await admin.query('update auth.users set banned_until=null where id=$1',[applicant.id])
 
   // Hold the serialization lock and prove that the real competing API call
   // waits before reading authority. Release only after observing the blocker.

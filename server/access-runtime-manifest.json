@@ -118,6 +118,9 @@
       "signature": "app_private.active_tenant(uuid)"
     },
     {
+      "signature": "app_private.auth_identity_eligible(uuid,boolean)"
+    },
+    {
       "signature": "app_private.can_block_from_profile(uuid)"
     },
     {
@@ -146,9 +149,6 @@
     },
     {
       "signature": "app_private.is_approved_owner(uuid)"
-    },
-    {
-      "signature": "app_private.is_staff_candidate(uuid,uuid,boolean)"
     },
     {
       "signature": "app_private.lock_eligible_actor()"
