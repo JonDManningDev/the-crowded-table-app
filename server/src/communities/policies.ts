@@ -1,6 +1,6 @@
 import { sql } from 'kysely'
 import { ApplicationError } from '../http-errors.ts'
-import { staffFlags, type CommunityCommand, type ConfigurationKind, type StaffPermissions, type Tx } from './types.ts'
+import { staffFlags, type CommunityCommand, type ConfigurationKind, type RecordKind, type StaffPermissions, type Tx } from './types.ts'
 
 // Creation and lifecycle. Services call these loaders in tenant-root, target
 // account, target Auth order; facts never survive the operation/transaction.
@@ -158,11 +158,14 @@ export function communityPendingRequestAudience(actor: string) {
 
 // Configuration and copy. Services lock the tenant root before loading facts,
 // so each statement sees the authority committed by any preceding lock holder.
-export async function loadConfigurationFacts(tx: Tx, actor: string, tenant: string) {
+async function loadCommunityStaffFacts(tx: Tx, actor: string, tenant: string) {
   const site = await tx.selectFrom('tenants').select('operational_status').where('id', '=', tenant).executeTakeFirst()
   const account = await tx.selectFrom('community_accounts').select('standing')
     .where('tenant_id', '=', tenant).where('user_id', '=', actor).executeTakeFirst()
   return { site, account, assignment: await loadStaffAssignmentFacts(tx, tenant, actor) }
+}
+export function loadConfigurationFacts(tx: Tx, actor: string, tenant: string) {
+  return loadCommunityStaffFacts(tx, actor, tenant)
 }
 type ConfigurationFacts = Awaited<ReturnType<typeof loadConfigurationFacts>>
 export function canReadConfiguration(facts: ConfigurationFacts): Decision {
@@ -180,3 +183,40 @@ export function canEditConfiguration(facts: ConfigurationFacts, kind: Configurat
 }
 export function requireCanReadConfiguration(facts: ConfigurationFacts) { requireDecision(canReadConfiguration(facts)) }
 export function requireCanEditConfiguration(facts: ConfigurationFacts, kind: ConfigurationKind) { requireDecision(canEditConfiguration(facts, kind)) }
+
+// Staff and participant records. The service holds the tenant root through the
+// projection/mutation; reuse the established staff loader after any lock wait.
+export function loadAccountRecordFacts(tx: Tx, actor: string, tenant: string) {
+  return loadCommunityStaffFacts(tx, actor, tenant)
+}
+type AccountRecordFacts = Awaited<ReturnType<typeof loadAccountRecordFacts>>
+export function canManageAccountRecords(facts: AccountRecordFacts, kind: RecordKind): Decision {
+  if (!facts.site) return 'missing'
+  const staff = facts.account?.standing === 'approved' && facts.assignment?.status === 'active' ? facts.assignment : undefined
+  if (!staff || (facts.site.operational_status !== 'active' && staff.role !== 'owner')) return 'forbidden'
+  return (kind === 'staff' ? staff.can_grant_staff : staff.can_manage_community_permissions) ? 'allowed' : 'forbidden'
+}
+export function canReadAccountRecord(facts: AccountRecordFacts, kind: RecordKind, own: boolean): Decision {
+  return canManageAccountRecords(facts, kind) === 'allowed' || (own && facts.site?.operational_status === 'active') ? 'allowed' : 'missing'
+}
+export function requireCanReadAccountRecord(facts: AccountRecordFacts, kind: RecordKind, own: boolean) {
+  requireDecision(canReadAccountRecord(facts, kind, own))
+}
+export function requireCanManageAccountRecords(facts: AccountRecordFacts, kind: RecordKind) {
+  requireDecision(canManageAccountRecords(facts, kind))
+}
+export function canListCommunityAccounts(facts: AccountRecordFacts): Decision {
+  return facts.site && facts.account?.standing === 'approved'
+    && facts.assignment?.role === 'owner' && facts.assignment.status === 'active' ? 'allowed' : 'missing'
+}
+export function requireCanListCommunityAccounts(facts: AccountRecordFacts) { requireDecision(canListCommunityAccounts(facts)) }
+export function canReadCommunityAccountFacts(facts: AccountRecordFacts, own: boolean): Decision {
+  return canListCommunityAccounts(facts) === 'allowed' || (facts.site?.operational_status === 'active'
+    && (own || facts.account?.standing === 'approved' || facts.account?.standing === 'suspended')) ? 'allowed' : 'missing'
+}
+export function requireCanReadCommunityAccountFacts(facts: AccountRecordFacts, own: boolean) {
+  requireDecision(canReadCommunityAccountFacts(facts, own))
+}
+export function communityAccountFactsTargetAudience(facts: AccountRecordFacts, own: boolean) {
+  return sql`${canListCommunityAccounts(facts) === 'allowed' || own} or standing in ('approved','suspended','inactive')`
+}

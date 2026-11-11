@@ -49,7 +49,6 @@ export type CommunityCommand =
 export type CommandResult = { outcome: string; tenantId: string; revision?: string; requestId?: string }
 export type Context = { tx: Tx; tenant: string; actor: string }
 export type Action<K extends CommunityCommand['kind']> = CommunityCommand & { kind: K }
-export type AuthorizationResult = { allowed: boolean }
 export type OperationalStatus = { operational_status: string }
 
 // Requests and reviews

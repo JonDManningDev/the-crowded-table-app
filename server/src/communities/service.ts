@@ -6,6 +6,8 @@ import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActio
   requireCanChangeCommunityStanding, loadStaffGrantFacts, requireCanManageCommunityStaff,
   ownCommunityRequestAudience, communityAccountReviewAudience, communityStaffCandidateAudience,
   communityPendingRequestAudience, loadConfigurationFacts, requireCanReadConfiguration, requireCanEditConfiguration,
+  loadAccountRecordFacts, requireCanReadAccountRecord, requireCanManageAccountRecords,
+  requireCanListCommunityAccounts, requireCanReadCommunityAccountFacts, communityAccountFactsTargetAudience,
   type Account, type Staff, type Pending } from './policies.ts'
 import { sql } from 'kysely'
 import { type AppDatabase, withEligibleActorTransaction, withTransactionRetry, type AuthenticatedContext } from '../database.ts'
@@ -46,7 +48,6 @@ import {
   type PublicDirectoryResult,
   type Context,
   type Action,
-  type AuthorizationResult,
   type OperationalStatus,
   type ReviewParams,
   type AfterQuery,
@@ -538,8 +539,8 @@ export async function readMemberDirectory(tx: Tx, actor: string, tenant: string,
   return { rows: visible, next: rows.length > limit && last ? cursors.encode(scope, last.account.user_id) : null }
 }
 export async function listOwnerAccounts(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<AccountFacts>> {
-  const access = await lockDirectoryTenant(tx, actor, tenant)
-  if (!access.owner) throw new ApplicationError(404, 'missing')
+  const facts = await lockAccountFacts(tx, actor, tenant)
+  requireCanListCommunityAccounts(facts)
   const scope = ['owner-accounts', actor, tenant], after = cursors.decode(scope, query.cursor), limit = Number(query.limit ?? 50)
   const rows = (await sql<AccountFacts>`select ${sql.join(factsFields.map(key => sql.id(key)))} from public.community_accounts
     where tenant_id=${tenant} and (${after}::uuid is null or user_id>${after}::uuid) order by user_id limit ${limit + 1}`.execute(tx)).rows
@@ -547,12 +548,17 @@ export async function listOwnerAccounts(tx: Tx, actor: string, tenant: string, q
   return { rows: visible, next: rows.length > limit && last ? cursors.encode(scope, last.user_id) : null }
 }
 export async function readAccountFacts(tx: Tx, actor: string, tenant: string, target: string): Promise<AccountFacts> {
-  const access = await lockDirectoryTenant(tx, actor, tenant)
-  if (!access.owner && (!access.active || (target !== actor && !access.member))) throw new ApplicationError(404, 'missing')
+  const facts = await lockAccountFacts(tx, actor, tenant)
+  requireCanReadCommunityAccountFacts(facts, target === actor)
   const row = (await sql<AccountFacts>`select ${sql.join(factsFields.map(key => sql.id(key)))} from public.community_accounts
-    where tenant_id=${tenant} and user_id=${target} and (${access.owner || target === actor} or standing in ('approved','suspended','inactive'))`.execute(tx)).rows[0]
+    where tenant_id=${tenant} and user_id=${target} and (${communityAccountFactsTargetAudience(facts, target === actor)})`.execute(tx)).rows[0]
   if (!row) throw new ApplicationError(404, 'missing')
   return row
+}
+async function lockAccountFacts(tx: Tx, actor: string, tenant: string) {
+  await scope(tx, tenant)
+  if (!(await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows[0]) throw new ApplicationError(404, 'missing')
+  return loadAccountRecordFacts(tx, actor, tenant)
 }
 
 // Staff and participant permissions
@@ -566,9 +572,9 @@ async function authorizeRecords(tx: Tx, actor: string, tenant: string, kind: Rec
   await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
   const site = (await sql`select id from public.tenants where id=${tenant} ${write ? sql`for update` : sql`for share`}`.execute(tx)).rows[0]
   if (!site) throw new ApplicationError(404, 'missing')
-  const allowed = (await sql<AuthorizationResult>`select app_private.can_manage_account_records(${tenant},${kind})
-    or (${!write && target === actor} and app_private.active_tenant(${tenant})) as allowed`.execute(tx)).rows[0]?.allowed
-  if (!allowed) throw new ApplicationError(write ? 403 : 404, write ? 'forbidden' : 'missing')
+  const facts = await loadAccountRecordFacts(tx, actor, tenant)
+  if (write) requireCanManageAccountRecords(facts, kind)
+  else requireCanReadAccountRecord(facts, kind, target === actor)
 }
 export async function readAccountRecord<K extends RecordKind>(tx: Tx, actor: string, tenant: string, kind: K, target: string): Promise<Records[K]> {
   await authorizeRecords(tx, actor, tenant, kind, target)
@@ -598,15 +604,16 @@ export async function listAccountRecords<K extends RecordKind>(tx: Tx, actor: st
 }
 export async function setParticipantPermission(tx: Tx, actor: string, tenant: string, target: string, enabled: boolean) {
   await authorizeRecords(tx, actor, tenant, 'participant', target, true)
-  const before = (await sql<ParticipantPermissionInput>`select can_post_public_events from public.community_account_permissions
+  const before = (await sql<Records['participant']>`select ${sql.join(columns.participant.map(key => sql.id(key)))} from public.community_account_permissions
     where tenant_id=${tenant} and user_id=${target} for update`.execute(tx)).rows[0]
   if (!before) throw new ApplicationError(404, 'missing')
-  if (before.can_post_public_events !== enabled) {
-    await sql`update public.community_account_permissions set can_post_public_events=${enabled} where tenant_id=${tenant} and user_id=${target}`.execute(tx)
-    await sql`insert into public.tenant_admin_actions(tenant_id,target_user_id,action,details)
-      values(${tenant},${target},'community_permissions_changed',${JSON.stringify({ before: before.can_post_public_events, after: enabled })}::jsonb)`.execute(tx)
-  }
-  return readAccountRecord(tx, actor, tenant, 'participant', target)
+  if (before.can_post_public_events === enabled) return before
+  const changed = (await sql<Records['participant']>`update public.community_account_permissions set can_post_public_events=${enabled}
+    where tenant_id=${tenant} and user_id=${target} returning ${sql.join(columns.participant.map(key => sql.id(key)))}`.execute(tx)).rows[0]
+  if (!changed) throw new ApplicationError(404, 'missing')
+  await sql`insert into public.tenant_admin_actions(tenant_id,target_user_id,action,details)
+    values(${tenant},${target},'community_permissions_changed',${JSON.stringify({ before: before.can_post_public_events, after: enabled })}::jsonb)`.execute(tx)
+  return changed
 }
 
 // Audit history

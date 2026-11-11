@@ -126,11 +126,21 @@ try {
     assert.deepEqual(collected,all);assert.deepEqual([...all].sort(),all)
     assert.equal((await list(owner,kind,'?limit=100')).next,null)
   }
+  const staffCursor=(await list(grant,'staff','?limit=1')).next
+  await afterLockedChange(
+    ()=>admin.query('update public.tenant_staff_assignments set can_grant_staff=false where tenant_id=$1 and user_id=$2',[tenant,grant.id]),
+    ()=>staff(grant,manager.id,404))
+  await list(grant,'staff','?cursor='+staffCursor,404)
+  assert.equal((await staff(grant,grant.id)).can_grant_staff,false)
+  await cmd(owner,{kind:'permissions',target:grant.id,permissions:{can_grant_staff:true}})
+  const priorReview=await http(grant,path+'/accounts/'+grant.id+'/review')
   const changed=await permissions(manager,grant.id,true)
   assert.equal(changed.can_post_public_events,true);assert.equal(changed.updated_by,manager.id)
   assert.equal((await staff(grant,grant.id)).can_manage_community_permissions,false)
   const repeated=await permissions(manager,grant.id,true)
   assert.deepEqual(repeated,changed)
+  assert.deepEqual(await http(grant,path+'/accounts/'+grant.id+'/review'),priorReview,'permission writes preserve account revisions')
+  await permissions(manager,randomUUID(),true,404)
   const audit=(await admin.query("select a.*,array(select category from app_private.tenant_admin_action_categories c where c.action_id=a.id) categories from public.tenant_admin_actions a where a.tenant_id=$1 and a.action='community_permissions_changed'",[tenant])).rows
   assert.equal(audit.length,1);assert.deepEqual(audit[0].details,{before:false,after:true})
   assert.deepEqual(audit[0].categories,['community_account']);assert.equal(audit[0].created_by,manager.id)
@@ -142,11 +152,15 @@ try {
   }),/injected rollback/)
   assert.deepEqual(await permissions(manager,grant.id),changed)
   assert.equal((await admin.query("select count(*)::int n from public.tenant_admin_actions where tenant_id=$1 and action='community_permissions_changed'",[tenant])).rows[0].n,1)
-  assert.equal((await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
+  // API policies own participant product authority. A scoped trusted runtime
+  // writer retains storage access; prove that boundary and roll the probe back.
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
-    assert.deepEqual((await sql`select user_id from public.community_account_permissions order by user_id`.execute(tx)).rows,[{user_id:member.id}])
-    assert.equal((await sql`update public.community_account_permissions set can_post_public_events=true where tenant_id=${tenant}`.execute(tx)).numAffectedRows,0n)
-  })).eligible, true)
+    assert.equal((await sql`select user_id from public.community_account_permissions where tenant_id=${tenant}`.execute(tx)).rows.length,5)
+    assert.equal((await sql`update public.community_account_permissions set can_post_public_events=true where tenant_id=${tenant} and user_id=${member.id}`.execute(tx)).numAffectedRows,1n)
+    assert.equal((await sql`update public.community_account_permissions set can_post_public_events=true where tenant_id=${otherTenant}`.execute(tx)).numAffectedRows,0n)
+    throw Error('rollback trusted-writer probe')
+  }),/rollback trusted-writer probe/)
   for(const field of ['user_id','tenant_id','created_by','updated_by']) await assert.rejects(withEligibleActorTransaction(db, { actorId: manager.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     await sql`update public.community_account_permissions set ${sql.id(field)}=${member.id} where tenant_id=${tenant}`.execute(tx)
@@ -175,7 +189,9 @@ try {
     }
   } finally {await admin.query('rollback')}
   // Pending, suspended and inactive targets retain stored participant permissions.
+  const pendingRequest=await http(pending,path+'/me/request')
   for(const actor of [pending,member]) assert.equal((await permissions(manager,actor.id,true)).can_post_public_events,true)
+  assert.deepEqual(await http(pending,path+'/me/request'),pendingRequest,'permission writes preserve pending request identity')
   await cmd(owner,{kind:'suspend',target:member.id,revision:(await http(owner,path+'/accounts/'+member.id+'/review')).revision})
   assert.equal((await permissions(member,member.id)).can_post_public_events,true)
   await permissions(member,member.id,false,403)
@@ -264,6 +280,15 @@ try {
     ()=>cmd(owner,{kind:'permissions',target:manager.id,permissions:{can_manage_community_permissions:false}}))
   assert.equal((await permissions(owner,member.id)).can_post_public_events,false)
   await permissions(manager,member.id,true,403)
+  await cmd(owner,{kind:'permissions',target:manager.id,permissions:{can_manage_community_permissions:true}})
+  const permissionEvents=async()=>(await admin.query("select details from public.tenant_admin_actions where tenant_id=$1 and target_user_id=$2 and action='community_permissions_changed' order by created_at,id",[tenant,member.id])).rows.map(row=>row.details)
+  const beforeConcurrent=await permissionEvents()
+  const admitted=await admittedOperation(tx=>setParticipantPermission(tx,manager.id,tenant,member.id,true),
+    ()=>permissions(manager,member.id,false))
+  assert.equal(admitted.can_post_public_events,true)
+  assert.equal((await permissions(owner,member.id)).can_post_public_events,false)
+  assert.deepEqual((await permissionEvents()).slice(beforeConcurrent.length),[{before:false,after:true},{before:true,after:false}],
+    'serialized updates derive each event from the locked committed value')
   console.log('PASS staff holder/manager reads, participant permission separation, bounded scoped pages, standing/archive/Auth boundaries, immutable attribution and community-only audit, no-op/rollback, raw bypasses and both serialization orders')
 
 } finally {

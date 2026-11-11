@@ -268,7 +268,9 @@ test('directory and exact/owner facts retain ordered projections and bound param
   const profile = ['tenant_id', 'user_id', 'display_name', 'bio', 'created_at', 'updated_at', 'created_by', 'updated_by']
   for (const name of ['memberDirectory', 'ownerAccounts', 'accountFacts']) {
     const operation = operations.find(operation => operation.name === name), dto = response(operation).dto
-    h.eligible([], [{ id: tenantId }], [{ active: true, owner: true, member: true }], name === 'accountFacts' ? [dto] : dto.rows)
+    if (name === 'memberDirectory') h.eligible([], [{ id: tenantId }], [{ active: true, owner: true, member: true }], dto.rows)
+    else h.eligible([], [{ id: tenantId }], [{ operational_status: 'active' }], [{ standing: 'approved' }],
+      [{ role: 'owner', status: 'active' }], name === 'accountFacts' ? [dto] : dto.rows)
     assert.equal((await h.app.inject(input(operation))).statusCode, 200)
     const query = h.queries.at(-1)
     if (name === 'memberDirectory') {
@@ -289,7 +291,8 @@ test('staff and participant services retain distinct projections and read/write 
   for (const name of ['listStaff', 'readStaff', 'listParticipantPermissions', 'readParticipantPermissions']) {
     const operation = operations.find(operation => operation.name === name), dto = response(operation).dto
     const list = name.startsWith('list'), staff = name.endsWith('Staff')
-    h.eligible([], [{ id: tenantId }], [{ allowed: true }], list ? dto.rows : [dto])
+    h.eligible([], [{ id: tenantId }], [{ operational_status: 'active' }], [{ standing: 'approved' }],
+      [{ role: 'owner', status: 'active', can_grant_staff: true, can_manage_community_permissions: true }], list ? dto.rows : [dto])
     assert.equal((await h.app.inject(input(operation))).statusCode, 200)
     const query = h.queries.at(-1), fields = [...metadata, ...(staff ? ['role', 'status', ...staffFlags] : ['can_post_public_events'])]
     assert.equal(/^select (.*?) from /.exec(query.sql)?.[1], fields.map(key => `"${key}"`).join(', '))
@@ -297,7 +300,7 @@ test('staff and participant services retain distinct projections and read/write 
   }
   for (const [name, status, code] of [['readStaff', 404, 'missing'], ['saveParticipantPermissions', 403, 'forbidden']]) {
     const operation = operations.find(operation => operation.name === name)
-    h.eligible([], [{ id: tenantId }], [{ allowed: false }])
+    h.eligible([], [{ id: tenantId }], [{ operational_status: 'active' }], [{ standing: 'approved' }], [])
     error(h, operation, await h.app.inject(input(operation)), status, code)
   }
 })

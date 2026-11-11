@@ -130,9 +130,6 @@
       "signature": "app_private.can_inspect_global_profile(uuid)"
     },
     {
-      "signature": "app_private.can_manage_account_records(uuid,text)"
-    },
-    {
       "signature": "app_private.can_read_account_action(uuid,uuid)"
     },
     {
