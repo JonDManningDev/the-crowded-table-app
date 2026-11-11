@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
 import { ownCommunityProfile, ownCommunityPreferences } from '../src/communities/service.ts'
-import { ownProfile } from '../src/user-accounts/service.ts'
+import { readOwnProfile, saveOwnProfile } from '../src/user-accounts/service.ts'
 import { communityCommand } from '../src/communities/service.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
@@ -134,10 +134,10 @@ try {
       }),error=>error.code==='23514')
     }
   }
+  // Global discovery has its own peer audience; the self operation stays exact.
+  assert.equal((await readOwnProfile(db,{actorId:member.id,requestId:randomUUID()})).profile.user_id,member.id)
   // Native role checks omit the application's self predicates deliberately.
   await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
-    // Global discovery has its own peer audience; the self operation stays exact.
-    assert.equal((await ownProfile(tx,member.id)).profile.user_id,member.id)
     assert.ok((await sql`select user_id from public.community_account_preferences`.execute(tx)).rows.every(r=>r.user_id===member.id))
     const changed=await sql`update public.community_account_profiles set bio='Own only' returning user_id`.execute(tx)
     assert.ok(changed.rows.length && changed.rows.every(r=>r.user_id===member.id))
@@ -145,10 +145,20 @@ try {
     assert.deepEqual(raw.rows,[{id:tenant}])
   })
   await assert.rejects(withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },tx=>sql`update public.user_account_profiles set updated_by=${other.id}`.execute(tx)),error=>error.code==='42501')
-  await assert.rejects(withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
-    await ownProfile(tx,member.id,{display_name:'Rollback',bio:null})
-    throw Error('injected rollback')
-  }),/injected rollback/)
+  // Fail after the real INSERT completes but before the service can commit.
+  const profileWrites = new Set()
+  const failingDb = db.withPlugin({
+    transformQuery({node,queryId}) {
+      if (node.kind === 'RawNode' && node.sqlFragments[0].startsWith('insert into public.user_account_profiles')) profileWrites.add(queryId)
+      return node
+    },
+    async transformResult({result,queryId}) {
+      if (profileWrites.delete(queryId)) throw Error('injected rollback')
+      return result
+    },
+  })
+  await assert.rejects(saveOwnProfile(failingDb,{actorId:member.id,requestId:randomUUID()},
+    {display_name:'Rollback',bio:null}),/injected rollback/)
   assert.equal((await global(member)).profile.display_name,'Changed')
   for(const viewer of [owner,member]) {
     for(const table of ['user_account_profiles','community_account_profiles','community_account_preferences']) {

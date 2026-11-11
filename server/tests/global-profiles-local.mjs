@@ -5,7 +5,7 @@ import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
-import { inspectGlobalProfile, setOwnBlock } from '../src/user-accounts/service.ts'
+import { readGlobalProfile, setOwnBlock } from '../src/user-accounts/service.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
@@ -319,9 +319,18 @@ try {
   // A read already admitted by its statement may finish; the next read is denied.
   let release,ready
   const gate=new Promise(resolve=>{release=resolve}),started=new Promise(resolve=>{ready=resolve})
-  const read=withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
-    const profile=await inspectGlobalProfile(tx,viewer.id,target.id);ready();await gate;return profile
+  const profileReads = new Set()
+  const pausedDb = db.withPlugin({
+    transformQuery({node,queryId}) {
+      if (node.kind === 'RawNode' && node.sqlFragments.some(fragment=>fragment.includes('from public.user_account_profiles p'))) profileReads.add(queryId)
+      return node
+    },
+    async transformResult({result,queryId}) {
+      if (profileReads.delete(queryId)) { ready();await gate }
+      return result
+    },
   })
+  const read=readGlobalProfile(pausedDb,{actorId:viewer.id,requestId:randomUUID()},target.id)
   await Promise.race([started,read.then(()=>{throw Error('read ended before barrier')})])
   try {await block(target,viewer.id,source)} finally {release()}
   const readResult=await read
