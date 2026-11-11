@@ -109,6 +109,8 @@ Preserve existing action identifiers, details shapes, audiences and historical r
 
 ## Concurrency and retries
 
+**Eligibility contract follow-up - accepted 2026-11-11.** The shared actor transaction facility returns callback values directly and throws database-owned `IneligibleActorError` on denial, rolling back before work. This error never retries. Confirmed 40001/40P01 retries still rebuild trusted context, locks and eligibility; an actor becoming ineligible between attempts fails immediately. HTTP translation remains outside database infrastructure, including the account-review exception. See the decision register and document 22 for ownership; verification is recorded in document 12.
+
 Preserve actor Auth eligibility locking and transaction-local attribution. Services coordinate locks before loading the policy facts used for a write. All writers changing those facts must share compatible locks; an ordinary snapshot or a missing-row lock is insufficient. Reuse facts only within the operation and locking/snapshot conditions that make them valid.
 
 | Dependency group | Required implementation verification |

@@ -112,8 +112,7 @@ try {
   assert.deepEqual((await candidates(other)).rows,[])
   const authFact=await withEligibleActorTransaction(db,{actorId:other.id,requestId:randomUUID()},
     tx=>sql`select app_private.auth_identity_eligible(${member.id},false) as eligible`.execute(tx))
-  assert.equal(authFact.eligible,true)
-  assert.equal(authFact.value.rows[0].eligible,true,'the private primitive supplies identity facts, not staff authority')
+  assert.equal(authFact.rows[0].eligible,true,'the private primitive supplies identity facts, not staff authority')
   await assert.rejects(withEligibleActorTransaction(db,{actorId:other.id,requestId:randomUUID()},
     tx=>sql`select email from auth.users`.execute(tx)),error=>error.code==='42501')
   await cmd(other,{kind:'grant',target:member.id},403)
@@ -244,7 +243,7 @@ try {
     ban.catch(()=>{})
     await waitForAuthBlocker(grantPid)
   } finally { releaseGrant() }
-  try { assert.equal((await heldGrant).eligible,true); await ban } finally { await authWriter.end() }
+  try { await heldGrant; await ban } finally { await authWriter.end() }
   assert.equal((await admin.query("select count(*)::int as n from public.tenant_admin_actions where operation_id=$1 and action='staff_created'",[grantOperation])).rows[0].n,1)
   await admin.query('update auth.users set banned_until=null where id=$1',[applicant.id])
 
@@ -296,8 +295,7 @@ try {
     }
   } finally { releaseWriter() }
   const written = await writer
-  assert.equal(written.eligible, true)
-  const fresh = written.value
+  const fresh = written
   await approval
   assert.equal((await review(waitingMember,waitingMember.id)).request_id,fresh.requestId)
   const operation = randomUUID()

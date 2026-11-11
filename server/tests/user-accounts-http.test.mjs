@@ -1,3 +1,4 @@
+import { IneligibleActorError } from '../src/database.ts'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -16,10 +17,10 @@ const summary = { id: tenantId, name: 'Test community', city: null, state_provin
 const block = { blocker_user_id: actorId, blocked_user_id: targetId, created_at: profile.created_at, created_by: actorId }
 const profileInput = { display_name: '  Test person  ', bio: null }
 const blockInput = { confirmed: true, source: { kind: 'community_profile', tenantId } }
-const taggedFlags = { eligible: true, value: { status: 200, row: { ...flags, internal_secret: 'omit' } } }
+const preferenceResult = { status: 200, row: { ...flags, internal_secret: 'omit' } }
 const cases = [
-  { operation: 'readAccountPreferences', method: 'GET', path: '/api/me/preferences', result: taggedFlags, expected: flags },
-  { operation: 'saveAccountPreferences', method: 'PUT', path: '/api/me/preferences', payload: flags, args: [flags], result: taggedFlags, expected: flags },
+  { operation: 'readAccountPreferences', method: 'GET', path: '/api/me/preferences', result: preferenceResult, expected: flags },
+  { operation: 'saveAccountPreferences', method: 'PUT', path: '/api/me/preferences', payload: flags, args: [flags], result: preferenceResult, expected: flags },
   { operation: 'readOwnProfile', method: 'GET', path: '/api/me/profile', result: { profile: { ...profile, internal_secret: 'omit' } }, expected: { profile } },
   { operation: 'saveOwnProfile', method: 'PUT', path: '/api/me/profile', payload: profileInput, args: [profileInput], result: { profile }, expected: { profile } },
   { operation: 'listMyCommunities', method: 'GET', path: '/api/me/communities', query: '?filter=managed&limit=2&cursor=opaque',
@@ -218,9 +219,9 @@ test('account blocks accept each source and reject unknown or mixed source field
 test('adapter preserves preference result branches, application errors, profile null and empty pages', async t => {
   const h = harness(t)
   for (const item of cases.slice(0, 2)) {
-    h.queue(item.operation, { eligible: false })
+    h.queue(item.operation, new IneligibleActorError())
     assertError(h, await h.app.inject(requestOptions(item)), 403, 'ineligible')
-    h.queue(item.operation, { eligible: true, value: { status: 404 } })
+    h.queue(item.operation, { status: 404 })
     assertError(h, await h.app.inject(requestOptions(item)), 404, 'missing')
   }
   const failures = [
@@ -256,7 +257,7 @@ test('child plugin inherits authentication once and keeps its scope isolated fro
   const sibling = await h.app.inject({ url: '/community-sibling', headers: authorization })
   assert.deepEqual(sibling.json(), { context: true, feature: false, actor: actorId })
   assert.equal(sibling.headers['cache-control'], 'private, no-store')
-  h.queue('readAccountPreferences', taggedFlags)
+  h.queue('readAccountPreferences', preferenceResult)
   assert.equal((await h.app.inject(requestOptions(cases[0]))).statusCode, 200)
   assert.equal(h.verifications.length, 2)
   assert.deepEqual(h.featureHits, ['/api/me/preferences'])

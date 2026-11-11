@@ -3,8 +3,8 @@ import test from 'node:test'
 import { setImmediate } from 'node:timers/promises'
 import Fastify from 'fastify'
 import { DummyDriver, Kysely, PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler, sql } from 'kysely'
-import { withEligibleActorTransaction } from '../src/database.ts'
-import { ApplicationError } from '../src/http-errors.ts'
+import { IneligibleActorError, withEligibleActorTransaction } from '../src/database.ts'
+import { ApplicationError, registerHttpErrors } from '../src/http-errors.ts'
 import { directoryCursors } from '../src/directory-cursors.ts'
 import { getAuthenticatedContext, registerRequiredAuthentication } from '../src/http-authentication.ts'
 import { actorId, targetId, tenantId } from './helpers/http-harness.mjs'
@@ -38,15 +38,14 @@ function transactionDatabase(t, steps) {
 
 test('transaction binds trusted context, locks eligibility, then returns application status values unchanged', async t => {
   const h = transactionDatabase(t, [[], [{ allowed: true }]])
-  const value = { status: 403, detail: null }
+  const value = { status: 403, detail: null, eligible: false, value: 'application-owned' }
   const result = await withEligibleActorTransaction(h.db, context, async tx => {
     h.events.push('work')
     assert.equal(tx.isTransaction, true)
     assert.equal(h.queries.length, 2)
     return value
   })
-  assert.deepEqual(result, { eligible: true, value })
-  assert.equal(result.value, value)
+  assert.equal(result, value)
   assert.deepEqual(h.events, ['begin', 'query', 'query', 'work', 'commit', 'release'])
   assert.equal(h.queries[0].sql.replace(/\s+/g, ' '),
     "select set_config('request.jwt.claim.sub', $1, true), set_config('ct.operation_id', $2, true)")
@@ -56,9 +55,8 @@ test('transaction binds trusted context, locks eligibility, then returns applica
 
 test('denied eligibility skips application work without fabricating an application status', async t => {
   const h = transactionDatabase(t, [[], [{ allowed: false }]])
-  const result = await withEligibleActorTransaction(h.db, context, async () => assert.fail('ineligible callback must not execute'))
-  assert.deepEqual(result, { eligible: false })
-  assert.deepEqual(h.events, ['begin', 'query', 'query', 'commit', 'release'])
+  await assert.rejects(withEligibleActorTransaction(h.db, context, async () => assert.fail('ineligible callback must not execute')), IneligibleActorError)
+  assert.deepEqual(h.events, ['begin', 'query', 'query', 'rollback', 'release'])
 })
 
 test('eligibility-query errors propagate and roll back before application work', async t => {
@@ -66,6 +64,24 @@ test('eligibility-query errors propagate and roll back before application work',
   const h = transactionDatabase(t, [[], failure])
   await assert.rejects(withEligibleActorTransaction(h.db, context, async () => assert.fail('callback must not execute')), error => error === failure)
   assert.deepEqual(h.events, ['begin', 'query', 'query', 'rollback', 'release'])
+})
+
+test('typed eligibility denial maps to 403 without unexpected-error logging', async t => {
+  const app = Fastify({ requestIdHeader: false })
+  t.after(() => app.close())
+  const logged = t.mock.method(console, 'error', () => {})
+  registerHttpErrors(app)
+  app.get('/denied', () => { throw new IneligibleActorError() })
+  for (const method of ['GET', 'HEAD']) {
+    const response = await app.inject({ method, url: '/denied' })
+    assert.equal(response.statusCode, 403)
+    if (method === 'HEAD') assert.equal(response.body, '')
+    else {
+      assert.equal(response.json().code, 'ineligible')
+      assert.equal(typeof response.json().requestId, 'string')
+    }
+  }
+  assert.equal(logged.mock.callCount(), 0)
 })
 
 test('application exceptions propagate unchanged and roll back work on the same transaction', async t => {

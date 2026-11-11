@@ -243,12 +243,12 @@ try {
   assert.equal((await list(owner,'staff')).rows.length,3)
   assert.equal((await list(owner,'participant-permissions')).rows.length,5)
   assert.equal((await permissions(owner,member.id,true)).can_post_public_events,true)
-  assert.equal((await withEligibleActorTransaction(db, { actorId: manager.id, requestId: randomUUID() },async tx=>{
+  await withEligibleActorTransaction(db, { actorId: manager.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     for(const relation of ['public.tenant_staff_assignments','public.community_account_permissions']) {
       assert.deepEqual((await sql`select user_id from ${sql.table(relation)}`.execute(tx)).rows,[])
     }
-  })).eligible, true)
+  })
   await cmd(owner,{kind:'archive',archived:false})
   // A checked read holds its tenant snapshot until it finishes; revocation waits.
   async function admittedOperation(work,compete) {
@@ -269,8 +269,7 @@ try {
       }
     } finally {release()}
     const result=await operation;await response
-    assert.equal(result.eligible,true)
-    return result.value
+    return result
   }
   assert.equal((await admittedOperation(tx=>readAccountRecord(tx,manager.id,tenant,'participant',member.id),
     ()=>cmd(owner,{kind:'permissions',target:manager.id,permissions:{can_manage_community_permissions:false}}))).can_post_public_events,true)

@@ -56,10 +56,10 @@ async function accountPreferences(tx: Tx, actor: string, input?: AccountPreferen
 
 // Own profile
 function readOwnProfile(db: AppDatabase, context: AuthenticatedContext) {
-  return run(db, context, tx => ownProfile(tx, context.actorId))
+  return withEligibleActorTransaction(db, context, tx => ownProfile(tx, context.actorId))
 }
 function saveOwnProfile(db: AppDatabase, context: AuthenticatedContext, input: ProfileInput) {
-  return run(db, context, tx => ownProfile(tx, context.actorId, input))
+  return withEligibleActorTransaction(db, context, tx => ownProfile(tx, context.actorId, input))
 }
 export async function ownProfile(tx: Tx, actor: string, input?: ProfileInput) {
   const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
@@ -73,7 +73,7 @@ export async function ownProfile(tx: Tx, actor: string, input?: ProfileInput) {
 
 // My communities
 function listMyCommunities(db: AppDatabase, context: AuthenticatedContext, query: CommunitySummaryQuery) {
-  return run(db, context, tx => myCommunities(tx, context.actorId, query))
+  return withEligibleActorTransaction(db, context, tx => myCommunities(tx, context.actorId, query))
 }
 async function myCommunities(tx: Tx, actor: string, query: CommunitySummaryQuery): Promise<CommunitySummaryPage> {
   const filter = query.filter ?? 'all', scope = [actor,filter]
@@ -105,7 +105,7 @@ async function myCommunities(tx: Tx, actor: string, query: CommunitySummaryQuery
 
 // Global profiles
 function discoverGlobalProfiles(db: AppDatabase, cursors: DirectoryCursors, context: AuthenticatedContext, query: DiscoveryQuery) {
-  return run(db, context, tx => discoverProfiles(tx, context.actorId, query, cursors))
+  return withEligibleActorTransaction(db, context, tx => discoverProfiles(tx, context.actorId, query, cursors))
 }
 async function discoverProfiles(tx: Tx, actor: string, query: DiscoveryQuery, cursors: DirectoryCursors): Promise<ProfilePage<GlobalProfile>> {
   const term = (query.q ?? '').trim().toLowerCase(), scope = ['global-discovery',actor,term]
@@ -118,7 +118,7 @@ async function discoverProfiles(tx: Tx, actor: string, query: DiscoveryQuery, cu
   return {rows:visible,next:rows.length>limit && last ? cursors.encode(scope,last.user_id):null}
 }
 function readGlobalProfile(db: AppDatabase, context: AuthenticatedContext, target: string) {
-  return run(db, context, tx => inspectGlobalProfile(tx, context.actorId, target))
+  return withEligibleActorTransaction(db, context, tx => inspectGlobalProfile(tx, context.actorId, target))
 }
 const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
 export async function inspectGlobalProfile(tx: Tx, actor: string, target: string): Promise<GlobalProfile> {
@@ -131,7 +131,7 @@ export async function inspectGlobalProfile(tx: Tx, actor: string, target: string
 
 // Account blocks
 function listAccountBlocks(db: AppDatabase, cursors: DirectoryCursors, context: AuthenticatedContext, query: DiscoveryQuery) {
-  return run(db, context, tx => listOwnBlocks(tx, context.actorId, query, cursors))
+  return withEligibleActorTransaction(db, context, tx => listOwnBlocks(tx, context.actorId, query, cursors))
 }
 const blockFields = sql`blocker_user_id,blocked_user_id,created_at,created_by`
 async function listOwnBlocks(tx: Tx, actor: string, query: DiscoveryQuery, cursors: DirectoryCursors): Promise<ProfilePage<OutgoingBlock>> {
@@ -142,10 +142,10 @@ async function listOwnBlocks(tx: Tx, actor: string, query: DiscoveryQuery, curso
   return {rows:visible,next:rows.length>limit && last?cursors.encode(scope,last.blocked_user_id):null}
 }
 function blockAccount(db: AppDatabase, context: AuthenticatedContext, target: string, input: BlockInput) {
-  return run(db, context, tx => setOwnBlock(tx, context.actorId, target, input))
+  return withEligibleActorTransaction(db, context, tx => setOwnBlock(tx, context.actorId, target, input))
 }
 function unblockAccount(db: AppDatabase, context: AuthenticatedContext, target: string) {
-  return run(db, context, tx => setOwnBlock(tx, context.actorId, target))
+  return withEligibleActorTransaction(db, context, tx => setOwnBlock(tx, context.actorId, target))
 }
 // These are the existing source writers' roots: lifecycle/archive commands
 // lock tenant then account; independent sharing saves lock account first. All
@@ -195,11 +195,4 @@ export async function setOwnBlock(tx: Tx, actor: string, target: string, input?:
     where ${ownOutgoingBlocksAudience(actor)} and blocked_user_id=${target}`.execute(tx)).rows[0]
   if (!row) throw new ApplicationError(404,'missing')
   return {blocked:true}
-}
-
-// Internal helpers
-async function run<T>(db: AppDatabase, context: AuthenticatedContext, work: (tx: Tx) => Promise<T>) {
-  const result = await withEligibleActorTransaction(db, context, work)
-  if (!result.eligible) throw new ApplicationError(403, 'ineligible')
-  return result.value
 }

@@ -327,8 +327,7 @@ try {
     }
   } finally { releaseRead() }
   const readResult=await reader
-  assert.equal(readResult.eligible,true)
-  assert.deepEqual(readResult.value.rows,[linked])
+  assert.deepEqual(readResult.rows,[linked])
   await writer
   assert.deepEqual(await history(sr,exact(linked.id)),empty)
   console.log('PASS history categories, exact lookup and disciplinary reason isolation; legacy preservation, pagination, current eligibility, browser/GraphQL/runtime bypasses and both serialization orders')

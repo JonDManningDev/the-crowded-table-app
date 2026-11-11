@@ -15,15 +15,13 @@ export const userAccountRoutes: FastifyPluginAsyncTypebox<UserAccountRoutesOptio
   // Account preferences
   routes.get(preferencesPath, { schema: readAccountPreferencesSchema }, async (request, reply) => {
     const result = await service.readAccountPreferences(getAuthenticatedContext(request))
-    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
-    if (result.value.status !== 200) return reply.code(result.value.status).send({ code: 'missing', requestId: request.id })
-    return result.value.row
+    if (result.status !== 200) return reply.code(result.status).send({ code: 'missing', requestId: request.id })
+    return result.row
   })
   routes.put(preferencesPath, { schema: saveAccountPreferencesSchema }, async (request, reply) => {
     const result = await service.saveAccountPreferences(getAuthenticatedContext(request), request.body)
-    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
-    if (result.value.status !== 200) return reply.code(result.value.status).send({ code: 'missing', requestId: request.id })
-    return result.value.row
+    if (result.status !== 200) return reply.code(result.status).send({ code: 'missing', requestId: request.id })
+    return result.row
   })
 
   // Own profile

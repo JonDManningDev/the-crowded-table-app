@@ -135,7 +135,7 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     return (await sql`select user_id from public.community_account_profiles where tenant_id=${tenant}`.execute(tx)).rows
   })
-  assert.deepEqual(archived.value, [])
+  assert.deepEqual(archived, [])
   assert.ok((await http(member, '/api/me/communities')).rows.some(row => row.id === tenant))
   await command(owner, { kind: 'archive', archived: false })
   await race(member, tx => configurationSettings(tx, member.id, tenant, { pause_community_events: true }),

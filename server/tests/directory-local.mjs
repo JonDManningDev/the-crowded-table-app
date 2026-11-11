@@ -265,11 +265,11 @@ try {
   for(const target of [missing,outsider,{id:randomUUID()}]) {
     await http(owner,path+'/accounts/'+target.id+'/profile','GET',undefined,404)
   }
-  assert.equal((await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
+  await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     assert.deepEqual((await sql`select user_id from public.community_accounts where tenant_id=${tenant}`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select user_id from public.community_account_profiles where tenant_id=${tenant}`.execute(tx)).rows,[])
-  })).eligible, true)
+  })
   await cmd(owner,{kind:'archive',archived:false})
   // Once admitted, a page finishes before a gate/standing change can commit.
   async function admittedRead(read,compete,actor) {
@@ -291,7 +291,6 @@ try {
       }
     } finally {release()}
     const result=await operation;await change
-    if (actor) { assert.equal(result.eligible,true);return result.value }
     return result
   }
   assert.equal((await admittedRead(tx=>readPublicDirectory(tx,slug,{},cursors),

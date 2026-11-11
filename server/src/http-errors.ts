@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { Type } from 'typebox'
+import { IneligibleActorError } from './database.ts'
 
 export class ApplicationError extends Error {
   statusCode: number
@@ -10,6 +11,7 @@ export const errorResponse = Type.Object({ code: Type.String(), requestId: Type.
 
 export function registerHttpErrors(app: FastifyInstance) {
   app.setErrorHandler((error, request, reply) => {
+    if (error instanceof IneligibleActorError) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
     if (error instanceof ApplicationError) return reply.code(error.statusCode).send({ code: error.message, requestId: request.id })
     if (error instanceof Error && 'code' in error && ['23514','22023'].includes(String(error.code))) {
       return reply.code(400).send({ code: error.message === 'invalid_timezone' ? 'invalid_timezone' : 'invalid_details', requestId: request.id })

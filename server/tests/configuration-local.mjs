@@ -268,11 +268,11 @@ try {
   await details(owner,{name:'Archived owner detail'})
   await config(owner,{auto_approve_users:false,pause_community_events:false})
   await copy(owner,'community.hero.heading','Archived owner copy')
-  assert.equal((await withEligibleActorTransaction(db, { actorId: editor.id, requestId: randomUUID() },async tx=>{
+  await withEligibleActorTransaction(db, { actorId: editor.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     assert.deepEqual((await sql`select tenant_id from public.tenant_settings where tenant_id=${tenant}`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select tenant_id from public.tenant_website_content_overrides where tenant_id=${tenant}`.execute(tx)).rows,[])
-  })).eligible, true)
+  })
   await cmd(owner,{kind:'archive',archived:false})
   const beforeArchive=await count()
   await cmd(owner,{kind:'archive',archived:true})

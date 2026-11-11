@@ -70,8 +70,8 @@ The authentication/error filenames resolve concrete responsibility overlap witho
 | --- | --- |
 | `token-verifier.ts` | Construct the Supabase-backed bearer verifier and validate token identity claims. No Fastify imports, hooks, HTTP responses, or database eligibility checks. |
 | `http-authentication.ts` | Required/optional HTTP authentication integration, request identity decoration, authenticated-context extraction, and existing authentication-related cache headers. Receives the verifier explicitly; does not construct it. |
-| `database.ts` | Own connection construction, database types, runtime verification and actor-scoped transactions. Export `AuthenticatedContext`, `EligibleActorTransactionResult` and `withEligibleActorTransaction`; bind trusted attribution and perform the locked database eligibility check. No Fastify dependencies. |
-| `http-errors.ts` | Define `ApplicationError` with its existing status/code representation. Own the common error-response schema and existing root error-handler translation/logging. Preserve PostgreSQL, application-error and unexpected-error mappings exactly. |
+| `database.ts` | Own connection construction, database types, runtime verification and actor-scoped transactions. Export `AuthenticatedContext`, `IneligibleActorError` and `withEligibleActorTransaction`; bind trusted attribution and perform the locked database eligibility check, throw the typed error on denial and return callback values directly. No Fastify or HTTP response dependencies. |
+| `http-errors.ts` | Define `ApplicationError` with its existing status/code representation. Own the common error-response schema and existing root error-handler translation/logging, including database eligibility errors as 403 `ineligible`. Preserve PostgreSQL, application-error and unexpected-error mappings exactly. |
 
 Authentication failures retain the current direct 401 response. They do not need to pass through a new exception mechanism.
 
@@ -207,8 +207,8 @@ No direct dependency between the two feature services is needed for current oper
 ### Final abstraction names
 
 - **`AuthenticatedContext`**: readonly `{ actorId: string; requestId: string }`. Represents verified identity and correlation, not current eligibility or authorization.
-- **`withEligibleActorTransaction(db, context, work)`**: ordinary function replacing `withVerifiedActor`; preserves its transaction and SQL sequence.
-- **`EligibleActorTransactionResult<T>`**: `{ eligible: false } | { eligible: true; value: T }`, local to the transaction facility. Prevents collisions with application results containing `status`; it is not a universal service result envelope.
+- **`withEligibleActorTransaction(db, context, work)`**: ordinary function replacing `withVerifiedActor`; preserves its context/locking SQL sequence; returns the callback value directly and rolls back with `IneligibleActorError` on denial (accepted 2026-11-11).
+- **`IneligibleActorError`**: database-owned error without HTTP metadata. Replaces the historical eligibility result envelope; the root handler maps it to 403 `ineligible`, with account review retaining route-owned 403 `unavailable`.
 - **`BuildApiOptions`**: required `{ db, verify, cursors, cleanup }` application construction inputs only—database, verifier, cursor codec and explicit asynchronous cleanup callback. Never passed wholesale to features. The old positional construction signature is removed.
 
 Normal cleanup belongs to `app.close()` after `buildApi` successfully returns. Startup cleans up allocated resources when construction fails before ownership transfers; later boot/readiness/listener failures close the returned app. Startup supplies one memoized cleanup promise and shares one close request across shutdown signals. Preserve cleanup exactly once, await failed-startup cleanup, retain the original startup failure if cleanup also rejects, and remove installed signal handlers on close. Shutdown failures use a generic diagnostic and nonzero exit status. No new timeout or force-close policy is introduced.
@@ -228,6 +228,8 @@ Normal cleanup belongs to `app.close()` after `buildApi` successfully returns. S
 - Receives resource dependencies explicitly.
 - Has no Fastify imports or runtime imports from HTTP schemas or HTTP utility modules.
 - Uses explicit database projections independent of response schemas.
+
+**Throwing eligibility follow-up - locally verified 2026-11-11.** Both features call the direct-return actor transaction facility and no longer define `run`. Routes retain operation-specific result/status handling, creation 201 and the account-review exception. Direct database test callers and the local/hosted verification helper consume plain callback values. The HTTP baseline fixture is unchanged. All 76 HTTP cases, full local API/retry suites and 51 direct PostgREST checks pass; see document 12 for evidence and trust boundaries. No hosted work or deployment was performed.
 
 **`json-schema.ts` (all features)**
 

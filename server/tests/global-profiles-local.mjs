@@ -111,7 +111,7 @@ try {
   await inspect(pending,target.id,404)
   // Product profile/account audiences now belong to API predicates. Runtime
   // facts retain their granted columns, self writes and explicit sharing scope.
-  assert.equal((await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
+  await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     assert.deepEqual((await sql`select user_id from public.user_accounts where user_id=${target.id}`.execute(tx)).rows,[{user_id:target.id}])
     await sql`select set_config('ct.profile_target',${target.id},true)`.execute(tx)
     await sql`savepoint peer_write`.execute(tx)
@@ -120,7 +120,7 @@ try {
     await sql`select set_config('ct.profile_target','',true)`.execute(tx)
     assert.deepEqual((await sql`select user_id from public.community_account_preferences where user_id=${target.id}`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select user_id from public.user_account_profiles where user_id=${target.id}`.execute(tx)).rows,[{user_id:target.id}])
-  })).eligible, true)
+  })
   const source={kind:'community_profile',tenantId:second}
   await prefs(viewer,true)
   assert.equal((await inspect(target,viewer.id)).user_id,viewer.id)
@@ -178,14 +178,14 @@ try {
   await prefs(target,true)
   await block(target,viewer.id,source)
   assert.ok(!(await search(viewer)).rows.some(row=>row.user_id===target.id))
-  assert.equal((await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
+  await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     assert.deepEqual((await sql`select user_id from public.user_account_profiles where user_id=${target.id}`.execute(tx)).rows,[{user_id:target.id}])
     assert.deepEqual((await sql`select blocker_user_id,blocked_user_id from public.user_account_blocks`.execute(tx)).rows,[{blocker_user_id:target.id,blocked_user_id:viewer.id}])
     assert.equal((await sql`delete from public.user_account_blocks where blocker_user_id=${target.id}`.execute(tx)).numAffectedRows,0n)
-  })).eligible, true)
-  assert.equal((await withEligibleActorTransaction(db,{actorId:stranger.id,requestId:randomUUID()},async tx=>{
+  })
+  await withEligibleActorTransaction(db,{actorId:stranger.id,requestId:randomUUID()},async tx=>{
     assert.deepEqual((await sql`select blocked_user_id from public.user_account_blocks`.execute(tx)).rows,[])
-  })).eligible,true)
+  })
   await unblock(target,viewer.id)
   await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     await setOwnBlock(tx,viewer.id,target.id,{confirmed:true,source});throw Error('injected rollback')
@@ -200,9 +200,9 @@ try {
   await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     await sql`insert into public.user_account_blocks(blocker_user_id,blocked_user_id) values(${stranger.id},${target.id})`.execute(tx)
   }),error=>error.code==='42501')
-  assert.equal((await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
+  await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     assert.equal((await sql`update public.user_account_profiles set bio='Bypass' where user_id=${target.id}`.execute(tx)).numAffectedRows,0n)
-  })).eligible, true)
+  })
   // Source revocation is re-evaluated in the API mutation, not database RLS.
   await prefs(target,false);await sharing(target,second,false)
   await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
@@ -236,12 +236,12 @@ try {
   await afterCallerWait(()=>cmd(viewer,second,{kind:'deactivate'}),()=>block(viewer,target.id,source,404))
   await cmd(viewer,second,{kind:'reactivate'})
   await afterCallerWait(()=>cmd(owner,second,{kind:'archive',archived:true}),()=>block(viewer,target.id,source,404))
-  assert.equal((await withEligibleActorTransaction(db,{actorId:viewer.id,requestId:randomUUID()},async tx=>{
+  await withEligibleActorTransaction(db,{actorId:viewer.id,requestId:randomUUID()},async tx=>{
     await sql`select set_config('ct.profile_target',${target.id},true),set_config('ct.tenant_id',${second},true)`.execute(tx)
     for(const table of ['community_account_preferences','community_accounts','community_account_profiles']) {
       assert.deepEqual((await sql`select tenant_id from ${sql.table(table)} where tenant_id=${second}`.execute(tx)).rows,[])
     }
-  })).eligible,true)
+  })
   await block(owner,target.id,source)
   await unblock(owner,target.id)
   await cmd(owner,second,{kind:'archive',archived:false})
@@ -265,7 +265,7 @@ try {
         await new Promise(resolve=>setTimeout(resolve,10))
       }
     } finally {release()}
-    assert.deepEqual((await write).value,{blocked:true})
+    assert.deepEqual((await write),{blocked:true})
     await transition
     assert.equal((await list(viewer)).rows.length,1)
     await unblock(viewer,target.id)
@@ -325,8 +325,7 @@ try {
   await Promise.race([started,read.then(()=>{throw Error('read ended before barrier')})])
   try {await block(target,viewer.id,source)} finally {release()}
   const readResult=await read
-  assert.equal(readResult.eligible,true)
-  assert.equal(readResult.value.user_id,target.id)
+  assert.equal(readResult.user_id,target.id)
   await inspect(viewer,target.id,404);await unblock(target,viewer.id)
   await prefs(target,false);await sharing(target,second,true)
   await sharing(target,second,false);await inspect(viewer,target.id,404)

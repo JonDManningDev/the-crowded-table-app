@@ -1,3 +1,4 @@
+import { IneligibleActorError } from '../database.ts'
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox'
 import type { PublicCommunityOperations, ProtectedCommunityOperations } from './types.ts'
 import * as schemas from './json-schema.ts'
@@ -28,45 +29,40 @@ export const communityRoutes: FastifyPluginAsyncTypebox<{ service: ProtectedComm
       if (e instanceof Error && 'code' in e && e.code === '23505') throw new ApplicationError(409, 'handle_taken')
       throw e
     }
-    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
-    return reply.code(201).send(result.value)
+    return reply.code(201).send(result)
   })
-  routes.post("/api/communities/:tenantId/commands", { bodyLimit: 32768, schema: schemas.executeCommandSchema }, async (request, reply) => {
-    const result = await service.executeCommand(getAuthenticatedContext(request), request.params, request.body)
-    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
-    return result.value
+  routes.post("/api/communities/:tenantId/commands", { bodyLimit: 32768, schema: schemas.executeCommandSchema }, async request => {
+    return await service.executeCommand(getAuthenticatedContext(request), request.params, request.body)
   })
 
   // Requests and reviews
   routes.get("/api/communities/:tenantId/me/request", { schema: schemas.ownRequestSchema }, async (request, reply) => {
     const result = await service.ownRequest(getAuthenticatedContext(request), request.params)
-    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
-    if ('status' in result.value) return reply.code(result.value.status).send({ code: 'missing', requestId: request.id })
-    return result.value
+    if ('status' in result) return reply.code(result.status).send({ code: 'missing', requestId: request.id })
+    return result
   })
   routes.get("/api/communities/:tenantId/accounts/:target/review", { schema: schemas.reviewAccountSchema }, async (request, reply) => {
-    const result = await service.reviewAccount(getAuthenticatedContext(request), request.params)
-    if (!result.eligible) return reply.code(403).send({ code: 'unavailable', requestId: request.id })
-    if (result.value.status !== undefined) return reply.code(result.value.status).send({ code: 'unavailable', requestId: request.id })
-    return result.value.row
+    try {
+      const result = await service.reviewAccount(getAuthenticatedContext(request), request.params)
+      if (result.status !== undefined) return reply.code(result.status).send({ code: 'unavailable', requestId: request.id })
+      return result.row
+    } catch (error) {
+      if (error instanceof IneligibleActorError) return reply.code(403).send({ code: 'unavailable', requestId: request.id })
+      throw error
+    }
   })
-  routes.get("/api/communities/:tenantId/staff-candidates", { schema: schemas.staffCandidatesSchema }, async (request, reply) => {
-    const result = await service.staffCandidates(getAuthenticatedContext(request), request.params, request.query)
-    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
-    return result.value
+  routes.get("/api/communities/:tenantId/staff-candidates", { schema: schemas.staffCandidatesSchema }, async request => {
+    return await service.staffCandidates(getAuthenticatedContext(request), request.params, request.query)
   })
-  routes.get("/api/communities/:tenantId/requests", { schema: schemas.pendingRequestsSchema }, async (request, reply) => {
-    const result = await service.pendingRequests(getAuthenticatedContext(request), request.params, request.query)
-    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
-    return result.value
+  routes.get("/api/communities/:tenantId/requests", { schema: schemas.pendingRequestsSchema }, async request => {
+    return await service.pendingRequests(getAuthenticatedContext(request), request.params, request.query)
   })
 
   // Profiles and preferences
   routes.get("/api/communities/:tenantId/accounts/:userId/profile", { schema: schemas.readProfileSchema }, async (request, reply) => {
     const result = await service.readProfile(getAuthenticatedContext(request), request.params)
-    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
-    if (result.value.status === 200) return result.value.profile
-    return reply.code(result.value.status).send({ code: 'missing', requestId: request.id })
+    if (result.status === 200) return result.profile
+    return reply.code(result.status).send({ code: 'missing', requestId: request.id })
   })
   routes.patch("/api/communities/:tenantId/me/profile", { schema: schemas.saveOwnProfileSchema }, request => service.saveOwnProfile(getAuthenticatedContext(request), request.params, request.body))
   routes.get("/api/communities/:tenantId/me/preferences", { schema: schemas.readOwnPreferencesSchema }, request => service.readOwnPreferences(getAuthenticatedContext(request), request.params))
@@ -94,9 +90,7 @@ export const communityRoutes: FastifyPluginAsyncTypebox<{ service: ProtectedComm
   routes.patch("/api/communities/:tenantId/accounts/:userId/permissions", { schema: schemas.saveParticipantPermissionsSchema }, request => service.saveParticipantPermissions(getAuthenticatedContext(request), request.params, request.body))
 
   // Audit history
-  routes.get("/api/communities/:tenantId/history", { schema: schemas.historySchema }, async (request, reply) => {
-    const result = await service.history(getAuthenticatedContext(request), request.params, request.query)
-    if (!result.eligible) return reply.code(403).send({ code: 'ineligible', requestId: request.id })
-    return result.value
+  routes.get("/api/communities/:tenantId/history", { schema: schemas.historySchema }, async request => {
+    return await service.history(getAuthenticatedContext(request), request.params, request.query)
   })
 }

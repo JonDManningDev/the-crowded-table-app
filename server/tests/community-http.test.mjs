@@ -1,3 +1,4 @@
+import { IneligibleActorError } from '../src/database.ts'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -10,35 +11,35 @@ import { staffFlags } from '../src/communities/types.ts'
 import { actorId, targetId, tenantId, authorization, createHttpHarness } from './helpers/http-harness.mjs'
 
 const operations = [
-  {"group":1,"name":"listStandings","method":"GET","path":"/api/community-standings","params":false,"query":false,"body":false,"tagged":false,"public":true},
-  {"group":1,"name":"readLanding","method":"GET","path":"/api/public/communities/:slug","params":true,"query":false,"body":false,"tagged":false,"public":true},
-  {"group":1,"name":"publicDirectory","method":"GET","path":"/api/public/communities/:slug/directory","params":true,"query":true,"body":false,"tagged":false,"public":true},
-  {"group":2,"name":"createCommunity","method":"POST","path":"/api/communities","params":false,"query":false,"body":true,"tagged":true,"public":false},
-  {"group":2,"name":"executeCommand","method":"POST","path":"/api/communities/:tenantId/commands","params":true,"query":false,"body":true,"tagged":true,"public":false},
-  {"group":3,"name":"ownRequest","method":"GET","path":"/api/communities/:tenantId/me/request","params":true,"query":false,"body":false,"tagged":true,"public":false},
-  {"group":3,"name":"reviewAccount","method":"GET","path":"/api/communities/:tenantId/accounts/:target/review","params":true,"query":false,"body":false,"tagged":true,"public":false},
-  {"group":3,"name":"staffCandidates","method":"GET","path":"/api/communities/:tenantId/staff-candidates","params":true,"query":true,"body":false,"tagged":true,"public":false},
-  {"group":3,"name":"pendingRequests","method":"GET","path":"/api/communities/:tenantId/requests","params":true,"query":true,"body":false,"tagged":true,"public":false},
-  {"group":4,"name":"readProfile","method":"GET","path":"/api/communities/:tenantId/accounts/:userId/profile","params":true,"query":false,"body":false,"tagged":true,"public":false},
-  {"group":4,"name":"saveOwnProfile","method":"PATCH","path":"/api/communities/:tenantId/me/profile","params":true,"query":false,"body":true,"tagged":false,"public":false},
-  {"group":4,"name":"readOwnPreferences","method":"GET","path":"/api/communities/:tenantId/me/preferences","params":true,"query":false,"body":false,"tagged":false,"public":false},
-  {"group":4,"name":"saveOwnPreferences","method":"PATCH","path":"/api/communities/:tenantId/me/preferences","params":true,"query":false,"body":true,"tagged":false,"public":false},
-  {"group":5,"name":"readDetails","method":"GET","path":"/api/communities/:tenantId/details","params":true,"query":false,"body":false,"tagged":false,"public":false},
-  {"group":5,"name":"saveDetails","method":"PATCH","path":"/api/communities/:tenantId/details","params":true,"query":false,"body":true,"tagged":false,"public":false},
-  {"group":5,"name":"readSettings","method":"GET","path":"/api/communities/:tenantId/settings","params":true,"query":false,"body":false,"tagged":false,"public":false},
-  {"group":5,"name":"saveSettings","method":"PATCH","path":"/api/communities/:tenantId/settings","params":true,"query":false,"body":true,"tagged":false,"public":false},
-  {"group":5,"name":"readCopy","method":"GET","path":"/api/communities/:tenantId/copy","params":true,"query":false,"body":false,"tagged":false,"public":false},
-  {"group":5,"name":"saveCopy","method":"PUT","path":"/api/communities/:tenantId/copy/:contentKey","params":true,"query":false,"body":true,"tagged":false,"public":false},
-  {"group":5,"name":"deleteCopy","method":"DELETE","path":"/api/communities/:tenantId/copy/:contentKey","params":true,"query":false,"body":false,"tagged":false,"public":false},
-  {"group":6,"name":"memberDirectory","method":"GET","path":"/api/communities/:tenantId/directory","params":true,"query":true,"body":false,"tagged":false,"public":false},
-  {"group":6,"name":"ownerAccounts","method":"GET","path":"/api/communities/:tenantId/accounts","params":true,"query":true,"body":false,"tagged":false,"public":false},
-  {"group":6,"name":"accountFacts","method":"GET","path":"/api/communities/:tenantId/accounts/:userId","params":true,"query":false,"body":false,"tagged":false,"public":false},
-  {"group":7,"name":"listStaff","method":"GET","path":"/api/communities/:tenantId/staff","params":true,"query":true,"body":false,"tagged":false,"public":false},
-  {"group":7,"name":"readStaff","method":"GET","path":"/api/communities/:tenantId/staff/:userId","params":true,"query":false,"body":false,"tagged":false,"public":false},
-  {"group":7,"name":"listParticipantPermissions","method":"GET","path":"/api/communities/:tenantId/participant-permissions","params":true,"query":true,"body":false,"tagged":false,"public":false},
-  {"group":7,"name":"readParticipantPermissions","method":"GET","path":"/api/communities/:tenantId/accounts/:userId/permissions","params":true,"query":false,"body":false,"tagged":false,"public":false},
-  {"group":7,"name":"saveParticipantPermissions","method":"PATCH","path":"/api/communities/:tenantId/accounts/:userId/permissions","params":true,"query":false,"body":true,"tagged":false,"public":false},
-  {"group":8,"name":"history","method":"GET","path":"/api/communities/:tenantId/history","params":true,"query":true,"body":false,"tagged":true,"public":false},
+  {"group":1,"name":"listStandings","method":"GET","path":"/api/community-standings","params":false,"query":false,"body":false,"public":true},
+  {"group":1,"name":"readLanding","method":"GET","path":"/api/public/communities/:slug","params":true,"query":false,"body":false,"public":true},
+  {"group":1,"name":"publicDirectory","method":"GET","path":"/api/public/communities/:slug/directory","params":true,"query":true,"body":false,"public":true},
+  {"group":2,"name":"createCommunity","method":"POST","path":"/api/communities","params":false,"query":false,"body":true,"public":false},
+  {"group":2,"name":"executeCommand","method":"POST","path":"/api/communities/:tenantId/commands","params":true,"query":false,"body":true,"public":false},
+  {"group":3,"name":"ownRequest","method":"GET","path":"/api/communities/:tenantId/me/request","params":true,"query":false,"body":false,"public":false},
+  {"group":3,"name":"reviewAccount","method":"GET","path":"/api/communities/:tenantId/accounts/:target/review","params":true,"query":false,"body":false,"public":false},
+  {"group":3,"name":"staffCandidates","method":"GET","path":"/api/communities/:tenantId/staff-candidates","params":true,"query":true,"body":false,"public":false},
+  {"group":3,"name":"pendingRequests","method":"GET","path":"/api/communities/:tenantId/requests","params":true,"query":true,"body":false,"public":false},
+  {"group":4,"name":"readProfile","method":"GET","path":"/api/communities/:tenantId/accounts/:userId/profile","params":true,"query":false,"body":false,"public":false},
+  {"group":4,"name":"saveOwnProfile","method":"PATCH","path":"/api/communities/:tenantId/me/profile","params":true,"query":false,"body":true,"public":false},
+  {"group":4,"name":"readOwnPreferences","method":"GET","path":"/api/communities/:tenantId/me/preferences","params":true,"query":false,"body":false,"public":false},
+  {"group":4,"name":"saveOwnPreferences","method":"PATCH","path":"/api/communities/:tenantId/me/preferences","params":true,"query":false,"body":true,"public":false},
+  {"group":5,"name":"readDetails","method":"GET","path":"/api/communities/:tenantId/details","params":true,"query":false,"body":false,"public":false},
+  {"group":5,"name":"saveDetails","method":"PATCH","path":"/api/communities/:tenantId/details","params":true,"query":false,"body":true,"public":false},
+  {"group":5,"name":"readSettings","method":"GET","path":"/api/communities/:tenantId/settings","params":true,"query":false,"body":false,"public":false},
+  {"group":5,"name":"saveSettings","method":"PATCH","path":"/api/communities/:tenantId/settings","params":true,"query":false,"body":true,"public":false},
+  {"group":5,"name":"readCopy","method":"GET","path":"/api/communities/:tenantId/copy","params":true,"query":false,"body":false,"public":false},
+  {"group":5,"name":"saveCopy","method":"PUT","path":"/api/communities/:tenantId/copy/:contentKey","params":true,"query":false,"body":true,"public":false},
+  {"group":5,"name":"deleteCopy","method":"DELETE","path":"/api/communities/:tenantId/copy/:contentKey","params":true,"query":false,"body":false,"public":false},
+  {"group":6,"name":"memberDirectory","method":"GET","path":"/api/communities/:tenantId/directory","params":true,"query":true,"body":false,"public":false},
+  {"group":6,"name":"ownerAccounts","method":"GET","path":"/api/communities/:tenantId/accounts","params":true,"query":true,"body":false,"public":false},
+  {"group":6,"name":"accountFacts","method":"GET","path":"/api/communities/:tenantId/accounts/:userId","params":true,"query":false,"body":false,"public":false},
+  {"group":7,"name":"listStaff","method":"GET","path":"/api/communities/:tenantId/staff","params":true,"query":true,"body":false,"public":false},
+  {"group":7,"name":"readStaff","method":"GET","path":"/api/communities/:tenantId/staff/:userId","params":true,"query":false,"body":false,"public":false},
+  {"group":7,"name":"listParticipantPermissions","method":"GET","path":"/api/communities/:tenantId/participant-permissions","params":true,"query":true,"body":false,"public":false},
+  {"group":7,"name":"readParticipantPermissions","method":"GET","path":"/api/communities/:tenantId/accounts/:userId/permissions","params":true,"query":false,"body":false,"public":false},
+  {"group":7,"name":"saveParticipantPermissions","method":"PATCH","path":"/api/communities/:tenantId/accounts/:userId/permissions","params":true,"query":false,"body":true,"public":false},
+  {"group":8,"name":"history","method":"GET","path":"/api/communities/:tenantId/history","params":true,"query":true,"body":false,"public":false},
 ];const baseline = JSON.parse(readFileSync(new URL('./fixtures/http-contract.json', import.meta.url), 'utf8'))
 function contract(operation) { return baseline.schemas[`${operation.method} ${operation.path}`] }
 function sample(schema, key = '') {
@@ -66,10 +67,9 @@ function response(operation) {
   return { status, dto: sample(schemas[status]) }
 }
 function result(operation, dto) {
-  if (!operation.tagged) return dto
-  if (operation.name === 'reviewAccount') return { eligible: true, value: { row: dto } }
-  if (operation.name === 'readProfile') return { eligible: true, value: { status: 200, profile: dto } }
-  return { eligible: true, value: dto }
+  if (operation.name === 'reviewAccount') return { row: dto }
+  if (operation.name === 'readProfile') return { status: 200, profile: dto }
+  return dto
 }
 function cache(operation) { return operation.public ? operation.name === 'listStandings' ? undefined : 'no-store' : 'private, no-store' }
 function harness(t) {
@@ -184,14 +184,14 @@ test('migrated routes validate before service calls and preserve public/protecte
 test('service denials retain operation-specific eligibility, missing and unavailable outcomes', async t => {
   const h = harness(t)
   for (const operation of operations.filter(operation => !operation.public)) {
-    h.queue(operation.name, operation.tagged ? { eligible: false } : new ApplicationError(403, 'ineligible'))
+    h.queue(operation.name, new IneligibleActorError())
     error(h, operation, await h.app.inject(input(operation)), 403, operation.name === 'reviewAccount' ? 'unavailable' : 'ineligible')
   }
   for (const operation of operations.filter(operation => ['ownRequest', 'reviewAccount', 'readProfile'].includes(operation.name))) {
-    h.queue(operation.name, { eligible: true, value: { status: 404 } })
+    h.queue(operation.name, { status: 404 })
     error(h, operation, await h.app.inject(input(operation)), 404, operation.name === 'reviewAccount' ? 'unavailable' : 'missing')
   }
-  for (const operation of operations.filter(operation => !operation.public && !operation.tagged)) {
+  for (const operation of operations.filter(operation => !operation.public && !['ownRequest', 'reviewAccount', 'readProfile'].includes(operation.name))) {
     h.queue(operation.name, new ApplicationError(404, 'missing'))
     error(h, operation, await h.app.inject(input(operation)), 404, 'missing')
   }
@@ -208,7 +208,7 @@ test('service denials retain operation-specific eligibility, missing and unavail
   }
   const history = operations.find(operation => operation.name === 'history')
   if (history) {
-    h.queue(history.name, { eligible: true, value: { rows: [], next: null } })
+    h.queue(history.name, { rows: [], next: null })
     const received = await h.app.inject(input(history))
     assert.equal(received.statusCode, 200)
     assert.deepEqual(received.json(), { rows: [], next: null })
@@ -319,7 +319,7 @@ test('history keeps open details and empty unauthorized pages; own requests keep
   h.queue(history.name, result(history, dto))
   assert.deepEqual((await h.app.inject(input(history))).json(), dto)
   const own = operations.find(operation => operation.name === 'ownRequest')
-  h.queue(own.name, { eligible: true, value: { request: null } })
+  h.queue(own.name, { request: null })
   const ownResponse = await h.app.inject(input(own))
   assert.equal(ownResponse.statusCode, 200)
   assert.deepEqual(ownResponse.json(), { request: null })

@@ -107,61 +107,61 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
       return readProfile(db, context, params)
     },
     saveOwnProfile(context: AuthenticatedContext, params: TenantParams, input: CommunityProfileInput) {
-      return run(db, context, tx => ownCommunityProfile(tx, context.actorId, params.tenantId, input))
+      return withEligibleActorTransaction(db, context, tx => ownCommunityProfile(tx, context.actorId, params.tenantId, input))
     },
     readOwnPreferences(context: AuthenticatedContext, params: TenantParams) {
-      return run(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId))
+      return withEligibleActorTransaction(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId))
     },
     saveOwnPreferences(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunityPreferences>) {
-      return run(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId, input))
+      return withEligibleActorTransaction(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId, input))
     },
     // Configuration and copy
     readDetails(context: AuthenticatedContext, params: TenantParams) {
-      return run(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId))
+      return withEligibleActorTransaction(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId))
     },
     saveDetails(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunityDetailsInput>) {
-      return run(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId, input))
+      return withEligibleActorTransaction(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId, input))
     },
     readSettings(context: AuthenticatedContext, params: TenantParams) {
-      return run(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId))
+      return withEligibleActorTransaction(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId))
     },
     saveSettings(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunitySettings>) {
-      return run(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId, input))
+      return withEligibleActorTransaction(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId, input))
     },
     readCopy(context: AuthenticatedContext, params: TenantParams) {
-      return run(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId))
+      return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId))
     },
     saveCopy(context: AuthenticatedContext, params: CopyParams, input: CopyInput) {
-      return run(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey, text: input.text_value }))
+      return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey, text: input.text_value }))
     },
     deleteCopy(context: AuthenticatedContext, params: CopyParams) {
-      return run(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey }))
+      return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey }))
     },
     // Directories and account facts
     memberDirectory(context: AuthenticatedContext, params: TenantParams, query: DirectoryQuery) {
-      return run(db, context, tx => readMemberDirectory(tx, context.actorId, params.tenantId, query, cursors))
+      return withEligibleActorTransaction(db, context, tx => readMemberDirectory(tx, context.actorId, params.tenantId, query, cursors))
     },
     ownerAccounts(context: AuthenticatedContext, params: TenantParams, query: DirectoryQuery) {
-      return run(db, context, tx => listOwnerAccounts(tx, context.actorId, params.tenantId, query, cursors))
+      return withEligibleActorTransaction(db, context, tx => listOwnerAccounts(tx, context.actorId, params.tenantId, query, cursors))
     },
     accountFacts(context: AuthenticatedContext, params: AccountParams) {
-      return run(db, context, tx => readAccountFacts(tx, context.actorId, params.tenantId, params.userId))
+      return withEligibleActorTransaction(db, context, tx => readAccountFacts(tx, context.actorId, params.tenantId, params.userId))
     },
     // Staff and participant permissions
     listStaff(context: AuthenticatedContext, params: TenantParams, query: RecordQuery) {
-      return run(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'staff', query))
+      return withEligibleActorTransaction(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'staff', query))
     },
     readStaff(context: AuthenticatedContext, params: AccountParams) {
-      return run(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'staff', params.userId))
+      return withEligibleActorTransaction(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'staff', params.userId))
     },
     listParticipantPermissions(context: AuthenticatedContext, params: TenantParams, query: RecordQuery) {
-      return run(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'participant', query))
+      return withEligibleActorTransaction(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'participant', query))
     },
     readParticipantPermissions(context: AuthenticatedContext, params: AccountParams) {
-      return run(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'participant', params.userId))
+      return withEligibleActorTransaction(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'participant', params.userId))
     },
     saveParticipantPermissions(context: AuthenticatedContext, params: AccountParams, input: ParticipantPermissionInput) {
-      return run(db, context, tx => setParticipantPermission(tx, context.actorId, params.tenantId, params.userId, input.can_post_public_events))
+      return withEligibleActorTransaction(db, context, tx => setParticipantPermission(tx, context.actorId, params.tenantId, params.userId, input.can_post_public_events))
     },
     // Audit history
     history(context: AuthenticatedContext, params: TenantParams, query: HistoryQuery) {
@@ -703,13 +703,6 @@ export async function accountHistory(tx: Tx, actor: string, tenant: string, quer
   const next = rows.length > limit && last
     ? Buffer.from(JSON.stringify([...cursorScope(actor, tenant, query), last.created_at, last.id])).toString('base64url') : null
   return { rows: visible, next }
-}
-
-// Internal helpers
-async function run<T>(db: AppDatabase, context: AuthenticatedContext, work: (tx: Tx) => Promise<T>) {
-  const result = await withEligibleActorTransaction(db, context, work)
-  if (!result.eligible) throw new ApplicationError(403, 'ineligible')
-  return result.value
 }
 
 // Community-owned adapter for the explicitly retained archived-card projection.

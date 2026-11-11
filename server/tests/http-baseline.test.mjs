@@ -248,8 +248,11 @@ test('own profile and request preserve null versus missing; review retains unava
   errorResponse(h, await h.app.inject({ url: `${community}/me/request`, headers: authorization }), 404, 'missing')
   h.eligible([], [])
   errorResponse(h, await h.app.inject({ url: `${community}/accounts/${targetId}/review`, headers: authorization }), 404, 'unavailable')
-  h.queue([], [{ allowed: false }])
-  errorResponse(h, await h.app.inject({ url: `${community}/accounts/${targetId}/review`, headers: authorization }), 403, 'unavailable')
+  for (const method of ['GET', 'HEAD']) {
+    h.queue([], [{ allowed: false }])
+    errorResponse(h, await h.app.inject({ method, url: `${community}/accounts/${targetId}/review`, headers: authorization }),
+      403, 'unavailable', 'private, no-store', method === 'HEAD')
+  }
 })
 
 test('unauthorized history stays a successful empty page; authorized detail fields remain open', async t => {

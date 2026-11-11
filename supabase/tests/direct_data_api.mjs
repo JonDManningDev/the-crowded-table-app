@@ -51,13 +51,11 @@ const db = connectDatabase(endpoint.href);
 const create = async (actor, name) => {
   const result = await withEligibleActorTransaction(db,{actorId:actor,requestId:randomUUID()},tx => createCommunity(tx,actor,{
     name: 'API fixture',slug: name,country:'HN',region:'',city:'',timezone:'UTC',profile:{displayName:'Owner',bio:null}}));
-  assert.equal(result.eligible,true);
-  return result.value;
+  return result;
 };
 const command = async (actor, body) => {
   const result = await withEligibleActorTransaction(db,{actorId:actor,requestId:randomUUID()},tx => communityCommand(tx,actor,tenant,body));
-  assert.equal(result.eligible,true);
-  return result.value;
+  return result;
 };
 
 try {
@@ -65,7 +63,6 @@ try {
   tenant = (await create(owner,slug)).tenantId;
   secondTenant = (await create(other,slug+'-b')).tenantId;
   const settings = await withEligibleActorTransaction(db,{actorId:owner,requestId:randomUUID()},tx=>configurationSettings(tx,owner,tenant,{auto_approve_users:true}));
-  assert.equal(settings.eligible,true);
   for (const actor of [member,other]) await command(actor,{kind:'join',profile:{displayName:'Participant',bio:null}});
   const a = client(owner), b = client(member), c = client(other), u = client(unverified);
 
