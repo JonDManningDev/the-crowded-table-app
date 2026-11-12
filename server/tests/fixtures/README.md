@@ -2,7 +2,7 @@
 
 `http-contract.json` remains the reviewed Fastify HTTP baseline.
 
-`policy-catalog.json` is the reviewed local PostgreSQL catalog after migration `20261110000800`. Local catalog regression, the hosted harness and the hosted checkpoint compare against it. It was moved byte-for-byte from the completed policy migration record; this cleanup did not regenerate or approve a different catalog.
+`policy-catalog.json` is the reviewed local PostgreSQL catalog through migration `20261112000100`. The original fixture moved byte-for-byte from the policy migration record through `20261110000800`. Migration `20261111000100` added the two-UUID setup function and its `ct_api` EXECUTE grant. Migration `20261112000100` replaces those reviewed catalog entries with the three-UUID `app_private.begin_actor_context(uuid,uuid,uuid)` definition, signature and matching grant. The volatile security invoker sets actor and operation, calls the retained `lock_eligible_actor()` Auth definer, then sets the initial tenant for eligible transactions. Local catalog regression, the hosted harness and the hosted checkpoint compare against the catalog for their checked-out source revision. The completed November 10 hosted verification used the earlier catalog through `20261110000800`.
 
 `hosted-policy-baseline/before-{catalog,data,integrity}.json` are the original reviewed pre-migration inputs for the selected hosted development project. Data contains table counts/checksums, not row contents. The hosted harness and checkpoint use data/integrity to prove preservation. The before checkpoint refuses to overwrite the existing baseline files. Do not replace them to accept drift; any future hosted fixture run needs separate authorization and a current reviewed baseline.
 

@@ -129,6 +129,11 @@ try {
   }
   await http(null,path+'/details','GET',undefined,401)
   await http(owner,'/api/communities/'+otherTenant+'/details','GET',undefined,404)
+  const missingPath='/api/communities/'+randomUUID()
+  for(const operation of ['details','settings','copy']) {
+    assert.equal((await http(owner,missingPath+'/'+operation,'GET',undefined,404)).code,'missing')
+  }
+  await http(owner,'/api/communities/malformed/details','GET',undefined,400)
   await details(member,{name:'Unauthorized'},403)
   await details(settings,{name:'Not ownership'},403)
   await config(editor,{auto_approve_users:false},403)
@@ -204,7 +209,7 @@ try {
     await configurationSettings(tx,owner.id,tenant,{pause_community_events:false})
     await configurationCopy(tx,owner.id,tenant,{key:'community.hero.heading',text:'Rollback copy'})
     throw Error('injected rollback')
-  }),/injected rollback/)
+  }, { initialTenantId: tenant }),/injected rollback/)
   assert.equal((await details(owner)).name,'Updated Community')
   assert.equal(await count(),before+1)
 
@@ -312,10 +317,9 @@ try {
   await config(owner,{auto_approve_users:false,pause_community_events:false})
   await copy(owner,'community.hero.heading','Archived owner copy')
   await withEligibleActorTransaction(db, { actorId: editor.id, requestId: randomUUID() },async tx=>{
-    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     assert.deepEqual((await sql`select tenant_id from public.tenant_settings where tenant_id=${tenant}`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select tenant_id from public.tenant_website_content_overrides where tenant_id=${tenant}`.execute(tx)).rows,[])
-  })
+  }, { initialTenantId: tenant })
   await cmd(owner,{kind:'archive',archived:false})
   const beforeArchive=await count()
   await cmd(owner,{kind:'archive',archived:true})
@@ -339,7 +343,7 @@ try {
     await configurationSettings(tx,settings.id,tenant,{pause_community_events:true})
     ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
     await gate
-  })
+  }, { initialTenantId: tenant })
   const holder=await Promise.race([started,write.then(()=>{throw Error('writer exited before barrier')})])
   const revoke=cmd(owner,{kind:'permissions',target:settings.id,permissions:{can_manage_settings:false}})
   revoke.catch(()=>{})
@@ -355,14 +359,14 @@ try {
   await config(settings,{pause_community_events:false},403)
   // Real runtime transactions on either side of a root lock, with competing
   // operations sent over HTTP. Archive and copy decisions reload after waits.
-  async function committedBefore(work,compete) {
+  async function committedBefore(work,compete,options) {
     let unlock,entered
     const gate=new Promise(resolve=>{unlock=resolve}),started=new Promise(resolve=>{entered=resolve})
     const transaction=withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },async tx=>{
       await work(tx)
       entered((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
       await gate
-    })
+    }, options)
     const holder=await Promise.race([started,transaction.then(()=>{throw Error('writer exited before barrier')})])
     const competing=compete();competing.catch(()=>{})
     try {
@@ -377,7 +381,7 @@ try {
   }
   await committedBefore(
     tx=>configurationCopy(tx,owner.id,tenant,{key:'community.hero.heading',text:'Committed before archive'}),
-    ()=>cmd(owner,{kind:'archive',archived:true}))
+    ()=>cmd(owner,{kind:'archive',archived:true}), { initialTenantId: tenant })
   assert.equal((await copy(owner)).rows.find(r=>r.content_key==='community.hero.heading').text_value,'Committed before archive')
   await cmd(owner,{kind:'archive',archived:false})
   await committedBefore(
@@ -393,7 +397,6 @@ try {
   const shared=new Promise(resolve=>{allShared=resolve})
   const contenders=operationIds.map((requestId,index)=>withEligibleActorTransaction(db,{actorId:owner.id,requestId},async tx=>{
     attempts[index]++
-    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)
     if(attempts[index]===1) {
       pids.push((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
@@ -401,7 +404,7 @@ try {
       await upgrades
     }
     return configurationDetails(tx,owner.id,tenant,{city:'Natural deadlock '+index})
-  }))
+  }, { initialTenantId: tenant }))
   contenders.forEach(p=>p.catch(()=>{}))
   let deadlockSettled=false
   const completedContenders=Promise.all(contenders)
@@ -434,11 +437,10 @@ try {
     const pending=withEligibleActorTransaction(serialDb,{actorId:owner.id,requestId:serialOperation},async tx=>{
       serialAttempts++
       assert.equal((await sql`select current_setting('transaction_isolation') as level`.execute(tx)).rows[0].level,'repeatable read')
-      await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
       await sql`select id from public.tenants where id=${tenant}`.execute(tx)
       if(serialAttempts===1){snapshotReady();await resume}
       return configurationDetails(tx,owner.id,tenant,{city:'Natural serialization retry'})
-    })
+    }, { initialTenantId: tenant })
     pending.catch(()=>{})
     await Promise.race([snapshot,pending])
     await details(owner,{city:'Concurrent committed update'})
@@ -451,18 +453,18 @@ try {
   try {
     const cleared=async()=>assert.deepEqual((await sql`select nullif(current_setting('request.jwt.claim.sub',true),'') as actor,
       nullif(current_setting('ct.operation_id',true),'') as operation,nullif(current_setting('ct.tenant_id',true),'') as tenant`.execute(singleDb)).rows[0],{actor:null,operation:null,tenant:null})
-    await withEligibleActorTransaction(singleDb,{actorId:owner.id,requestId:randomUUID()},tx=>configurationDetails(tx,owner.id,tenant))
+    await withEligibleActorTransaction(singleDb,{actorId:owner.id,requestId:randomUUID()},tx=>configurationDetails(tx,owner.id,tenant), { initialTenantId: tenant })
     await cleared()
-    await assert.rejects(withEligibleActorTransaction(singleDb,{actorId:outsider.id,requestId:randomUUID()},tx=>configurationDetails(tx,outsider.id,tenant)),error=>error.statusCode===404)
+    await assert.rejects(withEligibleActorTransaction(singleDb,{actorId:outsider.id,requestId:randomUUID()},tx=>configurationDetails(tx,outsider.id,tenant), { initialTenantId: tenant }),error=>error.statusCode===404)
     await cleared()
     await assert.rejects(withEligibleActorTransaction(singleDb,{actorId:owner.id,requestId:randomUUID()},async tx=>{
       await configurationDetails(tx,owner.id,tenant);throw new Error('pool isolation rollback')
-    }),/pool isolation rollback/)
+    }, { initialTenantId: tenant }),/pool isolation rollback/)
     await cleared()
     await withEligibleActorTransaction(singleDb,{actorId:editor.id,requestId:randomUUID()},async tx=>{
       assert.equal((await sql`select current_setting('request.jwt.claim.sub') as actor`.execute(tx)).rows[0].actor,editor.id)
       await configurationDetails(tx,editor.id,tenant)
-    })
+    }, { initialTenantId: tenant })
     await cleared()
     const anonymousApp=buildApi({db:singleDb,verify:verifyBearer(local.API_URL,local.ANON_KEY,local.issuer),cursors:directoryCursors(randomBytes(32).toString('hex')),cleanup:async()=>{}})
     try {assert.equal((await anonymousApp.inject({method:'GET',url:'/api/public/communities/'+slug})).statusCode,200);await cleared()}

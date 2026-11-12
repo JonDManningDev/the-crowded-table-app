@@ -117,25 +117,25 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
     },
     // Configuration and copy
     readDetails(context: AuthenticatedContext, params: TenantParams) {
-      return withEligibleActorTransaction(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId))
+      return withEligibleActorTransaction(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId), { initialTenantId: params.tenantId })
     },
     saveDetails(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunityDetailsInput>) {
-      return withEligibleActorTransaction(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId, input))
+      return withEligibleActorTransaction(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId, input), { initialTenantId: params.tenantId })
     },
     readSettings(context: AuthenticatedContext, params: TenantParams) {
-      return withEligibleActorTransaction(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId))
+      return withEligibleActorTransaction(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId), { initialTenantId: params.tenantId })
     },
     saveSettings(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunitySettings>) {
-      return withEligibleActorTransaction(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId, input))
+      return withEligibleActorTransaction(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId, input), { initialTenantId: params.tenantId })
     },
     readCopy(context: AuthenticatedContext, params: TenantParams) {
-      return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId))
+      return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId), { initialTenantId: params.tenantId })
     },
     saveCopy(context: AuthenticatedContext, params: CopyParams, input: CopyInput) {
-      return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey, text: input.text_value }))
+      return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey, text: input.text_value }), { initialTenantId: params.tenantId })
     },
     deleteCopy(context: AuthenticatedContext, params: CopyParams) {
-      return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey }))
+      return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey }), { initialTenantId: params.tenantId })
     },
     // Directories and account facts
     memberDirectory(context: AuthenticatedContext, params: TenantParams, query: DirectoryQuery) {
@@ -498,8 +498,8 @@ export async function ownCommunityPreferences(tx: Tx, actor: string, tenant: str
 const detailFields = sql`id,slug,name,country_code,state_province,city,timezone,operational_status,created_at,updated_at,created_by,updated_by`
 const settingsFields = sql`tenant_id,${sql.join(settingFields.map(key => sql.id(key)))},created_at,updated_at,created_by,updated_by`
 const copyFields = sql`tenant_id,content_key,text_value,created_at,updated_at,created_by,updated_by`
+// Configuration helpers run within an authenticated transaction scoped to tenant.
 async function authorizeConfiguration(tx: Tx, actor: string, tenant: string, kind: ConfigurationKind, write: boolean) {
-  await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
   // Management reads share the same root so their current authority cannot be
   // revoked between the check and the full-row projection.
   const site = (await sql`select id from public.tenants where id=${tenant} ${write ? sql`for update` : sql`for share`}`.execute(tx)).rows[0]

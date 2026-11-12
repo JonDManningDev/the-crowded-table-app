@@ -21,10 +21,11 @@ test('ordered actor context on the real runtime role', async t => {
   const facts = async tx => (await sql`select current_user, session_user,
     nullif(current_setting('request.jwt.claim.sub',true),'') as actor,
     nullif(current_setting('ct.operation_id',true),'') as operation,
+    nullif(current_setting('ct.tenant_id',true),'') as tenant,
     current_setting('search_path') as path, pg_backend_pid() as pid`.execute(tx)).rows[0]
   const clear = async () => {
     const row = await facts(db)
-    assert.equal(row.actor, null); assert.equal(row.operation, null)
+    assert.equal(row.actor, null); assert.equal(row.operation, null); assert.equal(row.tenant, null)
     assert.equal(row.current_user, 'ct_api'); assert.equal(row.session_user, 'ct_api')
   }
   async function user() {
@@ -46,14 +47,15 @@ test('ordered actor context on the real runtime role', async t => {
     const a = await user(), b = await user()
 
     await t.test('invoker function has the exact restricted boundary and leaves the Auth definer narrow', async () => {
+      assert.equal((await admin.query("select to_regprocedure('app_private.begin_actor_context(uuid,uuid)') as signature")).rows[0].signature, null)
       const fn = (await admin.query(`select p.prosecdef,p.provolatile,p.proconfig,pg_get_userbyid(p.proowner) as owner,
         has_function_privilege('ct_api',p.oid,'EXECUTE') as runtime,
         exists(select from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) where grantee=0 and privilege_type='EXECUTE') as public_execute
-        from pg_proc p where p.oid='app_private.begin_actor_context(uuid,uuid)'::regprocedure`)).rows[0]
+        from pg_proc p where p.oid='app_private.begin_actor_context(uuid,uuid,uuid)'::regprocedure`)).rows[0]
       assert.deepEqual(fn, { prosecdef: false, provolatile: 'v', proconfig: ['search_path=""'], owner: 'postgres', runtime: true, public_execute: false })
       for (const role of ['anon', 'authenticated', 'service_role']) {
-        assert.equal((await admin.query("select has_function_privilege($1,'app_private.begin_actor_context(uuid,uuid)','EXECUTE') as allowed", [role])).rows[0].allowed, false)
-        await assert.rejects(admin.query(`begin; set local role ${role}; select app_private.begin_actor_context('${a}', '${randomUUID()}'); commit`), { code: '42501' })
+        assert.equal((await admin.query("select has_function_privilege($1,'app_private.begin_actor_context(uuid,uuid,uuid)','EXECUTE') as allowed", [role])).rows[0].allowed, false)
+        await assert.rejects(admin.query(`begin; set local role ${role}; select app_private.begin_actor_context('${a}', '${randomUUID()}', null); commit`), { code: '42501' })
         await admin.query('rollback')
       }
       await assert.rejects(sql`select id from auth.users`.execute(db), { code: '42501' })
@@ -89,6 +91,54 @@ test('ordered actor context on the real runtime role', async t => {
         await assert.rejects(withEligibleActorTransaction(db, invalid, () => assert.fail('invalid callback')), { code: '22P02' })
         await clear()
       }
+    })
+
+    await t.test('initial scope is visible to work and stays local across actor and tenant reuse', async () => {
+      const original = await facts(db)
+      for (const actor of [a, b]) {
+        // A valid UUID with no tenant row can still select the scope.
+        const initialTenantId = randomUUID()
+        const trusted = context(actor)
+        const scoped = { initialTenantId }
+        const check = async tx => {
+          const row = await facts(tx)
+          assert.equal(row.actor, actor)
+          assert.equal(row.operation, trusted.requestId)
+          assert.equal(row.tenant, initialTenantId)
+          assert.equal(row.path, original.path)
+          assert.equal(row.pid, original.pid)
+        }
+        await withEligibleActorTransaction(db, trusted, check, scoped)
+        await clear()
+        await assert.rejects(withEligibleActorTransaction(db, trusted, async tx => {
+          await check(tx)
+          throw new Error('tenant rollback probe')
+        }, scoped), /tenant rollback probe/)
+        await clear()
+      }
+      await assert.rejects(withEligibleActorTransaction(db, context(a),
+        () => assert.fail('malformed tenant callback'), { initialTenantId: 'malformed' }), { code: '22P02' })
+      await clear()
+      await assert.rejects(withEligibleActorTransaction(db, context(randomUUID()),
+        () => assert.fail('ineligible scoped callback'), { initialTenantId: randomUUID() }), IneligibleActorError)
+      await clear()
+      await withEligibleActorTransaction(db, context(a), async tx => {
+        const row = await facts(tx)
+        assert.equal(row.actor, a)
+        assert.equal(row.tenant, null)
+        assert.equal(row.pid, original.pid)
+      })
+      await clear()
+      await db.transaction().execute(async tx => {
+        await sql`select set_config('ct.tenant_id',${randomUUID()},true)`.execute(tx)
+        const setup = (actor, tenant) => sql`select app_private.begin_actor_context(
+          ${actor}::uuid,${randomUUID()}::uuid,${tenant}::uuid) as allowed`.execute(tx)
+        assert.equal((await setup(a, null)).rows[0].allowed, true)
+        assert.equal((await facts(tx)).tenant, null, 'explicit null clears inherited scope')
+        assert.equal((await setup(randomUUID(), randomUUID())).rows[0].allowed, false)
+        assert.equal((await facts(tx)).tenant, null, 'denial does not establish the requested scope')
+      })
+      await clear()
     })
 
     await t.test('committed Auth changes win before the function lock; rollback preserves eligibility', async () => {
@@ -130,13 +180,26 @@ test('ordered actor context on the real runtime role', async t => {
       let release, ready
       const gate = new Promise(resolve => { release = resolve })
       const started = new Promise(resolve => { ready = resolve })
+      const initialTenantId = randomUUID()
       const running = withEligibleActorTransaction(db, context(a), async tx => {
-        ready((await facts(tx)).pid); await gate; return 'authorized before ban'
-      })
-      const pid = await started
-      const update = writer.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1", [a])
-      try { await waiting(pid) } finally { release() }
-      assert.equal(await running, 'authorized before ban'); await update
+        const row = await facts(tx)
+        assert.equal(row.tenant, initialTenantId)
+        ready(row.pid); await gate; return 'authorized before ban'
+      }, { initialTenantId })
+      let update
+      try {
+        const pid = await Promise.race([started, running.then(() => {
+          throw new Error('actor transaction exited before the lock barrier')
+        })])
+        update = writer.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1", [a])
+        update.catch(() => {})
+        await waiting(pid)
+      } finally {
+        release()
+        await Promise.allSettled([running, update])
+      }
+      assert.equal(await running, 'authorized before ban')
+      await update
       await assert.rejects(withEligibleActorTransaction(db, context(a), () => assert.fail('banned callback')), IneligibleActorError)
       await clear()
     })
@@ -150,7 +213,7 @@ test('ordered actor context on the real runtime role', async t => {
       await db.transaction().execute(async tx => {
         await sql`select now()`.execute(tx)
         await admin.query('update auth.users set banned_until=clock_timestamp() where id=$1', [b])
-        assert.equal((await sql`select app_private.begin_actor_context(${b}::uuid,${randomUUID()}::uuid) as allowed`.execute(tx)).rows[0].allowed, false)
+        assert.equal((await sql`select app_private.begin_actor_context(${b}::uuid,${randomUUID()}::uuid,${randomUUID()}::uuid) as allowed`.execute(tx)).rows[0].allowed, false)
       })
       assert.equal(await withEligibleActorTransaction(db, context(b), async tx => (await facts(tx)).actor), b)
       await clear()

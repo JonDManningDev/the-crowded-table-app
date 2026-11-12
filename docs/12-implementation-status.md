@@ -1,5 +1,32 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Tenant setup for community configuration
+
+[Issue #19](https://github.com/JonDManningDev/the-crowded-table-app/issues/19) is the configuration and copy checkpoint of [specification #18](https://github.com/JonDManningDev/the-crowded-table-app/issues/18). Migration `20261112000100_initial_tenant_context.sql` is applied to local Supabase. It replaces the two-UUID setup function with the three-UUID volatile security invoker and transfers the exact `ct_api` execution grant. Setup assigns actor and operation, locks current Auth eligibility, then sets the initial tenant for the transaction. The helper clears scope on omission and rejects an ineligible actor before callback work. The seven details, settings and copy operations pass their validated tenant separately from identity. Their root locks and subsequent authorization reads remain separate.
+
+Before changing the schema, the checkpoint pinned `d38872eb1050e58153a2d5e9d37a06b850cd510c`, migration state through `20261111000100`, PostgreSQL 17.11 application schema, function metadata and exact grants, and SHA-256 manifests for source and prior measurement artifacts. Evidence is in the ignored `server/test-results/tenant-setup-19/` directory. Live schema comparison after migration found only the intended replacement setup function and its ACL. Retained private function definitions, unrelated application schema and prior measurement artifact hashes matched.
+
+| Real authenticated HTTP operation | Baseline submissions | Checkpoint submissions |
+| --- | ---: | ---: |
+| Details read | 7 | 6 |
+| Details write | 9 | 8 |
+| Details no-op | 8 | 7 |
+| Settings read | 7 | 6 |
+| Settings write | 9 | 8 |
+| Copy read | 7 | 6 |
+| Copy write | 10 | 9 |
+| Copy delete | 9 | 8 |
+| History control | 7 | 7 |
+| Global preferences control | 4 | 4 |
+
+Counts include transaction boundaries and come from the real runtime connection with successful responses on owned synthetic fixtures. The remaining SQL statement sequence matched for each case after normalizing setup and excluding the standalone scope statement. The diagnostic counts measure submissions only.
+
+Local verification passed the 76 server HTTP tests against the existing baseline, the full real Auth/HTTP/runtime suite and client boundary scan, the focused policy scenarios on loopback, the 51 direct PostgREST checks, and 272 pgTAP assertions. Runtime tests cover eligibility locking and expiry, invalid or absent setup inputs, transaction cleanup and pooled reuse. Configuration tests cover audiences and projections, archive and revocation lock waits, no-ops, attribution and atomic audits. Retry coverage includes real deadlocks and serialization failures, fresh scope and eligibility, rollback, bounded replay and one committed audit set.
+
+Clean migration replay and populated forward upgrade passed in disposable databases. The upgrade retained application rows and audit history. The catalog, runtime grant manifest, database type drift and driver fixtures, SQL lint, root lint, 279 client tests and production build passed. The local application database now expects the three-UUID setup signature.
+
+[#20](https://github.com/JonDManningDev/the-crowded-table-app/issues/20) and [#21](https://github.com/JonDManningDev/the-crowded-table-app/issues/21) cover the remaining operations. [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) covers integrated gates and latency. For that comparison, run the pinned baseline and the pinned integrated candidate against separate disposable loopback Supabase stacks, each replayed only through its own revision. Use separate project IDs and port mappings and seed equivalent synthetic fixtures. Alternate schema-compatible cells using the same workloads, pool, warmups and outcome checks. Store comparison manifests and samples under a new experiment name. The historical A/B harness and its snapshots belong with their original schema, including the two-UUID signature. Hosted rollout is outside this checkpoint.
+
 **Staff-assignment presence simplification - locally complete 2026-11-12.**
 
 At the user's request, `loadCommunityStaffFacts` no longer selects the redundant assignment user ID and uses `row.role === null` to detect a missing/RLS-hidden assignment. The non-null storage constraint makes the check equivalent, including assignments with all permission flags false. Existing HTTP result fixtures and the source comment were updated. Server type checks, lint, all 76 HTTP tests and the real local configuration, records and history suites pass, including relevant authorization, bypass and concurrency coverage. Diff review confirms unchanged joins, tenant locking, fact shape and permissions. No migration or deployment is involved. The earlier performance measurements remain evidence for their pinned source; this equivalent projection simplification was not re-benchmarked.

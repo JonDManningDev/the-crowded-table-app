@@ -229,13 +229,24 @@ try {
   console.log('PASS populated policy upgrade preserves every application table, historical events/categories and metadata');
   const actorSnapshot = applicationSnapshot();
   const authPrimitive = sql("select pg_get_functiondef('app_private.lock_eligible_actor()'::regprocedure)");
-  apply(...files.filter(file => file >= '20261111000100'));
+  apply(...files.filter(file => file >= '20261111000100' && file < '20261112000100'));
   assert.deepEqual(applicationSnapshot(), actorSnapshot, 'actor-context migration preserves all populated application data');
   assert.equal(sql("select pg_get_functiondef('app_private.lock_eligible_actor()'::regprocedure)"), authPrimitive);
   assert.equal(sql(`select not prosecdef and provolatile='v' and has_function_privilege('ct_api',oid,'EXECUTE')
     and not has_function_privilege('authenticated',oid,'EXECUTE') from pg_proc
     where oid='app_private.begin_actor_context(uuid,uuid)'::regprocedure`), 't');
   console.log('PASS populated actor-context upgrade preserves data and the existing narrow Auth definer');
+  const tenantContextSnapshot = applicationSnapshot();
+  apply(...files.filter(file => file >= '20261112000100'));
+  assert.deepEqual(applicationSnapshot(), tenantContextSnapshot, 'initial-tenant setup preserves populated application rows and history');
+  assert.equal(sql("select pg_get_functiondef('app_private.lock_eligible_actor()'::regprocedure)"), authPrimitive);
+  assert.equal(sql("select to_regprocedure('app_private.begin_actor_context(uuid,uuid)') is null"), 't');
+  assert.equal(sql(`select not prosecdef and provolatile='v' and pg_get_userbyid(proowner)='postgres'
+    and proconfig=array['search_path=""']
+    and (select array_agg(pg_get_userbyid(a.grantee)::text order by pg_get_userbyid(a.grantee))
+      from aclexplode(proacl) a where a.privilege_type='EXECUTE')=array['ct_api','postgres']
+    from pg_proc where oid='app_private.begin_actor_context(uuid,uuid,uuid)'::regprocedure`), 't');
+  console.log('PASS populated initial-tenant upgrade preserves data, history, narrow Auth definer and exact replacement grant');
   assert.equal(sql(`select jsonb_agg(to_jsonb(p) order by tenant_id,user_id) from public.community_account_profiles p`),
     profileSnapshot, 'later policy migrations preserve existing profile bytes and attribution');
   assert.equal(sql(`select bio='  Original bio  ' from public.community_account_profiles where tenant_id='${tenant}' and user_id='${owner}'`), 't');

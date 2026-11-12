@@ -212,7 +212,7 @@ test('preferences serialize their fixed projection and bind trusted actor/reques
     assert.equal(response.headers['cache-control'], 'private, no-store')
     if (method === 'HEAD') assert.equal(response.body, '')
     else assert.deepEqual(response.json(), preferences)
-    assert.deepEqual(h.queries[start].parameters, [actorId, h.requests.at(-1).id])
+    assert.deepEqual(h.queries[start].parameters, [actorId, h.requests.at(-1).id, null])
     assert.notEqual(h.requests.at(-1).id, 'caller-controlled')
   }
   assert.equal(new Set(h.requests.map(r => r.id)).size, 3)

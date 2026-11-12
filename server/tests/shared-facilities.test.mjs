@@ -48,8 +48,8 @@ test('transaction binds trusted context, locks eligibility, then returns applica
   assert.equal(result, value)
   assert.deepEqual(h.events, ['begin', 'query', 'work', 'commit', 'release'])
   assert.equal(h.queries[0].sql.replace(/\s+/g, ' '),
-    'select app_private.begin_actor_context( $1::uuid, $2::uuid) as allowed')
-  assert.deepEqual(h.queries[0].parameters, [actorId, targetId])
+    'select app_private.begin_actor_context( $1::uuid, $2::uuid, $3::uuid) as allowed')
+  assert.deepEqual(h.queries[0].parameters, [actorId, targetId, null])
 })
 
 test('denied eligibility skips application work without fabricating an application status', async t => {

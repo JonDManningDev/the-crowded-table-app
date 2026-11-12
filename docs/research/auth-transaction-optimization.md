@@ -271,7 +271,7 @@ The resumed run renews tokens before each workload pair, outside warmup/timing. 
 
 ### Reproducing the comparison
 
-The opt-in [benchmark](../../server/tests/auth-optimization-benchmark.mjs), [cold worker](../../server/tests/auth-optimization-cold-worker.mjs) and [summary tool](../../server/tests/auth-optimization-summary.mjs) use existing dependencies. Run from the repository root against the local stack, with the existing local `ct_api` credential in `server/.env.local`:
+For the historical B comparison, create a separate worktree at `399e50dddf1262df789dc5113f69968816cc188b` and install its locked dependencies. Start a disposable loopback Supabase stack for that worktree and replay migrations through `20261110000800`. Give it its own project ID and ports and configure `server/.env.local` with that stack's `ct_api` credential and local Auth issuer. Run the opt-in benchmark, cold worker and summary tool from the pinned worktree root. Keep reproduction outputs in that worktree to preserve the original artifacts.
 
 ```powershell
 node server/tests/auth-optimization-benchmark.mjs snapshot ede7a14f780b61e4a377d8c9cbb134ce015d2463
@@ -305,7 +305,7 @@ Independent Standards and Spec reviews found no production-boundary defect. Befo
 
 The four-variant harness verifies the original 22-file source snapshot at `ede7a14f780b61e4a377d8c9cbb134ce015d2463`, a separate 22-file B snapshot at `399e50dddf1262df789dc5113f69968816cc188b`, and current A+B source hashes. A-only is derived solely by replacing the original snapshot's `database.ts` with the current version; it is an ignored experiment artifact, not an application switch or compatibility interface. Existing snapshot bytes must match before reuse. All four variants use the same migrated database/runtime role and fixtures. The run records the two setup-function definitions, ownership, configuration and volatility, together with the source manifests and environment. Resume requires complete valid groups of all four variants and matching source/function/migration provenance.
 
-Reproduction uses the same local-only prerequisites as the B procedure:
+For the historical A+B comparison, create a separate worktree at `508b6df70c84c92ed5c6f356322addbf47a3b1e7` and install its locked dependencies. Start a separate disposable loopback Supabase stack with its own project ID and ports and replay migrations through `20261111000100`. This database supplies the original two-UUID setup signature for all four variants. Configure the local `ct_api` credential and Auth issuer for that stack as in the B procedure, then run these commands from the pinned worktree root. Keep reproduction outputs there to preserve the original artifacts.
 
 ```powershell
 node server/tests/auth-optimization-benchmark.mjs snapshot ede7a14f780b61e4a377d8c9cbb134ce015d2463

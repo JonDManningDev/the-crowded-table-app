@@ -123,7 +123,7 @@
         "signature": "app_private.auth_identity_eligible(uuid,boolean)"
       },
       {
-        "signature": "app_private.begin_actor_context(uuid,uuid)"
+        "signature": "app_private.begin_actor_context(uuid,uuid,uuid)"
       },
       {
         "signature": "app_private.command_scope()"
@@ -244,6 +244,9 @@
     },
     {
       "version": "20261111000100"
+    },
+    {
+      "version": "20261112000100"
     }
   ],
   "relations": [
@@ -375,7 +378,7 @@
         "search_path=\"\""
       ],
       "definer": false,
-      "signature": "app_private.begin_actor_context(uuid,uuid)"
+      "signature": "app_private.begin_actor_context(uuid,uuid,uuid)"
     },
     {
       "signature": "app_private.command_scope()",
@@ -653,8 +656,8 @@
       "definition": "CREATE OR REPLACE FUNCTION app_private.auth_identity_eligible(p_target uuid, p_lock boolean)\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if p_lock then perform id from auth.users where id=p_target for share; end if;\n  return exists(select from auth.users where id=p_target and email is not null and email_confirmed_at is not null\n    and not coalesce(is_anonymous,false) and (banned_until is null or banned_until<=now()));\nend $function$\n"
     },
     {
-      "signature": "app_private.begin_actor_context(uuid,uuid)",
-      "definition": "CREATE OR REPLACE FUNCTION app_private.begin_actor_context(p_actor uuid, p_operation uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if p_actor is null or p_operation is null then\n    return false;\n  end if;\n  perform pg_catalog.set_config('request.jwt.claim.sub', p_actor::text, true);\n  perform pg_catalog.set_config('ct.operation_id', p_operation::text, true);\n  return app_private.lock_eligible_actor();\nend;\n$function$\n"
+      "signature": "app_private.begin_actor_context(uuid,uuid,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION app_private.begin_actor_context(p_actor uuid, p_operation uuid, p_initial_tenant uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if p_actor is null or p_operation is null then\n    return false;\n  end if;\n  perform pg_catalog.set_config('request.jwt.claim.sub', p_actor::text, true);\n  perform pg_catalog.set_config('ct.operation_id', p_operation::text, true);\n  if not app_private.lock_eligible_actor() then\n    return false;\n  end if;\n  perform pg_catalog.set_config('ct.tenant_id', coalesce(p_initial_tenant::text, ''), true);\n  return true;\nend;\n$function$\n"
     },
     {
       "signature": "app_private.command_scope()",

@@ -122,6 +122,18 @@ test('real local operations retry with fresh authorization and one committed out
     await command(owner, { kind: 'permissions', target: manager.id, permissions: { can_manage_settings: true } })
     await settings({ auto_approve_users: false })
 
+    await t.test('configuration details use one fewer submission for a read and a genuine write', async () => {
+      const noFault = { match: /never/, codes: [] }
+      const read = await faulted(owner, path + '/details', undefined, noFault, 200, 'GET')
+      assert.equal(read.value.id, tenant)
+      assert.equal(read.queries.length, 6)
+      const write = await faulted(owner, path + '/details', { city: 'Submission-count fixture' }, noFault, 200, 'PATCH')
+      assert.equal(write.value.city, 'Submission-count fixture')
+      assert.equal(write.value.updated_by, owner.id)
+      assert.equal(write.queries.length, 8)
+      assert.deepEqual((await events(write.operation)).map(row => row.action), ['tenants.update'])
+    })
+
     await t.test('two failed join attempts roll back accounts, requests and event/categories before one success', async () => {
       const result = await faulted(member, path + '/commands', join,
         { match: /insert into "tenant_admin_actions"/, codes: ['40001', '40P01'] })
@@ -193,6 +205,24 @@ test('real local operations retry with fresh authorization and one committed out
         assert.equal((await admin.query('select enable_matchmaking from public.user_accounts where user_id=$1', [member.id])).rows[0].enable_matchmaking,
           before.enable_matchmaking)
       } finally { assert.ifError((await authAdmin.updateUserById(member.id, { ban_duration: 'none' })).error) }
+    })
+
+    await t.test('an Auth ban after rollback excludes scoped configuration work on retry', async () => {
+      const before = await settings()
+      try {
+        const result = await faulted(owner, path + '/settings', { pause_community_events: !before.pause_community_events },
+          { match: /update public\.tenant_settings/, codes: ['40P01'], afterRollback: async () => {
+            assert.ifError((await authAdmin.updateUserById(owner.id, { ban_duration: '24h' })).error)
+          } }, 403, 'PATCH')
+        assert.equal(result.attempts, 2)
+        assert.equal(result.value.code, 'ineligible')
+        const contexts = result.queries.filter(query => query.text.includes('begin_actor_context'))
+        assert.equal(contexts.length, 2)
+        assert.ok(contexts.every(query => query.parameters[2] === tenant))
+        assert.equal(result.queries.filter(query => query.text.includes('update public.tenant_settings')).length, 1)
+        assert.deepEqual(await events(result.operation), [])
+      } finally { assert.ifError((await authAdmin.updateUserById(owner.id, { ban_duration: 'none' })).error) }
+      assert.deepEqual(await settings(), before)
     })
 
     await t.test('a request approved between attempts becomes stale and cannot be replayed', async () => {

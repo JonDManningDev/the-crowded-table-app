@@ -121,7 +121,7 @@
       "signature": "app_private.auth_identity_eligible(uuid,boolean)"
     },
     {
-      "signature": "app_private.begin_actor_context(uuid,uuid)"
+      "signature": "app_private.begin_actor_context(uuid,uuid,uuid)"
     },
     {
       "signature": "app_private.command_scope()"

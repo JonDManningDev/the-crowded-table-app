@@ -65,10 +65,10 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   const preferences = (actor, body, status = 200) => http(actor, path + '/me/preferences', body ? 'PATCH' : 'GET', body, status)
   const review = actor => http(owner, path + '/accounts/' + actor.id + '/review')
   const history = actor => http(actor, path + '/history?limit=100')
-  const transaction = (actor, work) => withEligibleActorTransaction(db, { actorId: actor.id, requestId: randomUUID() }, work)
+  const transaction = (actor, work, options) => withEligibleActorTransaction(db, { actorId: actor.id, requestId: randomUUID() }, work, options)
 
   // A held service operation uses the same locks and actual runtime as HTTP.
-  async function race(actor, work, compete, root = /from (?:public\.)?tenants\b[\s\S]*for update/) {
+  async function race(actor, work, compete, { root = /from (?:public\.)?tenants\b[\s\S]*for update/, initialTenantId } = {}) {
     let ready, release
     const started = new Promise(resolve => { ready = resolve })
     const gate = new Promise(resolve => { release = resolve })
@@ -76,7 +76,7 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
       await work(tx)
       ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
       await gate
-    })
+    }, initialTenantId ? { initialTenantId } : undefined)
     const pid = await Promise.race([started, held.then(() => { throw Error('holder exited before barrier') })])
     const reachingRoot = nextRootQuery(root)
     const requestStarted = Date.now()
@@ -107,11 +107,11 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   assert.equal(profile.profile.display_name, 'Hosted other'); assert.equal(profile.profile.bio, 'Profile')
   await http(member, path + '/accounts/' + other.id + '/permissions', 'PATCH', { can_post_public_events: true }, 403)
   await race(other, tx => ownCommunityPreferences(tx, other.id, tenant, { show_global_profile: true }),
-    () => command(other, { kind: 'deactivate' }), /from (?:public\.)?community_accounts\b[\s\S]*for update/)
+    () => command(other, { kind: 'deactivate' }), { root: /from (?:public\.)?community_accounts\b[\s\S]*for update/ })
   assert.equal((await preferences(other)).show_global_profile, false)
   await command(other, { kind: 'reactivate' })
   await race(other, tx => communityCommand(tx, other.id, tenant, { kind: 'deactivate' }),
-    () => preferences(other, { show_global_profile: true }, 404), /from (?:public\.)?community_accounts\b[\s\S]*for update/)
+    () => preferences(other, { show_global_profile: true }, 404), { root: /from (?:public\.)?community_accounts\b[\s\S]*for update/ })
   await command(other, { kind: 'reactivate' })
   console.log('PASS both hosted sharing/deactivation lock orders')
 
@@ -119,9 +119,9 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   const globalPreferences = value => http(other, '/api/me/preferences', 'PUT', { user_is_discoverable: value, enable_matchmaking: true, allow_direct_messages: true })
   const block = (status = 200) => http(owner, '/api/me/blocks/' + other.id, 'PUT', global, status)
   const unblock = () => http(owner, '/api/me/blocks/' + other.id, 'DELETE')
-  await race(other, tx => sql`update public.user_accounts set user_is_discoverable=false where user_id=${other.id}`.execute(tx), () => block(404), /from (?:public\.)?user_accounts\b[\s\S]*for share/)
+  await race(other, tx => sql`update public.user_accounts set user_is_discoverable=false where user_id=${other.id}`.execute(tx), () => block(404), { root: /from (?:public\.)?user_accounts\b[\s\S]*for share/ })
   await globalPreferences(true)
-  await race(owner, tx => setOwnBlock(tx, owner.id, other.id, global), () => globalPreferences(false), /update (?:public\.)?user_accounts\b/)
+  await race(owner, tx => setOwnBlock(tx, owner.id, other.id, global), () => globalPreferences(false), { root: /update (?:public\.)?user_accounts\b/ })
   await unblock()
   await http(owner, '/api/profiles/' + other.id, 'GET', undefined, 404)
   await globalPreferences(true)
@@ -139,7 +139,7 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   assert.ok((await http(member, '/api/me/communities')).rows.some(row => row.id === tenant))
   await command(owner, { kind: 'archive', archived: false })
   await race(member, tx => configurationSettings(tx, member.id, tenant, { pause_community_events: true }),
-    () => command(owner, { kind: 'archive', archived: true }))
+    () => command(owner, { kind: 'archive', archived: true }), { initialTenantId: tenant })
   await command(owner, { kind: 'archive', archived: false })
   await settings(owner, { pause_community_events: false })
   const revoke = { kind: 'permissions', target: member.id, permissions: { can_manage_settings: false } }
@@ -147,7 +147,7 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
     () => settings(member, { pause_community_events: true }, 403))
   await command(owner, { ...revoke, permissions: { can_manage_settings: true } })
   await race(member, tx => configurationSettings(tx, member.id, tenant, { pause_community_events: true }),
-    () => command(owner, revoke))
+    () => command(owner, revoke), { initialTenantId: tenant })
   await settings(member, { pause_community_events: false }, 403)
   await command(owner, { ...revoke, permissions: { can_manage_settings: true } })
   console.log('PASS both hosted archive/write and permission/write lock orders, G-02 and own-card exception')
@@ -175,7 +175,7 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
     await assert.rejects(transaction(owner, async tx => {
       await configurationSettings(tx, owner.id, tenant, { pause_community_events: false })
       throw Error('deliberate rollback')
-    }), /deliberate rollback/)
+    }, { initialTenantId: tenant }), /deliberate rollback/)
     assert.equal((await http(owner, path + '/settings')).pause_community_events, true)
     const noOp = (await history(owner)).rows
     await settings(owner, { pause_community_events: true })

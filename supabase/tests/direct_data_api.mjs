@@ -62,7 +62,7 @@ try {
   sql(`insert into auth.users(id,email,email_confirmed_at) values ${identities.map(id => `('${id}','${id}@example.test',${id === unverified ? 'null' : 'now()'})`).join(',')};`);
   tenant = (await create(owner,slug)).tenantId;
   secondTenant = (await create(other,slug+'-b')).tenantId;
-  const settings = await withEligibleActorTransaction(db,{actorId:owner,requestId:randomUUID()},tx=>configurationSettings(tx,owner,tenant,{auto_approve_users:true}));
+  const settings = await withEligibleActorTransaction(db,{actorId:owner,requestId:randomUUID()},tx=>configurationSettings(tx,owner,tenant,{auto_approve_users:true}), { initialTenantId: tenant });
   for (const actor of [member,other]) await command(actor,{kind:'join',profile:{displayName:'Participant',bio:null}});
   const a = client(owner), b = client(member), c = client(other), u = client(unverified);
 

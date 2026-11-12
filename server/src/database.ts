@@ -24,16 +24,17 @@ export type AppDatabase = ReturnType<typeof connectDatabase>
  */
 
 export type AuthenticatedContext = Readonly<{ actorId: string; requestId: string }>
+type ActorTransactionOptions = Readonly<{ initialTenantId: string }>
 export class IneligibleActorError extends Error {
   constructor() { super('Actor is ineligible'); this.name = 'IneligibleActorError' }
 }
 
 export async function withEligibleActorTransaction<T>(db: AppDatabase, context: AuthenticatedContext,
-  work: (tx: Transaction<DB>) => Promise<T>): Promise<T> {
+  work: (tx: Transaction<DB>) => Promise<T>, options?: ActorTransactionOptions): Promise<T> {
   const { actorId: actor, requestId } = context
   return withTransactionRetry(db, async tx => {
     const eligible = await sql<{ allowed: boolean }>`select app_private.begin_actor_context(
-      ${actor}::uuid, ${requestId}::uuid) as allowed`.execute(tx)
+      ${actor}::uuid, ${requestId}::uuid, ${options?.initialTenantId ?? null}::uuid) as allowed`.execute(tx)
     if (!eligible.rows[0].allowed) throw new IneligibleActorError()
     return await work(tx)
   })
@@ -71,7 +72,8 @@ export async function checkRuntime(db: AppDatabase) {
       and has_column_privilege(current_user,'public.tenants','operational_status','UPDATE')
       and to_regprocedure('public.join_community(uuid)') is null
       and has_function_privilege(current_user,'app_private.auth_identity_eligible(uuid,boolean)','EXECUTE')
-      and has_function_privilege(current_user,'app_private.begin_actor_context(uuid,uuid)','EXECUTE')
+      and to_regprocedure('app_private.begin_actor_context(uuid,uuid)') is null
+      and has_function_privilege(current_user,to_regprocedure('app_private.begin_actor_context(uuid,uuid,uuid)'),'EXECUTE')
       and to_regprocedure('app_private.is_staff_candidate(uuid,uuid,boolean)') is null
       and has_column_privilege(current_user,'public.tenant_admin_actions','reason','SELECT')
       and has_column_privilege(current_user,'app_private.tenant_admin_action_categories','category','INSERT')
