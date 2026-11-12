@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-11-11T03:36:03.124Z",
+  "captured_at": "2026-11-12T00:05:41.708Z",
   "runtime": {
     "relations": [
       {
@@ -123,6 +123,9 @@
         "signature": "app_private.auth_identity_eligible(uuid,boolean)"
       },
       {
+        "signature": "app_private.begin_actor_context(uuid,uuid)"
+      },
+      {
         "signature": "app_private.command_scope()"
       },
       {
@@ -238,6 +241,9 @@
     },
     {
       "version": "20261110000800"
+    },
+    {
+      "version": "20261111000100"
     }
   ],
   "relations": [
@@ -362,6 +368,14 @@
       "config": [
         "search_path=\"\""
       ]
+    },
+    {
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": false,
+      "signature": "app_private.begin_actor_context(uuid,uuid)"
     },
     {
       "signature": "app_private.command_scope()",
@@ -637,6 +651,10 @@
     {
       "signature": "app_private.auth_identity_eligible(uuid,boolean)",
       "definition": "CREATE OR REPLACE FUNCTION app_private.auth_identity_eligible(p_target uuid, p_lock boolean)\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if p_lock then perform id from auth.users where id=p_target for share; end if;\n  return exists(select from auth.users where id=p_target and email is not null and email_confirmed_at is not null\n    and not coalesce(is_anonymous,false) and (banned_until is null or banned_until<=now()));\nend $function$\n"
+    },
+    {
+      "signature": "app_private.begin_actor_context(uuid,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION app_private.begin_actor_context(p_actor uuid, p_operation uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if p_actor is null or p_operation is null then\n    return false;\n  end if;\n  perform pg_catalog.set_config('request.jwt.claim.sub', p_actor::text, true);\n  perform pg_catalog.set_config('ct.operation_id', p_operation::text, true);\n  return app_private.lock_eligible_actor();\nend;\n$function$\n"
     },
     {
       "signature": "app_private.command_scope()",

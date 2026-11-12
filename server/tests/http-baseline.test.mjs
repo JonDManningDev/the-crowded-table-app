@@ -222,7 +222,7 @@ test('preferences retain distinct ineligible and missing outcomes', async t => {
   const h = createHttpHarness(t)
   for (const method of ['GET', 'PUT', 'HEAD']) {
     const options = { method, url: '/api/me/preferences', headers: authorization, ...(method === 'PUT' && { payload: preferences }) }
-    h.queue([], [{ allowed: false }])
+    h.queue([{ allowed: false }])
     errorResponse(h, await h.app.inject(options), 403, 'ineligible', 'private, no-store', method === 'HEAD')
     h.eligible([])
     errorResponse(h, await h.app.inject(options), 404, 'missing', 'private, no-store', method === 'HEAD')
@@ -249,7 +249,7 @@ test('own profile and request preserve null versus missing; review retains unava
   h.eligible([], [])
   errorResponse(h, await h.app.inject({ url: `${community}/accounts/${targetId}/review`, headers: authorization }), 404, 'unavailable')
   for (const method of ['GET', 'HEAD']) {
-    h.queue([], [{ allowed: false }])
+    h.queue([{ allowed: false }])
     errorResponse(h, await h.app.inject({ method, url: `${community}/accounts/${targetId}/review`, headers: authorization }),
       403, 'unavailable', 'private, no-store', method === 'HEAD')
   }
@@ -349,7 +349,7 @@ test('a confirmed serialization failure retries the complete authenticated opera
   const response = await h.app.inject({ url: '/api/me/preferences', headers: authorization })
   assert.equal(response.statusCode, 200)
   assert.deepEqual(response.json(), preferences)
-  const contexts = h.queries.filter(query => query.sql.includes("set_config('request.jwt.claim.sub'"))
+  const contexts = h.queries.filter(query => query.sql.includes("begin_actor_context"))
   assert.equal(contexts.length, 2)
   assert.deepEqual(contexts[0].parameters, contexts[1].parameters)
 })
@@ -368,7 +368,7 @@ test('both transient SQLSTATEs exhaust at three complete attempts and preserve t
     const response = await h.app.inject({ url: '/api/me/preferences', headers: authorization })
     assert.equal(response.statusCode, 503)
     assert.equal(response.json().code, 'unavailable')
-    const contexts = h.queries.filter(query => query.sql.includes("set_config('request.jwt.claim.sub'"))
+    const contexts = h.queries.filter(query => query.sql.includes("begin_actor_context"))
     assert.equal(contexts.length, 3)
     assert.ok(contexts.every(query => query.parameters[1] === response.json().requestId))
   }
@@ -377,11 +377,11 @@ test('both transient SQLSTATEs exhaust at three complete attempts and preserve t
 test('a retry checks current eligibility and returns the existing denial without application work', async t => {
   const h = createHttpHarness(t)
   h.eligible(databaseFailure('40001'))
-  h.queue([], [{ allowed: false }])
+  h.queue([{ allowed: false }])
   const response = await h.app.inject({ url: '/api/me/preferences', headers: authorization })
   assert.equal(response.statusCode, 403)
   assert.equal(response.json().code, 'ineligible')
-  assert.equal(h.queries.filter(query => query.sql.includes('lock_eligible_actor')).length, 2)
+  assert.equal(h.queries.filter(query => query.sql.includes('begin_actor_context')).length, 2)
 })
 
 test('business, stale, arbitrary SQL and unconfirmed transport errors are never replayed', async t => {
@@ -398,7 +398,7 @@ test('business, stale, arbitrary SQL and unconfirmed transport errors are never 
     const response = await h.app.inject({ url: '/api/me/preferences', headers: authorization })
     assert.equal(response.statusCode, status)
     assert.equal(response.json().code, code)
-    assert.equal(h.queries.filter(query => query.sql.includes('lock_eligible_actor')).length, 1)
+    assert.equal(h.queries.filter(query => query.sql.includes('begin_actor_context')).length, 1)
   }
 })
 
@@ -415,6 +415,6 @@ test('public community reads retry without introducing actor context or eligibil
     assert.deepEqual(response.json(), expected)
     assert.equal(response.headers['cache-control'], url === '/api/community-standings' ? undefined : 'no-store')
     assert.equal(h.queries.length, 1 + rows.length)
-    assert.ok(h.queries.every(query => !/request.jwt.claim.sub|ct.operation_id/.test(query.sql) && !query.sql.includes('lock_eligible_actor')))
+    assert.ok(h.queries.every(query => !/request.jwt.claim.sub|ct.operation_id/.test(query.sql) && !query.sql.includes('begin_actor_context')))
   }
 })

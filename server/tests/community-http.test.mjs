@@ -244,7 +244,7 @@ test('public service retains projections and anonymous transaction scope without
   h.queue([], [{ id: tenantId }], [], [{ operational_status: 'active', allow_public_directory_visibility: true }], [])
   assert.equal((await h.app.inject(input(directory))).statusCode, 200)
   assert.ok(h.queries.some(q => q.sql.includes('for share') && q.parameters[0] === 'test-community'))
-  assert.ok(h.queries.every(q => !/lock_eligible_actor|request.jwt.claim.sub|ct.operation_id/.test(q.sql)))
+  assert.ok(h.queries.every(q => !/begin_actor_context|request.jwt.claim.sub|ct.operation_id/.test(q.sql)))
 })
 
 test('exact profile service projects the same eight columns independently of HTTP schemas', async t => {
@@ -328,7 +328,7 @@ test('history keeps open details and empty unauthorized pages; own requests keep
   const empty = await actual.app.inject(input(history))
   assert.equal(empty.statusCode, 200)
   assert.deepEqual(empty.json(), { rows: [], next: null })
-  assert.equal(actual.queries.length, 6)
+  assert.equal(actual.queries.length, 5)
 })
 
 test('member directory preserves nullable profile and staff role and projects returned profiles', async t => {

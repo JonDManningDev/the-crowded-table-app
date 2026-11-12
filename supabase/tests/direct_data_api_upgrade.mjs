@@ -224,9 +224,18 @@ try {
   const policySnapshot = applicationSnapshot();
   assert.ok(JSON.parse(policySnapshot['public.tenant_admin_actions']).length > 0, 'upgrade has retained history');
   assert.ok(JSON.parse(policySnapshot['app_private.tenant_admin_action_categories']).length > 0, 'upgrade has retained history categories');
-  apply(...files.filter(file => file >= '20261110000100'));
+  apply(...files.filter(file => file >= '20261110000100' && file < '20261111000100'));
   assert.deepEqual(applicationSnapshot(), policySnapshot, 'policy migration preserves all application rows, history/categories and attribution');
   console.log('PASS populated policy upgrade preserves every application table, historical events/categories and metadata');
+  const actorSnapshot = applicationSnapshot();
+  const authPrimitive = sql("select pg_get_functiondef('app_private.lock_eligible_actor()'::regprocedure)");
+  apply(...files.filter(file => file >= '20261111000100'));
+  assert.deepEqual(applicationSnapshot(), actorSnapshot, 'actor-context migration preserves all populated application data');
+  assert.equal(sql("select pg_get_functiondef('app_private.lock_eligible_actor()'::regprocedure)"), authPrimitive);
+  assert.equal(sql(`select not prosecdef and provolatile='v' and has_function_privilege('ct_api',oid,'EXECUTE')
+    and not has_function_privilege('authenticated',oid,'EXECUTE') from pg_proc
+    where oid='app_private.begin_actor_context(uuid,uuid)'::regprocedure`), 't');
+  console.log('PASS populated actor-context upgrade preserves data and the existing narrow Auth definer');
   assert.equal(sql(`select jsonb_agg(to_jsonb(p) order by tenant_id,user_id) from public.community_account_profiles p`),
     profileSnapshot, 'later policy migrations preserve existing profile bytes and attribution');
   assert.equal(sql(`select bio='  Original bio  ' from public.community_account_profiles where tenant_id='${tenant}' and user_id='${owner}'`), 't');

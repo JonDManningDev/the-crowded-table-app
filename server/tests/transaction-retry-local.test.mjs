@@ -90,7 +90,7 @@ test('real local operations retry with fresh authorization and one committed out
     try {
       const value = await request(app, actor, url, payload, expected, method)
       const queries = pool.queries.slice()
-      const contexts = queries.filter(query => query.text.includes("set_config('request.jwt.claim.sub'"))
+      const contexts = queries.filter(query => query.text.includes("begin_actor_context"))
       if (contexts.length) {
         assert.ok(contexts.every(query => query.parameters[0] === actor.id))
         assert.ok(contexts.every(query => query.parameters[1] === contexts[0].parameters[1]))
@@ -126,7 +126,7 @@ test('real local operations retry with fresh authorization and one committed out
       const result = await faulted(member, path + '/commands', join,
         { match: /insert into "tenant_admin_actions"/, codes: ['40001', '40P01'] })
       assert.equal(result.attempts, 3)
-      assert.equal(result.queries.filter(query => query.text.includes('lock_eligible_actor')).length, 3)
+      assert.equal(result.queries.filter(query => query.text.includes('begin_actor_context')).length, 3)
       assert.equal(result.queries.filter(query => query.text.includes('for update')).length >= 3, true)
       const own = await request(controlApp, member, path + '/me/request')
       assert.equal(own.request.request_id, result.value.requestId)
@@ -250,7 +250,7 @@ test('real local operations retry with fresh authorization and one committed out
         { match: /from "community_accounts" as "c"/, codes: ['40P01'] }, 200, 'GET')
       assert.equal(result.attempts, 2)
       assert.equal(result.operation, undefined)
-      assert.ok(result.queries.every(query => !query.text.includes('lock_eligible_actor') && !query.text.includes('request.jwt.claim.sub') && !query.text.includes('ct.operation_id')))
+      assert.ok(result.queries.every(query => !query.text.includes('begin_actor_context') && !query.text.includes('request.jwt.claim.sub') && !query.text.includes('ct.operation_id')))
       assert.deepEqual(result.value, before)
     })
 

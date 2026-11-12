@@ -37,33 +37,32 @@ function transactionDatabase(t, steps) {
 }
 
 test('transaction binds trusted context, locks eligibility, then returns application status values unchanged', async t => {
-  const h = transactionDatabase(t, [[], [{ allowed: true }]])
+  const h = transactionDatabase(t, [[{ allowed: true }]])
   const value = { status: 403, detail: null, eligible: false, value: 'application-owned' }
   const result = await withEligibleActorTransaction(h.db, context, async tx => {
     h.events.push('work')
     assert.equal(tx.isTransaction, true)
-    assert.equal(h.queries.length, 2)
+    assert.equal(h.queries.length, 1)
     return value
   })
   assert.equal(result, value)
-  assert.deepEqual(h.events, ['begin', 'query', 'query', 'work', 'commit', 'release'])
+  assert.deepEqual(h.events, ['begin', 'query', 'work', 'commit', 'release'])
   assert.equal(h.queries[0].sql.replace(/\s+/g, ' '),
-    "select set_config('request.jwt.claim.sub', $1, true), set_config('ct.operation_id', $2, true)")
+    'select app_private.begin_actor_context( $1::uuid, $2::uuid) as allowed')
   assert.deepEqual(h.queries[0].parameters, [actorId, targetId])
-  assert.equal(h.queries[1].sql, 'select app_private.lock_eligible_actor() as allowed')
 })
 
 test('denied eligibility skips application work without fabricating an application status', async t => {
-  const h = transactionDatabase(t, [[], [{ allowed: false }]])
+  const h = transactionDatabase(t, [[{ allowed: false }]])
   await assert.rejects(withEligibleActorTransaction(h.db, context, async () => assert.fail('ineligible callback must not execute')), IneligibleActorError)
-  assert.deepEqual(h.events, ['begin', 'query', 'query', 'rollback', 'release'])
+  assert.deepEqual(h.events, ['begin', 'query', 'rollback', 'release'])
 })
 
 test('eligibility-query errors propagate and roll back before application work', async t => {
   const failure = Object.assign(new Error('locked eligibility failed'), { code: '42501' })
-  const h = transactionDatabase(t, [[], failure])
+  const h = transactionDatabase(t, [failure])
   await assert.rejects(withEligibleActorTransaction(h.db, context, async () => assert.fail('callback must not execute')), error => error === failure)
-  assert.deepEqual(h.events, ['begin', 'query', 'query', 'rollback', 'release'])
+  assert.deepEqual(h.events, ['begin', 'query', 'rollback', 'release'])
 })
 
 test('typed eligibility denial maps to 403 without unexpected-error logging', async t => {
@@ -86,12 +85,12 @@ test('typed eligibility denial maps to 403 without unexpected-error logging', as
 
 test('application exceptions propagate unchanged and roll back work on the same transaction', async t => {
   const failure = new ApplicationError(409, 'stale_state')
-  const h = transactionDatabase(t, [[], [{ allowed: true }], []])
+  const h = transactionDatabase(t, [[{ allowed: true }], []])
   await assert.rejects(withEligibleActorTransaction(h.db, context, async tx => {
     await sql`select 42`.execute(tx)
     throw failure
   }), error => error === failure)
-  assert.deepEqual(h.events, ['begin', 'query', 'query', 'query', 'rollback', 'release'])
+  assert.deepEqual(h.events, ['begin', 'query', 'query', 'rollback', 'release'])
 })
 
 test('authenticated contexts are isolated across overlapping requests and absent from public scope', async t => {

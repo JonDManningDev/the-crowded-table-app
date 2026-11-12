@@ -1,10 +1,10 @@
 # Actor transaction and community authorization query research
 
-Date: 2026-11-11. **Candidate B is implemented and locally verified; the measured baseline/B checkpoint is accepted. Candidate A remains a proposal.** The initial research changed no application code, migrations or grants. PostgreSQL 17 documentation matches the configured [local major version](../../supabase/config.toml#L13). The initial connection attempt returned `ECONNREFUSED`; after the user updated/restarted Docker, live local verification succeeded against PostgreSQL **17.11** as `ct_api`, using **Read Committed**. Targeted catalog checks and five existing fixture suites passed; see [original live verification](#live-local-verification--2026-11-11). The subsequent authorized Candidate B checkpoint and measured baseline comparison are recorded below. Fixtures remain local and are cleaned up; no hosted checks or deployment occurred.
+Date: 2026-11-11. **B's measured checkpoint is accepted. The separately authorized A+B implementation and four-variant local verification are complete.** The initial research changed no application code, migrations or grants. PostgreSQL 17 documentation matches the configured [local major version](../../supabase/config.toml#L13). The initial connection attempt returned `ECONNREFUSED`; after the user updated/restarted Docker, live local verification succeeded against PostgreSQL **17.11** as `ct_api`, using **Read Committed**. Targeted catalog checks and five existing fixture suites passed; see [original live verification](#live-local-verification--2026-11-11). The subsequent B and A+B checkpoints are recorded below. Fixtures remain local and are cleaned up; no hosted checks or deployment occurred.
 
 ## Recommendation
 
-Evaluate the candidates independently: replace the two client calls for transaction context and actor eligibility with one explicitly ordered PL/pgSQL call, and replace the three community staff-fact reads with one typed join **after the existing tenant lock statement completes**. Keep product decisions in feature policies and preserve whole-transaction retries. The user selected Candidate B first. The completed screen and expanded comparison support adopting B locally: affected paths use two fewer commands and show repeatable warm-request benefits while preserving the correctness gates. Cold-request results are mixed, and local-loopback measurements do not establish performance on a hosted topology. Candidate A has not been installed or measured.
+Evaluate the candidates independently: replace the two client calls for transaction context and actor eligibility with one explicitly ordered PL/pgSQL call, and replace the three community staff-fact reads with one typed join **after the existing tenant lock statement completes**. Keep product decisions in feature policies and preserve whole-transaction retries. The user selected B first, then authorized A+B. B's completed screen and expanded comparison remain historical evidence. A+B now passes the local correctness and measurement gates, including a fresh original/A/B/A+B comparison. Incremental warm benefits support keeping A with B; heavily contended writes gain little beyond B. Cold-request results and saturated history tails remain mixed, and local-loopback measurements do not establish performance on a hosted topology.
 
 The governing requirements are [document 20, actor propagation/concurrency](../20-persistent-api-transition-proposal.md#L85), [ADR 0001, accepted ownership](../adr/0001-api-policy-ownership.md#accepted-decisions), [document 22, shared facilities](../22-fastify-architecture-refactoring-plan.md), and [document 23, concurrency/retries](../23-api-policy-implementation-plan.md#concurrency-and-retries). Current completion notices supersede older unstarted milestones. This report does not reopen eligibility, archive, authorization or retry policy. The decision register's [actor-transaction ownership](../08-decisions-and-open-questions.md#L602) and [current throwing eligibility contract](../08-decisions-and-open-questions.md#L23) remain authoritative; the latter supersedes the historical result-envelope convention.
 
@@ -36,9 +36,13 @@ These installed `node_modules` links are local primary-source references; they r
 
 ## Candidate A: ordered context setup and locked eligibility
 
+**Implementation authorized 2026-11-11.** After accepting B, the user requested an implementation incorporating A as well. The new local checkpoint adds the invoker orchestrator below and changes only the authenticated transaction setup call; B, anonymous transactions, HTTP behavior and retry ownership remain intact. Add a forward migration, one runtime EXECUTE grant, readiness/catalog reconciliation and real-role tests of ordering, post-return context lifetime, Auth races and rollback/retry isolation. The existing narrow Auth definer remains an active dependency. Null identifiers fail closed; HTTP identity and operation IDs remain server-verified/generated UUIDs.
+
+Preserve original source `ede7a14` and B source `399e50d` separately. Evaluate baseline, A-only (derived experiment source), B-only and A+B on the same migrated local database, with the existing staged screen and full measurement criteria. Derived experiment sources are confined to ignored artifacts; the application has one implementation. Renew tokens outside timing and retain failed samples. Clean replay, populated forward upgrade, exact function/grant review and the existing correctness gates must pass before adopting and independently committing A+B. No hosted migration or deployment is authorized by this checkpoint. These gates are now complete as recorded below; the earlier B evidence remains historical evidence, not results for A.
+
 The existing [Auth primitive](../../supabase/migrations/20261103000100_preferences_api.sql#L17) is PL/pgSQL `SECURITY DEFINER`, with an empty `search_path`, implicitly `VOLATILE`. It selects the current Auth user with confirmed/non-null email, non-anonymous status and no active ban, takes `FOR SHARE`, and returns `FOUND`. No later migration definition was found. It does not itself verify the application account exists; preserve each operation's existing missing-account behavior rather than silently extending this optimization's scope. The preferences suite explicitly expects missing-account 404 ([test:113](../../server/tests/preferences-local.mjs#L113)).
 
-An illustrative orchestration function, **not a migration to execute**, is:
+The original illustrative design below is now implemented by the separately authorized forward migration `20261111000100_actor_context.sql`:
 
 ```sql
 create function app_private.begin_actor_context(p_actor uuid, p_operation uuid)
@@ -286,3 +290,102 @@ Raw samples, per-command timings, runtime metadata, plans, statement-statistics 
 If a run is interrupted, preserve its original JSON and pass its path as the final argument to `full` to resume only complete valid pairs. Both members of incomplete/failed pairs are rerun. Resume requires matching baseline/candidate source manifests, lockfile, runtime and migration head. Never infer a latency benefit from a changed denial mix or silently drop a failed pair; the summary tool lists excluded pairs and emits confidence intervals only for five valid repeats. Each invocation cleans up only its own synthetic fixtures in `finally`.
 
 Candidate B implementation and local verification are complete. The checkpoint includes the independently reviewed loader/test changes and opt-in measurement utilities. If Candidate A is later authorized, review its function ownership/grants, context lifetime and migration/function-manifest changes independently. Hosted-topology measurement and deployment remain separate work; no deployment recommendation follows from local-loopback measurements alone.
+
+## Candidate A implementation and verification - 2026-11-11
+
+This follow-up supersedes B's historical "A deferred" status. The implementation and its local verification are complete. `database.ts` replaces two setup submissions with one call to `begin_actor_context(uuid,uuid)`. The function is owned by `postgres`, explicitly volatile/security-invoker, has an empty search path, and grants EXECUTE only to `ct_api` (in addition to owner rights). PUBLIC, anonymous, authenticated and service-role execution are revoked. The existing volatile Auth definer, predicate, SHARE lock and transaction-start `now()` behavior are unchanged. Context identifiers are verified/generated UUIDs; null inputs deny and malformed internal identifiers fail UUID conversion. No HTTP identity input, anonymous setup, product permission or feature API changes were introduced.
+
+Migration `20261111000100` was applied only to the local stack. Before/after catalog and application-table checksum evidence establishes unchanged data, existing function definitions, relation/column privileges, RLS, triggers, defaults and external grants. There is exactly one new runtime EXECUTE signature and 19 application functions. The reviewed catalog fixture adds that function and migration while preserving earlier evidence formatting. A clean disposable replay and populated forward upgrade passed; the latter separately checks that this migration preserves every populated application table and the original Auth-definer body.
+
+Verification passed before measurement: server type checking; all 76 HTTP tests against the unchanged contract fixture; all nine real Auth/HTTP feature suites; 13 retry tests; two database-type/generation/driver tests; the browser boundary scan; 272 pgTAP assertions; SQL lint; direct PostgREST/retired-interface/concurrent-slug checks; exact runtime and local catalog checks; 279 frontend tests; lint and build. The new actor-context suite has five child scenarios plus its parent and verifies real `ct_api` identity, grants/no raw Auth access, post-return settings and restored search path, trusted attribution, commit/rollback cleanup with one pooled connection, next-actor reuse, null/unknown/malformed IDs, committed/rolled-back Auth changes, deletion, both Auth-lock orders, pending unban and transaction-start ban expiry. Existing tests continue to cover anonymous reuse, natural deadlock/serialization, fresh eligibility on retries and exactly-once committed audit effects. The pre-existing bundle-size warning remains. A root npm argument-forwarding failure was resolved by running the same frontend suite directly with `npm.cmd test -w client -- --run`.
+
+Independent Standards and Spec reviews found no production-boundary defect. Before timing, they prompted immutable derived-A source verification and retention of failed cold observations, including their variant/repeat/pool/verifier dimensions and available measurements. A focused expired-token cold-worker check returned a retained 401, zero database commands and positive request duration before rejection. Failed observations are not silently removed from evidence.
+
+The four-variant harness verifies the original 22-file source snapshot at `ede7a14f780b61e4a377d8c9cbb134ce015d2463`, a separate 22-file B snapshot at `399e50dddf1262df789dc5113f69968816cc188b`, and current A+B source hashes. A-only is derived solely by replacing the original snapshot's `database.ts` with the current version; it is an ignored experiment artifact, not an application switch or compatibility interface. Existing snapshot bytes must match before reuse. All four variants use the same migrated database/runtime role and fixtures. The run records the two setup-function definitions, ownership, configuration and volatility, together with the source manifests and environment. Resume requires complete valid groups of all four variants and matching source/function/migration provenance.
+
+Reproduction uses the same local-only prerequisites as the B procedure:
+
+```powershell
+node server/tests/auth-optimization-benchmark.mjs snapshot ede7a14f780b61e4a377d8c9cbb134ce015d2463
+node server/tests/auth-optimization-benchmark.mjs snapshot 399e50dddf1262df789dc5113f69968816cc188b b
+node server/tests/auth-optimization-benchmark.mjs compare-a
+node server/tests/auth-optimization-benchmark.mjs full-a
+node server/tests/auth-optimization-summary.mjs server/test-results/auth-optimization/compare-a.json baseline ab
+node server/tests/auth-optimization-summary.mjs server/test-results/auth-optimization/compare-a.json b ab
+node server/tests/auth-optimization-summary.mjs server/test-results/auth-optimization/full-a.json baseline ab
+node server/tests/auth-optimization-summary.mjs server/test-results/auth-optimization/full-a.json b ab
+```
+
+Use `baseline a` and `baseline b` for the independent effects. `compare-a` preserves the original service/HTTP screening matrix across all four variants (320,000 completed timed requests); `full-a` preserves the 18 workload/concurrency combinations, five alternating repeats, nine outcome classes and four independent first-request configurations across all four variants (792,000 completed timed warm/outcome requests and 480 first requests). Warmups, sample sizes, synthetic scale, pool/timeouts, root-lock order and interpretation limits remain as documented above. Token renewal occurs between comparison groups, outside timing. The `-a` artifact names preserve the earlier B results. Completed results and adoption follow.
+
+### Candidate A four-variant screen
+
+The screen completed all 160 cells and **320,000 timed requests**, with five alternating repeats, no excluded groups, no unexpected errors or retries, and every expected command count. Both original and B source were measured again on the same migrated local database as A and A+B. The following p95 values are milliseconds and average the five run-level percentiles. Paired percentage intervals retain the earlier descriptive bootstrap limitations.
+
+| Transport / endpoint | Clients | Original p95 | A p95 | B p95 | A+B p95 | A+B vs B change (95% interval) |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| service / details | 1 | 8.22 | 7.66 | 6.69 | 6.11 | -8.6% (-10.3% to -6.9%) |
+| service / details | 4 | 8.91 | 7.81 | 7.92 | 6.67 | -15.7% (-18.8% to -12.2%) |
+| service / preferences | 1 | 4.00 | 3.36 | 3.97 | 3.36 | -15.5% (-16.4% to -14.4%) |
+| service / preferences | 4 | 4.05 | 3.41 | 3.98 | 3.53 | -11.4% (-14.3% to -7.6%) |
+| http / details | 1 | 8.99 | 8.27 | 7.40 | 6.90 | -6.8% (-9.4% to -4.1%) |
+| http / details | 4 | 9.57 | 9.27 | 8.39 | 7.99 | -4.8% (-9.9% to 1.7%) |
+| http / preferences | 1 | 4.70 | 3.95 | 4.60 | 3.94 | -14.3% (-14.8% to -13.7%) |
+| http / preferences | 4 | 5.39 | 4.32 | 5.01 | 4.81 | -5.3% (-15.8% to 9.8%) |
+
+Adding A to B shows a repeatable single-client benefit: details HTTP p95 7.40 to 6.90 ms (-6.8%, interval -9.4% to -4.1%) and preferences 4.60 to 3.94 ms (-14.3%, interval -14.8% to -13.7%). Against the original, A+B details HTTP p95 is 8.99 to 6.90 ms (-23.3%, interval -24.5% to -22.1%). Four-client incremental HTTP intervals cross zero, so the screen does not establish improvement in every cell. B-only preferences uses unchanged source on that path yet also fluctuates relative to the original, reinforcing that these small-sample intervals and local timings are not a universal performance guarantee. The screen supports proceeding to the full matrix; it is not final A+B acceptance.
+
+
+### Completed A+B expanded comparison and acceptance
+
+**Accepted locally on 2026-11-11.** The uninterrupted four-variant run completed 360 authorized-workload cells (720,000 requests), 36 audience cells (72,000 requests) and 480 independent first requests. Each of the 18 workload/concurrency combinations has exactly five valid repeats for every variant; each audience has one complete four-variant group. No cell was excluded or resumed. Every measured response and command count matched its expectation, with zero unexpected errors, timeouts or retries. Including the screen, this checkpoint measured **1,112,000 warm/outcome requests**, plus 480 first requests. Warmups are additional and excluded from those totals.
+
+Original source remains pinned to `ede7a14`, B to `399e50d`, A to the documented single-file derivation, and A+B to the current source manifest recorded at run start. All four 22-file manifests and the lockfile hash were rechecked after completion. PostgreSQL 17.11, Node 22.22.2, runtime role, pool maximum 4, fixture sizes and Windows-to-Docker loopback topology match the procedure above; migration head is now `20261111000100`. Both setup-function definitions and their owner/security/configuration metadata were recorded before timing. Final application checksums, function definitions, policies, grants, triggers, defaults and runtime metadata match the post-migration snapshot. A whole-catalog comparison initially also detected its capture timestamp and automatic Realtime date-partition rotation (November 8 removed, November 15 added); these infrastructure differences do not involve application tables or grants. The original and final snapshots are retained.
+
+The following p95 values are milliseconds, averaged across five run-level percentiles. Percentage estimates use paired log ratios and the same 10,000-resample descriptive bootstrap as the screen. Five repeats and unadjusted intervals do not establish a universal 5% non-inferiority bound.
+
+| Workload | Clients | Original p95 | A p95 | B p95 | A+B p95 | A+B vs original (95% interval) | A+B vs B (95% interval) |
+| --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| details / distributed | 1 | 8.91 | 8.21 | 7.54 | 6.96 | -21.8% (-24.4% to -19.2%) | -7.6% (-12.2% to -3.9%) |
+| details / distributed | 4 | 10.18 | 9.11 | 8.18 | 7.66 | -24.4% (-32.0% to -17.5%) | -6.3% (-9.5% to -3.2%) |
+| details / distributed | 16 | 36.34 | 34.39 | 30.93 | 29.66 | -18.4% (-24.3% to -10.0%) | -4.2% (-8.6% to 0.8%) |
+| preferences / distributed | 1 | 4.60 | 4.01 | 4.61 | 3.97 | -13.9% (-16.3% to -11.3%) | -14.0% (-15.2% to -12.6%) |
+| preferences / distributed | 4 | 4.96 | 4.33 | 4.94 | 4.47 | -9.8% (-13.0% to -7.0%) | -9.5% (-11.6% to -7.4%) |
+| preferences / distributed | 16 | 17.12 | 15.40 | 17.08 | 14.48 | -15.3% (-23.1% to -8.2%) | -15.2% (-19.4% to -10.1%) |
+| write / distributed | 1 | 34.38 | 33.89 | 33.05 | 32.36 | -5.9% (-6.7% to -5.1%) | -2.1% (-2.7% to -1.4%) |
+| write / distributed | 4 | 37.67 | 38.20 | 37.09 | 36.17 | -4.0% (-5.8% to -1.9%) | -2.5% (-4.8% to 0.9%) |
+| write / distributed | 16 | 145.77 | 151.35 | 138.26 | 135.67 | -7.0% (-9.4% to -4.5%) | -1.9% (-4.8% to 1.1%) |
+| history / distributed | 1 | 10.19 | 9.61 | 8.80 | 8.17 | -19.9% (-21.1% to -18.7%) | -7.2% (-10.1% to -4.6%) |
+| history / distributed | 4 | 11.45 | 11.02 | 10.56 | 9.67 | -15.6% (-19.5% to -11.3%) | -8.4% (-15.5% to -0.7%) |
+| history / distributed | 16 | 44.10 | 42.30 | 39.47 | 41.37 | -6.9% (-21.2% to 12.8%) | 3.6% (-8.2% to 21.6%) |
+| write / one-tenant | 1 | 34.82 | 33.70 | 33.42 | 32.32 | -7.2% (-9.6% to -5.8%) | -3.3% (-5.3% to -1.9%) |
+| noop / one-tenant | 1 | 9.91 | 9.07 | 8.34 | 7.96 | -19.7% (-21.0% to -18.2%) | -4.6% (-7.9% to -1.3%) |
+| write / one-tenant | 4 | 121.64 | 121.92 | 116.19 | 115.74 | -4.8% (-5.7% to -4.3%) | -0.4% (-1.3% to 0.2%) |
+| noop / one-tenant | 4 | 23.05 | 23.15 | 18.81 | 17.94 | -22.2% (-23.7% to -20.4%) | -4.6% (-6.4% to -3.3%) |
+| write / one-tenant | 16 | 470.09 | 471.94 | 450.08 | 447.63 | -4.8% (-5.6% to -4.2%) | -0.5% (-1.13% to -0.02%) |
+| noop / one-tenant | 16 | 93.64 | 91.00 | 72.08 | 71.47 | -23.7% (-25.7% to -21.2%) | -0.8% (-2.4% to 0.6%) |
+
+Adding A to B provides a repeatable warm benefit on details (one and four clients), preferences (all three concurrency levels), single-client writes, and history (one and four clients). For example, details HTTP p95 is **7.54 to 6.96 ms**, an incremental -7.6% (interval -12.2% to -3.9%), while the original-to-combined change is **8.91 to 6.96 ms**, -21.8% (interval -24.4% to -19.2%). Preferences p95 is **4.61 to 3.97 ms** versus B, -14.0% (interval -15.2% to -12.6%). A-only also improves single-client details/preferences versus the original; B-only preferences remains an unchanged-path control, with p95 estimates +0.2%, -0.3% and -0.1% and intervals crossing zero. A-only distributed writes at 16 clients are +3.4% with an interval of -2.5% to +12.2%; this experiment does not establish that A independently improves every workload.
+
+Successful command counts for original / A / B / A+B are **10 / 9 / 8 / 7** for details/history, **5 / 4 / 5 / 4** for preferences, **12 / 11 / 10 / 9** for real writes and **11 / 10 / 9 / 8** for no-ops. Counts include transaction boundaries. Details transaction p95 at one client is 8.15 / 7.50 / 6.80 / 6.20 ms; verifier p95 stays approximately 0.29 ms and pool acquisition below 0.02 ms. Details throughput is 125.6 / 135.5 / 148.6 / 162.1 requests/second at one client, and 472.1 / 511.8 / 561.6 / 609.0 at four clients. These measurements place the incremental benefit in the transaction path, without claiming zero Auth network work: 12 Auth requests occurred during the 720,000 warmed workload requests (original 1, A 4, B 4, A+B 3), plus one original-variant archived-owner probe. Token renewal itself remained outside timing.
+
+Under single-tenant contention, A adds little to B's real-write throughput: at 16 clients, original / B / A+B are 35.79 / 37.41 / 37.50 requests/second. Their transaction p95 is 120.96 / 116.38 / 115.57 ms, pool-wait p95 353.55 / 338.27 / 336.52 ms, and HTTP p99 486.75 / 475.46 / 471.58 ms. All variants reached three sampled blocked connections. Across the four- and sixteen-client single-tenant write/no-op cells, A+B p99 changes versus B range from -4.8% to +2.1%, with lower p95 and comparable or lower transaction/pool-wait values. No material contention-tail or sampled-lock regression is demonstrated. This fits A removing setup before the tenant lock while B removes reads within that critical section; it does not measure exact isolated lock-hold duration.
+
+**Saturated history is an explicit limitation.** At 16 clients A+B p95 is 41.37 ms versus B's 39.47 ms: +3.6%, with a wide -8.2% to +21.6% interval. Mean run-level p99 rises from 46.42 to 55.90 ms (+20.4%), compared with original 55.39 ms. A+B's fourth repeat has p95/p99 55.41/103.79 ms; its other four p99 values are 41.66 to 46.27 ms. The original also has a separate 89.93 ms p99 repeat. All samples remain included; the cause of these spikes is not established. No blocked database connection or Auth network request was sampled in those history cells, but pool wait and transaction tails increased during the spike. This is not evidence of universal tail improvement. Other small A+B-versus-B p99 increases remain visible in raw summaries, including distributed writes at 16 clients (147.74 to 147.95 ms) and history at four (12.72 to 12.83 ms).
+
+No warmed authorized cell shows a statistically credible p95 regression above 5% for A+B versus either the original or B. The repeatable benefits, zero unexpected outcomes/retries, exact command reductions and unchanged correctness boundary satisfy the agreed local acceptance gates. Wide intervals, the history tail spike and small contention increments constrain the claim; they are not removed or treated as proof of non-inferiority.
+
+Audience probes each produced exactly 2,000 expected responses per variant. Admin, member without assignment, suspended account and archived owner returned 200; pending account, inactive account, outsider, missing tenant and archived non-owner returned 404. These are outcome checks, not five-repeat audience-specific performance estimates. Staff-fact plans remain bounded: three one-row results for original/A versus one one-row joined result for B/A+B, indexed/nested-loop access, no row multiplication and no physical reads. All variants used 20 combined buffer hits on the small fixture and 24 on the seeded fixture. Seeded planning/execution totals were 0.386/0.299 ms (original), 0.392/0.294 (A), 0.334/0.246 (B) and 0.302/0.240 (A+B). These single instrumented plan observations establish shape, not a CPU-speedup estimate; top-level statement deltas retain the earlier tracking limitations.
+
+All 480 first requests returned 200 with expected command counts. Each pool/verifier combination has 30 independent processes per variant, using the archived-owner details fixture. New verifiers made exactly one Auth network request per observation; warmed verifiers made none. Values below are p50 / p95 milliseconds across those 30 observations, not means of workload repeats.
+
+| Pool / verifier | Original p50 / p95 | A p50 / p95 | B p50 / p95 | A+B p50 / p95 |
+| --- | --- | --- | --- | --- |
+| New / new | 52.14 / 58.47 | 51.47 / 54.65 | 51.09 / 55.80 | 50.34 / 57.94 |
+| New / warm | 40.56 / 48.45 | 40.03 / 48.12 | 39.44 / 46.09 | 38.44 / 43.61 |
+| Warm / new | 41.69 / 43.29 | 41.10 / 48.11 | 40.04 / 46.19 | 40.27 / 50.49 |
+| Warm / warm | 32.17 / 37.80 | 31.39 / 33.42 | 31.61 / 38.18 | 30.73 / 38.79 |
+
+First-request results are mixed. A+B improves the new-pool/warm-verifier p95 versus B, but its warm-pool/new-verifier p95 is 50.49 ms versus 46.19 ms for B and 43.29 ms for the original. Both-new A+B p95 is 57.94 ms versus B's 55.80 ms; warm/warm is 38.79 versus 38.18 ms. Lower medians do not establish lower cold tails. Module loading/application construction precede timing, and PostgreSQL buffers remain warm; these observations do not establish total startup, database cold-cache or hosted performance.
+
+The reviewed local implementation keeps A with B. The migration is applied locally only; the hosted database remains outside this checkpoint. No HTTP contract fixture, frontend, saved credentials, existing Auth-definer body or product policy changed. The required local correctness/replay/grant suites, full measurement matrix and independent diff reviews support this checkpoint. Deployment and measurement on a representative hosted topology remain separate work.

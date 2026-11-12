@@ -15,8 +15,10 @@ import { localStack } from '../../supabase/tests/local-stack.mjs'
 // or source files. See docs/research/auth-transaction-optimization.md for scope.
 mkdirSync('server/test-results/auth-optimization',{recursive:true})
 if(process.argv[2]==='snapshot') {
+  const label=process.argv[4]??'baseline'
+  assert.ok(['baseline','b'].includes(label))
   const revision=execFileSync('git',['rev-parse','--verify',process.argv[3]+'^{commit}'],{encoding:'utf8'}).trim()
-  const root=resolve('server/test-results/auth-optimization/baseline-src'), files={}
+  const root=resolve(`server/test-results/auth-optimization/${label}-src`), files={}
   const paths=execFileSync('git',['ls-tree','-r','--name-only',revision,'--','server/src'],{encoding:'utf8'}).trim().split('\n')
   for(const path of paths) {
     const destination=resolve(root,path.slice('server/src/'.length))
@@ -26,12 +28,15 @@ if(process.argv[2]==='snapshot') {
     else {mkdirSync(join(destination,'..'),{recursive:true});writeFileSync(destination,source)}
     files[path]=createHash('sha256').update(source).digest('hex')
   }
-  writeFileSync('server/test-results/auth-optimization/baseline-source.json',JSON.stringify({revision,files},null,2))
+  writeFileSync(`server/test-results/auth-optimization/${label}-source.json`,JSON.stringify({revision,files},null,2))
   console.log('Verified source snapshot '+revision+' ('+paths.length+' files)')
   process.exit(0)
 }
 const mode=process.argv[2]
-assert.ok(['baseline','compare','full','cold'].includes(mode),'Specify baseline, compare, full or cold mode; snapshot requires a git revision')
+assert.ok(['baseline','compare','full','cold','compare-a','full-a','cold-a'].includes(mode),'Specify an explicit benchmark mode; snapshot requires a git revision')
+const experimentA=mode.endsWith('-a')
+const variantNames=experimentA?['baseline','a','b','ab']:['baseline','candidate']
+const order=(values,repeat)=>repeat%2?[...values].reverse():values
 function sourceHashes(root) {
   const files={}
   function visit(directory,prefix='') {
@@ -46,6 +51,21 @@ function sourceHashes(root) {
 const baselineSource=JSON.parse(readFileSync('server/test-results/auth-optimization/baseline-source.json','utf8'))
 assert.deepEqual(sourceHashes('server/test-results/auth-optimization/baseline-src'),baselineSource.files,'Baseline snapshot bytes changed')
 const candidateSource=sourceHashes('server/src')
+let bSource=null,aSource=null
+if(experimentA) {
+  bSource=JSON.parse(readFileSync('server/test-results/auth-optimization/b-source.json','utf8'))
+  assert.deepEqual(sourceHashes('server/test-results/auth-optimization/b-src'),bSource.files)
+  // A-only is an explicitly derived experiment, never a production switch.
+  for(const [path,hash] of Object.entries(bSource.files))if(path!=='server/src/database.ts')assert.equal(candidateSource[path],hash)
+  for(const path of Object.keys(baselineSource.files)) {
+    const relative=path.slice('server/src/'.length),destination=join('server/test-results/auth-optimization/a-src',relative)
+    const source=readFileSync(relative==='database.ts'?path:join('server/test-results/auth-optimization/baseline-src',relative),'utf8').replace(/\r\n/g,'\n')
+    if(existsSync(destination))assert.equal(readFileSync(destination,'utf8').replace(/\r\n/g,'\n'),source,'Existing A-only snapshot differs: '+path)
+    else {mkdirSync(join(destination,'..'),{recursive:true});writeFileSync(destination,source)}
+  }
+  aSource={derivedFrom:baselineSource.revision,databaseSource:candidateSource['server/src/database.ts'],files:sourceHashes('server/test-results/auth-optimization/a-src')}
+  assert.deepEqual(Object.keys(aSource.files).sort(),Object.keys(baselineSource.files).sort())
+}
 process.loadEnvFile('server/.env.local')
 const local = localStack(), endpoint = new URL(process.env.DATABASE_URL)
 assert.ok(['localhost','127.0.0.1','[::1]'].includes(endpoint.hostname))
@@ -90,8 +110,8 @@ if(previousRun)assert.notEqual(resolve(process.argv[3]).toLowerCase(),resolve(`s
   'Preserve the original results under a different filename before resuming')
 const cellKey=r=>[r.transport,r.endpoint,r.scenario??'owner',r.concurrency,r.repeat].join('/')
 if(previousRun) {
-  // Only retain complete, successful baseline/B pairs. An interrupted or
-  // expired-token cell is rerun together with its mate on the new fixture.
+  // Retain only complete successful groups of all measured variants. Rerun an
+  // interrupted/failed group's variants together on the new fixture.
   const groups=new Map()
   for(const row of previousRun.rows) {
     const key=cellKey(row)
@@ -99,11 +119,11 @@ if(previousRun) {
     groups.get(key).push(row)
   }
   const valid=row=>row.invalidSamples===0 && row.errors===0 && row.n===2000 && row.samples.length===row.n
-  for(const pair of groups.values())if(pair.length===2 && pair.every(valid) &&
-    pair.some(row=>row.variant==='baseline') && pair.some(row=>row.variant==='candidate'))rows.push(...pair)
+  for(const group of groups.values())if(group.length===variantNames.length && group.every(valid) &&
+    variantNames.every(name=>group.some(row=>row.variant===name)))rows.push(...group)
 }
-function completedPair(endpoint,concurrency,repeat,scenario) {
-  return rows.filter(r=>r.endpoint===endpoint&&r.concurrency===concurrency&&r.repeat===repeat&&r.scenario===scenario).length===2
+function completedGroup(endpoint,concurrency,repeat,scenario) {
+  return rows.filter(r=>r.endpoint===endpoint&&r.concurrency===concurrency&&r.repeat===repeat&&r.scenario===scenario).length===variantNames.length
 }
 let statsRelation=null
 async function statistics(){return statsRelation?(await admin.query(`select queryid::text,calls,total_exec_time,total_plan_time,rows,shared_blks_hit,shared_blks_read from ${statsRelation} where userid='ct_api'::regrole`)).rows:[]}
@@ -113,6 +133,8 @@ const output=new URL(`../test-results/auth-optimization/${mode}.json`,import.met
 const record=()=>({acquire:0,verify:0,authRequests:0,authNetwork:0,transaction:0,attempts:0,queries:[],captured:[]})
 const summarize=values=>{ const a=[...values].sort((a,b)=>a-b); return {p50:a[Math.floor(a.length*.5)],p95:a[Math.floor(a.length*.95)],p99:a[Math.floor(a.length*.99)],mean:a.reduce((a,b)=>a+b,0)/a.length} }
 async function variant(name,src) {
+  const setupSaving=Number(readFileSync(new URL(`${src}/database.ts`,import.meta.url),'utf8').includes('app_private.begin_actor_context('))
+  const factSaving=readFileSync(new URL(`${src}/communities/policies.ts`,import.meta.url),'utf8').includes("const row = await tx.selectFrom('tenants as t')")?2:0
   const modules=await Promise.all(['app','database','token-verifier','directory-cursors','communities/service','user-accounts/service'].map(p=>import(new URL(`${src}/${p}.ts`,import.meta.url))))
   const [application,database,token,cursor,community,account]=modules
   const pool=new MeasuredPool({connectionString:endpoint.href,max:4,connectionTimeoutMillis:4000,statement_timeout:5000,lock_timeout:2000,idle_in_transaction_session_timeout:8000,options:'-c default_transaction_isolation=read\\ committed'})
@@ -136,7 +158,7 @@ async function variant(name,src) {
     return payload
   })
   const base=await app.listen({host:'127.0.0.1',port:0})
-  const v={name,db,pool,app,base,completed,runtime,community:community.createCommunityService({db,cursors}),account:account.createUserAccountService({db,cursors}),database}
+  const v={name,src,setupSaving,factSaving,db,pool,app,base,completed,runtime,community:community.createCommunityService({db,cursors}),account:account.createUserAccountService({db,cursors}),database}
   variants.push(v);return v
 }
 async function user() {
@@ -178,7 +200,7 @@ async function run(v,actor,tenant,endpointName,transport,concurrency,repeat,n=20
     }
     r.valid=r.status===(options.expectedStatus??200) && Boolean(data)
     if(!options.expectedStatus&&['details','preferences','history','write','noop'].includes(endpointName)) {
-      const expected=endpointName==='preferences'?5:(v.name==='baseline'?10:8)+(endpointName==='write'?2:endpointName==='noop'?1:0)
+      const expected=(endpointName==='preferences'?5:10-v.factSaving+(endpointName==='write'?2:endpointName==='noop'?1:0))-v.setupSaving
       r.valid&&=r.queries.length===expected
     }
     if(measured)samples.push(r)
@@ -188,7 +210,7 @@ async function run(v,actor,tenant,endpointName,transport,concurrency,repeat,n=20
   const beforeStatistics=await statistics()
   let next=0;const start=performance.now()
   const waits={samples:0,lockObservations:0,maxBlocked:0};let observation=null
-  const timer=mode==='full'?setInterval(()=>{
+  const timer=mode.startsWith('full')?setInterval(()=>{
     if(observation)return
     observation=admin.query("select pid,wait_event_type,wait_event,pg_blocking_pids(pid) as blockers from pg_stat_activity where usename='ct_api' and state='active'")
       .then(result=>{waits.samples++;const blocked=result.rows.filter(r=>r.wait_event_type==='Lock').length;waits.lockObservations+=blocked;waits.maxBlocked=Math.max(waits.maxBlocked,blocked)})
@@ -213,8 +235,9 @@ async function plans(v,owner,tenant,label) {
   await als.run(r,()=>v.community.readDetails({actorId:owner.id,requestId:randomUUID()},{tenantId:tenant}))
   const client=await v.pool.connect(),captured=r.captured,results=[]
   try {
-    for(const q of captured.slice(0,5))await client.query(q.text,q.values)
-    for(const q of captured.slice(5,-2))results.push({sql:q.text,plan:(await client.query('explain (analyze,buffers,format json) '+q.text,q.values)).rows[0]['QUERY PLAN']})
+    const factsStart=5-v.setupSaving
+    for(const q of captured.slice(0,factsStart))await client.query(q.text,q.values)
+    for(const q of captured.slice(factsStart,-2))results.push({sql:q.text,plan:(await client.query('explain (analyze,buffers,format json) '+q.text,q.values)).rows[0]['QUERY PLAN']})
   } finally {await client.query('rollback');client.release()}
   metadata.plans??=[];metadata.plans.push({variant:v.name,label,results});save()
 }
@@ -225,17 +248,21 @@ async function createTenant(v,owner) {
 async function cold(owner,tenant) {
   await freshToken(owner)
   metadata.cold=[]
-  for(let repeat=0;repeat<30;repeat++)for(const [poolWarm,verifierWarm] of [[true,false],[false,true],[false,false],[true,true]])for(const variant of repeat%2?['candidate','baseline']:['baseline','candidate']) {
-    const result=await new Promise((resolve,reject)=>{
+  for(let repeat=0;repeat<30;repeat++)for(const [poolWarm,verifierWarm] of [[true,false],[false,true],[false,false],[true,true]])for(const v of order(variants,repeat)) {
+    let result
+    try {result=await new Promise((resolve,reject)=>{
       const child=fork(new URL('./auth-optimization-cold-worker.mjs',import.meta.url),[],{stdio:['ignore','ignore','pipe','ipc']})
       const timeout=setTimeout(()=>{child.kill();reject(new Error('cold worker timeout'))},15000)
       let message=null
       child.on('message',data=>{message=data})
       child.on('error',reject)
-      child.on('exit',code=>{clearTimeout(timeout);if(code!==0||!message?.ok)reject(new Error(message?.error??'cold worker failed'));else resolve(message.result)})
-      child.send({variant,poolWarm,verifierWarm,database:endpoint.href,api:local.API_URL,key:local.ANON_KEY,issuer:local.issuer,token:owner.token,actor:owner.id,tenant})
-    })
-    metadata.cold.push({variant,poolWarm,verifierWarm,repeat,...result});save()
+      child.on('exit',code=>{clearTimeout(timeout);if(code!==0||!message?.ok)reject(Object.assign(new Error(message?.error??'cold worker failed'),{measurement:message?.result}));else resolve(message.result)})
+      child.send({variant:v.name,src:v.src,expectedCommands:10-v.setupSaving-v.factSaving,poolWarm,verifierWarm,database:endpoint.href,api:local.API_URL,key:local.ANON_KEY,issuer:local.issuer,token:owner.token,actor:owner.id,tenant})
+    })} catch(error) {
+      metadata.cold.push({variant:v.name,poolWarm,verifierWarm,repeat,ok:false,error:error.message,...error.measurement});save()
+      throw error
+    }
+    metadata.cold.push({variant:v.name,poolWarm,verifierWarm,repeat,ok:true,...result});save()
   }
 }
 async function full(vs,owner,tenant) {
@@ -268,9 +295,9 @@ async function full(vs,owner,tenant) {
   for(const endpoint of ['details','preferences','write','history'])for(const concurrency of [1,4,16])cells.push({endpoint,concurrency,options:{targets,label:'distributed'}})
   for(const concurrency of [1,4,16])for(const endpoint of ['write','noop'])cells.push({endpoint,concurrency,options:{label:'one-tenant'}})
   for(let repeat=0;repeat<5;repeat++)for(const cell of cells) {
-    if(completedPair(cell.endpoint,cell.concurrency,repeat,cell.options.label))continue
+    if(completedGroup(cell.endpoint,cell.concurrency,repeat,cell.options.label))continue
     await freshToken(owner)
-    for(const v of repeat%2?[vs[1],vs[0]]:vs) {
+    for(const v of order(vs,repeat)) {
       await resetWrites()
       await run(v,owner,tenant,cell.endpoint,'http',cell.concurrency,repeat,2000,cell.options)
     }
@@ -284,26 +311,30 @@ async function full(vs,owner,tenant) {
   await admin.query("update public.community_accounts set standing=case user_id when $2::uuid then 'pending' when $3::uuid then 'suspended' else 'inactive' end,has_disciplinary_restriction=(user_id=$3::uuid) where tenant_id=$1 and user_id=any($4::uuid[])",[tenant,pending.id,suspended.id,[pending.id,suspended.id,inactive.id]])
   const outsider=await user()
   for(const [label,actor,status] of [['admin',staff,200],['member-no-assignment',member,200],['pending',pending,404],['suspended',suspended,200],['inactive',inactive,404],['outsider',outsider,404]]) {
-    if(completedPair('details',1,0,label))continue
+    if(completedGroup('details',1,0,label))continue
     await freshToken(actor)
     for(const v of vs)await run(v,actor,tenant,'details','http',1,0,2000,{label,expectedStatus:status})
   }
   await freshToken(owner)
-  if(!completedPair('details',1,0,'missing-tenant'))for(const v of vs)await run(v,owner,randomUUID(),'details','http',1,0,2000,{label:'missing-tenant',expectedStatus:404})
+  if(!completedGroup('details',1,0,'missing-tenant'))for(const v of vs)await run(v,owner,randomUUID(),'details','http',1,0,2000,{label:'missing-tenant',expectedStatus:404})
   assert.equal((await http(vs[0],owner,`/api/communities/${tenant}/commands`,'POST',{kind:'archive',archived:true})).r.status,200)
   for(const v of vs) {
-    if(!completedPair('details',1,0,'archived-owner'))await run(v,owner,tenant,'details','http',1,0,2000,{label:'archived-owner',expectedStatus:200})
-    if(!completedPair('details',1,0,'archived-non-owner'))await run(v,staff,tenant,'details','http',1,0,2000,{label:'archived-non-owner',expectedStatus:404})
+    if(!completedGroup('details',1,0,'archived-owner'))await run(v,owner,tenant,'details','http',1,0,2000,{label:'archived-owner',expectedStatus:200})
+    if(!completedGroup('details',1,0,'archived-non-owner'))await run(v,staff,tenant,'details','http',1,0,2000,{label:'archived-non-owner',expectedStatus:404})
   }
 }
 try {
   await admin.connect()
   const baseline=await variant('baseline','../test-results/auth-optimization/baseline-src')
-  metadata={revision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),baselineSource,candidateSource,lockfile:createHash('sha256').update(readFileSync('package-lock.json')).digest('hex'),node:process.version,cpu:cpus()[0].model,logicalCpus:cpus().length,memory:totalmem(),runtime:baseline.runtime,poolMax:4,timeoutsMs:{connection:4000,statement:5000,lock:2000,idleTransaction:8000},packages:Object.fromEntries(['kysely','pg','fastify','@supabase/supabase-js'].map(name=>[name,JSON.parse(readFileSync('node_modules/'+name+'/package.json','utf8')).version])),topology:'Windows API to local Docker PostgreSQL on loopback',migration:(await admin.query('select max(version) as version from supabase_migrations.schema_migrations')).rows[0].version,started:new Date().toISOString()}
+  metadata={revision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),baselineSource,candidateSource,bSource,aSource,variantNames,lockfile:createHash('sha256').update(readFileSync('package-lock.json')).digest('hex'),node:process.version,cpu:cpus()[0].model,logicalCpus:cpus().length,memory:totalmem(),runtime:baseline.runtime,poolMax:4,timeoutsMs:{connection:4000,statement:5000,lock:2000,idleTransaction:8000},packages:Object.fromEntries(['kysely','pg','fastify','@supabase/supabase-js'].map(name=>[name,JSON.parse(readFileSync('node_modules/'+name+'/package.json','utf8')).version])),topology:'Windows API to local Docker PostgreSQL on loopback',migration:(await admin.query('select max(version) as version from supabase_migrations.schema_migrations')).rows[0].version,started:new Date().toISOString()}
+  if(experimentA)metadata.setupFunctions=(await admin.query(`select p.oid::regprocedure::text as signature,
+    pg_get_functiondef(p.oid) as definition,p.prosecdef,p.provolatile,p.proconfig,pg_get_userbyid(p.proowner) as owner
+    from pg_proc p where p.oid in ('app_private.begin_actor_context(uuid,uuid)'::regprocedure,'app_private.lock_eligible_actor()'::regprocedure) order by 1`)).rows
   if(previousRun) {
     assert.equal(previousRun.metadata.lockfile,metadata.lockfile)
     assert.deepEqual(previousRun.metadata.baselineSource,metadata.baselineSource)
     assert.deepEqual(previousRun.metadata.candidateSource,metadata.candidateSource)
+    if(experimentA)for(const key of ['bSource','aSource','variantNames','setupFunctions'])assert.deepEqual(previousRun.metadata[key],metadata[key])
     assert.deepEqual(previousRun.metadata.runtime,metadata.runtime)
     assert.equal(previousRun.metadata.migration,metadata.migration)
     metadata.resumed={file:process.argv[3],started:previousRun.metadata.started,retainedCells:rows.length}
@@ -320,11 +351,20 @@ try {
   if(mode==='baseline') {
     for(const transport of ['service','http'])for(const endpoint of ['details','preferences'])for(const concurrency of [1,4])await run(baseline,owner,tenant,endpoint,transport,concurrency,0)
   } else {
-    const candidate=await variant('candidate','../src')
-    assert.deepEqual((await http(baseline,owner,`/api/communities/${tenant}/details`)).data,(await http(candidate,owner,`/api/communities/${tenant}/details`)).data)
-    if(mode==='full') {await full([baseline,candidate],owner,tenant);await cold(owner,tenant)}
-    else if(mode==='cold')await cold(owner,tenant)
-    else for(let repeat=0;repeat<5;repeat++)for(const transport of ['service','http'])for(const endpoint of ['details','preferences'])for(const concurrency of [1,4])for(const v of repeat%2?[candidate,baseline]:[baseline,candidate])await run(v,owner,tenant,endpoint,transport,concurrency,repeat)
+    if(experimentA) {
+      await variant('a','../test-results/auth-optimization/a-src')
+      await variant('b','../test-results/auth-optimization/b-src')
+      await variant('ab','../src')
+      assert.deepEqual(variants.map(v=>[v.setupSaving,v.factSaving]),[[0,0],[1,0],[0,2],[1,2]])
+    } else await variant('candidate','../src')
+    const expected=(await http(baseline,owner,`/api/communities/${tenant}/details`)).data
+    for(const v of variants.slice(1))assert.deepEqual((await http(v,owner,`/api/communities/${tenant}/details`)).data,expected)
+    if(mode.startsWith('full')) {await full(variants,owner,tenant);await cold(owner,tenant)}
+    else if(mode.startsWith('cold'))await cold(owner,tenant)
+    else for(let repeat=0;repeat<5;repeat++)for(const transport of ['service','http'])for(const endpoint of ['details','preferences'])for(const concurrency of [1,4]) {
+      await freshToken(owner)
+      for(const v of order(variants,repeat))await run(v,owner,tenant,endpoint,transport,concurrency,repeat)
+    }
   }
 } finally {
   save()

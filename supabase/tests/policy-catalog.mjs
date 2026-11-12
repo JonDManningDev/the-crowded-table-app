@@ -33,7 +33,7 @@ try {
   // pg_depend does not enumerate calls in string-bodied SQL/PLpgSQL functions;
   // definitions are exported too, and require review alongside these edges.
   const retained = ['active_tenant(uuid)','attribute_command()','auth_identity_eligible(uuid,boolean)',
-    'command_scope()','guard_community_sharing()','is_approved_owner(uuid)','lock_eligible_actor()',
+    'begin_actor_context(uuid,uuid)','command_scope()','guard_community_sharing()','is_approved_owner(uuid)','lock_eligible_actor()',
     'my_community_relationships()','protect_invariants()','protect_staff_assignment()',
     'provision_user_account()','reject_audit_mutation()','require_tenant_roots()','stamp_audit()',
     'stamp_community_revision()','stamp_first_approval()','validate_command_details()','verified_user()']
@@ -41,10 +41,10 @@ try {
   assert.deepEqual(catalog.runtime, JSON.parse(readFileSync(new URL('../../server/access-runtime-manifest.json', import.meta.url))))
   assert.deepEqual(catalog.external_relation_grants, [])
   assert.deepEqual(catalog.external_function_grants, [])
-  assert.equal(catalog.migrations.at(-1).version, '20261110000800')
+  assert.equal(catalog.migrations.at(-1).version, '20261111000100')
   // Export a review candidate without overwriting the checked-in test fixture.
   const directory = new URL('../../server/test-results/policy/', import.meta.url)
   mkdirSync(directory, { recursive: true })
   writeFileSync(new URL('local-catalog.json', directory), JSON.stringify(catalog, null, 2) + '\n')
-  console.log('PASS final local catalog: 18 reviewed functions, exact runtime manifest, zero external grants; all trigger/RLS/default dependencies exported')
+  console.log('PASS final local catalog: 19 reviewed functions, exact runtime manifest, zero external grants; all trigger/RLS/default dependencies exported')
 } finally { await db.end() }

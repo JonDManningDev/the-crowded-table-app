@@ -95,6 +95,6 @@ export function createHttpHarness(t) {
   })
   return { app, queries, verifications, requests, registrations,
     queue: (...steps) => pending.push(...steps),
-    eligible: (...steps) => pending.push([], [{ allowed: true }], ...steps),
+    eligible: (...steps) => pending.push([{ allowed: true }], ...steps),
     contract: () => httpContract(registrations, app.initialConfig) }
 }

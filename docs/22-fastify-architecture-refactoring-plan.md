@@ -207,7 +207,7 @@ No direct dependency between the two feature services is needed for current oper
 ### Final abstraction names
 
 - **`AuthenticatedContext`**: readonly `{ actorId: string; requestId: string }`. Represents verified identity and correlation, not current eligibility or authorization.
-- **`withEligibleActorTransaction(db, context, work)`**: ordinary function replacing `withVerifiedActor`; preserves its context/locking SQL sequence; returns the callback value directly and rolls back with `IneligibleActorError` on denial (accepted 2026-11-11).
+- **`withEligibleActorTransaction(db, context, work)`**: ordinary function replacing `withVerifiedActor`; preserves ordered context assignment and locked eligibility; returns the callback value directly and rolls back with `IneligibleActorError` on denial (accepted 2026-11-11). The separately authorized Candidate A checkpoint consolidates setup into restricted invoker `begin_actor_context(uuid,uuid)` calling the retained Auth definer. Database infrastructure still owns the transaction and complete retries; see the [measurement/verification record](research/auth-transaction-optimization.md#candidate-a-ordered-context-setup-and-locked-eligibility).
 - **`IneligibleActorError`**: database-owned error without HTTP metadata. Replaces the historical eligibility result envelope; the root handler maps it to 403 `ineligible`, with account review retaining route-owned 403 `unavailable`.
 - **`BuildApiOptions`**: required `{ db, verify, cursors, cleanup }` application construction inputs only—database, verifier, cursor codec and explicit asynchronous cleanup callback. Never passed wholesale to features. The old positional construction signature is removed.
 
