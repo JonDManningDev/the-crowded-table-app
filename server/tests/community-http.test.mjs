@@ -264,7 +264,7 @@ test('directory and exact/owner facts retain ordered projections and bound param
     const operation = operations.find(operation => operation.name === name), dto = response(operation).dto
     if (name === 'memberDirectory') h.eligible([], [{ id: tenantId }], [{ operational_status: 'active', standing: 'approved' }], dto.rows)
     else h.eligible([], [{ id: tenantId }], [{ operational_status: 'active', accountId: actorId, standing: 'approved',
-      assignmentId: actorId, role: 'owner', status: 'active' }], name === 'accountFacts' ? [dto] : dto.rows)
+      role: 'owner', status: 'active' }], name === 'accountFacts' ? [dto] : dto.rows)
     assert.equal((await h.app.inject(input(operation))).statusCode, 200)
     const query = h.queries.at(-1)
     if (name === 'memberDirectory') {
@@ -286,7 +286,7 @@ test('staff and participant services retain distinct projections and read/write 
     const operation = operations.find(operation => operation.name === name), dto = response(operation).dto
     const list = name.startsWith('list'), staff = name.endsWith('Staff')
     h.eligible([], [{ id: tenantId }], [{ operational_status: 'active', accountId: actorId, standing: 'approved',
-      assignmentId: actorId, role: 'owner', status: 'active', can_grant_staff: true, can_manage_community_permissions: true }], list ? dto.rows : [dto])
+      role: 'owner', status: 'active', can_grant_staff: true, can_manage_community_permissions: true }], list ? dto.rows : [dto])
     assert.equal((await h.app.inject(input(operation))).statusCode, 200)
     const query = h.queries.at(-1), fields = [...metadata, ...(staff ? ['role', 'status', ...staffFlags] : ['can_post_public_events'])]
     assert.equal(/^select (.*?) from /.exec(query.sql)?.[1], fields.map(key => `"${key}"`).join(', '))
@@ -294,7 +294,7 @@ test('staff and participant services retain distinct projections and read/write 
   }
   for (const [name, status, code] of [['readStaff', 404, 'missing'], ['saveParticipantPermissions', 403, 'forbidden']]) {
     const operation = operations.find(operation => operation.name === name)
-    h.eligible([], [{ id: tenantId }], [{ operational_status: 'active', accountId: actorId, standing: 'approved', assignmentId: null }])
+    h.eligible([], [{ id: tenantId }], [{ operational_status: 'active', accountId: actorId, standing: 'approved', role: null }])
     error(h, operation, await h.app.inject(input(operation)), status, code)
   }
 })
@@ -324,7 +324,7 @@ test('history keeps open details and empty unauthorized pages; own requests keep
   assert.equal(ownResponse.statusCode, 200)
   assert.deepEqual(ownResponse.json(), { request: null })
   const actual = createHttpHarness(t)
-  actual.eligible([], [{ operational_status: 'active' }], [{ operational_status: 'active', accountId: null, assignmentId: null }], [])
+  actual.eligible([], [{ operational_status: 'active' }], [{ operational_status: 'active', accountId: null, role: null }], [])
   const empty = await actual.app.inject(input(history))
   assert.equal(empty.statusCode, 200)
   assert.deepEqual(empty.json(), { rows: [], next: null })

@@ -61,14 +61,14 @@ async function loadCommunityStaffFacts(tx: Tx, actor: string, tenant: string) {
   const row = await tx.selectFrom('tenants as t')
     .leftJoin('community_accounts as c', join => join.onRef('c.tenant_id', '=', 't.id').on('c.user_id', '=', actor))
     .leftJoin('tenant_staff_assignments as s', join => join.onRef('s.tenant_id', '=', 't.id').on('s.user_id', '=', actor))
-    .select(['t.operational_status', 'c.user_id as accountId', 'c.standing', 's.user_id as assignmentId', 's.role', 's.status'])
+    .select(['t.operational_status', 'c.user_id as accountId', 'c.standing', 's.role', 's.status'])
     .select(staffFlags.map(key => `s.${key}` as const))
     .where('t.id', '=', tenant).executeTakeFirst()
   if (!row) return { site: undefined, account: undefined, assignment: undefined }
   // Only LEFT JOIN absence introduces nulls into these NOT NULL columns.
-  // Identity sentinels preserve real assignments whose flags are all false.
+  // A non-null role preserves assignments whose permission flags are all false.
   // The role/status unions reflect storage CHECKs rather than generated enums.
-  const assignment: Staff | undefined = row.assignmentId === null ? undefined : {
+  const assignment: Staff | undefined = row.role === null ? undefined : {
     role: row.role as Staff['role'], status: row.status as Staff['status'],
     ...Object.fromEntries(staffFlags.map(key => [key, row[key]!])) as StaffPermissions,
   }

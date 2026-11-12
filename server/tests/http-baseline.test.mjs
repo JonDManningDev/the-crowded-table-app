@@ -258,9 +258,9 @@ test('own profile and request preserve null versus missing; review retains unava
 test('unauthorized history stays a successful empty page; authorized detail fields remain open', async t => {
   const h = createHttpHarness(t)
   for (const steps of [[[], []],
-    [[], [{ operational_status: 'active' }], [{ operational_status: 'active', accountId: null, assignmentId: null }], []],
+    [[], [{ operational_status: 'active' }], [{ operational_status: 'active', accountId: null, role: null }], []],
     [[], [{ operational_status: 'active' }], [{ operational_status: 'active', accountId: actorId, standing: 'approved',
-      assignmentId: actorId, role: 'admin', status: 'active', can_audit_community_accounts: false, can_audit_staff_accounts: false }], []]]) {
+      role: 'admin', status: 'active', can_audit_community_accounts: false, can_audit_staff_accounts: false }], []]]) {
     h.eligible(...steps)
     const response = await h.app.inject({ url: `${community}/history`, headers: authorization })
     assert.equal(response.statusCode, 200)
@@ -270,7 +270,7 @@ test('unauthorized history stays a successful empty page; authorized detail fiel
     content_key: null, created_at: '2026-11-04T00:00:00.000000Z', created_by: actorId, operation_id: actorId,
     reason: null, details: { future_field: { retained: true } }, categories: ['community_account'] }
   h.eligible([], [{ operational_status: 'active' }], [{ operational_status: 'active', accountId: actorId,
-    standing: 'approved', assignmentId: actorId, role: 'owner', status: 'active' }], [{ ...entry, internal_secret: 'omit' }])
+    standing: 'approved', role: 'owner', status: 'active' }], [{ ...entry, internal_secret: 'omit' }])
   const response = await h.app.inject({ url: `${community}/history`, headers: authorization })
   assert.equal(response.statusCode, 200)
   assert.deepEqual(response.json(), { rows: [entry], next: null })
