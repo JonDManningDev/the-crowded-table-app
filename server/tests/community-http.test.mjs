@@ -249,7 +249,7 @@ test('public service retains projections and anonymous transaction scope without
 
 test('exact profile service projects the same eight columns independently of HTTP schemas', async t => {
   const h = createHttpHarness(t), operation = operations.find(operation => operation.name === 'readProfile')
-  h.eligible([], [response(operation).dto])
+  h.eligible([response(operation).dto])
   assert.equal((await h.app.inject(input(operation))).statusCode, 200)
   assert.equal(/^select (.*?) from /.exec(h.queries.at(-1).sql)?.[1],
     '"p"."tenant_id", "p"."user_id", "p"."display_name", "p"."bio", "p"."created_at", "p"."updated_at", "p"."created_by", "p"."updated_by"')

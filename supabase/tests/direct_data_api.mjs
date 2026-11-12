@@ -54,7 +54,7 @@ const create = async (actor, name) => {
   return result;
 };
 const command = async (actor, body) => {
-  const result = await withEligibleActorTransaction(db,{actorId:actor,requestId:randomUUID()},tx => communityCommand(tx,actor,tenant,body));
+  const result = await withEligibleActorTransaction(db,{actorId:actor,requestId:randomUUID()},tx => communityCommand(tx,actor,tenant,body), { initialTenantId: tenant });
   return result;
 };
 

@@ -107,11 +107,11 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   assert.equal(profile.profile.display_name, 'Hosted other'); assert.equal(profile.profile.bio, 'Profile')
   await http(member, path + '/accounts/' + other.id + '/permissions', 'PATCH', { can_post_public_events: true }, 403)
   await race(other, tx => ownCommunityPreferences(tx, other.id, tenant, { show_global_profile: true }),
-    () => command(other, { kind: 'deactivate' }), { root: /from (?:public\.)?community_accounts\b[\s\S]*for update/ })
+    () => command(other, { kind: 'deactivate' }), { root: /from (?:public\.)?community_accounts\b[\s\S]*for update/, initialTenantId: tenant })
   assert.equal((await preferences(other)).show_global_profile, false)
   await command(other, { kind: 'reactivate' })
   await race(other, tx => communityCommand(tx, other.id, tenant, { kind: 'deactivate' }),
-    () => preferences(other, { show_global_profile: true }, 404), { root: /from (?:public\.)?community_accounts\b[\s\S]*for update/ })
+    () => preferences(other, { show_global_profile: true }, 404), { root: /from (?:public\.)?community_accounts\b[\s\S]*for update/, initialTenantId: tenant })
   await command(other, { kind: 'reactivate' })
   console.log('PASS both hosted sharing/deactivation lock orders')
 
@@ -129,7 +129,7 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
 
   await command(owner, { kind: 'permissions', target: member.id, permissions: { can_manage_settings: true } })
   await race(owner, tx => communityCommand(tx, owner.id, tenant, { kind: 'archive', archived: true }),
-    () => settings(member, { pause_community_events: true }, 403))
+    () => settings(member, { pause_community_events: true }, 403), { initialTenantId: tenant })
   await http(member, path + '/accounts/' + member.id + '/profile', 'GET', undefined, 404)
   const archived = await transaction(member, async tx => {
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
@@ -144,7 +144,7 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   await settings(owner, { pause_community_events: false })
   const revoke = { kind: 'permissions', target: member.id, permissions: { can_manage_settings: false } }
   await race(owner, tx => communityCommand(tx, owner.id, tenant, revoke),
-    () => settings(member, { pause_community_events: true }, 403))
+    () => settings(member, { pause_community_events: true }, 403), { initialTenantId: tenant })
   await command(owner, { ...revoke, permissions: { can_manage_settings: true } })
   await race(member, tx => configurationSettings(tx, member.id, tenant, { pause_community_events: true }),
     () => command(owner, revoke), { initialTenantId: tenant })

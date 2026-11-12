@@ -1,5 +1,40 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Tenant setup for lifecycle and self-service
+
+[Issue #20](https://github.com/JonDManningDev/the-crowded-table-app/issues/20) uses migration `20261112000100` from [issue #19](https://github.com/JonDManningDev/the-crowded-table-app/issues/19) for nine existing-tenant operations. The command dispatcher, own request, account review, staff candidates, pending requests, exact profile, own-profile save and own-preference read/save establish their initial tenant during authenticated setup. The exported command, own-profile and own-preference helpers take transactions already scoped by their callers.
+
+Lifecycle commands lock the tenant root before reading current authority. Independent profile saves check lifecycle at statement time. Independent preference saves acquire the account lock before updating preferences and check lifecycle at the write. Creation generates its tenant and assigns scope during creation. Block sources continue to scope each community during source validation under the existing root locks.
+
+| Real authenticated HTTP operation | #19 baseline | #20 checkpoint |
+| --- | ---: | ---: |
+| Pending join command | 15 | 14 |
+| Own request, account review, staff candidates, pending requests, exact profile, own-profile save, own-preference read (each) | 5 | 4 |
+| Own-preference save | 6 | 5 |
+| Ineligible command and account review (each) | 3 | 3 |
+
+Counts include transaction boundaries and use the same local runtime schema and synthetic fixture workload against baseline `c90f903f6156631ba17a551ed700bc69d0162362` and the checkpoint. After accounting for setup and the removed scope statement, each SQL submission sequence matched its baseline. Configuration details, community history and global preferences controls remained at six, seven and four submissions. The logs, harnesses and comparison JSON are local and ignored under `server/test-results/tenant-setup-20/` in the original clone at `C:\Projects\Personal\the-crowded-table-app`.
+
+The comparison ran from the original clone using its `server/.env.local`, local Supabase Auth and the `ct_api` runtime connection aligned to the loopback stack on port 54322. Both revisions used migration `20261112000100`, a one-connection pool, a five-second statement timeout and a two-second lock timeout. Use the baseline revision above and the reviewed candidate source in separate checkouts with dependencies installed. Run the commands sequentially with each placeholder replaced by its checkout path. These checks compare SQL submissions. Latency remains part of #22.
+
+```text
+node server/test-results/tenant-setup-20/count-submissions.mjs baseline <baseline-checkout> 20261112000100
+node server/test-results/tenant-setup-20/count-submissions.mjs candidate <candidate-checkout> 20261112000100 candidate-committed
+node server/test-results/tenant-setup-20/compare-submissions.mjs server/test-results/tenant-setup-20/submissions-baseline.json server/test-results/tenant-setup-20/submissions-candidate-committed.json
+```
+
+The real runtime regression rejected a command given a transaction scoped to a different tenant and preserved the pending request. The pinned baseline failed that regression. Real HTTP checks covered nonempty cursors and their denied audiences, own-request isolation, current Auth denial, role/standing and archive outcomes, stale and repeated commands, trusted audit effects and both lifecycle/self-edit lock orders. The scoped join retry reestablished identity, tenant and request correlation before committing one set of effects.
+
+Local verification used the following commands from the candidate checkout root. The database checks targeted the local stack at `127.0.0.1:54322` with migration `20261112000100` applied. For runtime scripts, use the original clone's local env file and set `DATABASE_URL` in the test process to the local `ct_api` connection on that port.
+
+- `npm.cmd run test:http -w server` passed 76 tests with the reviewed HTTP fixture. `npm.cmd test -w client -- --run` passed 279 tests. `npm.cmd run lint` and `npm.cmd run build` passed, including the server TypeScript checks in the build.
+- `node --env-file="<original-clone>/server/.env.local" server/tests/<suite>-local.mjs` passed for `preferences`, `community`, `history`, `self-service`, `configuration`, `records`, `directory`, `global-profiles` and `access-audit`, run in the order listed in the server's `test:local` script. `node --env-file="<original-clone>/server/.env.local" --test server/tests/actor-context-local.test.mjs server/tests/transaction-retry-local.test.mjs` passed the runtime context and retry checks.
+- `node supabase/tests/direct_data_api.mjs` passed the direct PostgREST checks. `node --env-file="<original-clone>/server/.env.local" server/tests/hosted-policy-local.mjs` passed the focused policy scenarios on loopback when run in isolation and preserved the application checksums. `node supabase/tests/access-client-audit.mjs` passed the client boundary scan.
+- `npm.cmd run verify:types -w server` passed with the tracked canonical LF bytes in `server/src/database.types.ts`. A first run against the Windows CRLF checkout failed the byte comparison. `node --test server/tests/database-types-local.test.mjs` passed the generation, drift detection and driver checks.
+- `npx supabase test db` passed 272 pgTAP assertions. `npx supabase db lint --local --level warning --fail-on warning` reported no schema errors.
+
+The setup migration replay and populated upgrade evidence belongs to #19. [#21](https://github.com/JonDManningDev/the-crowded-table-app/issues/21) tracks the directory, record and history operations, and [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) tracks the integrated gates and latency. Hosted rollout is separate.
+
 ## Tenant setup for community configuration
 
 [Issue #19](https://github.com/JonDManningDev/the-crowded-table-app/issues/19) is the configuration and copy checkpoint of [specification #18](https://github.com/JonDManningDev/the-crowded-table-app/issues/18). Migration `20261112000100_initial_tenant_context.sql` is applied to local Supabase. It replaces the two-UUID setup function with the three-UUID volatile security invoker and transfers the exact `ct_api` execution grant. Setup assigns actor and operation, locks current Auth eligibility, then sets the initial tenant for the transaction. The helper clears scope on omission and rejects an ineligible actor before callback work. The seven details, settings and copy operations pass their validated tenant separately from identity. Their root locks and subsequent authorization reads remain separate.
@@ -25,7 +60,7 @@ Local verification passed the 76 server HTTP tests against the existing baseline
 
 Clean migration replay and populated forward upgrade passed in disposable databases. The upgrade retained application rows and audit history. The catalog, runtime grant manifest, database type drift and driver fixtures, SQL lint, root lint, 279 client tests and production build passed. The local application database now expects the three-UUID setup signature.
 
-[#20](https://github.com/JonDManningDev/the-crowded-table-app/issues/20) and [#21](https://github.com/JonDManningDev/the-crowded-table-app/issues/21) cover the remaining operations. [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) covers integrated gates and latency. For that comparison, run the pinned baseline and the pinned integrated candidate against separate disposable loopback Supabase stacks, each replayed only through its own revision. Use separate project IDs and port mappings and seed equivalent synthetic fixtures. Alternate schema-compatible cells using the same workloads, pool, warmups and outcome checks. Store comparison manifests and samples under a new experiment name. The historical A/B harness and its snapshots belong with their original schema, including the two-UUID signature. Hosted rollout is outside this checkpoint.
+[#20](#tenant-setup-for-lifecycle-and-self-service) covers lifecycle and self-service. [#21](https://github.com/JonDManningDev/the-crowded-table-app/issues/21) covers the remaining operations. [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) covers integrated gates and latency. For that comparison, run the pinned baseline and the pinned integrated candidate against separate disposable loopback Supabase stacks, each replayed only through its own revision. Use separate project IDs and port mappings and seed equivalent synthetic fixtures. Alternate schema-compatible cells using the same workloads, pool, warmups and outcome checks. Store comparison manifests and samples under a new experiment name. The historical A/B harness and its snapshots belong with their original schema, including the two-UUID signature. Hosted rollout is outside this checkpoint.
 
 **Staff-assignment presence simplification - locally complete 2026-11-12.**
 

@@ -233,7 +233,7 @@ try {
       await work(tx)
       ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
       await gate
-    })
+    }, { initialTenantId: tenant })
     const pid=await Promise.race([started,done.then(()=>{throw Error('transaction ended before barrier')})])
     return {pid,release,done}
   }

@@ -386,7 +386,7 @@ try {
   await cmd(owner,{kind:'archive',archived:false})
   await committedBefore(
     tx=>communityCommand(tx,owner.id,tenant,{kind:'archive',archived:true}),
-    ()=>copy(editor,'community.hero.heading','Stale pre-archive authority',403))
+    ()=>copy(editor,'community.hero.heading','Stale pre-archive authority',403), { initialTenantId: tenant })
   assert.equal((await copy(owner)).rows.find(r=>r.content_key==='community.hero.heading').text_value,'Committed before archive')
   await cmd(owner,{kind:'archive',archived:false})
   // Two real runtime transactions upgrade the same SHARE lock. PostgreSQL

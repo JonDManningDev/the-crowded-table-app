@@ -138,7 +138,9 @@ test('real local operations retry with fresh authorization and one committed out
       const result = await faulted(member, path + '/commands', join,
         { match: /insert into "tenant_admin_actions"/, codes: ['40001', '40P01'] })
       assert.equal(result.attempts, 3)
-      assert.equal(result.queries.filter(query => query.text.includes('begin_actor_context')).length, 3)
+      const contexts = result.queries.filter(query => query.text.includes('begin_actor_context'))
+      assert.equal(contexts.length, 3)
+      assert.ok(contexts.every(query => query.parameters[2] === tenant))
       assert.equal(result.queries.filter(query => query.text.includes('for update')).length >= 3, true)
       const own = await request(controlApp, member, path + '/me/request')
       assert.equal(own.request.request_id, result.value.requestId)

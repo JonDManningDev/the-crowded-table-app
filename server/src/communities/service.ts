@@ -87,7 +87,7 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
       return withEligibleActorTransaction(db, context, tx => createCommunity(tx, context.actorId, input))
     },
     executeCommand(context: AuthenticatedContext, params: TenantParams, input: CommunityCommand) {
-      return withEligibleActorTransaction(db, context, tx => communityCommand(tx, context.actorId, params.tenantId, input))
+      return withEligibleActorTransaction(db, context, tx => communityCommand(tx, context.actorId, params.tenantId, input), { initialTenantId: params.tenantId })
     },
     // Requests and reviews
     ownRequest(context: AuthenticatedContext, params: TenantParams) {
@@ -107,13 +107,13 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
       return readProfile(db, context, params)
     },
     saveOwnProfile(context: AuthenticatedContext, params: TenantParams, input: CommunityProfileInput) {
-      return withEligibleActorTransaction(db, context, tx => ownCommunityProfile(tx, context.actorId, params.tenantId, input))
+      return withEligibleActorTransaction(db, context, tx => ownCommunityProfile(tx, context.actorId, params.tenantId, input), { initialTenantId: params.tenantId })
     },
     readOwnPreferences(context: AuthenticatedContext, params: TenantParams) {
-      return withEligibleActorTransaction(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId))
+      return withEligibleActorTransaction(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId), { initialTenantId: params.tenantId })
     },
     saveOwnPreferences(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunityPreferences>) {
-      return withEligibleActorTransaction(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId, input))
+      return withEligibleActorTransaction(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId, input), { initialTenantId: params.tenantId })
     },
     // Configuration and copy
     readDetails(context: AuthenticatedContext, params: TenantParams) {
@@ -350,9 +350,9 @@ async function changeAssignment(c: Context, user: string, member: Account, assig
   await setStanding(c, user, member.standing, member.restricted)
   return result(c, 'saved')
 }
+// The caller opens an authenticated transaction scoped to tenant.
 export async function communityCommand(tx: Tx, actor: string, tenant: string, cmd: CommunityCommand): Promise<CommandResult> {
   const c = { tx, actor, tenant }
-  await scope(tx, tenant)
   const facts = await loadCommunityActionFacts(tx, actor, tenant)
   requireCanEnterCommunityAction(facts, cmd)
   const effective = facts.assignment?.status === 'active' ? facts.assignment : undefined
@@ -395,33 +395,30 @@ function ownRequest(db: AppDatabase, context: AuthenticatedContext, params: Tena
   const actor = context.actorId;
   const tenant = params.tenantId;
   return withEligibleActorTransaction<OwnCommunityRequestResponse | MissingRequest>(db, context, async tx => {
-    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     const row = (await sql<OwnCommunityRequestResponse>`select case when r.id is not null then
         jsonb_build_object('request_id',r.id,'kind',r.kind,'requested_at',r.requested_at) end as request
         from public.community_accounts c join public.tenants t on t.id=c.tenant_id
         left join app_private.community_account_requests r using(tenant_id,user_id)
         where c.tenant_id=${tenant} and ${ownCommunityRequestAudience(actor)}`.execute(tx)).rows[0]
     return row ?? { status: 404 as const }
-  })
+  }, { initialTenantId: tenant })
 }
 function reviewAccount(db: AppDatabase, context: AuthenticatedContext, params: ReviewParams) {
   const actor = context.actorId;
   const tenantId = params.tenantId;
   const target = params.target;
   return withEligibleActorTransaction(db, context, async tx => {
-    await sql`select set_config('ct.tenant_id',${tenantId},true)`.execute(tx)
     const row = (await sql<AccountReview>`select c.standing,c.revision,case when c.user_id=${actor} then r.id end as request_id
           from public.community_accounts c join public.tenants t on t.id=c.tenant_id
           left join app_private.community_account_requests r using(tenant_id,user_id)
           where c.tenant_id=${tenantId} and c.user_id=${target} and ${communityAccountReviewAudience(actor)}
           `.execute(tx)).rows[0]
     return row ? { row } : { status: 404 as const }
-  })
+  }, { initialTenantId: tenantId })
 }
 function staffCandidates(db: AppDatabase, context: AuthenticatedContext, params: TenantParams, query: AfterQuery) {
   const tenantId = params.tenantId;
   return withEligibleActorTransaction(db, context, async tx => {
-    await sql`select set_config('ct.tenant_id',${tenantId},true)`.execute(tx)
     const rows = (await sql<StaffCandidate>`select c.tenant_id,c.user_id,c.standing,p.display_name,s.status as staff_status,s.role as staff_role
           from public.community_accounts c left join public.community_account_profiles p using(tenant_id,user_id)
           left join public.tenant_staff_assignments s using(tenant_id,user_id)
@@ -429,13 +426,12 @@ function staffCandidates(db: AppDatabase, context: AuthenticatedContext, params:
             and (${query.after ?? null}::uuid is null or c.user_id>${query.after ?? null}::uuid)
           order by c.user_id limit 51`.execute(tx)).rows
     return { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].user_id : null }
-  })
+  }, { initialTenantId: tenantId })
 }
 function pendingRequests(db: AppDatabase, context: AuthenticatedContext, params: TenantParams, query: AfterQuery) {
   const actor = context.actorId;
   const tenantId = params.tenantId;
   return withEligibleActorTransaction(db, context, async tx => {
-    await sql`select set_config('ct.tenant_id',${tenantId},true)`.execute(tx)
     const rows = (await sql<CommunityRequest>`select r.id,r.kind,r.user_id,r.requested_at,c.revision,c.standing,c.first_approved_at,
           c.has_disciplinary_restriction,p.display_name from app_private.community_account_requests r
           join public.community_accounts c using(tenant_id,user_id) left join public.community_account_profiles p using(tenant_id,user_id)
@@ -443,7 +439,7 @@ function pendingRequests(db: AppDatabase, context: AuthenticatedContext, params:
             and (${query.after ?? null}::uuid is null or r.id>${query.after ?? null}::uuid)
           order by r.id limit 51`.execute(tx)).rows
     return { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].id : null }
-  })
+  }, { initialTenantId: tenantId })
 }
 
 // Profiles and preferences
@@ -453,7 +449,6 @@ function readProfile(db: AppDatabase, context: AuthenticatedContext, params: Acc
   const tenantId = params.tenantId;
   const userId = params.userId;
   return withEligibleActorTransaction(db, context, async tx => {
-    await scope(tx, tenantId)
     // Resolve viewer, target, lifecycle and curated profile in one snapshot.
     const profile = await tx.selectFrom('community_account_profiles as p')
       .innerJoin('community_accounts as target', join => join
@@ -465,11 +460,11 @@ function readProfile(db: AppDatabase, context: AuthenticatedContext, params: Acc
       .where(communityProfileSourceAudience(actor))
       .select(communityProfileColumns.map(field => `p.${field}` as const)).executeTakeFirst()
     return profile ? { status: 200 as const, profile } : { status: 404 as const }
-  })
+  }, { initialTenantId: tenantId })
 }
+// Both self-edit helpers require an authenticated transaction scoped to tenant.
 export async function ownCommunityProfile(tx: Tx, actor: string, tenant: string, input: CommunityProfileInput) {
   // Independent self edits have statement-time lifecycle checks and no tenant lock.
-  await scope(tx, tenant)
   const result = await sql`update public.community_account_profiles p set display_name=${input.display_name.trim()},bio=${input.bio?.trim() || null}
     where p.tenant_id=${tenant} and ${ownCommunityProfileEditAudience(actor)}
     returning p.tenant_id`.execute(tx)
@@ -477,7 +472,6 @@ export async function ownCommunityProfile(tx: Tx, actor: string, tenant: string,
   return { tenantId: tenant }
 }
 export async function ownCommunityPreferences(tx: Tx, actor: string, tenant: string, input?: Partial<CommunityPreferences>) {
-  await scope(tx, tenant)
   if (input) {
     // Account then preference is also the lifecycle writer's order. Do not take
     // a tenant lock: other members' independent saves must remain concurrent.
