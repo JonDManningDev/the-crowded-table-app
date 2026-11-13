@@ -95,11 +95,14 @@ try {
     await list(actor,'participant-permissions','',404)
   }
   await permissions(outsider,outsider.id,undefined,404)
+  const missingPath='/api/communities/'+randomUUID()
   for(const endpoint of ['/staff/'+owner.id,'/staff','/participant-permissions','/accounts/'+member.id+'/permissions']) {
     await http(null,path+endpoint,'GET',undefined,401)
     await http({token:'invalid'},path+endpoint,'GET',undefined,401)
     await http(owner,'/api/communities/'+otherTenant+endpoint,'GET',undefined,404)
+    assert.equal((await http(owner,missingPath+endpoint,'GET',undefined,404)).code,'missing')
   }
+  assert.equal((await http(owner,missingPath+'/accounts/'+member.id+'/permissions','PATCH',{can_post_public_events:true},404)).code,'missing')
   await permissions(manager,outsider.id,true,404)
   await http(owner,'/api/communities/'+otherTenant+'/accounts/'+outsider.id+'/permissions','PATCH',{can_post_public_events:true},403)
   for(const body of [{},{can_post_public_events:'true'},{can_post_public_events:true,user_id:outsider.id},
@@ -149,9 +152,14 @@ try {
   assert.equal((await http(manager,path+'/history?eventId='+audit[0].id)).rows.length,1)
   await assert.rejects(withEligibleActorTransaction(db, { actorId: manager.id, requestId: randomUUID() },async tx=>{
     await setParticipantPermission(tx,manager.id,tenant,grant.id,false);throw Error('injected rollback')
-  }),/injected rollback/)
+  }, { initialTenantId: tenant }),/injected rollback/)
   assert.deepEqual(await permissions(manager,grant.id),changed)
   assert.equal((await admin.query("select count(*)::int n from public.tenant_admin_actions where tenant_id=$1 and action='community_permissions_changed'",[tenant])).rows[0].n,1)
+  await assert.rejects(withEligibleActorTransaction(db, { actorId: manager.id, requestId: randomUUID() },
+    tx => setParticipantPermission(tx, manager.id, tenant, grant.id, false), { initialTenantId: otherTenant }),
+    error => error.statusCode === 404 && error.message === 'missing')
+  assert.deepEqual(await permissions(manager, grant.id), changed,
+    'the participant-permission helper must keep the transaction in its initial tenant')
   // API policies own participant product authority. A scoped trusted runtime
   // writer retains storage access; prove that boundary and roll the probe back.
   await assert.rejects(withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
@@ -258,7 +266,7 @@ try {
       const result=await work(tx)
       ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
       await gate;return result
-    })
+    }, { initialTenantId: tenant })
     const holder=await Promise.race([started,operation.then(()=>{throw Error('operation exited before barrier')})])
     const response=compete();response.catch(()=>{})
     try {

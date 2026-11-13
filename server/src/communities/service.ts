@@ -139,29 +139,29 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
     },
     // Directories and account facts
     memberDirectory(context: AuthenticatedContext, params: TenantParams, query: DirectoryQuery) {
-      return withEligibleActorTransaction(db, context, tx => readMemberDirectory(tx, context.actorId, params.tenantId, query, cursors))
+      return withEligibleActorTransaction(db, context, tx => readMemberDirectory(tx, context.actorId, params.tenantId, query, cursors), { initialTenantId: params.tenantId })
     },
     ownerAccounts(context: AuthenticatedContext, params: TenantParams, query: DirectoryQuery) {
-      return withEligibleActorTransaction(db, context, tx => listOwnerAccounts(tx, context.actorId, params.tenantId, query, cursors))
+      return withEligibleActorTransaction(db, context, tx => listOwnerAccounts(tx, context.actorId, params.tenantId, query, cursors), { initialTenantId: params.tenantId })
     },
     accountFacts(context: AuthenticatedContext, params: AccountParams) {
-      return withEligibleActorTransaction(db, context, tx => readAccountFacts(tx, context.actorId, params.tenantId, params.userId))
+      return withEligibleActorTransaction(db, context, tx => readAccountFacts(tx, context.actorId, params.tenantId, params.userId), { initialTenantId: params.tenantId })
     },
     // Staff and participant permissions
     listStaff(context: AuthenticatedContext, params: TenantParams, query: RecordQuery) {
-      return withEligibleActorTransaction(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'staff', query))
+      return withEligibleActorTransaction(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'staff', query), { initialTenantId: params.tenantId })
     },
     readStaff(context: AuthenticatedContext, params: AccountParams) {
-      return withEligibleActorTransaction(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'staff', params.userId))
+      return withEligibleActorTransaction(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'staff', params.userId), { initialTenantId: params.tenantId })
     },
     listParticipantPermissions(context: AuthenticatedContext, params: TenantParams, query: RecordQuery) {
-      return withEligibleActorTransaction(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'participant', query))
+      return withEligibleActorTransaction(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'participant', query), { initialTenantId: params.tenantId })
     },
     readParticipantPermissions(context: AuthenticatedContext, params: AccountParams) {
-      return withEligibleActorTransaction(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'participant', params.userId))
+      return withEligibleActorTransaction(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'participant', params.userId), { initialTenantId: params.tenantId })
     },
     saveParticipantPermissions(context: AuthenticatedContext, params: AccountParams, input: ParticipantPermissionInput) {
-      return withEligibleActorTransaction(db, context, tx => setParticipantPermission(tx, context.actorId, params.tenantId, params.userId, input.can_post_public_events))
+      return withEligibleActorTransaction(db, context, tx => setParticipantPermission(tx, context.actorId, params.tenantId, params.userId, input.can_post_public_events), { initialTenantId: params.tenantId })
     },
     // Audit history
     history(context: AuthenticatedContext, params: TenantParams, query: HistoryQuery) {
@@ -547,11 +547,11 @@ export async function configurationCopy(tx: Tx, actor: string, tenant: string, c
 }
 
 // Directories and account facts
+// Transaction-level helpers require the caller to establish tenant scope.
 const factsFields = ['tenant_id', 'user_id', 'standing', 'first_approved_at', 'has_disciplinary_restriction', 'created_at', 'updated_at', 'created_by', 'updated_by']
 const profileFields = ['tenant_id', 'user_id', 'display_name', 'bio', 'created_at', 'updated_at', 'created_by', 'updated_by']
 const jsonProjection = (alias: string, fields: string[]) => sql`jsonb_build_object(${sql.join(fields.flatMap(key => [sql`${key}::text`, sql.ref(alias + '.' + key)]))})`
 export async function readMemberDirectory(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<MemberDirectoryRow>> {
-  await scope(tx, tenant)
   if (!(await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows[0]) throw new ApplicationError(404, 'missing')
   requireCanReadMemberDirectory(await loadMemberDirectoryFacts(tx, actor, tenant))
   const cursorScope = ['member-directory', actor, tenant], after = cursors.decode(cursorScope, query.cursor), limit = Number(query.limit ?? 50)
@@ -583,12 +583,12 @@ export async function readAccountFacts(tx: Tx, actor: string, tenant: string, ta
   return row
 }
 async function lockAccountFacts(tx: Tx, actor: string, tenant: string) {
-  await scope(tx, tenant)
   if (!(await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows[0]) throw new ApplicationError(404, 'missing')
   return loadAccountRecordFacts(tx, actor, tenant)
 }
 
 // Staff and participant permissions
+// Transaction-level helpers require the caller to establish tenant scope.
 const recordMetadataColumns = ['tenant_id', 'user_id', 'created_at', 'updated_at', 'created_by', 'updated_by']
 const table = { staff: 'public.tenant_staff_assignments', participant: 'public.community_account_permissions' }
 const columns = {
@@ -596,7 +596,6 @@ const columns = {
   participant: [...recordMetadataColumns, 'can_post_public_events'],
 }
 async function authorizeRecords(tx: Tx, actor: string, tenant: string, kind: RecordKind, target?: string, write = false) {
-  await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
   const site = (await sql`select id from public.tenants where id=${tenant} ${write ? sql`for update` : sql`for share`}`.execute(tx)).rows[0]
   if (!site) throw new ApplicationError(404, 'missing')
   const facts = await loadAccountRecordFacts(tx, actor, tenant)
@@ -644,9 +643,10 @@ export async function setParticipantPermission(tx: Tx, actor: string, tenant: st
 }
 
 // Audit history
+// Transaction-level helpers require the caller to establish tenant scope.
 function history(db: AppDatabase, context: AuthenticatedContext, params: TenantParams, query: HistoryQuery) {
   const actor = context.actorId;
-  return withEligibleActorTransaction(db, context, tx => accountHistory(tx, actor, params.tenantId, query))
+  return withEligibleActorTransaction(db, context, tx => accountHistory(tx, actor, params.tenantId, query), { initialTenantId: params.tenantId })
 }
 function cursorScope(actor: string, tenant: string, query: HistoryQuery) {
   return [actor, tenant, query.target ?? null, query.category ?? null]
@@ -669,7 +669,6 @@ function decodeCursor(actor: string, tenant: string, query: HistoryQuery): Posit
 }
 export async function accountHistory(tx: Tx, actor: string, tenant: string, query: HistoryQuery): Promise<HistoryPage> {
   const position = decodeCursor(actor, tenant, query)
-  await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
   // Every command takes this row FOR UPDATE. Acquire it before reading the
   // staff flags, so a committed archive or revocation governs this request.
   const site = (await sql<OperationalStatus>`select operational_status from public.tenants

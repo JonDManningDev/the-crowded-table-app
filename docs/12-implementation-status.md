@@ -1,5 +1,42 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Tenant setup for directories, records and history
+
+[Issue #21](https://github.com/JonDManningDev/the-crowded-table-app/issues/21) completes the nine directory, account-record, participant-permission and history operations in [specification #18](https://github.com/JonDManningDev/the-crowded-table-app/issues/18). Member directory, owner-account list, exact account facts, staff list and exact record, participant-permission list, exact record and save, and history supply their initial tenant during authenticated setup. Their transaction-level helpers expect a transaction scoped by the caller. Each operation still acquires its tenant-root lock before a separate authorization-facts read. History validates its cursor after Auth eligibility and before the root lock. Creation still assigns scope after generating its tenant, and block workflows still assign scope during source validation.
+
+| Real authenticated HTTP path | #20 baseline | #21 checkpoint |
+| --- | ---: | ---: |
+| Member directory, owner-account list, exact account facts, staff list and exact record, participant-permission list and exact record, history (each) | 7 | 6 |
+| Genuine participant-permission write | 10 | 9 |
+| Participant-permission no-op | 7 | 6 |
+| Configuration details control | 6 | 6 |
+| Community preferences and global preferences controls (each) | 4 | 4 |
+| Invalid history cursor (HTTP 400) | 3 | 3 |
+| Ineligible history actor with an invalid cursor (HTTP 403) | 3 | 3 |
+
+Counts include transaction boundaries. For each migrated case, the SQL submission sequence matched after removing the baseline's standalone scope statement. The control sequences matched directly. The trace used baseline `f1711e0e34d3d64780d5aae3e5ed45154426eee6` and the reviewed candidate, both with local migration `20261112000100`, real Supabase Auth and `ct_api` on loopback port 54322. The pool size was one, with five-second statement and two-second lock timeouts. The harnesses, logs and comparison JSON are ignored under `server/test-results/tenant-setup-21/` in the original clone at `C:\Projects\Personal\the-crowded-table-app`.
+
+Run these commands sequentially from the original clone, which supplies `server/.env.local`. Use the pinned baseline and reviewed candidate checkouts with their dependencies installed. Each new measurement requires unused run labels because the trace JSON files are immutable. To compare the original measurements directly, pass `submissions-baseline.json` and `submissions-candidate-committed.json` from the same directory to the comparison script.
+
+```text
+node server/test-results/tenant-setup-21/count-submissions.mjs baseline <baseline-checkout> 20261112000100 baseline-rerun
+node server/test-results/tenant-setup-21/count-submissions.mjs candidate <candidate-checkout> 20261112000100 candidate-rerun
+node server/test-results/tenant-setup-21/compare-submissions.mjs server/test-results/tenant-setup-21/submissions-baseline-rerun.json server/test-results/tenant-setup-21/submissions-candidate-rerun.json
+```
+
+The pinned baseline failed the cross-tenant transaction regression because the participant-permission helper replaced the caller's scope. The checkpoint returns `missing` and preserves the original record. The history count regression failed before the cutover and passed afterward. Real HTTP coverage retained audience distinctions, archive and permission changes during root-lock waits, cursor bindings, exact-event and reason visibility, and attribution and audit atomicity. After a PostgreSQL retryable failure, the participant-permission test reestablished scope and re-read authority, denied the revoked manager and preserved the committed record and audit history.
+
+Real HTTP tests also cover a well-formed unknown tenant ID across the changed directory and record routes. All eight operations, including the permission write, return HTTP 404 with `missing`. The records suite separately checks HTTP 403 for permission writes without authority in an existing active tenant.
+
+Local verification ran from the candidate checkout root with migration `20261112000100` on loopback. For runtime scripts, use the original clone's local env file and set the test process's `DATABASE_URL` to the local `ct_api` connection on port 54322.
+
+- `npm.cmd run test:http -w server` passed all 76 tests with the reviewed HTTP fixture. The injection harness queues reflect the removed statements. `npm.cmd test -w client -- --run` passed all 279 tests. `npm.cmd run lint` and `npm.cmd run build` passed, including the server type checks.
+- `node --env-file="<original-clone>/server/.env.local" server/tests/<suite>-local.mjs` passed for `preferences`, `community`, `history`, `self-service`, `configuration`, `records`, `directory`, `global-profiles` and `access-audit`. `node --env-file="<original-clone>/server/.env.local" --test server/tests/actor-context-local.test.mjs server/tests/transaction-retry-local.test.mjs` passed all 24 tests.
+- `node --env-file="<original-clone>/server/.env.local" supabase/tests/direct_data_api.mjs` passed 51 checks. `node --env-file="<original-clone>/server/.env.local" server/tests/hosted-policy-local.mjs` passed the focused policy scenarios on loopback in isolation and preserved the application checksums. `node supabase/tests/access-client-audit.mjs` passed across 134 production TypeScript files.
+- `npm.cmd run verify:types -w server` and `node --test server/tests/database-types-local.test.mjs` passed with the canonical LF generated file. The original Windows checkout bytes were restored after verification. `npx --yes supabase test db` passed 272 pgTAP assertions, and `npx --yes supabase db lint --local --level warning --fail-on warning` reported no schema errors.
+
+The setup migration replay and populated upgrade evidence is in [#19](#tenant-setup-for-community-configuration). [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) tracks the integrated verification and latency comparison. Hosted rollout is separate.
+
 ## Tenant setup for lifecycle and self-service
 
 [Issue #20](https://github.com/JonDManningDev/the-crowded-table-app/issues/20) uses migration `20261112000100` from [issue #19](https://github.com/JonDManningDev/the-crowded-table-app/issues/19) for nine existing-tenant operations. The command dispatcher, own request, account review, staff candidates, pending requests, exact profile, own-profile save and own-preference read/save establish their initial tenant during authenticated setup. The exported command, own-profile and own-preference helpers take transactions already scoped by their callers.
@@ -33,7 +70,7 @@ Local verification used the following commands from the candidate checkout root.
 - `npm.cmd run verify:types -w server` passed with the tracked canonical LF bytes in `server/src/database.types.ts`. A first run against the Windows CRLF checkout failed the byte comparison. `node --test server/tests/database-types-local.test.mjs` passed the generation, drift detection and driver checks.
 - `npx supabase test db` passed 272 pgTAP assertions. `npx supabase db lint --local --level warning --fail-on warning` reported no schema errors.
 
-The setup migration replay and populated upgrade evidence belongs to #19. [#21](https://github.com/JonDManningDev/the-crowded-table-app/issues/21) tracks the directory, record and history operations, and [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) tracks the integrated gates and latency. Hosted rollout is separate.
+The setup migration replay and populated upgrade evidence belongs to #19. [#21](#tenant-setup-for-directories-records-and-history) covers the directory, record and history operations, and [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) tracks the integrated gates and latency. Hosted rollout is separate.
 
 ## Tenant setup for community configuration
 
@@ -60,7 +97,7 @@ Local verification passed the 76 server HTTP tests against the existing baseline
 
 Clean migration replay and populated forward upgrade passed in disposable databases. The upgrade retained application rows and audit history. The catalog, runtime grant manifest, database type drift and driver fixtures, SQL lint, root lint, 279 client tests and production build passed. The local application database now expects the three-UUID setup signature.
 
-[#20](#tenant-setup-for-lifecycle-and-self-service) covers lifecycle and self-service. [#21](https://github.com/JonDManningDev/the-crowded-table-app/issues/21) covers the remaining operations. [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) covers integrated gates and latency. For that comparison, run the pinned baseline and the pinned integrated candidate against separate disposable loopback Supabase stacks, each replayed only through its own revision. Use separate project IDs and port mappings and seed equivalent synthetic fixtures. Alternate schema-compatible cells using the same workloads, pool, warmups and outcome checks. Store comparison manifests and samples under a new experiment name. The historical A/B harness and its snapshots belong with their original schema, including the two-UUID signature. Hosted rollout is outside this checkpoint.
+[#20](#tenant-setup-for-lifecycle-and-self-service) covers lifecycle and self-service. [#21](#tenant-setup-for-directories-records-and-history) covers directories, records and history. [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) covers integrated gates and latency. For that comparison, run the pinned baseline and the pinned integrated candidate against separate disposable loopback Supabase stacks, each replayed only through its own revision. Use separate project IDs and port mappings and seed equivalent synthetic fixtures. Alternate schema-compatible cells using the same workloads, pool, warmups and outcome checks. Store comparison manifests and samples under a new experiment name. The historical A/B harness and its snapshots belong with their original schema, including the two-UUID signature. Hosted rollout is outside this checkpoint.
 
 **Staff-assignment presence simplification - locally complete 2026-11-12.**
 

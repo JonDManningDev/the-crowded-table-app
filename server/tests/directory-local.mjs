@@ -110,7 +110,11 @@ try {
   await facts(owner,outsider.id,404);await facts(owner,randomUUID(),404)
   await http(owner,'/api/communities/'+otherTenant+'/accounts/'+outsider.id,'GET',undefined,404)
   await http(owner,'/api/communities/'+otherTenant+'/directory','GET',undefined,404)
-  for(const endpoint of ['/directory','/accounts','/accounts/'+member.id]) await http(null,path+endpoint,'GET',undefined,401)
+  const missingPath='/api/communities/'+randomUUID()
+  for(const endpoint of ['/directory','/accounts','/accounts/'+member.id]) {
+    await http(null,path+endpoint,'GET',undefined,401)
+    assert.equal((await http(owner,missingPath+endpoint,'GET',undefined,404)).code,'missing')
+  }
   // The public flag is independent of authorized member reads and other public flags.
   await publicDirectory(null,'',404)
   await config({allow_public_chat_visibility:true,allow_public_activity_visibility:true})
@@ -280,7 +284,7 @@ try {
       ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
       await gate;return result
     }
-    const operation=actor?withEligibleActorTransaction(db, { actorId: actor.id, requestId: randomUUID() },work):db.transaction().execute(work)
+    const operation=actor?withEligibleActorTransaction(db, { actorId: actor.id, requestId: randomUUID() },work,{ initialTenantId: tenant }):db.transaction().execute(work)
     const holder=await Promise.race([started,operation.then(()=>{throw Error('read exited before barrier')})])
     const change=compete();change.catch(()=>{})
     try {

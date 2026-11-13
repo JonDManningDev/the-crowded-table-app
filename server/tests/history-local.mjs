@@ -315,7 +315,7 @@ try {
     signalReady((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
     await release
     return result
-  })
+  }, { initialTenantId: tenant })
   const holder=await Promise.race([ready,reader.then(()=>{throw Error('read exited before barrier')})])
   const writer=cmd(owner,{kind:'permissions',target:sr.id,permissions:{can_audit_staff_accounts:false}})
   writer.catch(()=>{})

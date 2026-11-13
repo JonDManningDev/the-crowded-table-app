@@ -134,6 +134,16 @@ test('real local operations retry with fresh authorization and one committed out
       assert.deepEqual((await events(write.operation)).map(row => row.action), ['tenants.update'])
     })
 
+    await t.test('history uses six submissions and preserves cursor validation before the root lock', async () => {
+      const noFault = { match: /never/, codes: [] }
+      const read = await faulted(owner, path + '/history', undefined, noFault, 200, 'GET')
+      assert.ok(read.value.rows.length > 0)
+      assert.equal(read.queries.length, 6)
+      const invalid = await faulted(owner, path + '/history?cursor=garbage', undefined, noFault, 400, 'GET')
+      assert.equal(invalid.value.code, 'invalid_cursor')
+      assert.equal(invalid.queries.length, 3)
+    })
+
     await t.test('two failed join attempts roll back accounts, requests and event/categories before one success', async () => {
       const result = await faulted(member, path + '/commands', join,
         { match: /insert into "tenant_admin_actions"/, codes: ['40001', '40P01'] })
@@ -164,6 +174,24 @@ test('real local operations retry with fresh authorization and one committed out
       const noop = await faulted(owner, path + '/accounts/' + member.id + '/permissions',
         { can_post_public_events: true }, { match: /never/, codes: [] }, 200, 'PATCH')
       assert.deepEqual(await events(noop.operation), [])
+    })
+
+    await t.test('participant-permission retry uses current authority and leaves the rolled-back change unapplied', async () => {
+      await command(owner, { kind: 'permissions', target: manager.id, permissions: { can_manage_community_permissions: true } })
+      const url = path + '/accounts/' + member.id + '/permissions'
+      const result = await faulted(manager, url, { can_post_public_events: false }, {
+        match: /insert into "app_private"\."tenant_admin_action_categories"/,
+        codes: ['40P01'],
+        afterRollback: () => command(owner, {
+          kind: 'permissions', target: manager.id, permissions: { can_manage_community_permissions: false },
+        }),
+      }, 403, 'PATCH')
+      assert.equal(result.attempts, 2)
+      assert.equal(result.value.code, 'forbidden')
+      const contexts = result.queries.filter(query => query.text.includes('begin_actor_context'))
+      assert.deepEqual(contexts.map(query => query.parameters[2]), [tenant, tenant])
+      assert.deepEqual(await events(result.operation), [])
+      assert.equal((await request(controlApp, owner, url)).can_post_public_events, true)
     })
 
     await t.test('failure between event and categories leaves neither mutation nor event committed', async () => {
