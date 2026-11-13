@@ -1,5 +1,7 @@
 # The Crowded Table — planning documents
 
+**Tenant setup consolidation — locally verified.** All 25 existing-tenant operations save one database submission on attempts that reach their initial scope. The [integrated checkpoint](12-implementation-status.md#integrated-tenant-setup-verification) records the final correctness gates and local performance comparison. Hosted rollout is separate.
+
 **Tenant setup for directories, records and history — locally verified 2026-11-12.** [Issue #21](https://github.com/JonDManningDev/the-crowded-table-app/issues/21) removes one database submission from each of the nine remaining existing-tenant operations. See the [checkpoint evidence](12-implementation-status.md#tenant-setup-for-directories-records-and-history).
 
 **Tenant setup for lifecycle and self-service — locally verified 2026-11-12.** [Issue #20](https://github.com/JonDManningDev/the-crowded-table-app/issues/20) removes one database submission from each of nine existing-tenant operations. See the [checkpoint evidence and remaining tickets](12-implementation-status.md#tenant-setup-for-lifecycle-and-self-service).

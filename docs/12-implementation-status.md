@@ -1,5 +1,88 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Integrated tenant setup verification
+
+[Issue #22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) completes local verification of the 25 authenticated operations in [specification #18](https://github.com/JonDManningDev/the-crowded-table-app/issues/18). The source baseline is `d38872eb1050e58153a2d5e9d37a06b850cd510c` through migration `20261111000100`. The integrated candidate is `d2db5a555faa1227757b43193b18d2d10ba254be` through `20261112000100`. The [configuration](#tenant-setup-for-community-configuration), [lifecycle and self-service](#tenant-setup-for-lifecycle-and-self-service), and [directory, record and history](#tenant-setup-for-directories-records-and-history) checkpoints cover seven, nine and nine operations respectively.
+
+The submission reconciliation verified the pinned trace and source hashes, matched each operation's SQL sequence after removing the former standalone tenant assignment, and checked all 25 entry points in the integrated source. Every migrated operation saves one submission on attempts that previously reached scope. Counts include `BEGIN` and `COMMIT` or `ROLLBACK`. Details and history reads go from seven to six, genuine details writes from nine to eight, and details no-ops from eight to seven. Global preferences remain at four. Invalid history cursors and early Auth denials retain their three-submission outcomes. The command-dispatch trace uses a join. The community and retry suites verify other command kinds through the same entry point.
+
+The source review followed the transaction-level helpers through the feature service and real tests. All affected callers supply the initial tenant through `withEligibleActorTransaction`. Creation still scopes the generated tenant. Block source validation scopes each relevant community under its existing root locks. Global account operations omit the initial tenant, and anonymous operations use their own selectors. Root-lock reads and the later authorization facts remain separate. Independent profile and preference edits preserve their respective lock behavior.
+
+### Local correctness and migration gates
+
+The local run used Node 22.22.2 and PostgreSQL 17.11. Supabase Auth and PostgreSQL listened on loopback ports 54321 and 54322. Runtime scripts loaded the original clone's local server environment and aligned only the process's database port with the active `ct_api` connection. The tests exercised actual Supabase Auth, the API's semantic audit behavior, and the database's separate attribution, append-only, integrity and G-02 safeguards.
+
+| Executed command | Result |
+| --- | --- |
+| `npm.cmd run test:http -w server` | 76 tests passed with the existing reviewed HTTP fixture. |
+| `node --env-file="<original-clone>/server/.env.local" server/tests/<suite>-local.mjs` | All nine suites passed. Run preferences, community, history, self-service, configuration, records, directory, global-profiles and access-audit in that order. |
+| `node --env-file="<original-clone>/server/.env.local" --test --test-concurrency=1 server/tests/actor-context-local.test.mjs server/tests/transaction-retry-local.test.mjs server/tests/policy-catalog-local.test.mjs` | 25 tests passed, including real lock ordering, scoped retries, transaction cleanup and pooled reuse. |
+| `node --env-file="<original-clone>/server/.env.local" supabase/tests/direct_data_api.mjs` | 51 real PostgREST checks passed, including the concurrent slug checks. |
+| `node --env-file="<original-clone>/server/.env.local" server/tests/hosted-policy-local.mjs` | Focused policy scenarios passed on loopback, including both orders of the sharing, block-source, archive and permission races. |
+| `node supabase/tests/policy-catalog.mjs` | 35 migration versions, 19 reviewed functions, exact runtime privilege manifest and zero external application grants. |
+| `npx.cmd --yes supabase test db` | All 272 pgTAP assertions passed. |
+| `npx.cmd --yes supabase db lint --local --level warning --fail-on warning` | No schema lint findings. The CLI reported existing option and configuration deprecations. |
+| `node supabase/tests/direct_data_api_upgrade.mjs` | Clean replay and populated upgrades passed in a disposable database. Application rows, historical audit events/categories, the retained Auth definer and unrelated grants survived the upgrade. |
+| `npm.cmd run verify:types -w server` and `node --test server/tests/database-types-local.test.mjs` | Code generation matched the canonical LF bytes and both driver/drift tests passed. The Windows worktree bytes were restored after the checks. |
+| `node supabase/tests/access-client-audit.mjs` | Auth-only Supabase usage and workspace ownership passed across 134 production TypeScript files. |
+| `npm.cmd test -w client -- --run`, `npm.cmd run lint`, and `npm.cmd run build` | 279 client tests, root lint, server TypeScript and production build passed. |
+
+A schema-only dump of `public` and `app_private` matched the reviewed candidate after normalizing the random dump boundary tokens. The sole difference from the pinned baseline dump was the three-UUID `begin_actor_context` definition and its ACL replacing the two-UUID signature. The function is a volatile security invoker owned by `postgres` with a fixed empty search path and restricted `ct_api` execution. The retained eligibility definer, policies, triggers, constraints and unrelated grants matched. Before-and-after row counts and checksums matched across all 16 application relations, nine Auth tables and two Storage tables. The disposable replay database was removed.
+
+Run the correctness commands from the candidate checkout root. The PowerShell runners `verify-workspaces.ps1`, `verify-local.ps1` and `compare-schema.ps1`, their output and the `correctness-evidence-sha256.json` manifest are under `server/test-results/tenant-setup-22/` in the original clone. To rerun a PowerShell script, set its `$results` path to a fresh evidence directory. From the original clone, `node server/test-results/tenant-setup-22/reconcile-pinned-submissions.mjs <unused-label>` reconciles the recorded per-slice traces against immutable Git revisions and digest-verified prior evidence. The final reconciliation is in `all-25-submissions-final.json`, and the rerun produced the same result in `all-25-submissions-pinned-check.json`. The working local database uses migration `20261112000100`. Hosted migration and API rollout remain separate.
+
+### Local benchmark
+
+The [recorded plan](research/tenant-setup-benchmark-plan.md) defined six alternating paired repeats before timing. Each variant ran 48 warmups and 160 timed requests per repeat in each of 16 cells, for 9,216 warmups and 30,720 timed requests across both variants. The cells cross details GET, genuine details PATCH, history GET (20 rows) and global preferences GET with service and real loopback HTTP at one and four concurrent clients. Four tenant lanes share an owned Auth fixture. Four communities started with 24 genuine configuration changes each. The baseline database was cloned before applying the replacement migration to the candidate. Initial application data and outcome projections matched.
+
+Both variants used four warmed `ct_api` connections to isolated databases on the same local PostgreSQL 17.11 instance, with Read Committed, a five-second statement timeout and a two-second lock timeout. Timing used ordinary pools with `track_functions=none`. Query counting ran separately. The host ran Windows 10.0.26300 on a Ryzen 7 9700X with 16 logical CPUs and approximately 62 GiB of RAM. Both variants used Node 22.22.2, pg 8.23.1, Kysely 0.29.8, Fastify 5.12.8 and Supabase JS 2.117.2. The real HTTP path used an ES256 bearer from local Supabase Auth. The service path called the same services with the verified actor.
+
+The benchmark runs from the candidate checkout with local Docker access and the original clone's locked dependencies, local environment, pinned #19 evidence and corrected screen's `sources.json` available. It verifies both revisions against the archived source hashes, so the original clone can advance beyond the baseline.
+
+```text
+node server/tests/tenant-setup-benchmark.mjs "<original-clone>"
+node server/tests/tenant-setup-benchmark.mjs "<original-clone>" history-tail
+```
+
+Pooled percentiles and paired deltas below are in milliseconds. The delta is the mean of six repeat-level candidate-minus-baseline p95 differences. Intervals use the paired bootstrap from the plan. The raw summaries retain the p50 and p99 intervals and all repeat-level values.
+
+| Workload | Path | Clients | Baseline p50 / p95 / p99 | Candidate p50 / p95 / p99 | Paired p95 delta [95% interval] |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Details read | Service | 1 | 5.41 / 5.94 / 6.67 | 4.85 / 5.42 / 6.11 | -0.43 [-0.67, -0.18] |
+| Details read | Service | 4 | 5.73 / 7.40 / 8.17 | 5.13 / 6.23 / 7.05 | -1.03 [-1.34, -0.74] |
+| Details read | HTTP | 1 | 5.93 / 6.92 / 7.58 | 5.39 / 5.98 / 7.55 | -0.56 [-1.21, 0.33] |
+| Details read | HTTP | 4 | 6.40 / 8.92 / 10.69 | 5.92 / 7.80 / 8.75 | -0.60 [-1.52, 0.11] |
+| Genuine details write | Service | 1 | 28.27 / 31.80 / 34.65 | 27.97 / 32.75 / 39.16 | 0.30 [-1.17, 1.59] |
+| Genuine details write | Service | 4 | 29.98 / 34.91 / 41.08 | 29.31 / 35.17 / 39.19 | -0.24 [-1.95, 1.40] |
+| Genuine details write | HTTP | 1 | 29.70 / 33.96 / 38.08 | 28.69 / 33.16 / 39.78 | -0.02 [-1.73, 2.02] |
+| Genuine details write | HTTP | 4 | 31.85 / 38.75 / 43.52 | 31.05 / 35.56 / 40.68 | -2.59 [-4.20, -0.82] |
+| History read | Service | 1 | 5.73 / 7.17 / 8.58 | 5.17 / 5.85 / 6.72 | -0.92 [-1.58, -0.32] |
+| History read | Service | 4 | 6.10 / 7.67 / 8.52 | 5.46 / 6.91 / 7.88 | -0.49 [-1.14, 0.21] |
+| History read | HTTP | 1 | 6.32 / 7.20 / 8.07 | 5.80 / 7.45 / 8.99 | -0.24 [-0.89, 0.73] |
+| History read | HTTP | 4 | 7.08 / 9.49 / 10.66 | 6.42 / 8.84 / 10.85 | -0.66 [-1.42, 0.17] |
+| Global preferences | Service | 1 | 2.82 / 3.12 / 3.33 | 2.84 / 3.14 / 3.45 | 0.07 [-0.01, 0.17] |
+| Global preferences | Service | 4 | 3.08 / 3.85 / 4.15 | 3.04 / 3.56 / 4.18 | -0.10 [-0.30, 0.09] |
+| Global preferences | HTTP | 1 | 3.35 / 4.20 / 5.37 | 3.38 / 3.87 / 4.41 | -0.24 [-0.82, 0.12] |
+| Global preferences | HTTP | 4 | 3.58 / 4.78 / 5.50 | 3.67 / 4.71 / 5.59 | 0.00 [-0.45, 0.47] |
+
+All details and history cells show lower median latency. The mean paired median deltas span approximately −0.73 to −0.47 ms. Details service p95 improves at both concurrency levels and history service p95 improves at one client. The paired p95 intervals for details and history HTTP cross zero. Genuine writes show a lower median at four clients and on the one-client HTTP path. The four-client HTTP write cell also shows a lower p95 and p99. Other write tails are mixed. The global preferences intervals cross zero for p50, p95 and p99.
+
+At one client, genuine-write p99 rose from 34.65 to 39.16 ms through the service and from 38.08 to 39.78 ms through HTTP. The mean paired p99 deltas were +3.40 ms (95% interval −0.89 to +8.83) and +2.26 ms (−4.97 to +12.08), respectively. The largest paired increases came from different repeats and included adjacent candidate requests at 51.80 and 50.78 ms in the service path and 65.30 and 72.15 ms in HTTP. Database rollback and deadlock counts were stable during timing. The preliminary fixed-order screen showed mean p99 deltas of −1.85 and −0.94 ms and provides context only. The single-client write-tail effect remains inconclusive.
+
+History HTTP at four clients showed a mixed tail. Pooled p99 rose from 10.66 to 10.85 ms. The mean paired repeat-level p99 delta was +4.44 ms (95% interval +0.13 to +11.83). The first repeat contributed +22.54 ms after four adjacent candidate requests, one in each lane, took 33.35–34.47 ms. The other five p99 deltas ranged from −0.35 to +2.85 ms. Their mean is +0.82 ms as a sensitivity check. The reported result includes all six repeats.
+
+The [focused follow-up plan](research/tenant-setup-benchmark-plan.md#focused-history-tail-follow-up) used eight alternating pairs at four clients with fixed read-only history. Across the HTTP and service paths it recorded 12,800 timed requests, 3,072 warmups and 100 diagnostic requests. Every outcome matched, and database rollback/deadlock counts were stable during timing. No diagnostic attempt retried. HTTP p50 / p95 / p99 moved from 6.82 / 8.74 / 9.85 to 6.26 / 7.93 / 9.09 ms. The mean paired HTTP p99 delta was −0.25 ms (95% interval −1.03 to +0.51). Service percentiles moved from 5.90 / 7.20 / 8.08 to 5.32 / 6.34 / 7.27 ms, with a paired p99 delta of −0.79 ms (95% interval −1.10 to −0.47). No timed request exceeded 20 ms. The earlier cluster did not recur in this fixed-history workload. Its cause remains undetermined.
+
+All 30,720 timed requests and 9,216 warmups returned the expected outcome. Each genuine write produced one persisted audit event. The separate 436-request diagnostic confirmed 7→6 details/history, 9→8 genuine details writes, 8→7 no-op details, 4→4 global preferences and 3→3 invalid history cursors. The no-op and cursor probes produced zero audit events. Diagnostic attempts recorded zero retries. The timing run did not instrument individual retry counts.
+
+The corrected run is `benchmark-2026-11-13T14-23-07-950Z/` under the original clone's `server/test-results/tenant-setup-22/`. It preserves the pre-timing plan, pinned source and migration manifests, matched schema dumps, raw sample outcomes and paired summaries. The preceding run's rotated cell index canceled the intended per-cell alternation. Its complete results are preserved under `benchmark-2026-11-13T14-17-52-946Z/`. The corrected schedule alternates the first variant across all six repeats for every cell. The focused follow-up is in `benchmark-2026-11-13T14-29-07-009Z/`. Both corrected artifacts include the matching `harness.mjs` and plan bytes. The independent `verify-benchmark-artifact.mjs` check confirmed the hashes, schedules, outcome parity, persisted write counts, diagnostics and cleanup.
+
+Review of the rerun harness added checkout failure cleanup, retention of malformed responses and their sibling samples, and diagnostic checks for partial retry attempts. The shortened loopback verification in `benchmark-2026-11-13T14-40-27-376Z/` completed two alternating pairs across all 16 cells, with 256 warmups, 512 timed samples, 148 diagnostic requests and successful cleanup. Focused checks covered a failed pool checkout with late successful siblings, malformed response and no-op recording, and partial retry prefixes before and after scope. This run verifies the harness. The reported performance values come from the six-pair screen and focused history follow-up above.
+
+Each run removed its two disposable databases and owned local Auth fixture. Original runtime diagnostic settings and historical A/B evidence hashes matched after cleanup.
+
+The regional sensitivity remains 15–35 ms for one avoided database round trip, with 25 ms as the central estimate for a Virginia client, California API and Oregon database. It is a topology estimate. The timed samples were collected on local loopback, and their latency percentiles apply to that environment.
+
 ## Tenant setup for directories, records and history
 
 [Issue #21](https://github.com/JonDManningDev/the-crowded-table-app/issues/21) completes the nine directory, account-record, participant-permission and history operations in [specification #18](https://github.com/JonDManningDev/the-crowded-table-app/issues/18). Member directory, owner-account list, exact account facts, staff list and exact record, participant-permission list, exact record and save, and history supply their initial tenant during authenticated setup. Their transaction-level helpers expect a transaction scoped by the caller. Each operation still acquires its tenant-root lock before a separate authorization-facts read. History validates its cursor after Auth eligibility and before the root lock. Creation still assigns scope after generating its tenant, and block workflows still assign scope during source validation.
@@ -35,7 +118,7 @@ Local verification ran from the candidate checkout root with migration `20261112
 - `node --env-file="<original-clone>/server/.env.local" supabase/tests/direct_data_api.mjs` passed 51 checks. `node --env-file="<original-clone>/server/.env.local" server/tests/hosted-policy-local.mjs` passed the focused policy scenarios on loopback in isolation and preserved the application checksums. `node supabase/tests/access-client-audit.mjs` passed across 134 production TypeScript files.
 - `npm.cmd run verify:types -w server` and `node --test server/tests/database-types-local.test.mjs` passed with the canonical LF generated file. The original Windows checkout bytes were restored after verification. `npx --yes supabase test db` passed 272 pgTAP assertions, and `npx --yes supabase db lint --local --level warning --fail-on warning` reported no schema errors.
 
-The setup migration replay and populated upgrade evidence is in [#19](#tenant-setup-for-community-configuration). [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) tracks the integrated verification and latency comparison. Hosted rollout is separate.
+The [integrated checkpoint](#integrated-tenant-setup-verification) records the final replay, populated upgrade and latency comparison.
 
 ## Tenant setup for lifecycle and self-service
 
@@ -70,7 +153,7 @@ Local verification used the following commands from the candidate checkout root.
 - `npm.cmd run verify:types -w server` passed with the tracked canonical LF bytes in `server/src/database.types.ts`. A first run against the Windows CRLF checkout failed the byte comparison. `node --test server/tests/database-types-local.test.mjs` passed the generation, drift detection and driver checks.
 - `npx supabase test db` passed 272 pgTAP assertions. `npx supabase db lint --local --level warning --fail-on warning` reported no schema errors.
 
-The setup migration replay and populated upgrade evidence belongs to #19. [#21](#tenant-setup-for-directories-records-and-history) covers the directory, record and history operations, and [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) tracks the integrated gates and latency. Hosted rollout is separate.
+[#21](#tenant-setup-for-directories-records-and-history) covers the directory, record and history operations. The [integrated checkpoint](#integrated-tenant-setup-verification) records the final replay, populated upgrade and latency comparison.
 
 ## Tenant setup for community configuration
 
@@ -97,7 +180,7 @@ Local verification passed the 76 server HTTP tests against the existing baseline
 
 Clean migration replay and populated forward upgrade passed in disposable databases. The upgrade retained application rows and audit history. The catalog, runtime grant manifest, database type drift and driver fixtures, SQL lint, root lint, 279 client tests and production build passed. The local application database now expects the three-UUID setup signature.
 
-[#20](#tenant-setup-for-lifecycle-and-self-service) covers lifecycle and self-service. [#21](#tenant-setup-for-directories-records-and-history) covers directories, records and history. [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) covers integrated gates and latency. For that comparison, run the pinned baseline and the pinned integrated candidate against separate disposable loopback Supabase stacks, each replayed only through its own revision. Use separate project IDs and port mappings and seed equivalent synthetic fixtures. Alternate schema-compatible cells using the same workloads, pool, warmups and outcome checks. Store comparison manifests and samples under a new experiment name. The historical A/B harness and its snapshots belong with their original schema, including the two-UUID signature. Hosted rollout is outside this checkpoint.
+[#20](#tenant-setup-for-lifecycle-and-self-service) covers lifecycle and self-service. [#21](#tenant-setup-for-directories-records-and-history) covers directories, records and history. The [integrated checkpoint](#integrated-tenant-setup-verification) records the final gates and latency comparison.
 
 **Staff-assignment presence simplification - locally complete 2026-11-12.**
 
