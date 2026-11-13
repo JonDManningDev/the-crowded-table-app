@@ -1,12 +1,48 @@
 # Account and navigation implementation audit — 2026-10-16
 
-## Service-owned result SQL specification — published 2026-11-13
+## Service-owned result SQL — locally verified 2026-11-13
 
-The user confirmed the [specification](25-service-owned-result-sql-spec.md) and its real Auth/HTTP, direct-runtime database, external Data API and HTTP-contract testing boundaries. [Issue #23](https://github.com/JonDManningDev/the-crowded-table-app/issues/23) is published, open and labelled `ready-for-agent`. CLI read-back verified the exact approved body, title, open state and label.
+The user confirmed the [specification](25-service-owned-result-sql-spec.md) and its real Auth/HTTP, direct-runtime database, external Data API and HTTP-contract testing boundaries, then separately authorized implementation through implement-spec. [Issue #23](https://github.com/JonDManningDev/the-crowded-table-app/issues/23) was published with `ready-for-agent`, and CLI read-back verified the exact approved body, title, open state and label before implementation.
 
-The accepted target places audience conditions inline in service result queries across communities and user accounts, with no named audience variables or extracted predicate functions. Fact loaders retain their fact-gathering SQL. Decision and requirement functions retain their responsibilities. The decision register, ADR, ownership plans, file structure and agent guidance record the revised target and preserve the earlier implementation history.
+The implementation lives on `implementation/service-owned-result-sql`, based on the specification checkpoint `e37df8b`. Each code checkpoint passed its required suites and received a source diff review before its independent commit.
 
-Publication and documentation reconciliation are complete. Implementation requires a separate instruction and initially ends at complete local verification. Source still uses the existing audience-predicate exports. Verification for this planning step covers publication and documentation consistency.
+| Checkpoint | Changes and verification |
+| --- | --- |
+| `bf85bc5` | Community-local result queries now contain their audience conditions directly. All 76 HTTP tests, server TypeScript, lint and the community, history, self-service, configuration, records, directory, global-profile and access-audit suites passed. Cross-feature helpers remained only for their still-pending user-account consumers. |
+| `32763ee` | User-account and cross-feature conditions are inline, including discovery, exact profiles, outgoing blocks and both profile-source branches. Remaining audience helpers and predicate-only types/imports are removed. All 76 HTTP tests, server TypeScript, lint and the preferences, community, self-service, directory, global-profile and access-audit suites passed. |
+
+Service queries retain tenant correlation, projections, exact-versus-enumerated audiences, bilateral blocks, archive-owner exceptions, independent history categories, locked sharing roots and filtering before pagination. Fact loaders retain their fact-gathering SQL. Token comparison, normalizing Windows line endings and ignoring trivia, verified all 49 community and one user-account fact-loader, decision, requirement and shared requirement-helper declarations against `e37df8b`. Combined read/update operations and the existing transaction, lock, snapshot and retry boundaries are preserved.
+
+### Final local verification
+
+The final integrated source at `32763ee` passed the following checks. The pre-refactor source also passed all nine local integration suites before code changes. Tests used Node 22.22.2, the explicit loopback Auth API at port 54321 and PostgreSQL at port 54322, and the real `ct_api` runtime role. The runner loaded the original clone's local server environment and normalized only the process's database transport port after validating the local host, role and database name.
+
+| Executed command | Result |
+| --- | --- |
+| `npm.cmd run test:http -w server` | All 76 HTTP cases passed against the reviewed contract fixture. |
+| `node --env-file="<clone>/server/.env.local" server/tests/<suite>-local.mjs` | All nine suites passed in order, covering preferences, community, history, self-service, configuration, records, directory, global profiles and access audit. |
+| `node --env-file="<clone>/server/.env.local" --test --test-concurrency=1 server/tests/actor-context-local.test.mjs server/tests/transaction-retry-local.test.mjs server/tests/policy-catalog-local.test.mjs` | All 25 tests passed, including real context, locking, cleanup, pooling and retry behavior. |
+| `node --env-file="<clone>/server/.env.local" supabase/tests/direct_data_api.mjs` | All 51 real PostgREST checks passed, including external denial and concurrent slug claims. |
+| `node --env-file="<clone>/server/.env.local" server/tests/hosted-policy-local.mjs` | Focused authorization and concurrency scenarios passed against the local stack. |
+| `npx.cmd --yes supabase test db` | All 272 pgTAP assertions passed across nine files. |
+| `node supabase/tests/policy-catalog.mjs` | The 19 reviewed functions, exact runtime privilege manifest and zero external application grants matched. |
+| `node supabase/tests/access-client-audit.mjs` | Auth-only Supabase and workspace boundaries passed across 134 production TypeScript files. |
+| `npm.cmd test -w client -- --run` | All 279 client tests passed across 38 files. |
+| `npm.cmd run lint` and `npm.cmd run build` | Root lint, server/application-test TypeScript and the production client build passed. Vite retained its existing chunk-size advisory. |
+
+The PowerShell runner and evidence are under `server/test-results/service-owned-result-sql/`. The `baseline`, `checkpoint1-retry`, `checkpoint2` and `final` directories contain the corresponding gate logs. Run `verify-local.ps1 -Phase <fresh-label> -Supplementary` from the clone root to repeat the local integrated gate without overwriting prior evidence. The retained-declaration comparison is recorded in `retained-policy-declarations.json`.
+
+Initial verification attempts inside the sandbox and in a worktree under `node_modules` failed during environment setup. Moving the implementation worktree and running local checks with the Windows user's Docker/Supabase access resolved those failures. The successful checkpoint and final runs exercised the complete application checks. The implementation worktree was removed after its clean branch was fast-forwarded into integration.
+
+### Standards
+
+Independent review of `git diff e37df8b...32763ee` found zero documented-standard violations and zero actionable findings under the review skill's code-smell baseline. Inline audience duplication follows the user's explicit ownership decision. The review checked policy abstractions, SQL grouping and correlation, archive access, locked source roots and filtering before pagination.
+
+### Spec
+
+Independent review of the same diff found zero missing, incorrect or out-of-scope implementation requirements. The review checked all audience consumers, both block-source branches, discovery versus exact lookup, history categories, preserved facts and operation boundaries. The exact-profile sharing query omits the former helper's literal `and true`, preserving its unrestricted-root behavior.
+
+Both review axes report zero findings. The committed source diff changes only the four community/user-account policy and service modules. The reviewed HTTP fixture, migrations, runtime manifest, database infrastructure, generated schema types and dependencies match the baseline. Documentation and agent guidance record the completed ownership change. The scope ends at complete local verification.
 
 ## Integrated tenant setup verification
 

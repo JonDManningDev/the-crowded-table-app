@@ -1,6 +1,6 @@
 # Service-owned result SQL
 
-Specification and testing boundaries confirmed, 2026-11-13. Published as [issue #23](https://github.com/JonDManningDev/the-crowded-table-app/issues/23), labelled `ready-for-agent`, with the exact body, open state and label verified. Implementation requires a separate instruction and initially ends at complete local verification.
+**Locally implemented and verified, 2026-11-13.** The user separately authorized implementation through implement-spec after confirming this specification and its testing boundaries. [Issue #23](https://github.com/JonDManningDev/the-crowded-table-app/issues/23) was published with `ready-for-agent` and exact body read-back verified. Checkpoints `bf85bc5` and `32763ee` implement community-local and user-account/cross-feature queries respectively. The [implementation record](12-implementation-status.md#service-owned-result-sql--locally-verified-2026-11-13) contains the passing local gates and independent standards/spec reviews. The specification body below preserves the published requirements.
 
 ## Problem Statement
 
