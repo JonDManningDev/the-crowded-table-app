@@ -182,6 +182,29 @@ Clean migration replay and populated forward upgrade passed in disposable databa
 
 [#20](#tenant-setup-for-lifecycle-and-self-service) covers lifecycle and self-service. [#21](#tenant-setup-for-directories-records-and-history) covers directories, records and history. The [integrated checkpoint](#integrated-tenant-setup-verification) records the final gates and latency comparison.
 
+## Tenant-setup consolidation tickets — published 2026-11-12
+
+The user approved the four-ticket breakdown under [specification #18](https://github.com/JonDManningDev/the-crowded-table-app/issues/18). All four children are open and labelled `ready-for-agent`. Read-back verified exact approved bodies/titles/labels, the native parent relationship and all four blocking edges. The parent's title, body, state and labels are unchanged.
+
+| Ticket | Deliverable | Blocked by |
+| --- | --- | --- |
+| [#19](https://github.com/JonDManningDev/the-crowded-table-app/issues/19) | Replacement shared setup, migration and seven configuration/copy operations; baseline preservation and local safeguards | None |
+| [#20](https://github.com/JonDManningDev/the-crowded-table-app/issues/20) | Nine lifecycle/request/profile/preference operations, preserving creation and block-source workflows | #19 |
+| [#21](https://github.com/JonDManningDev/the-crowded-table-app/issues/21) | Nine directory/account-record/participant-permission/history operations | #19 |
+| [#22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) | Full integrated local verification, pinned baseline/candidate measurement and evidence reconciliation | #20, #21 |
+
+Each implementation slice includes its own relevant tests, diff review, documentation and independent commit; the final checkpoint supplements those gates. #20 and #21 have no behavioral dependency on each other. The single replacement setup interface avoids compatibility overloads while unconsolidated families retain their necessary workflow scope assignments until their own slice. Baseline capture must precede signature replacement so subsequent measurements can use schema-compatible isolated experiments without rewriting historical evidence.
+
+The implementation frontier is #19 once implementation is explicitly started. Ticket publication authorizes neither implementation nor hosted migration/deployment. No application code or database changes occurred during ticketing.
+
+**Tenant-setup consolidation specification — published 2026-11-12.** The user approved publishing the [specification](24-tenant-setup-consolidation-spec.md) with its existing real HTTP and direct-runtime database test boundaries. [Issue #18](https://github.com/JonDManningDev/the-crowded-table-app/issues/18) contains the complete operation scope, migration/interface decisions, 40 user stories, testing and performance gates, and explicit exclusions. Read-back verified the exact body, open state and `ready-for-agent` label. No implementation, migration or deployment has begun.
+
+**Secondary authorization investigation — complete 2026-11-12; implementation remains proposed.**
+
+The user's subsequent Virginia-client/California-API/Oregon-database scenario is documented as a [regional projection](research/secondary-auth-investigation.md#regional-latency-projection--requested-2026-11-12), with primary-source regional proxies and explicit network assumptions. Central warmed estimates are about 180 ms for preference reads, 260 ms for details/history and 330 ms for genuine detail writes; each safely removed database submission saves approximately 15–35 ms in the modeled range (25 ms centrally). This strengthens the initial-scope recommendation without changing the eligibility-cache recommendation. No remote benchmark or implementation is claimed.
+
+The requested handoff investigation inventories 25 existing-tenant community operations with one removable scope submission and the retained eligibility callers. A separate local `ct_api` screen completed 9,000 timed service operations with instrumentation separated from latency measurement: scope submissions averaged about 0.5 ms; secondary `verified_user()` calls were 1 for preferences, 12 for details, 22 for genuine detail writes and 13 for history at both measured sizes. The report recommends an initial-scope implementation checkpoint while retaining current eligibility safeguards; no candidate gain or HTTP improvement is claimed. The first diagnostic pass is excluded for counter/pool instrumentation defects. The corrected run verified exact catalog/source preservation, monitoring-default restoration and owned-fixture cleanup; syntax, lint and whitespace checks pass. Application code, migrations, grants, HTTP contracts and saved credentials are unchanged. No hosted work, commit or publication is included. See the [report and limitations](research/secondary-auth-investigation.md) and [PostgreSQL 17 sources](research/secondary-auth-postgresql-notes.md).
+
 **Staff-assignment presence simplification - locally complete 2026-11-12.**
 
 At the user's request, `loadCommunityStaffFacts` no longer selects the redundant assignment user ID and uses `row.role === null` to detect a missing/RLS-hidden assignment. The non-null storage constraint makes the check equivalent, including assignments with all permission flags false. Existing HTTP result fixtures and the source comment were updated. Server type checks, lint, all 76 HTTP tests and the real local configuration, records and history suites pass, including relevant authorization, bypass and concurrency coverage. Diff review confirms unchanged joins, tenant locking, fact shape and permissions. No migration or deployment is involved. The earlier performance measurements remain evidence for their pinned source; this equivalent projection simplification was not re-benchmarked.
