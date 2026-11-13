@@ -1,5 +1,7 @@
 # The Crowded Table — planning documents
 
+**Service-owned result SQL — specification published 2026-11-13.** The user confirmed [document 25](25-service-owned-result-sql-spec.md) and its existing real Auth/HTTP, direct-runtime, external Data API and HTTP-contract testing boundaries. [Issue #23](https://github.com/JonDManningDev/the-crowded-table-app/issues/23) is open and labelled `ready-for-agent`, with its exact body verified. The accepted target places audience conditions inline in service queries, with no named audience variables or extracted predicate functions. Fact loaders retain their fact-gathering SQL, and decision and requirement functions retain their responsibilities. This revises the audience-predicate ownership in ADR 0001 and document 23. Implementation is pending and requires a separate instruction.
+
 **Tenant setup consolidation — locally verified.** All 25 existing-tenant operations save one database submission on attempts that reach their initial scope. The [integrated checkpoint](12-implementation-status.md#integrated-tenant-setup-verification) records the final correctness gates and local performance comparison. Hosted rollout is separate.
 
 **Tenant setup for directories, records and history — locally verified 2026-11-12.** [Issue #21](https://github.com/JonDManningDev/the-crowded-table-app/issues/21) removes one database submission from each of the nine remaining existing-tenant operations. See the [checkpoint evidence](12-implementation-status.md#tenant-setup-for-directories-records-and-history).

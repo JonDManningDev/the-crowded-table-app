@@ -1,5 +1,13 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Service-owned result SQL specification — published 2026-11-13
+
+The user confirmed the [specification](25-service-owned-result-sql-spec.md) and its real Auth/HTTP, direct-runtime database, external Data API and HTTP-contract testing boundaries. [Issue #23](https://github.com/JonDManningDev/the-crowded-table-app/issues/23) is published, open and labelled `ready-for-agent`. CLI read-back verified the exact approved body, title, open state and label.
+
+The accepted target places audience conditions inline in service result queries across communities and user accounts, with no named audience variables or extracted predicate functions. Fact loaders retain their fact-gathering SQL. Decision and requirement functions retain their responsibilities. The decision register, ADR, ownership plans, file structure and agent guidance record the revised target and preserve the earlier implementation history.
+
+Publication and documentation reconciliation are complete. Implementation requires a separate instruction and initially ends at complete local verification. Source still uses the existing audience-predicate exports. Verification for this planning step covers publication and documentation consistency.
+
 ## Integrated tenant setup verification
 
 [Issue #22](https://github.com/JonDManningDev/the-crowded-table-app/issues/22) completes local verification of the 25 authenticated operations in [specification #18](https://github.com/JonDManningDev/the-crowded-table-app/issues/18). The source baseline is `d38872eb1050e58153a2d5e9d37a06b850cd510c` through migration `20261111000100`. The integrated candidate is `d2db5a555faa1227757b43193b18d2d10ba254be` through `20261112000100`. The [configuration](#tenant-setup-for-community-configuration), [lifecycle and self-service](#tenant-setup-for-lifecycle-and-self-service), and [directory, record and history](#tenant-setup-for-directories-records-and-history) checkpoints cover seven, nine and nine operations respectively.
