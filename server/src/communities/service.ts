@@ -1,16 +1,14 @@
 import { randomUUID } from 'node:crypto'
-import { publicCommunityLandingAudience, loadPublicDirectoryFacts, requireCanReadPublicDirectory, publicCommunityDirectoryTargetAudience, loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActionFacts,
+import { loadPublicDirectoryFacts, requireCanReadPublicDirectory, loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActionFacts,
   loadLifecycleAccountFacts, loadStaffAssignmentFacts, loadCommunityRequestFacts,
   requireCanEnterCommunityAction, requireCanSelectCommunityRequest, requireCanTargetCommunityAccount,
   requireCanApproveCommunityRequest, requireCanReturnToCommunity, loadJoinCommunityFacts, decideCommunityEntry,
   requireCanChangeCommunityStanding, loadStaffGrantFacts, requireCanManageCommunityStaff,
-  ownCommunityRequestAudience, communityAccountReviewAudience, communityStaffCandidateAudience,
-  communityPendingRequestAudience, loadConfigurationFacts, requireCanReadConfiguration, requireCanEditConfiguration,
+  loadConfigurationFacts, requireCanReadConfiguration, requireCanEditConfiguration,
   loadAccountRecordFacts, requireCanReadAccountRecord, requireCanManageAccountRecords,
-  requireCanListCommunityAccounts, requireCanReadCommunityAccountFacts, communityAccountFactsTargetAudience,
-  loadHistoryFacts, communityHistoryAudience, communityProfileSourceAudience, ownCommunityProfileEditAudience,
-  ownCommunityPreferencesReadAudience, ownCommunityPreferencesEditAudience, loadMemberDirectoryFacts,
-  requireCanReadMemberDirectory, communityMemberDirectoryTargetAudience, type Account, type Staff, type Pending } from './policies.ts'
+  canListCommunityAccounts, requireCanListCommunityAccounts, requireCanReadCommunityAccountFacts,
+  loadHistoryFacts, loadMemberDirectoryFacts,
+  requireCanReadMemberDirectory, type Account, type Staff, type Pending } from './policies.ts'
 import { sql } from 'kysely'
 import { type AppDatabase, withEligibleActorTransaction, withTransactionRetry, type AuthenticatedContext } from '../database.ts'
 import { ApplicationError } from '../http-errors.ts'
@@ -189,7 +187,7 @@ async function readCommunityLanding(db: AppDatabase, slug: string): Promise<Comm
         'tenant_id',o.tenant_id,'content_key',o.content_key,'text_value',o.text_value) order by o.content_key)
         from public.tenant_website_content_overrides o where o.tenant_id=t.id
         and o.content_key in (${sql.join(Object.keys(copySlots))})), '[]'::jsonb)`.as('overrides'))
-      .where('t.id', '=', site.id).where(publicCommunityLandingAudience()).executeTakeFirst()
+      .where('t.id', '=', site.id).where(sql<boolean>`t.operational_status='active'`).executeTakeFirst()
   })
 }
 export async function readPublicDirectory(tx: Tx, slug: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<PublicDirectoryRow>> {
@@ -202,7 +200,7 @@ export async function readPublicDirectory(tx: Tx, slug: string, query: Directory
     .leftJoin('tenant_staff_assignments as s', join => join.onRef('s.tenant_id', '=', 'c.tenant_id').onRef('s.user_id', '=', 'c.user_id'))
     .select(['c.user_id', 'p.display_name'])
     .select(sql<PublicDirectoryRow['staff_role']>`case when c.standing='approved' and s.status='active' then s.role end`.as('staff_role'))
-    .where('c.tenant_id', '=', site.id).where(publicCommunityDirectoryTargetAudience())
+    .where('c.tenant_id', '=', site.id).where(sql<boolean>`c.standing in ('approved','suspended')`)
     .$if(after !== null, q => q.where('c.user_id', '>', after!))
     .orderBy('c.user_id').limit(limit + 1).execute()
   const visible = rows.slice(0, limit), last = visible.at(-1)
@@ -391,6 +389,7 @@ export async function communityCommand(tx: Tx, actor: string, tenant: string, cm
 }
 
 // Requests and reviews
+// Queue visibility does not confer command authority or expose applicant Auth.
 function ownRequest(db: AppDatabase, context: AuthenticatedContext, params: TenantParams) {
   const actor = context.actorId;
   const tenant = params.tenantId;
@@ -399,7 +398,7 @@ function ownRequest(db: AppDatabase, context: AuthenticatedContext, params: Tena
         jsonb_build_object('request_id',r.id,'kind',r.kind,'requested_at',r.requested_at) end as request
         from public.community_accounts c join public.tenants t on t.id=c.tenant_id
         left join app_private.community_account_requests r using(tenant_id,user_id)
-        where c.tenant_id=${tenant} and ${ownCommunityRequestAudience(actor)}`.execute(tx)).rows[0]
+        where c.tenant_id=${tenant} and c.user_id=${actor} and t.operational_status='active'`.execute(tx)).rows[0]
     return row ?? { status: 404 as const }
   }, { initialTenantId: tenant })
 }
@@ -411,7 +410,9 @@ function reviewAccount(db: AppDatabase, context: AuthenticatedContext, params: R
     const row = (await sql<AccountReview>`select c.standing,c.revision,case when c.user_id=${actor} then r.id end as request_id
           from public.community_accounts c join public.tenants t on t.id=c.tenant_id
           left join app_private.community_account_requests r using(tenant_id,user_id)
-          where c.tenant_id=${tenantId} and c.user_id=${target} and ${communityAccountReviewAudience(actor)}
+          where c.tenant_id=${tenantId} and c.user_id=${target} and t.operational_status='active' and (c.user_id=${actor} or exists(
+            select from public.tenant_staff_assignments s where s.tenant_id=c.tenant_id
+            and s.user_id=${actor} and s.status='active' and s.can_discipline_users))
           `.execute(tx)).rows[0]
     return row ? { row } : { status: 404 as const }
   }, { initialTenantId: tenantId })
@@ -422,7 +423,10 @@ function staffCandidates(db: AppDatabase, context: AuthenticatedContext, params:
     const rows = (await sql<StaffCandidate>`select c.tenant_id,c.user_id,c.standing,p.display_name,s.status as staff_status,s.role as staff_role
           from public.community_accounts c left join public.community_account_profiles p using(tenant_id,user_id)
           left join public.tenant_staff_assignments s using(tenant_id,user_id)
-          where c.tenant_id=${tenantId} and ${communityStaffCandidateAudience(context.actorId)}
+          where c.tenant_id=${tenantId} and c.standing='approved' and exists(select from public.tenant_staff_assignments a
+            join public.tenants t on t.id=a.tenant_id where a.tenant_id=c.tenant_id and a.user_id=${context.actorId}
+            and a.status='active' and a.can_grant_staff and t.operational_status='active')
+            and app_private.auth_identity_eligible(c.user_id,false)
             and (${query.after ?? null}::uuid is null or c.user_id>${query.after ?? null}::uuid)
           order by c.user_id limit 51`.execute(tx)).rows
     return { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].user_id : null }
@@ -435,7 +439,9 @@ function pendingRequests(db: AppDatabase, context: AuthenticatedContext, params:
     const rows = (await sql<CommunityRequest>`select r.id,r.kind,r.user_id,r.requested_at,c.revision,c.standing,c.first_approved_at,
           c.has_disciplinary_restriction,p.display_name from app_private.community_account_requests r
           join public.community_accounts c using(tenant_id,user_id) left join public.community_account_profiles p using(tenant_id,user_id)
-          where r.tenant_id=${tenantId} and ${communityPendingRequestAudience(actor)}
+          where r.tenant_id=${tenantId} and exists(select from public.tenant_staff_assignments s join public.tenants t on t.id=s.tenant_id
+            where s.tenant_id=r.tenant_id and s.user_id=${actor} and s.status='active' and t.operational_status='active'
+            and (s.can_approve_users or (s.can_discipline_users and r.kind='reactivation' and c.standing='inactive' and c.has_disciplinary_restriction)))
             and (${query.after ?? null}::uuid is null or r.id>${query.after ?? null}::uuid)
           order by r.id limit 51`.execute(tx)).rows
     return { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].id : null }
@@ -457,7 +463,13 @@ function readProfile(db: AppDatabase, context: AuthenticatedContext, params: Acc
         .onRef('viewer.tenant_id', '=', 'p.tenant_id').on('viewer.user_id', '=', actor))
       .where('p.tenant_id', '=', tenantId).where('p.user_id', '=', userId)
       .innerJoin('tenants as t', 't.id', 'p.tenant_id')
-      .where(communityProfileSourceAudience(actor))
+      .where(sql<boolean>`((t.operational_status='active' and (
+        (p.user_id=${actor} and viewer.standing='pending') or
+        (viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended','inactive'))))
+        or (t.operational_status='archived' and exists(select from public.tenant_staff_assignments owner_staff
+          join public.community_accounts owner_account using(tenant_id,user_id)
+          where owner_staff.tenant_id=t.id and owner_staff.user_id=${actor}
+            and owner_staff.role='owner' and owner_staff.status='active' and owner_account.standing='approved')))`)
       .select(communityProfileColumns.map(field => `p.${field}` as const)).executeTakeFirst()
     return profile ? { status: 200 as const, profile } : { status: 404 as const }
   }, { initialTenantId: tenantId })
@@ -466,7 +478,9 @@ function readProfile(db: AppDatabase, context: AuthenticatedContext, params: Acc
 export async function ownCommunityProfile(tx: Tx, actor: string, tenant: string, input: CommunityProfileInput) {
   // Independent self edits have statement-time lifecycle checks and no tenant lock.
   const result = await sql`update public.community_account_profiles p set display_name=${input.display_name.trim()},bio=${input.bio?.trim() || null}
-    where p.tenant_id=${tenant} and ${ownCommunityProfileEditAudience(actor)}
+    where p.tenant_id=${tenant} and p.user_id=${actor} and exists(select from public.community_accounts c
+      join public.tenants t on t.id=c.tenant_id where c.tenant_id=p.tenant_id and c.user_id=p.user_id
+      and t.operational_status='active' and c.standing in ('pending','approved','suspended'))
     returning p.tenant_id`.execute(tx)
   if (!result.rows.length) throw new ApplicationError(404, 'missing')
   return { tenantId: tenant }
@@ -482,8 +496,16 @@ export async function ownCommunityPreferences(tx: Tx, actor: string, tenant: str
   const fields = sql.join(communityPreferenceFields.map(field => sql.id(field)))
   const result = input
     ? await sql<CommunityPreferences>`update public.community_account_preferences set ${sql.join(Object.entries(input).map(([key, value]) => sql`${sql.id(key)}=${value}`))}
-        where tenant_id=${tenant} and ${ownCommunityPreferencesEditAudience(actor)} returning ${fields}`.execute(tx)
-    : await sql<CommunityPreferences>`select ${fields} from public.community_account_preferences where tenant_id=${tenant} and ${ownCommunityPreferencesReadAudience(actor)}`.execute(tx)
+        where tenant_id=${tenant} and user_id=${actor} and exists(select from public.community_accounts c
+          join public.tenants t on t.id=c.tenant_id
+          where c.tenant_id=community_account_preferences.tenant_id and c.user_id=community_account_preferences.user_id
+            and t.operational_status='active' and c.standing in ('pending','approved')) returning ${fields}`.execute(tx)
+    : await sql<CommunityPreferences>`select ${fields} from public.community_account_preferences where tenant_id=${tenant} and user_id=${actor} and exists(select from public.tenants t
+        where t.id=community_account_preferences.tenant_id and
+        (t.operational_status='active' or exists(select from public.tenant_staff_assignments owner_staff
+          join public.community_accounts owner_account using(tenant_id,user_id)
+          where owner_staff.tenant_id=t.id and owner_staff.user_id=${actor}
+            and owner_staff.role='owner' and owner_staff.status='active' and owner_account.standing='approved')))`.execute(tx)
   if (!result.rows[0]) throw new ApplicationError(404, 'missing')
   return result.rows[0]
 }
@@ -560,7 +582,7 @@ export async function readMemberDirectory(tx: Tx, actor: string, tenant: string,
     case when c.standing='approved' and s.status='active' then s.role end as staff_role
     from public.community_accounts c left join public.community_account_profiles p using(tenant_id,user_id)
     left join public.tenant_staff_assignments s using(tenant_id,user_id)
-    where c.tenant_id=${tenant} and ${communityMemberDirectoryTargetAudience()} and (${after}::uuid is null or c.user_id>${after}::uuid)
+    where c.tenant_id=${tenant} and c.standing in ('approved','suspended') and (${after}::uuid is null or c.user_id>${after}::uuid)
     order by c.user_id limit ${limit + 1}`.execute(tx)).rows
   const visible = rows.slice(0, limit), last = visible.at(-1)
   return { rows: visible, next: rows.length > limit && last ? cursors.encode(cursorScope, last.account.user_id) : null }
@@ -578,7 +600,7 @@ export async function readAccountFacts(tx: Tx, actor: string, tenant: string, ta
   const facts = await lockAccountFacts(tx, actor, tenant)
   requireCanReadCommunityAccountFacts(facts, target === actor)
   const row = (await sql<AccountFacts>`select ${sql.join(factsFields.map(key => sql.id(key)))} from public.community_accounts
-    where tenant_id=${tenant} and user_id=${target} and (${communityAccountFactsTargetAudience(facts, target === actor)})`.execute(tx)).rows[0]
+    where tenant_id=${tenant} and user_id=${target} and (${canListCommunityAccounts(facts) === 'allowed' || target === actor} or standing in ('approved','suspended','inactive'))`.execute(tx)).rows[0]
   if (!row) throw new ApplicationError(404, 'missing')
   return row
 }
@@ -676,6 +698,7 @@ export async function accountHistory(tx: Tx, actor: string, tenant: string, quer
   const empty: HistoryPage = { rows: [], next: null }
   if (!site) return empty
   const facts = await loadHistoryFacts(tx, actor, tenant)
+  const staff = facts.account?.standing === 'approved' && facts.assignment?.status === 'active' ? facts.assignment : undefined
   const limit = query.eventId ? 1 : Number(query.limit ?? 50)
   const rows = (await sql<HistoryEntry>`
     select a.id,a.tenant_id,a.action,a.target_user_id,a.content_key,
@@ -688,7 +711,10 @@ export async function accountHistory(tx: Tx, actor: string, tenant: string, quer
       and (${query.eventId ?? null}::uuid is null or a.id=${query.eventId ?? null}::uuid)
       and (${query.category ?? null}::text is null or exists(select from app_private.tenant_admin_action_categories c
         where c.action_id=a.id and c.category=${query.category ?? null}))
-      and (${communityHistoryAudience(facts)})
+      and (${staff?.role === 'owner'} or (${facts.site?.operational_status === 'active'} and exists(
+        select from app_private.tenant_admin_action_categories c where c.action_id=a.id
+        and ((c.category='community_account' and ${Boolean(staff?.can_audit_community_accounts)})
+          or (c.category='staff_account' and ${Boolean(staff?.can_audit_staff_accounts)})))))
       and (${position?.time ?? null}::timestamptz is null or (a.created_at,a.id)<(${position?.time ?? null}::timestamptz,${position?.id ?? null}::uuid))
     order by a.created_at desc,a.id desc limit ${query.eventId ? 1 : limit + 1}
   `.execute(tx)).rows

@@ -19,8 +19,6 @@ type ConfigurationFacts = Awaited<ReturnType<typeof loadConfigurationFacts>>
 
 type Decision = 'allowed' | 'missing' | 'forbidden' | 'stale'
 
-type HistoryFacts = Awaited<ReturnType<typeof loadHistoryFacts>>
-
 type MemberDirectoryFacts = Awaited<ReturnType<typeof loadMemberDirectoryFacts>>
 
 export type Pending = { id: string; user_id: string; kind: 'join' | 'reactivation' }
@@ -334,16 +332,6 @@ function approvedCommunityOwnerAudience(actor: string) {
       and owner_staff.role='owner' and owner_staff.status='active' and owner_account.standing='approved')`
 }
 
-export function communityAccountFactsTargetAudience(facts: AccountRecordFacts, own: boolean) {
-  return sql`${canListCommunityAccounts(facts) === 'allowed' || own} or standing in ('approved','suspended','inactive')`
-}
-
-export function communityAccountReviewAudience(actor: string) {
-  return sql`t.operational_status='active' and (c.user_id=${actor} or exists(
-    select from public.tenant_staff_assignments s where s.tenant_id=c.tenant_id
-    and s.user_id=${actor} and s.status='active' and s.can_discipline_users))`
-}
-
 export function communityBlockProfileSourceAudience(actor: string, target: string, tenant: string) {
   return sql<boolean>`exists(select from public.community_account_profiles p
     join public.community_accounts target on (target.tenant_id,target.user_id)=(p.tenant_id,p.user_id)
@@ -365,27 +353,6 @@ export function communityGlobalSharingAudience(actor: string, target: RawBuilder
       and ${lockedTenants === undefined ? sql<boolean>`true` : sql<boolean>`t.id=any(${lockedTenants}::uuid[])`})`
 }
 
-// Audit history. The service holds a tenant SHARE lock before these facts are
-// loaded; category filtering must precede cursor/order/limit, including exact IDs.
-export function communityHistoryAudience(facts: HistoryFacts) {
-  const staff = facts.account?.standing === 'approved' && facts.assignment?.status === 'active' ? facts.assignment : undefined
-  const owner = staff?.role === 'owner'
-  return sql`${Boolean(owner)} or (${facts.site?.operational_status === 'active'} and exists(
-    select from app_private.tenant_admin_action_categories c where c.action_id=a.id
-    and ((c.category='community_account' and ${Boolean(staff?.can_audit_community_accounts)})
-      or (c.category='staff_account' and ${Boolean(staff?.can_audit_staff_accounts)}))))`
-}
-
-export function communityMemberDirectoryTargetAudience() {
-  return sql<boolean>`c.standing in ('approved','suspended')`
-}
-
-export function communityPendingRequestAudience(actor: string) {
-  return sql`exists(select from public.tenant_staff_assignments s join public.tenants t on t.id=s.tenant_id
-    where s.tenant_id=r.tenant_id and s.user_id=${actor} and s.status='active' and t.operational_status='active'
-    and (s.can_approve_users or (s.can_discipline_users and r.kind='reactivation' and c.standing='inactive' and c.has_disciplinary_restriction)))`
-}
-
 // Narrow source-access export for exact community profiles and later block-source
 // composition. Requires p/target/viewer/t aliases with the same tenant linkage.
 export function communityProfileSourceAudience(actor: string) {
@@ -393,44 +360,4 @@ export function communityProfileSourceAudience(actor: string) {
     (p.user_id=${actor} and viewer.standing='pending') or
     (viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended','inactive'))))
     or (t.operational_status='archived' and ${approvedCommunityOwnerAudience(actor)}))`
-}
-
-export function communityStaffCandidateAudience(actor: string) {
-  return sql`c.standing='approved' and exists(select from public.tenant_staff_assignments a
-    join public.tenants t on t.id=a.tenant_id where a.tenant_id=c.tenant_id and a.user_id=${actor}
-    and a.status='active' and a.can_grant_staff and t.operational_status='active')
-    and app_private.auth_identity_eligible(c.user_id,false)`
-}
-
-export function ownCommunityPreferencesEditAudience(actor: string) {
-  return sql<boolean>`user_id=${actor} and exists(select from public.community_accounts c
-    join public.tenants t on t.id=c.tenant_id
-    where c.tenant_id=community_account_preferences.tenant_id and c.user_id=community_account_preferences.user_id
-      and t.operational_status='active' and c.standing in ('pending','approved'))`
-}
-
-export function ownCommunityPreferencesReadAudience(actor: string) {
-  return sql<boolean>`user_id=${actor} and exists(select from public.tenants t
-    where t.id=community_account_preferences.tenant_id and
-    (t.operational_status='active' or ${approvedCommunityOwnerAudience(actor)}))`
-}
-
-export function ownCommunityProfileEditAudience(actor: string) {
-  return sql<boolean>`p.user_id=${actor} and exists(select from public.community_accounts c
-    join public.tenants t on t.id=c.tenant_id where c.tenant_id=p.tenant_id and c.user_id=p.user_id
-    and t.operational_status='active' and c.standing in ('pending','approved','suspended'))`
-}
-
-// Requests and reviews. Audiences are applied before ordering and pagination;
-// queue visibility does not confer command authority or expose applicant Auth.
-export function ownCommunityRequestAudience(actor: string) {
-  return sql`c.user_id=${actor} and t.operational_status='active'`
-}
-
-export function publicCommunityDirectoryTargetAudience() {
-  return sql<boolean>`c.standing in ('approved','suspended')`
-}
-
-export function publicCommunityLandingAudience() {
-  return sql<boolean>`t.operational_status='active'`
 }
