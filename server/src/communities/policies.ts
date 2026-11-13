@@ -1,4 +1,4 @@
-import { sql, type RawBuilder } from 'kysely'
+import { sql } from 'kysely'
 import { ApplicationError } from '../http-errors.ts'
 import { staffFlags, type CommunityCommand, type ConfigurationKind, type RecordKind, type StaffPermissions, type Tx } from './types.ts'
 
@@ -315,49 +315,4 @@ export function canTargetCommunityAccount(account: Account | undefined, assignme
 export function decideCommunityEntry(account: Account | undefined, facts: Awaited<ReturnType<typeof loadJoinCommunityFacts>>): CommunityEntryDecision {
   if (account?.restricted) return { kind: 'review', requestId: facts.request?.id }
   return { kind: 'establish', standing: account?.approved || facts.autoApprove ? 'approved' : 'pending' }
-}
-
-/*
- * Audience Predicates
- */
-
-// Community profiles and preferences. These predicates use operation-local
-// statement snapshots; ordinary community identity is independent of blocks.
-// The caller supplies the tenant `t` alias. Archive RLS independently protects
-// underlying account/profile content even if a trusted writer omits a predicate.
-function approvedCommunityOwnerAudience(actor: string) {
-  return sql<boolean>`exists(select from public.tenant_staff_assignments owner_staff
-    join public.community_accounts owner_account using(tenant_id,user_id)
-    where owner_staff.tenant_id=t.id and owner_staff.user_id=${actor}
-      and owner_staff.role='owner' and owner_staff.status='active' and owner_account.standing='approved')`
-}
-
-export function communityBlockProfileSourceAudience(actor: string, target: string, tenant: string) {
-  return sql<boolean>`exists(select from public.community_account_profiles p
-    join public.community_accounts target on (target.tenant_id,target.user_id)=(p.tenant_id,p.user_id)
-    join public.community_accounts viewer on viewer.tenant_id=p.tenant_id and viewer.user_id=${actor}
-    join public.tenants t on t.id=p.tenant_id
-    where t.id=${tenant} and p.user_id=${target} and ${communityProfileSourceAudience(actor)})`
-}
-
-// Global sharing is a separate audience from ordinary community identity.
-// A single qualifying active shared community suffices; no affiliation is returned.
-export function communityGlobalSharingAudience(actor: string, target: RawBuilder<string>, lockedTenants?: readonly string[]) {
-  return sql<boolean>`exists(select from public.community_accounts viewer
-    join public.community_accounts target using(tenant_id)
-    join public.community_account_preferences prefs on (prefs.tenant_id,prefs.user_id)=(target.tenant_id,target.user_id)
-    join public.tenants t on t.id=target.tenant_id
-    where viewer.user_id=${actor} and target.user_id=${target}
-      and viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended')
-      and t.operational_status='active' and prefs.show_global_profile
-      and ${lockedTenants === undefined ? sql<boolean>`true` : sql<boolean>`t.id=any(${lockedTenants}::uuid[])`})`
-}
-
-// Narrow source-access export for exact community profiles and later block-source
-// composition. Requires p/target/viewer/t aliases with the same tenant linkage.
-export function communityProfileSourceAudience(actor: string) {
-  return sql<boolean>`((t.operational_status='active' and (
-    (p.user_id=${actor} and viewer.standing='pending') or
-    (viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended','inactive'))))
-    or (t.operational_status='archived' and ${approvedCommunityOwnerAudience(actor)}))`
 }

@@ -1,4 +1,4 @@
-import { ownAccountPreferencesAudience, ownGlobalProfileAudience, myCommunitySummaryAudience, globalProfileDiscoveryAudience, exactGlobalProfileAudience, ownOutgoingBlocksAudience, blockProfileSourceAudience, loadOwnBlockFacts } from './policies.ts'
+import { loadOwnBlockFacts } from './policies.ts'
 import { loadGlobalProfileSharingRoots } from '../communities/policies.ts'
 import { myCommunityRelationships } from '../communities/service.ts'
 import { sql } from 'kysely'
@@ -45,7 +45,7 @@ function readAccountPreferences(db: AppDatabase, context: AuthenticatedContext) 
   return withEligibleActorTransaction(db, context, async tx => {
     const row = await tx.selectFrom('user_accounts')
       .select(['user_is_discoverable', 'enable_matchmaking', 'allow_direct_messages'])
-      .where(ownAccountPreferencesAudience(context.actorId)).executeTakeFirst()
+      .where(sql<boolean>`user_id=${context.actorId}`).executeTakeFirst()
     return row ? { status: 200 as const, row } : { status: 404 as const }
   })
 }
@@ -53,7 +53,7 @@ function readAccountPreferences(db: AppDatabase, context: AuthenticatedContext) 
 function saveAccountPreferences(db: AppDatabase, context: AuthenticatedContext, input: AccountPreferences) {
   return withEligibleActorTransaction(db, context, async tx => {
     const row = await tx.updateTable('user_accounts').set(input)
-      .where(ownAccountPreferencesAudience(context.actorId))
+      .where(sql<boolean>`user_id=${context.actorId}`)
       .returning(['user_is_discoverable', 'enable_matchmaking', 'allow_direct_messages']).executeTakeFirst()
     return row ? { status: 200 as const, row } : { status: 404 as const }
   })
@@ -65,7 +65,7 @@ export async function readOwnProfile(db: AppDatabase, context: AuthenticatedCont
   return withEligibleActorTransaction(db, context, async tx => {
     const actor = context.actorId
     const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
-    const result = await sql<OwnProfile>`select ${fields} from public.user_account_profiles where ${ownGlobalProfileAudience(actor)}`.execute(tx)
+    const result = await sql<OwnProfile>`select ${fields} from public.user_account_profiles where user_account_profiles.user_id=${actor}`.execute(tx)
     return { profile: result.rows[0] ?? null }
   })
 }
@@ -76,7 +76,7 @@ export async function saveOwnProfile(db: AppDatabase, context: AuthenticatedCont
     const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
     const result = await sql<OwnProfile>`insert into public.user_account_profiles(display_name,bio) values(${input.display_name.trim()},${input.bio?.trim() || null})
       on conflict(user_id) do update set display_name=excluded.display_name,bio=excluded.bio
-      where ${ownGlobalProfileAudience(actor)} returning ${fields}`.execute(tx)
+      where user_account_profiles.user_id=${actor} returning ${fields}`.execute(tx)
     return { profile: result.rows[0] ?? null }
   })
 }
@@ -104,7 +104,8 @@ async function listMyCommunities(db: AppDatabase, context: AuthenticatedContext,
       .select(['t.id','t.name','t.city','t.state_province','t.country_code','t.operational_status',
         'r.is_owned','r.is_managed','r.is_member'])
       .select(sql<string>`to_char(t.created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`.as('created_at'))
-      .where(myCommunitySummaryAudience(filter))
+      .where(filter === 'owned' ? sql<boolean>`r.is_owned` : filter === 'managed' ? sql<boolean>`r.is_managed`
+        : sql<boolean>`(r.is_owned or r.is_member)`)
       .where(sql<boolean>`(${position?.time ?? null}::timestamptz is null or t.created_at<${position?.time ?? null}::timestamptz
         or (t.created_at=${position?.time ?? null}::timestamptz and t.id>${position?.id ?? null}::uuid))`)
       .orderBy('t.created_at','desc').orderBy('t.id','asc').limit(limit+1)
@@ -123,7 +124,9 @@ async function discoverGlobalProfiles(db: AppDatabase, cursors: DirectoryCursors
     const after = cursors.decode(scope,query.cursor), limit = Number(query.limit ?? 50)
     // Admission and projection share a fresh statement snapshot, before pagination.
     const rows = (await sql<GlobalProfile>`select ${fields} from public.user_account_profiles p
-      where ${globalProfileDiscoveryAudience(actor,sql<string>`p.user_id`)} and strpos(lower(display_name),${term})>0
+      where exists(select from public.user_accounts u where u.user_id=p.user_id and u.user_is_discoverable)
+        and not exists(select from public.user_account_blocks b where
+          (b.blocker_user_id,b.blocked_user_id) in ((${actor}::uuid,p.user_id),(p.user_id,${actor}::uuid))) and strpos(lower(display_name),${term})>0
         and (${after}::uuid is null or user_id>${after}::uuid) order by user_id limit ${limit+1}`.execute(tx)).rows
     const visible=rows.slice(0,limit), last=visible.at(-1)
     return {rows:visible,next:rows.length>limit && last ? cursors.encode(scope,last.user_id):null}
@@ -134,8 +137,17 @@ export async function readGlobalProfile(db: AppDatabase, context: AuthenticatedC
   return withEligibleActorTransaction(db, context, async tx => {
     const actor = context.actorId
     await sql`select set_config('ct.profile_target',${target},true)`.execute(tx)
+    // Shared-community consent and standing follow the community-owned sharing rule.
     const row = (await sql<GlobalProfile>`select ${fields} from public.user_account_profiles p
-      where p.user_id=${target} and ${exactGlobalProfileAudience(actor,sql<string>`p.user_id`)}`.execute(tx)).rows[0]
+      where p.user_id=${target} and (p.user_id=${actor}::uuid or (not exists(select from public.user_account_blocks b where
+        (b.blocker_user_id,b.blocked_user_id) in ((${actor}::uuid,p.user_id),(p.user_id,${actor}::uuid)))
+        and (exists(select from public.user_accounts u where u.user_id=p.user_id and u.user_is_discoverable) or exists(select from public.community_accounts viewer
+          join public.community_accounts target using(tenant_id)
+          join public.community_account_preferences prefs on (prefs.tenant_id,prefs.user_id)=(target.tenant_id,target.user_id)
+          join public.tenants t on t.id=target.tenant_id
+          where viewer.user_id=${actor} and target.user_id=p.user_id
+            and viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended')
+            and t.operational_status='active' and prefs.show_global_profile))))`.execute(tx)).rows[0]
     if (!row) throw new ApplicationError(404,'missing')
     return row
   })
@@ -149,7 +161,7 @@ async function listAccountBlocks(db: AppDatabase, cursors: DirectoryCursors, con
   return withEligibleActorTransaction(db, context, async tx => {
     const actor = context.actorId
     const scope=['outgoing-blocks',actor],after=cursors.decode(scope,query.cursor),limit=Number(query.limit??50)
-    const rows=(await sql<OutgoingBlock>`select ${blockFields} from public.user_account_blocks where ${ownOutgoingBlocksAudience(actor)}
+    const rows=(await sql<OutgoingBlock>`select ${blockFields} from public.user_account_blocks where blocker_user_id=${actor}
       and (${after}::uuid is null or blocked_user_id>${after}::uuid) order by blocked_user_id limit ${limit+1}`.execute(tx)).rows
     const visible=rows.slice(0,limit),last=visible.at(-1)
     return {rows:visible,next:rows.length>limit && last?cursors.encode(scope,last.blocked_user_id):null}
@@ -200,18 +212,42 @@ export async function setOwnBlock(tx: Tx, actor: string, target: string, input?:
   const pair = [actor,target].map(id => id.toLowerCase()).sort().join(':')
   await sql`select pg_advisory_xact_lock(hashtextextended('ct.profile-block-pair:' || ${pair}::text,0))`.execute(tx)
   if (!input) {
-    await sql`delete from public.user_account_blocks where ${ownOutgoingBlocksAudience(actor)} and blocked_user_id=${target}`.execute(tx)
+    await sql`delete from public.user_account_blocks where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)
     return {blocked:false}
   }
   if (await loadOwnBlockFacts(tx,actor,target)) return {blocked:true}
   // Selectors grant runtime fact/lock scope, never product authority.
   await sql`select set_config('ct.profile_target',${target},true)`.execute(tx)
   const lockedTenants = await lockBlockSource(tx,actor,target,input.source)
+  // Community profile and sharing conditions follow community-owned rules.
+  // Global sharing admits only the roots locked above.
   const rows=(await sql<OutgoingBlock>`insert into public.user_account_blocks(blocked_user_id)
-    select ${target}::uuid where ${blockProfileSourceAudience(actor,target,input.source,lockedTenants)}
+    select ${target}::uuid where ${input.source.kind === 'community_profile'
+      ? sql<boolean>`exists(select from public.community_account_profiles p
+          join public.community_accounts target on (target.tenant_id,target.user_id)=(p.tenant_id,p.user_id)
+          join public.community_accounts viewer on viewer.tenant_id=p.tenant_id and viewer.user_id=${actor}
+          join public.tenants t on t.id=p.tenant_id
+          where t.id=${input.source.tenantId} and p.user_id=${target} and ((t.operational_status='active' and (
+            (p.user_id=${actor} and viewer.standing='pending') or
+            (viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended','inactive'))))
+            or (t.operational_status='archived' and exists(select from public.tenant_staff_assignments owner_staff
+              join public.community_accounts owner_account using(tenant_id,user_id)
+              where owner_staff.tenant_id=t.id and owner_staff.user_id=${actor}
+                and owner_staff.role='owner' and owner_staff.status='active' and owner_account.standing='approved'))))`
+      : sql<boolean>`exists(select from public.user_account_profiles p where p.user_id=${target}
+          and (p.user_id=${actor}::uuid or (not exists(select from public.user_account_blocks b where
+            (b.blocker_user_id,b.blocked_user_id) in ((${actor}::uuid,p.user_id),(p.user_id,${actor}::uuid)))
+            and (exists(select from public.user_accounts u where u.user_id=p.user_id and u.user_is_discoverable) or exists(select from public.community_accounts viewer
+              join public.community_accounts target using(tenant_id)
+              join public.community_account_preferences prefs on (prefs.tenant_id,prefs.user_id)=(target.tenant_id,target.user_id)
+              join public.tenants t on t.id=target.tenant_id
+              where viewer.user_id=${actor} and target.user_id=p.user_id
+                and viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended')
+                and t.operational_status='active' and prefs.show_global_profile
+                and t.id=any(${lockedTenants}::uuid[]))))))`}
     on conflict(blocker_user_id,blocked_user_id) do nothing returning ${blockFields}`.execute(tx)).rows
   const row=rows[0]??(await sql<OutgoingBlock>`select ${blockFields} from public.user_account_blocks
-    where ${ownOutgoingBlocksAudience(actor)} and blocked_user_id=${target}`.execute(tx)).rows[0]
+    where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)).rows[0]
   if (!row) throw new ApplicationError(404,'missing')
   return {blocked:true}
 }
