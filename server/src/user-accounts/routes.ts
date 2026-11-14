@@ -5,7 +5,7 @@ import { readAccountPreferencesSchema, saveAccountPreferencesSchema,
   readOwnProfileSchema, saveOwnProfileSchema,
   listMyCommunitiesSchema,
   discoverGlobalProfilesSchema, readGlobalProfileSchema,
-  listAccountBlocksSchema, blockAccountSchema, unblockAccountSchema } from './json-schema.ts'
+  listAccountBlocksSchema, blockUserSchema, unblockUserSchema } from './json-schema.ts'
 
 export const preferencesPath = '/api/me/preferences'
 const ownProfilePath = '/api/me/profile'
@@ -42,8 +42,8 @@ export const userAccountRoutes: FastifyPluginAsyncTypebox<UserAccountRoutesOptio
   // Account blocks
   routes.get('/api/me/blocks', { schema: listAccountBlocksSchema }, request =>
     service.listAccountBlocks(getAuthenticatedContext(request), request.query))
-  routes.put('/api/me/blocks/:userId', { schema: blockAccountSchema }, request =>
-    service.blockAccount(getAuthenticatedContext(request), request.params.userId, request.body))
-  routes.delete('/api/me/blocks/:userId', { schema: unblockAccountSchema }, request =>
-    service.unblockAccount(getAuthenticatedContext(request), request.params.userId))
+  routes.put('/api/me/blocks/:userId', { schema: blockUserSchema }, request =>
+    service.blockUser(getAuthenticatedContext(request), request.params.userId, request.body))
+  routes.delete('/api/me/blocks/:userId', { schema: unblockUserSchema }, request =>
+    service.unblockUser(getAuthenticatedContext(request), request.params.userId))
 }

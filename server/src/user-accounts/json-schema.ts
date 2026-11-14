@@ -90,5 +90,5 @@ const blockSource = Type.Union([
 ])
 const blockInput = Type.Object({ confirmed: Type.Literal(true), source: blockSource }, closed)
 const blockResponse = Type.Object({ blocked: Type.Boolean() }, closed)
-export const blockAccountSchema = { params: userParams, querystring: emptyQuery, body: blockInput, response: { 200: blockResponse, ...errors } }
-export const unblockAccountSchema = { params: userParams, querystring: emptyQuery, response: { 200: blockResponse, ...errors } }
+export const blockUserSchema = { params: userParams, querystring: emptyQuery, body: blockInput, response: { 200: blockResponse, ...errors } }
+export const unblockUserSchema = { params: userParams, querystring: emptyQuery, response: { 200: blockResponse, ...errors } }

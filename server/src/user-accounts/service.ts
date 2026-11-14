@@ -34,8 +34,55 @@ export function createUserAccountService({ db, cursors }: UserAccountDependencie
     discoverGlobalProfiles(context: AuthenticatedContext, query: DiscoveryQuery) { return discoverGlobalProfiles(db, cursors, context, query) },
     readGlobalProfile(context: AuthenticatedContext, target: string) { return readGlobalProfile(db, context, target) },
     listAccountBlocks(context: AuthenticatedContext, query: DiscoveryQuery) { return listAccountBlocks(db, cursors, context, query) },
-    blockAccount(context: AuthenticatedContext, target: string, input: BlockInput) { return blockAccount(db, context, target, input) },
-    unblockAccount(context: AuthenticatedContext, target: string) { return unblockAccount(db, context, target) },
+    blockUser(context: AuthenticatedContext, target: string, input: BlockInput) {
+      return withEligibleActorTransaction(db, context, async tx => {
+        const actor = context.actorId
+        await lockBlockPair(tx, actor, target)
+        if (await loadOwnBlockFacts(tx,actor,target)) return {blocked:true}
+        // Selectors grant runtime fact/lock scope, never product authority.
+        await sql`select set_config('ct.profile_target',${target},true)`.execute(tx)
+        const lockedTenants = await lockBlockSource(tx,actor,target,input.source)
+        // Community profile and sharing conditions follow community-owned rules.
+        // Global sharing admits only the roots locked above.
+        const rows=(await sql<OutgoingBlock>`insert into public.user_account_blocks(blocked_user_id)
+          select ${target}::uuid where ${input.source.kind === 'community_profile'
+            ? sql<boolean>`exists(select from public.community_account_profiles p
+                join public.community_accounts target on (target.tenant_id,target.user_id)=(p.tenant_id,p.user_id)
+                join public.community_accounts viewer on viewer.tenant_id=p.tenant_id and viewer.user_id=${actor}
+                join public.tenants t on t.id=p.tenant_id
+                where t.id=${input.source.tenantId} and p.user_id=${target} and ((t.operational_status='active' and (
+                  (p.user_id=${actor} and viewer.standing='pending') or
+                  (viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended','inactive'))))
+                  or (t.operational_status='archived' and exists(select from public.tenant_staff_assignments owner_staff
+                    join public.community_accounts owner_account using(tenant_id,user_id)
+                    where owner_staff.tenant_id=t.id and owner_staff.user_id=${actor}
+                      and owner_staff.role='owner' and owner_staff.status='active' and owner_account.standing='approved'))))`
+            : sql<boolean>`exists(select from public.user_account_profiles p where p.user_id=${target}
+                and (p.user_id=${actor}::uuid or (not exists(select from public.user_account_blocks b where
+                  (b.blocker_user_id,b.blocked_user_id) in ((${actor}::uuid,p.user_id),(p.user_id,${actor}::uuid)))
+                  and (exists(select from public.user_accounts u where u.user_id=p.user_id and u.user_is_discoverable) or exists(select from public.community_accounts viewer
+                    join public.community_accounts target using(tenant_id)
+                    join public.community_account_preferences prefs on (prefs.tenant_id,prefs.user_id)=(target.tenant_id,target.user_id)
+                    join public.tenants t on t.id=target.tenant_id
+                    where viewer.user_id=${actor} and target.user_id=p.user_id
+                      and viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended')
+                      and t.operational_status='active' and prefs.show_global_profile
+                      and t.id=any(${lockedTenants}::uuid[]))))))`}
+          on conflict(blocker_user_id,blocked_user_id) do nothing returning ${blockFields}`.execute(tx)).rows
+        const row=rows[0]??(await sql<OutgoingBlock>`select ${blockFields} from public.user_account_blocks
+          where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)).rows[0]
+        if (!row) throw new ApplicationError(404,'missing')
+        return {blocked:true}
+      })
+    },
+    unblockUser(context: AuthenticatedContext, target: string) {
+      return withEligibleActorTransaction(db, context, async tx => {
+        const actor = context.actorId
+        await lockBlockPair(tx, actor, target)
+        await sql`delete from public.user_account_blocks where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)
+        return {blocked:false}
+      })
+    },
   }
 }
 
@@ -168,14 +215,6 @@ async function listAccountBlocks(db: AppDatabase, cursors: DirectoryCursors, con
   })
 }
 
-function blockAccount(db: AppDatabase, context: AuthenticatedContext, target: string, input: BlockInput) {
-  return withEligibleActorTransaction(db, context, tx => setOwnBlock(tx, context.actorId, target, input))
-}
-
-function unblockAccount(db: AppDatabase, context: AuthenticatedContext, target: string) {
-  return withEligibleActorTransaction(db, context, tx => setOwnBlock(tx, context.actorId, target))
-}
-
 // These are the existing source writers' roots: lifecycle/archive commands
 // lock tenant then account; independent sharing saves lock account first. All
 // source row locks are held through INSERT/commit, using those same roots.
@@ -204,50 +243,11 @@ async function lockBlockSource(tx: Tx, actor: string, target: string, source: Bl
   return roots.map(root => root.tenant_id)
 }
 
-export async function setOwnBlock(tx: Tx, actor: string, target: string, input?: BlockInput) {
+async function lockBlockPair(tx: Tx, actor: string, target: string) {
   if (actor.toLowerCase()===target.toLowerCase()) throw new ApplicationError(400,'invalid_target')
   // Serialize one caller's retries/unblocks so conflict readback cannot lose
   // its row to another command between INSERT and SELECT.
   await sql`select pg_advisory_xact_lock(hashtextextended('ct.profile-block:' || ${actor}::text,0))`.execute(tx)
   const pair = [actor,target].map(id => id.toLowerCase()).sort().join(':')
   await sql`select pg_advisory_xact_lock(hashtextextended('ct.profile-block-pair:' || ${pair}::text,0))`.execute(tx)
-  if (!input) {
-    await sql`delete from public.user_account_blocks where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)
-    return {blocked:false}
-  }
-  if (await loadOwnBlockFacts(tx,actor,target)) return {blocked:true}
-  // Selectors grant runtime fact/lock scope, never product authority.
-  await sql`select set_config('ct.profile_target',${target},true)`.execute(tx)
-  const lockedTenants = await lockBlockSource(tx,actor,target,input.source)
-  // Community profile and sharing conditions follow community-owned rules.
-  // Global sharing admits only the roots locked above.
-  const rows=(await sql<OutgoingBlock>`insert into public.user_account_blocks(blocked_user_id)
-    select ${target}::uuid where ${input.source.kind === 'community_profile'
-      ? sql<boolean>`exists(select from public.community_account_profiles p
-          join public.community_accounts target on (target.tenant_id,target.user_id)=(p.tenant_id,p.user_id)
-          join public.community_accounts viewer on viewer.tenant_id=p.tenant_id and viewer.user_id=${actor}
-          join public.tenants t on t.id=p.tenant_id
-          where t.id=${input.source.tenantId} and p.user_id=${target} and ((t.operational_status='active' and (
-            (p.user_id=${actor} and viewer.standing='pending') or
-            (viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended','inactive'))))
-            or (t.operational_status='archived' and exists(select from public.tenant_staff_assignments owner_staff
-              join public.community_accounts owner_account using(tenant_id,user_id)
-              where owner_staff.tenant_id=t.id and owner_staff.user_id=${actor}
-                and owner_staff.role='owner' and owner_staff.status='active' and owner_account.standing='approved'))))`
-      : sql<boolean>`exists(select from public.user_account_profiles p where p.user_id=${target}
-          and (p.user_id=${actor}::uuid or (not exists(select from public.user_account_blocks b where
-            (b.blocker_user_id,b.blocked_user_id) in ((${actor}::uuid,p.user_id),(p.user_id,${actor}::uuid)))
-            and (exists(select from public.user_accounts u where u.user_id=p.user_id and u.user_is_discoverable) or exists(select from public.community_accounts viewer
-              join public.community_accounts target using(tenant_id)
-              join public.community_account_preferences prefs on (prefs.tenant_id,prefs.user_id)=(target.tenant_id,target.user_id)
-              join public.tenants t on t.id=target.tenant_id
-              where viewer.user_id=${actor} and target.user_id=p.user_id
-                and viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended')
-                and t.operational_status='active' and prefs.show_global_profile
-                and t.id=any(${lockedTenants}::uuid[]))))))`}
-    on conflict(blocker_user_id,blocked_user_id) do nothing returning ${blockFields}`.execute(tx)).rows
-  const row=rows[0]??(await sql<OutgoingBlock>`select ${blockFields} from public.user_account_blocks
-    where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)).rows[0]
-  if (!row) throw new ApplicationError(404,'missing')
-  return {blocked:true}
 }

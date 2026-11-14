@@ -30,9 +30,9 @@ const cases = [
   { operation: 'readGlobalProfile', method: 'GET', path: `/api/profiles/${targetId}`, args: [targetId], result: { ...profile, internal_secret: 'omit' }, expected: profile },
   { operation: 'listAccountBlocks', method: 'GET', path: '/api/me/blocks', query: '?limit=2&cursor=opaque', args: [{ limit: '2', cursor: 'opaque' }],
     result: { rows: [{ ...block, internal_secret: 'omit' }], next: null }, expected: { rows: [block], next: null } },
-  { operation: 'blockAccount', method: 'PUT', path: `/api/me/blocks/${targetId}`, payload: blockInput, args: [targetId, blockInput],
+  { operation: 'blockUser', method: 'PUT', path: `/api/me/blocks/${targetId}`, payload: blockInput, args: [targetId, blockInput],
     result: { blocked: true, internal_secret: 'omit' }, expected: { blocked: true } },
-  { operation: 'unblockAccount', method: 'DELETE', path: `/api/me/blocks/${targetId}`, args: [targetId],
+  { operation: 'unblockUser', method: 'DELETE', path: `/api/me/blocks/${targetId}`, args: [targetId],
     result: { blocked: false, internal_secret: 'omit' }, expected: { blocked: false } },
 ]
 
@@ -194,7 +194,7 @@ test('own profile keeps a bio at its limit and rejects an overlong bio from the 
 
 test('account blocks accept each source and reject unknown or mixed source fields', async t => {
   const h = harness(t)
-  const item = cases.find(item => item.operation === 'blockAccount')
+  const item = cases.find(item => item.operation === 'blockUser')
   for (const source of [{ kind: 'global_profile' }, { kind: 'community_profile', tenantId }]) {
     const payload = { confirmed: true, source }
     h.queue(item.operation, { blocked: true })
@@ -228,7 +228,7 @@ test('adapter preserves preference result branches, application errors, profile 
     ['readOwnProfile', 403, 'ineligible'], ['saveOwnProfile', 403, 'ineligible'],
     ['listMyCommunities', 400, 'invalid_cursor'], ['discoverGlobalProfiles', 400, 'invalid_cursor'],
     ['readGlobalProfile', 404, 'missing'], ['listAccountBlocks', 400, 'invalid_cursor'],
-    ['blockAccount', 404, 'missing'], ['unblockAccount', 400, 'invalid_target'],
+    ['blockUser', 404, 'missing'], ['unblockUser', 400, 'invalid_target'],
   ]
   for (const [operation, status, code] of failures) {
     h.queue(operation, new ApplicationError(status, code))

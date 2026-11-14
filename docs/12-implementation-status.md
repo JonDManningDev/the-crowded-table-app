@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Account block service methods — locally verified 2026-11-14
+
+`blockUser` and `unblockUser` now own their eligibility transactions and writes in the user-account service. They share self-target validation and caller-before-pair advisory locking. The `setOwnBlock` export and the former `blockAccount` and `unblockAccount` wrappers are removed. The existing HTTP contract and block-source authorization are preserved. Integration tests use the real service with a driver hook after the insert for rollback and lock observation. Source-denial checks use the authenticated HTTP route.
+
+`npm.cmd run test:http -w server` passed all 76 cases against the reviewed baseline. `npm.cmd run test:local -w server` passed all nine Auth/HTTP suites, actor-context and transaction retry tests, and the client access audit. The focused policy scenarios in `server/tests/hosted-policy-local.mjs` passed on loopback, including both block/source lock orders. `supabase/tests/direct_data_api.mjs` passed 51 checks and `npx.cmd --yes supabase test db` passed 272 pgTAP assertions. Local verification used process-only loopback port overrides for Auth and PostgreSQL. Client tests (279), TypeScript, lint and build passed. The diff review confirmed equivalent SQL apart from indentation and preserved lock order. No schema migration or hosted deployment was run.
+
 ## Service-owned result SQL — locally verified 2026-11-13
 
 The user confirmed the [specification](25-service-owned-result-sql-spec.md) and its real Auth/HTTP, direct-runtime database, external Data API and HTTP-contract testing boundaries, then separately authorized implementation through implement-spec. [Issue #23](https://github.com/JonDManningDev/the-crowded-table-app/issues/23) was published with `ready-for-agent`, and CLI read-back verified the exact approved body, title, open state and label before implementation.

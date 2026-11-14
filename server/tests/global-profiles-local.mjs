@@ -5,7 +5,8 @@ import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
-import { readGlobalProfile, setOwnBlock } from '../src/user-accounts/service.ts'
+import { readGlobalProfile } from '../src/user-accounts/service.ts'
+import { holdBlockWrite, runBlockWithInsertHook } from './helpers/block-write.mjs'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
@@ -187,9 +188,10 @@ try {
     assert.deepEqual((await sql`select blocked_user_id from public.user_account_blocks`.execute(tx)).rows,[])
   })
   await unblock(target,viewer.id)
-  await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
-    await setOwnBlock(tx,viewer.id,target.id,{confirmed:true,source});throw Error('injected rollback')
-  }),/injected rollback/)
+  await assert.rejects(runBlockWithInsertHook(endpoint.href, { actorId: viewer.id, requestId: randomUUID() },
+    target.id, { confirmed: true, source }, client => client.query("do $$ begin raise exception 'injected block rollback'; end $$")),
+    error => error.code === 'P0001' && error.message === 'injected block rollback')
+  assert.deepEqual((await list(viewer)).rows, [])
   assert.equal((await inspect(viewer,target.id)).user_id,target.id)
   // A trusted runtime can insert its own block without product source proof;
   // the API is now the sole owner of that decision. Roll this bypass back.
@@ -205,9 +207,7 @@ try {
   })
   // Source revocation is re-evaluated in the API mutation, not database RLS.
   await prefs(target,false);await sharing(target,second,false)
-  await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
-    await setOwnBlock(tx,viewer.id,target.id,{confirmed:true,source:{kind:'global_profile'}})
-  }),error=>error.statusCode===404)
+  await block(viewer,target.id,{kind:'global_profile'},404)
   // Source proof is loaded after the caller lock wait, in the INSERT snapshot.
   async function afterCallerWait(change,read) {
     await admin.query('begin')
@@ -249,22 +249,18 @@ try {
   // Source-root changes wait for an admitted write to commit. This is stronger
   // than the former statement-only admission and matches the accepted plan.
   async function admittedBlock(input,change) {
-    let release,ready
-    const gate=new Promise(resolve=>{release=resolve}),started=new Promise(resolve=>{ready=resolve})
-    const write=withEligibleActorTransaction(db,{actorId:viewer.id,requestId:randomUUID()},async tx=>{
-      const result=await setOwnBlock(tx,viewer.id,target.id,input)
-      ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
-      await gate;return result
-    })
-    const holder=await Promise.race([started,write.then(()=>{throw Error('block ended before barrier')})])
-    const transition=change();transition.catch(()=>{})
+    const { started, release, result: write } = holdBlockWrite(endpoint.href,
+      { actorId: viewer.id, requestId: randomUUID() }, target.id, input)
+    let transition
     try {
+      const holder=await Promise.race([started,write.then(()=>{throw Error('block ended before barrier')})])
+      transition=change();transition.catch(()=>{})
       const deadline=Date.now()+1800
       while(!(await admin.query('select exists(select from pg_stat_activity where $1=any(pg_blocking_pids(pid))) as waiting',[holder])).rows[0].waiting) {
         assert.ok(Date.now()<deadline,'source transition must wait for admitted block')
         await new Promise(resolve=>setTimeout(resolve,10))
       }
-    } finally {release()}
+    } finally {release();await Promise.allSettled([write,transition])}
     assert.deepEqual((await write),{blocked:true})
     await transition
     assert.equal((await list(viewer)).rows.length,1)

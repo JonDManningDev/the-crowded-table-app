@@ -4,7 +4,7 @@ import pg from 'pg'
 import { Kysely, PostgresDialect, PostgresQueryCompiler, sql } from 'kysely'
 import { withEligibleActorTransaction } from '../../src/database.ts'
 import { communityCommand, ownCommunityPreferences, configurationSettings } from '../../src/communities/service.ts'
-import { setOwnBlock } from '../../src/user-accounts/service.ts'
+import { holdBlockWrite } from './block-write.mjs'
 import { buildApi } from '../../src/app.ts'
 import { verifyBearer } from '../../src/token-verifier.ts'
 import { directoryCursors } from '../../src/directory-cursors.ts'
@@ -69,21 +69,24 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
 
   // A held service operation uses the same locks and actual runtime as HTTP.
   async function race(actor, work, compete, { root = /from (?:public\.)?tenants\b[\s\S]*for update/, initialTenantId } = {}) {
-    let ready, release
-    const started = new Promise(resolve => { ready = resolve })
-    const gate = new Promise(resolve => { release = resolve })
+    const { promise: started, resolve: ready } = Promise.withResolvers()
+    const { promise: gate, resolve: release } = Promise.withResolvers()
     const held = transaction(actor, async tx => {
       await work(tx)
       ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
       await gate
     }, initialTenantId ? { initialTenantId } : undefined)
-    const pid = await Promise.race([started, held.then(() => { throw Error('holder exited before barrier') })])
-    const reachingRoot = nextRootQuery(root)
-    const requestStarted = Date.now()
-    const waiting = compete()
-    waiting.catch(() => {})
-    let arrivalTimer
+    return observeRace({ started, release, result: held }, compete, root)
+  }
+
+  async function observeRace({ started, release, result: held }, compete, root) {
+    let arrivalTimer, waiting
     try {
+      const pid = await Promise.race([started, held.then(() => { throw Error('holder exited before barrier') })])
+      const reachingRoot = nextRootQuery(root)
+      const requestStarted = Date.now()
+      waiting = compete()
+      waiting.catch(() => {})
       const arrivalDeadline = new Promise((_, reject) => {
         arrivalTimer = setTimeout(() => reject(Error('competitor did not reach its root query within 6000ms')), 6000)
       })
@@ -121,7 +124,8 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   const unblock = () => http(owner, '/api/me/blocks/' + other.id, 'DELETE')
   await race(other, tx => sql`update public.user_accounts set user_is_discoverable=false where user_id=${other.id}`.execute(tx), () => block(404), { root: /from (?:public\.)?user_accounts\b[\s\S]*for share/ })
   await globalPreferences(true)
-  await race(owner, tx => setOwnBlock(tx, owner.id, other.id, global), () => globalPreferences(false), { root: /update (?:public\.)?user_accounts\b/ })
+  await observeRace(holdBlockWrite(endpoint, { actorId: owner.id, requestId: randomUUID() }, other.id, global),
+    () => globalPreferences(false), /update (?:public\.)?user_accounts\b/)
   await unblock()
   await http(owner, '/api/profiles/' + other.id, 'GET', undefined, 404)
   await globalPreferences(true)
