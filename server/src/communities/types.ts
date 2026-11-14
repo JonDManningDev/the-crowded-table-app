@@ -113,10 +113,7 @@ export type RoleBadge = 'owner' | 'admin' | null
 type JsonAccountFacts = Omit<AccountFacts, 'created_at' | 'updated_at' | 'first_approved_at'> & {
   created_at: string; updated_at: string; first_approved_at: string | null
 }
-type JsonCommunityProfile = Omit<CommunityProfile, 'created_at' | 'updated_at'> & {
-  created_at: string; updated_at: string
-}
-export type MemberDirectoryRow = { account: JsonAccountFacts; profile: JsonCommunityProfile | null; staff_role: RoleBadge }
+export type MemberDirectoryRow = { account: JsonAccountFacts; profile: Pick<CommunityProfile, 'display_name'> | null; staff_role: RoleBadge }
 export type PublicDirectoryRow = { display_name: string; staff_role: RoleBadge }
 export type DirectoryQuery = { limit?: string; cursor?: string }
 export type DirectoryPage<T> = { rows: T[]; next: string | null }

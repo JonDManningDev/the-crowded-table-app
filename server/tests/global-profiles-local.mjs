@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
 import { readGlobalProfile } from '../src/user-accounts/service.ts'
-import { holdBlockWrite, runBlockWithInsertHook } from './helpers/block-write.mjs'
+import { holdBlockWrite, runBlockWriteWithHook } from './helpers/block-write.mjs'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
@@ -67,7 +67,7 @@ try {
   const inspect=(actor,user,status=200)=>http(actor,'/api/profiles/'+user,'GET',undefined,status)
   const search=(actor,q=prefix,suffix='',status=200)=>http(actor,'/api/profiles?q='+encodeURIComponent(q)+suffix,'GET',undefined,status)
   const list=(actor,suffix='',status=200)=>http(actor,'/api/me/blocks'+suffix,'GET',undefined,status)
-  const block=(actor,user,source={kind:'global_profile'},status=200)=>http(actor,'/api/me/blocks/'+user,'PUT',{confirmed:true,source},status)
+  const block=(actor,user,status=200)=>http(actor,'/api/me/blocks/'+user,'PUT',{confirmed:true},status)
   const unblock=(actor,user)=>http(actor,'/api/me/blocks/'+user,'DELETE')
   const expected=['user_id','display_name','bio','created_at','updated_at','created_by','updated_by'].sort()
   assert.equal((await search(viewer)).rows.length,5)
@@ -115,58 +115,75 @@ try {
   await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     assert.deepEqual((await sql`select user_id from public.user_accounts where user_id=${target.id}`.execute(tx)).rows,[{user_id:target.id}])
     await sql`select set_config('ct.profile_target',${target.id},true)`.execute(tx)
-    await sql`savepoint peer_write`.execute(tx)
-    await assert.rejects(sql`update public.user_accounts set user_is_discoverable=true where user_id=${target.id}`.execute(tx),e=>e.code==='42501')
-    await sql`rollback to savepoint peer_write`.execute(tx)
+    assert.equal((await sql`update public.user_accounts set user_is_discoverable=true where user_id=${target.id}`.execute(tx)).numAffectedRows,0n)
     await sql`select set_config('ct.profile_target','',true)`.execute(tx)
     assert.deepEqual((await sql`select user_id from public.community_account_preferences where user_id=${target.id}`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select user_id from public.user_account_profiles where user_id=${target.id}`.execute(tx)).rows,[{user_id:target.id}])
   })
-  const source={kind:'community_profile',tenantId:second}
-  await prefs(viewer,true)
-  assert.equal((await inspect(target,viewer.id)).user_id,viewer.id)
+  const communityProfile=(actor,user,status=200)=>http(actor,'/api/communities/'+second+'/accounts/'+user+'/profile','GET',undefined,status)
+  const directory=(actor,suffix='')=>http(actor,'/api/communities/'+second+'/directory'+suffix)
+  const withheld={status:'blocked'}
+  await prefs(viewer,true);await prefs(target,true)
+  const initialSearch=(await search(viewer)).rows
+  const initialDirectory=(await directory(viewer)).rows
+  const memberCursor=(await directory(viewer,'?limit=1')).next
+  assert.ok(memberCursor)
+  const memberTail=await directory(viewer,'?cursor='+memberCursor)
+  assert.ok(initialSearch.some(row=>row.user_id===target.id))
+  for(const row of initialSearch) assert.deepEqual(Object.keys(row).sort(),['display_name','user_id'])
+  assert.deepEqual(initialDirectory.find(row=>row.account.user_id===target.id).profile,{display_name:'Community identity'})
+  assert.equal((await communityProfile(viewer,target.id)).bio,'Independent biography')
   await block(viewer,target.id)
-  await inspect(viewer,target.id,404);await inspect(target,viewer.id,404)
-  assert.equal((await http(viewer,'/api/communities/'+second+'/accounts/'+target.id+'/profile')).display_name,'Community identity')
-  assert.ok((await http(viewer,'/api/communities/'+second+'/directory')).rows.some(row=>row.account.user_id===target.id))
+  for(const [actor,user] of [[viewer,target.id],[target,viewer.id]]) {
+    assert.deepEqual(await inspect(actor,user),withheld)
+    assert.deepEqual(await communityProfile(actor,user),withheld)
+  }
+  assert.deepEqual((await search(viewer)).rows,initialSearch)
+  assert.deepEqual((await directory(viewer)).rows,initialDirectory)
+  assert.deepEqual(await directory(viewer,'?cursor='+memberCursor),memberTail)
   const saved=(await list(viewer)).rows[0]
   assert.deepEqual(Object.keys(saved).sort(),['blocked_user_id','blocker_user_id','created_at','created_by'])
   assert.equal(saved.blocker_user_id,viewer.id);assert.equal(saved.created_by,viewer.id);assert.equal(saved.blocked_user_id,target.id)
   assert.deepEqual(await list(target),{rows:[],next:null})
   await Promise.all([block(viewer,target.id),block(viewer,target.id)])
   assert.deepEqual((await list(viewer)).rows,[saved])
-  await sharing(target,second,false)
-  await block(viewer,target.id)
-  assert.deepEqual((await list(viewer)).rows,[saved])
-  await sharing(target,second,true)
-  await block(target,viewer.id,{kind:'global_profile'},404)
-  await block(target,viewer.id,source)
+  await block(target,viewer.id)
   await Promise.all([unblock(viewer,target.id),unblock(viewer,target.id)])
-  await inspect(viewer,target.id,404);await inspect(target,viewer.id,404)
+  assert.deepEqual(await inspect(viewer,target.id),withheld)
+  assert.deepEqual(await communityProfile(target,viewer.id),withheld)
   assert.equal((await list(target)).rows.length,1)
   await unblock(target,viewer.id)
   assert.equal((await inspect(viewer,target.id)).user_id,target.id)
-  assert.equal((await inspect(target,viewer.id)).user_id,viewer.id)
-  await prefs(viewer,false)
-  // Encounter selectors must resolve a real, currently readable profile.
-  await block(viewer,viewer.id,source,400)
-  assert.equal((await block(viewer,viewer.id.toUpperCase(),source,400)).code,'invalid_target')
-  await block(viewer,randomUUID(),{kind:'global_profile'},404)
-  await block(viewer,missing.id,{kind:'global_profile'},404)
-  await block(viewer,target.id,{kind:'community_profile',tenantId:other},404)
-  await block(pending,target.id,source,404)
+  assert.equal((await communityProfile(target,viewer.id)).bio,'Independent biography')
+  assert.deepEqual((await directory(viewer)).rows,initialDirectory)
+  await prefs(viewer,false);await prefs(target,false)
+  await block(viewer,viewer.id,400)
+  assert.equal((await block(viewer,viewer.id.toUpperCase(),400)).code,'invalid_target')
+  assert.deepEqual(await block(viewer,randomUUID()),{blocked:true})
+  assert.deepEqual((await list(viewer)).rows,[])
+  assert.deepEqual(await block(viewer,missing.id),{blocked:true})
+  assert.equal((await list(viewer)).rows[0].blocked_user_id,missing.id)
+  await inspect(viewer,missing.id,404)
+  await unblock(viewer,missing.id)
+  await block(pending,target.id)
+  await communityProfile(pending,target.id,404)
+  await unblock(pending,target.id)
   await sharing(target,second,false)
-  await block(viewer,target.id,{kind:'global_profile'},404)
-  await block(viewer,target.id,source)
+  await block(viewer,target.id)
+  await inspect(viewer,target.id,404)
+  await cmd(owner,second,{kind:'archive',archived:true})
+  await communityProfile(viewer,target.id,404)
+  await cmd(owner,second,{kind:'archive',archived:false})
   await unblock(viewer,target.id)
+  await inspect(viewer,target.id,404)
   await sharing(target,second,true)
-  for(const body of [{confirmed:false,source},{confirmed:true},{confirmed:true,source:{kind:'activity',id:randomUUID()}},
-    {confirmed:true,source,blocker_user_id:stranger.id},{confirmed:true,source:{...source,allowed:true}}]) {
+  for(const body of [{confirmed:false},{},{confirmed:true,source:{kind:'global_profile'}},
+    {confirmed:true,blocker_user_id:stranger.id}]) {
     await http(viewer,'/api/me/blocks/'+target.id,'PUT',body,400)
   }
   await http(viewer,'/api/profiles/'+target.id+'?source_id='+first,'GET',undefined,400)
   for(const path of ['/api/profiles','/api/profiles/'+target.id,'/api/me/blocks']) await http(null,path,'GET',undefined,401)
-  await http(null,'/api/me/blocks/'+target.id,'PUT',{confirmed:true,source},401)
+  await http(null,'/api/me/blocks/'+target.id,'PUT',{confirmed:true},401)
   await http({token:'bad'},'/api/profiles','GET',undefined,401)
   await search(viewer,prefix,'&limit=101',400);await list(viewer,'?q=test',400)
   await http(stranger,'/api/me/profile','PUT',{display_name:prefix+' %_needle',bio:null})
@@ -177,8 +194,8 @@ try {
   await search(viewer,'other','&cursor='+cursor,400)
   await list(viewer,'?cursor='+cursor,400)
   await prefs(target,true)
-  await block(target,viewer.id,source)
-  assert.ok(!(await search(viewer)).rows.some(row=>row.user_id===target.id))
+  await block(target,viewer.id)
+  assert.ok((await search(viewer)).rows.some(row=>row.user_id===target.id))
   await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     assert.deepEqual((await sql`select user_id from public.user_account_profiles where user_id=${target.id}`.execute(tx)).rows,[{user_id:target.id}])
     assert.deepEqual((await sql`select blocker_user_id,blocked_user_id from public.user_account_blocks`.execute(tx)).rows,[{blocker_user_id:target.id,blocked_user_id:viewer.id}])
@@ -188,13 +205,12 @@ try {
     assert.deepEqual((await sql`select blocked_user_id from public.user_account_blocks`.execute(tx)).rows,[])
   })
   await unblock(target,viewer.id)
-  await assert.rejects(runBlockWithInsertHook(endpoint.href, { actorId: viewer.id, requestId: randomUUID() },
-    target.id, { confirmed: true, source }, client => client.query("do $$ begin raise exception 'injected block rollback'; end $$")),
+  await assert.rejects(runBlockWriteWithHook(endpoint.href, { actorId: viewer.id, requestId: randomUUID() },
+    target.id, 'blockUser', client => client.query("do $$ begin raise exception 'injected block rollback'; end $$")),
     error => error.code === 'P0001' && error.message === 'injected block rollback')
   assert.deepEqual((await list(viewer)).rows, [])
   assert.equal((await inspect(viewer,target.id)).user_id,target.id)
-  // A trusted runtime can insert its own block without product source proof;
-  // the API is now the sole owner of that decision. Roll this bypass back.
+  // The trusted runtime can write its own row. Roll back the storage probe.
   await assert.rejects(withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     await sql`insert into public.user_account_blocks(blocked_user_id) values(${target.id})`.execute(tx)
     throw Error('trusted writer rollback')
@@ -205,114 +221,51 @@ try {
   await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     assert.equal((await sql`update public.user_account_profiles set bio='Bypass' where user_id=${target.id}`.execute(tx)).numAffectedRows,0n)
   })
-  // Source revocation is re-evaluated in the API mutation, not database RLS.
-  await prefs(target,false);await sharing(target,second,false)
-  await block(viewer,target.id,{kind:'global_profile'},404)
-  // Source proof is loaded after the caller lock wait, in the INSERT snapshot.
-  async function afterCallerWait(change,read) {
-    await admin.query('begin')
-    let operation
-    try {
-      await admin.query("select pg_advisory_xact_lock(hashtextextended('ct.profile-block:'||$1::text,0))",[viewer.id])
-      operation=read();operation.catch(()=>{})
-      const deadline=Date.now()+1800
-      while(!(await admin.query("select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as waiting")).rows[0].waiting) {
-        assert.ok(Date.now()<deadline,'block must wait for caller coordination')
-        await new Promise(resolve=>setTimeout(resolve,10))
-      }
-      await change()
-      await admin.query('commit')
-    } finally {await admin.query('rollback')}
-    return operation
-  }
-  await prefs(target,true)
-  await afterCallerWait(()=>prefs(target,false),()=>block(viewer,target.id,{kind:'global_profile'},404))
-  await sharing(target,second,true)
-  await afterCallerWait(()=>sharing(target,second,false),()=>block(viewer,target.id,{kind:'global_profile'},404))
-  await afterCallerWait(()=>cmd(target,second,{kind:'deactivate'}),()=>block(viewer,target.id,source))
-  // Inactive target links still authorize the exact community source.
+  // Locking a profile preference must not delay creating the block.
+  await admin.query('begin')
+  try {
+    await admin.query('update public.user_accounts set user_is_discoverable=false where user_id=$1',[target.id])
+    await block(viewer,target.id)
+  } finally {await admin.query('rollback')}
   await unblock(viewer,target.id)
-  await cmd(target,second,{kind:'reactivate'})
-  await afterCallerWait(()=>cmd(viewer,second,{kind:'deactivate'}),()=>block(viewer,target.id,source,404))
-  await cmd(viewer,second,{kind:'reactivate'})
-  await afterCallerWait(()=>cmd(owner,second,{kind:'archive',archived:true}),()=>block(viewer,target.id,source,404))
-  await withEligibleActorTransaction(db,{actorId:viewer.id,requestId:randomUUID()},async tx=>{
-    await sql`select set_config('ct.profile_target',${target.id},true),set_config('ct.tenant_id',${second},true)`.execute(tx)
-    for(const table of ['community_account_preferences','community_accounts','community_account_profiles']) {
-      assert.deepEqual((await sql`select tenant_id from ${sql.table(table)} where tenant_id=${second}`.execute(tx)).rows,[])
+
+  // The same unordered pair serializes block and unblock in both orders.
+  async function waitForPair(holder) {
+    const deadline=Date.now()+1800
+    while(!(await admin.query(`select exists(select from pg_stat_activity
+      where wait_event_type='Lock' and wait_event='advisory' and $1=any(pg_blocking_pids(pid))) as waiting`,[holder])).rows[0].waiting) {
+      assert.ok(Date.now()<deadline,'opposing write must wait for the pair lock')
+      await new Promise(resolve=>setTimeout(resolve,10))
     }
-  })
-  await block(owner,target.id,source)
-  await unblock(owner,target.id)
-  await cmd(owner,second,{kind:'archive',archived:false})
-  await prefs(target,true)
-  // Source-root changes wait for an admitted write to commit. This is stronger
-  // than the former statement-only admission and matches the accepted plan.
-  async function admittedBlock(input,change) {
-    const { started, release, result: write } = holdBlockWrite(endpoint.href,
-      { actorId: viewer.id, requestId: randomUUID() }, target.id, input)
-    let transition
-    try {
-      const holder=await Promise.race([started,write.then(()=>{throw Error('block ended before barrier')})])
-      transition=change();transition.catch(()=>{})
-      const deadline=Date.now()+1800
-      while(!(await admin.query('select exists(select from pg_stat_activity where $1=any(pg_blocking_pids(pid))) as waiting',[holder])).rows[0].waiting) {
-        assert.ok(Date.now()<deadline,'source transition must wait for admitted block')
-        await new Promise(resolve=>setTimeout(resolve,10))
-      }
-    } finally {release();await Promise.allSettled([write,transition])}
-    assert.deepEqual((await write),{blocked:true})
-    await transition
-    assert.equal((await list(viewer)).rows.length,1)
-    await unblock(viewer,target.id)
   }
-  await prefs(viewer,true)
-  await admittedBlock({confirmed:true,source:{kind:'global_profile'}},()=>block(target,viewer.id.toUpperCase(),{kind:'global_profile'},404))
-  await prefs(viewer,false)
-  await admittedBlock({confirmed:true,source:{kind:'global_profile'}},()=>prefs(target,false))
-  await inspect(viewer,target.id,404)
-  await sharing(target,second,true)
-  await admittedBlock({confirmed:true,source:{kind:'global_profile'}},()=>sharing(target,second,false))
-  await inspect(viewer,target.id,404)
-  await admittedBlock({confirmed:true,source},()=>cmd(viewer,second,{kind:'deactivate'}))
-  await cmd(viewer,second,{kind:'reactivate'})
-  await admittedBlock({confirmed:true,source},()=>cmd(owner,second,{kind:'archive',archived:true}))
-  await cmd(owner,second,{kind:'archive',archived:false})
-  // In the reverse order, the block waits on the actual source writer and
-  // re-evaluates committed discoverability/sharing/standing/archive facts.
-  async function afterSourceWrite(change,read) {
-    await admin.query('begin')
-    let operation
-    try {
-      await change()
-      operation=read();operation.catch(()=>{})
-      const deadline=Date.now()+1800
-      while(!(await admin.query("select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as waiting")).rows[0].waiting) {
-        assert.ok(Date.now()<deadline,'block must wait for source writer')
-        await new Promise(resolve=>setTimeout(resolve,10))
-      }
-      await admin.query('commit')
-    } finally {await admin.query('rollback')}
-    return operation
-  }
+  const held=holdBlockWrite(endpoint.href,{actorId:viewer.id,requestId:randomUUID()},target.id,'blockUser')
+  let removing
+  try {
+    const holder=await Promise.race([held.started,held.result.then(()=>{throw Error('block ended before barrier')})])
+    removing=unblock(viewer,target.id)
+    removing.catch(()=>{})
+    await waitForPair(holder)
+  } finally {held.release();await Promise.allSettled([held.result,removing])}
+  assert.deepEqual(await held.result,{blocked:true})
+  assert.deepEqual(await removing,{blocked:false})
+  assert.deepEqual((await list(viewer)).rows,[])
+
+  await block(viewer,target.id)
+  const removeFirst=holdBlockWrite(endpoint.href,{actorId:viewer.id,requestId:randomUUID()},target.id,'unblockUser')
+  let adding
+  try {
+    const holder=await Promise.race([removeFirst.started,removeFirst.result.then(()=>{throw Error('unblock ended before barrier')})])
+    adding=block(viewer,target.id)
+    adding.catch(()=>{})
+    await waitForPair(holder)
+  } finally {removeFirst.release();await Promise.allSettled([removeFirst.result,adding])}
+  assert.deepEqual(await removeFirst.result,{blocked:false})
+  assert.deepEqual(await adding,{blocked:true})
+  assert.equal((await list(viewer)).rows[0].blocked_user_id,target.id)
+  await unblock(viewer,target.id)
+
   await prefs(target,true)
-  await afterSourceWrite(()=>admin.query('update public.user_accounts set user_is_discoverable=false where user_id=$1',[target.id]),
-    ()=>block(viewer,target.id,{kind:'global_profile'},404))
-  await sharing(target,second,true)
-  await afterSourceWrite(async()=>{
-    await admin.query('select user_id from public.community_accounts where tenant_id=$1 and user_id=$2 for update',[second,target.id])
-    await admin.query('update public.community_account_preferences set show_global_profile=false where tenant_id=$1 and user_id=$2',[second,target.id])
-  },()=>block(viewer,target.id,{kind:'global_profile'},404))
-  await afterSourceWrite(async()=>{
-    await admin.query('select id from public.tenants where id=$1 for update',[second])
-    await admin.query("update public.community_accounts set standing='inactive' where tenant_id=$1 and user_id=$2",[second,viewer.id])
-  },()=>block(viewer,target.id,source,404))
-  await cmd(viewer,second,{kind:'reactivate'})
-  await afterSourceWrite(()=>admin.query("update public.tenants set operational_status='archived' where id=$1",[second]),
-    ()=>block(viewer,target.id,source,404))
-  await cmd(owner,second,{kind:'archive',archived:false})
-  await prefs(target,true)
-  // A read already admitted by its statement may finish; the next read is denied.
+  // A read already admitted by its statement may finish; the next read withholds details.
   let release,ready
   const gate=new Promise(resolve=>{release=resolve}),started=new Promise(resolve=>{ready=resolve})
   const profileReads = new Set()
@@ -328,16 +281,16 @@ try {
   })
   const read=readGlobalProfile(pausedDb,{actorId:viewer.id,requestId:randomUUID()},target.id)
   await Promise.race([started,read.then(()=>{throw Error('read ended before barrier')})])
-  try {await block(target,viewer.id,source)} finally {release()}
+  try {await block(target,viewer.id)} finally {release()}
   const readResult=await read
   assert.equal(readResult.user_id,target.id)
-  await inspect(viewer,target.id,404);await unblock(target,viewer.id)
+  assert.deepEqual(await inspect(viewer,target.id),withheld);await unblock(target,viewer.id)
   await prefs(target,false);await sharing(target,second,true)
   await sharing(target,second,false);await inspect(viewer,target.id,404)
   await prefs(target,true);await prefs(target,false);await inspect(viewer,target.id,404)
   await admin.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1",[viewer.id])
   await inspect(viewer,viewer.id,403);await search(viewer,prefix,'',403);await list(viewer,'',403)
-  await block(viewer,target.id,source,403)
+  await block(viewer,target.id,403)
   await admin.query('update auth.users set banned_until=null where id=$1',[viewer.id])
 
   for(const client of [createClient(local.API_URL,local.ANON_KEY,authOptions),viewer.client,owner.client]) {
@@ -372,7 +325,7 @@ try {
   assert.equal(new Set([...maxPage.rows,...tail.rows].map(row=>row.user_id)).size,102)
   const blockedLater=tail.rows[0].user_id
   await block(viewer,blockedLater)
-  assert.equal((await search(viewer,bulkName,'&limit=100&cursor='+maxPage.next)).rows.length,1)
+  assert.deepEqual(await search(viewer,bulkName,'&limit=100&cursor='+maxPage.next),tail)
   await unblock(viewer,blockedLater)
   for(const id of bulkUsers) await block(viewer,id)
   const ownDefault=await list(viewer),ownMax=await list(viewer,'?limit=100')
@@ -380,10 +333,10 @@ try {
   const ownTail=await list(viewer,'?limit=100&cursor='+ownMax.next)
   assert.equal(ownTail.rows.length,2);assert.equal(ownTail.next,null)
   assert.equal(new Set([...ownMax.rows,...ownTail.rows].map(row=>row.blocked_user_id)).size,102)
-  assert.equal((await search(viewer,bulkName)).rows.length,0)
+  assert.deepEqual((await search(viewer,bulkName)).rows,defaultPage.rows)
   assert.equal((await search(owner,bulkName)).rows.length,50)
   await list(owner,'?cursor='+ownMax.next,400)
-  console.log('PASS global discovery vs exact consent, OR sharing and lifecycle boundaries, literal search/pages, bilateral profile blocks and unchanged community identity, validated source/confirmation, attribution/idempotence/rollback, snapshot revocation and REST/GraphQL/runtime bypasses')
+  console.log('PASS global discovery vs exact consent, OR sharing and lifecycle boundaries, literal search/pages, bilateral profile withholding, independent lists, account-ID confirmation and pair locks, attribution/idempotence/rollback, snapshot revocation and REST/GraphQL/runtime bypasses')
 
 } finally {
   try {

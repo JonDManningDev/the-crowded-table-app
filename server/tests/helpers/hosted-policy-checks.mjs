@@ -4,7 +4,6 @@ import pg from 'pg'
 import { Kysely, PostgresDialect, PostgresQueryCompiler, sql } from 'kysely'
 import { withEligibleActorTransaction } from '../../src/database.ts'
 import { communityCommand, ownCommunityPreferences, configurationSettings } from '../../src/communities/service.ts'
-import { holdBlockWrite } from './block-write.mjs'
 import { buildApi } from '../../src/app.ts'
 import { verifyBearer } from '../../src/token-verifier.ts'
 import { directoryCursors } from '../../src/directory-cursors.ts'
@@ -76,10 +75,6 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
       ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
       await gate
     }, initialTenantId ? { initialTenantId } : undefined)
-    return observeRace({ started, release, result: held }, compete, root)
-  }
-
-  async function observeRace({ started, release, result: held }, compete, root) {
     let arrivalTimer, waiting
     try {
       const pid = await Promise.race([started, held.then(() => { throw Error('holder exited before barrier') })])
@@ -118,18 +113,17 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   await command(other, { kind: 'reactivate' })
   console.log('PASS both hosted sharing/deactivation lock orders')
 
-  const global = { confirmed: true, source: { kind: 'global_profile' } }
   const globalPreferences = value => http(other, '/api/me/preferences', 'PUT', { user_is_discoverable: value, enable_matchmaking: true, allow_direct_messages: true })
-  const block = (status = 200) => http(owner, '/api/me/blocks/' + other.id, 'PUT', global, status)
-  const unblock = () => http(owner, '/api/me/blocks/' + other.id, 'DELETE')
-  await race(other, tx => sql`update public.user_accounts set user_is_discoverable=false where user_id=${other.id}`.execute(tx), () => block(404), { root: /from (?:public\.)?user_accounts\b[\s\S]*for share/ })
-  await globalPreferences(true)
-  await observeRace(holdBlockWrite(endpoint, { actorId: owner.id, requestId: randomUUID() }, other.id, global),
-    () => globalPreferences(false), /update (?:public\.)?user_accounts\b/)
-  await unblock()
+  const blockPath = '/api/me/blocks/' + other.id
+  await globalPreferences(false)
   await http(owner, '/api/profiles/' + other.id, 'GET', undefined, 404)
+  assert.deepEqual(await http(owner, blockPath, 'PUT', { confirmed: true }), { blocked: true })
   await globalPreferences(true)
-  console.log('PASS both hosted block/source-revocation lock orders')
+  assert.deepEqual(await http(owner, '/api/profiles/' + other.id), { status: 'blocked' })
+  assert.deepEqual(await http(owner, path + '/accounts/' + other.id + '/profile'), { status: 'blocked' })
+  await http(owner, blockPath, 'DELETE')
+  await http(owner, '/api/profiles/' + other.id)
+  console.log('PASS account-ID block and profile withholding independent of discoverability')
 
   await command(owner, { kind: 'permissions', target: member.id, permissions: { can_manage_settings: true } })
   await race(owner, tx => communityCommand(tx, owner.id, tenant, { kind: 'archive', archived: true }),

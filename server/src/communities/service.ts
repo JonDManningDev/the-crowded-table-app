@@ -24,6 +24,7 @@ import {
   type CommunitySettings,
   type CommunitySettingsRecord,
   type AccountFacts,
+  type CommunityProfile,
   type CommunityProfileInput,
   type DirectoryPage,
   type DirectoryQuery,
@@ -463,6 +464,10 @@ function readProfile(db: AppDatabase, context: AuthenticatedContext, params: Acc
         .onRef('viewer.tenant_id', '=', 'p.tenant_id').on('viewer.user_id', '=', actor))
       .where('p.tenant_id', '=', tenantId).where('p.user_id', '=', userId)
       .innerJoin('tenants as t', 't.id', 'p.tenant_id')
+      .innerJoinLateral(sql<{ blocked: boolean }>`(select exists(select from public.user_account_blocks b
+        where (b.blocker_user_id,b.blocked_user_id) in ((${actor}::uuid,p.user_id),(p.user_id,${actor}::uuid))) as blocked)`.as('block_status'), join => join.onTrue())
+      .leftJoinLateral(sql<CommunityProfile>`(select ${sql.join(communityProfileColumns.map(field => sql.ref(`p.${field}`)))}
+        where not block_status.blocked)`.as('details'), join => join.onTrue())
       .where(sql<boolean>`((t.operational_status='active' and (
         (p.user_id=${actor} and viewer.standing='pending') or
         (viewer.standing in ('approved','suspended') and target.standing in ('approved','suspended','inactive'))))
@@ -470,8 +475,12 @@ function readProfile(db: AppDatabase, context: AuthenticatedContext, params: Acc
           join public.community_accounts owner_account using(tenant_id,user_id)
           where owner_staff.tenant_id=t.id and owner_staff.user_id=${actor}
             and owner_staff.role='owner' and owner_staff.status='active' and owner_account.standing='approved')))`)
-      .select(communityProfileColumns.map(field => `p.${field}` as const)).executeTakeFirst()
-    return profile ? { status: 200 as const, profile } : { status: 404 as const }
+      .select('block_status.blocked').selectAll('details').executeTakeFirst()
+    if (!profile) return { status: 404 as const }
+    const { blocked, ...details } = profile
+    if (blocked) return { status: 200 as const, profile: { status: 'blocked' as const } }
+    // The lateral projection emits all profile columns when blocked is false.
+    return { status: 200 as const, profile: details as CommunityProfile }
   }, { initialTenantId: tenantId })
 }
 // Both self-edit helpers require an authenticated transaction scoped to tenant.
@@ -571,14 +580,13 @@ export async function configurationCopy(tx: Tx, actor: string, tenant: string, c
 // Directories and account facts
 // Transaction-level helpers require the caller to establish tenant scope.
 const factsFields = ['tenant_id', 'user_id', 'standing', 'first_approved_at', 'has_disciplinary_restriction', 'created_at', 'updated_at', 'created_by', 'updated_by']
-const profileFields = ['tenant_id', 'user_id', 'display_name', 'bio', 'created_at', 'updated_at', 'created_by', 'updated_by']
 const jsonProjection = (alias: string, fields: string[]) => sql`jsonb_build_object(${sql.join(fields.flatMap(key => [sql`${key}::text`, sql.ref(alias + '.' + key)]))})`
 export async function readMemberDirectory(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<MemberDirectoryRow>> {
   if (!(await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows[0]) throw new ApplicationError(404, 'missing')
   requireCanReadMemberDirectory(await loadMemberDirectoryFacts(tx, actor, tenant))
   const cursorScope = ['member-directory', actor, tenant], after = cursors.decode(cursorScope, query.cursor), limit = Number(query.limit ?? 50)
   const rows = (await sql<MemberDirectoryRow>`select ${jsonProjection('c', factsFields)} as account,
-    case when p.user_id is not null then ${jsonProjection('p', profileFields)} end as profile,
+    case when p.user_id is not null then jsonb_build_object('display_name',p.display_name) end as profile,
     case when c.standing='approved' and s.status='active' then s.role end as staff_role
     from public.community_accounts c left join public.community_account_profiles p using(tenant_id,user_id)
     left join public.tenant_staff_assignments s using(tenant_id,user_id)

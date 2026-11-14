@@ -1,5 +1,7 @@
 # Access migration — packages 2 and 3 specification
 
+**Accepted 2026-11-14.** [Revised block and profile rules](16-intended-access-matrix.md#am-04--blocks-and-profile-shared-community-visibility) supersede this document’s profile-source requirement, blocked-pair search filtering, and exact-profile/list projections. The Package 3 text below records the earlier delivery contract.
+
 Draft for review, 2026-10-31. Product rules already accepted in [matrix16](16-intended-access-matrix.md) remain authoritative. Physical tables, identifiers, interfaces and migration mechanics below are **proposed**, not deployed or automatically approved by this document. [Package 1](18-access-migration-baseline.md) supplies the verified starting point. This document does not authorize package 4 implementation or hosted deployment.
 
 ## Approved execution addendum — 2026-11-03

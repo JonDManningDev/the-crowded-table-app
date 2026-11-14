@@ -27,13 +27,13 @@ export type Position = { time: string; id: string }
 
 // Global profiles
 export type GlobalProfile = OwnProfile
+export type GlobalSearchRow = Pick<GlobalProfile, 'user_id' | 'display_name'>
+export type BlockedProfile = { status: 'blocked' }
 export type DiscoveryQuery = { q?: string; cursor?: string; limit?: string }
 export type ProfilePage<T> = { rows: T[]; next: string | null }
 
 // Account blocks
 export type OutgoingBlock = { blocker_user_id: string; blocked_user_id: string; created_at: Date; created_by: string }
-export type BlockSource = { kind: 'global_profile' } | { kind: 'community_profile'; tenantId: string }
-export type BlockInput = { confirmed: true; source: BlockSource }
 
 // Internal helpers
 export type Tx = Transaction<DB>

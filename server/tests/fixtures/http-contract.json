@@ -1874,71 +1874,88 @@
       },
       "response": {
         "200": {
-          "additionalProperties": false,
-          "properties": {
-            "bio": {
-              "anyOf": [
-                {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "bio": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "created_at": {
+                  "format": "date-time",
                   "type": "string"
                 },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "created_at": {
-              "format": "date-time",
-              "type": "string"
-            },
-            "created_by": {
-              "anyOf": [
-                {
+                "created_by": {
+                  "anyOf": [
+                    {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "display_name": {
+                  "type": "string"
+                },
+                "tenant_id": {
                   "format": "uuid",
                   "type": "string"
                 },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "display_name": {
-              "type": "string"
-            },
-            "tenant_id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "updated_at": {
-              "format": "date-time",
-              "type": "string"
-            },
-            "updated_by": {
-              "anyOf": [
-                {
-                  "format": "uuid",
+                "updated_at": {
+                  "format": "date-time",
                   "type": "string"
                 },
-                {
-                  "type": "null"
+                "updated_by": {
+                  "anyOf": [
+                    {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "user_id": {
+                  "format": "uuid",
+                  "type": "string"
                 }
-              ]
+              },
+              "required": [
+                "tenant_id",
+                "user_id",
+                "display_name",
+                "bio",
+                "created_at",
+                "updated_at",
+                "created_by",
+                "updated_by"
+              ],
+              "type": "object"
             },
-            "user_id": {
-              "format": "uuid",
-              "type": "string"
+            {
+              "additionalProperties": false,
+              "properties": {
+                "status": {
+                  "const": "blocked",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "status"
+              ],
+              "type": "object"
             }
-          },
-          "required": [
-            "tenant_id",
-            "user_id",
-            "display_name",
-            "bio",
-            "created_at",
-            "updated_at",
-            "created_by",
-            "updated_by"
-          ],
-          "type": "object"
+          ]
         },
         "403": {
           "properties": {
@@ -2445,69 +2462,13 @@
                     "type": "object"
                   },
                   "profile": {
-                    "additionalProperties": false,
                     "properties": {
-                      "bio": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "created_at": {
-                        "format": "date-time",
-                        "type": "string"
-                      },
-                      "created_by": {
-                        "anyOf": [
-                          {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
                       "display_name": {
-                        "type": "string"
-                      },
-                      "tenant_id": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "updated_at": {
-                        "format": "date-time",
-                        "type": "string"
-                      },
-                      "updated_by": {
-                        "anyOf": [
-                          {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "user_id": {
-                        "format": "uuid",
                         "type": "string"
                       }
                     },
                     "required": [
-                      "tenant_id",
-                      "user_id",
-                      "display_name",
-                      "bio",
-                      "created_at",
-                      "updated_at",
-                      "created_by",
-                      "updated_by"
+                      "display_name"
                     ],
                     "type": [
                       "object",
@@ -4817,50 +4778,9 @@
             },
             "rows": {
               "items": {
-                "additionalProperties": false,
                 "properties": {
-                  "bio": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "created_at": {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  "created_by": {
-                    "anyOf": [
-                      {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
                   "display_name": {
                     "type": "string"
-                  },
-                  "updated_at": {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  "updated_by": {
-                    "anyOf": [
-                      {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
                   },
                   "user_id": {
                     "format": "uuid",
@@ -4869,12 +4789,7 @@
                 },
                 "required": [
                   "user_id",
-                  "display_name",
-                  "bio",
-                  "created_at",
-                  "updated_at",
-                  "created_by",
-                  "updated_by"
+                  "display_name"
                 ],
                 "type": "object"
               },
@@ -4971,66 +4886,83 @@
       },
       "response": {
         "200": {
-          "additionalProperties": false,
-          "properties": {
-            "bio": {
-              "anyOf": [
-                {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "bio": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "created_at": {
+                  "format": "date-time",
                   "type": "string"
                 },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "created_at": {
-              "format": "date-time",
-              "type": "string"
-            },
-            "created_by": {
-              "anyOf": [
-                {
+                "created_by": {
+                  "anyOf": [
+                    {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "display_name": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "updated_by": {
+                  "anyOf": [
+                    {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "user_id": {
                   "format": "uuid",
                   "type": "string"
-                },
-                {
-                  "type": "null"
                 }
-              ]
+              },
+              "required": [
+                "user_id",
+                "display_name",
+                "bio",
+                "created_at",
+                "updated_at",
+                "created_by",
+                "updated_by"
+              ],
+              "type": "object"
             },
-            "display_name": {
-              "type": "string"
-            },
-            "updated_at": {
-              "format": "date-time",
-              "type": "string"
-            },
-            "updated_by": {
-              "anyOf": [
-                {
-                  "format": "uuid",
+            {
+              "additionalProperties": false,
+              "properties": {
+                "status": {
+                  "const": "blocked",
                   "type": "string"
-                },
-                {
-                  "type": "null"
                 }
-              ]
-            },
-            "user_id": {
-              "format": "uuid",
-              "type": "string"
+              },
+              "required": [
+                "status"
+              ],
+              "type": "object"
             }
-          },
-          "required": [
-            "user_id",
-            "display_name",
-            "bio",
-            "created_at",
-            "updated_at",
-            "created_by",
-            "updated_by"
-          ],
-          "type": "object"
+          ]
         },
         "400": {
           "properties": {
@@ -7132,46 +7064,10 @@
           "confirmed": {
             "const": true,
             "type": "boolean"
-          },
-          "source": {
-            "anyOf": [
-              {
-                "additionalProperties": false,
-                "properties": {
-                  "kind": {
-                    "const": "global_profile",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "kind"
-                ],
-                "type": "object"
-              },
-              {
-                "additionalProperties": false,
-                "properties": {
-                  "kind": {
-                    "const": "community_profile",
-                    "type": "string"
-                  },
-                  "tenantId": {
-                    "format": "uuid",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "kind",
-                  "tenantId"
-                ],
-                "type": "object"
-              }
-            ]
           }
         },
         "required": [
-          "confirmed",
-          "source"
+          "confirmed"
         ],
         "type": "object"
       },

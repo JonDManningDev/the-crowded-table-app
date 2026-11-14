@@ -247,7 +247,7 @@ export const readProfileSchema = {
   // Preserve the original open params object; other account params are closed.
   params: Type.Object({ tenantId: uuid, userId: uuid }),
   querystring: noQuery,
-  response: { 200: communityProfile, 403: errorResponse, 404: errorResponse },
+  response: { 200: Type.Union([communityProfile, Type.Object({ status: Type.Literal('blocked') }, closed)]), 403: errorResponse, 404: errorResponse },
 } as const
 
 export const saveOwnProfileSchema = {
@@ -336,7 +336,7 @@ export const memberDirectorySchema = {
     200: Type.Object({
       rows: Type.Array(Type.Object({
         account: accountFacts,
-        profile: nullableObject(communityProfile),
+        profile: nullableObject(Type.Pick(communityProfile, ['display_name'])),
         staff_role: nullableStaffRole,
       }, closed)),
       next: nullableText,

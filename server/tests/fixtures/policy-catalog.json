@@ -247,6 +247,9 @@
     },
     {
       "version": "20261112000100"
+    },
+    {
+      "version": "20261114000100"
     }
   ],
   "relations": [
@@ -1180,16 +1183,6 @@
       "cmd": "UPDATE",
       "qual": "(user_id = ( SELECT app_private.verified_user() AS verified_user))",
       "with_check": "(user_id = ( SELECT app_private.verified_user() AS verified_user))"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "user_accounts",
-      "policyname": "profile_target_lock",
-      "permissive": "PERMISSIVE",
-      "roles": "{ct_api}",
-      "cmd": "UPDATE",
-      "qual": "((( SELECT app_private.verified_user() AS verified_user) IS NOT NULL) AND (user_id = (NULLIF(current_setting('ct.profile_target'::text, true), ''::text))::uuid))",
-      "with_check": "false"
     }
   ],
   "triggers": [
@@ -2120,11 +2113,6 @@
     {
       "function": "app_private.verified_user()",
       "dependent": "policy own_profile_scope_edit on table community_account_profiles",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.verified_user()",
-      "dependent": "policy profile_target_lock on table user_accounts",
       "deptype": "n"
     },
     {

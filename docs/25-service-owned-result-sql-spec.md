@@ -1,5 +1,7 @@
 # Service-owned result SQL
 
+**Accepted 2026-11-14.** [Revised block and profile rules](16-intended-access-matrix.md#am-04--blocks-and-profile-shared-community-visibility) supersede this document’s profile-source requirement, blocked-pair search filtering, and exact-profile/list projections. This specification records the earlier SQL ownership checkpoint.
+
 **Locally implemented and verified, 2026-11-13.** The user separately authorized implementation through implement-spec after confirming this specification and its testing boundaries. [Issue #23](https://github.com/JonDManningDev/the-crowded-table-app/issues/23) was published with `ready-for-agent` and exact body read-back verified. Checkpoints `bf85bc5` and `32763ee` implement community-local and user-account/cross-feature queries respectively. The [implementation record](12-implementation-status.md#service-owned-result-sql--locally-verified-2026-11-13) contains the passing local gates and independent standards/spec reviews. The specification body below preserves the published requirements.
 
 ## Problem Statement

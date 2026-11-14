@@ -14,7 +14,7 @@ select ok(has_column_privilege('ct_api','public.user_account_blocks','blocked_us
 select ok(exists(select from pg_policies where tablename='user_account_blocks' and policyname='own_blocks_insert' and with_check not like '%can_block_from_profile%'),'block storage retains self scope without product source authority');
 select ok(exists(select from pg_policies where tablename='user_account_profiles' and policyname='api_global_profile_facts' and cmd='SELECT'),'runtime fact read policy adds no peer writes');
 select ok(exists(select from pg_policies where tablename='user_account_profiles' and policyname='api_self_profile'),'self edits retain independent self policy');
-select ok(exists(select from pg_policies where tablename='user_accounts' and policyname='profile_target_lock' and cmd='UPDATE' and with_check='false'),'target preference root permits locking but no peer write');
+select ok(not exists(select from pg_policies where tablename='user_accounts' and policyname='profile_target_lock'),'retired block source has no peer lock policy');
 select ok(exists(select from pg_class where oid='public.user_account_blocks'::regclass and relrowsecurity),'directed blocks use RLS');
 select * from finish();
 rollback;

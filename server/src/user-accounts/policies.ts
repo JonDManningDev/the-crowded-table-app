@@ -1,5 +1,3 @@
-import type { Tx } from './types.ts'
-
 /*
  * Types
  */
@@ -10,10 +8,7 @@ import type { Tx } from './types.ts'
  * Fact Loaders
  */
 
-export function loadOwnBlockFacts(tx: Tx, actor: string, target: string) {
-  return tx.selectFrom('user_account_blocks').select('blocked_user_id')
-    .where('blocker_user_id', '=', actor).where('blocked_user_id', '=', target).executeTakeFirst()
-}
+// None currently.
 
 /*
  * Helpers

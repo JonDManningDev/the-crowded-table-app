@@ -82,7 +82,7 @@ try {
   await cmd(owner,{kind:'revoke',target:revoked.id})
   await admin.query('delete from public.community_account_profiles where tenant_id=$1 and user_id=$2',[tenant,missing.id])
   const factKeys=['tenant_id','user_id','standing','first_approved_at','has_disciplinary_restriction','created_at','updated_at','created_by','updated_by'].sort()
-  const profileKeys=['tenant_id','user_id','display_name','bio','created_at','updated_at','created_by','updated_by'].sort()
+  const profileKeys=['display_name']
   const expected=[owner,manager,member,suspended,paused,revoked,missing].map(a=>a.id).sort()
   for(const actor of [owner,manager,member,suspended,paused,revoked]) {
     const page=await directory(actor)

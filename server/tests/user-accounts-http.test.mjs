@@ -16,7 +16,7 @@ const summary = { id: tenantId, name: 'Test community', city: null, state_provin
   operational_status: 'active', created_at: profile.created_at, is_owned: true, is_managed: true, is_member: true }
 const block = { blocker_user_id: actorId, blocked_user_id: targetId, created_at: profile.created_at, created_by: actorId }
 const profileInput = { display_name: '  Test person  ', bio: null }
-const blockInput = { confirmed: true, source: { kind: 'community_profile', tenantId } }
+const blockInput = { confirmed: true }
 const preferenceResult = { status: 200, row: { ...flags, internal_secret: 'omit' } }
 const cases = [
   { operation: 'readAccountPreferences', method: 'GET', path: '/api/me/preferences', result: preferenceResult, expected: flags },
@@ -26,11 +26,11 @@ const cases = [
   { operation: 'listMyCommunities', method: 'GET', path: '/api/me/communities', query: '?filter=managed&limit=2&cursor=opaque',
     args: [{ filter: 'managed', limit: '2', cursor: 'opaque' }], result: { rows: [{ ...summary, internal_secret: 'omit' }], next: 'next-cursor' }, expected: { rows: [summary], next: 'next-cursor' } },
   { operation: 'discoverGlobalProfiles', method: 'GET', path: '/api/profiles', query: '?q=%20CaFe%20&limit=2&cursor=opaque',
-    args: [{ q: ' CaFe ', limit: '2', cursor: 'opaque' }], result: { rows: [{ ...profile, internal_secret: 'omit' }], next: null }, expected: { rows: [profile], next: null } },
-  { operation: 'readGlobalProfile', method: 'GET', path: `/api/profiles/${targetId}`, args: [targetId], result: { ...profile, internal_secret: 'omit' }, expected: profile },
+    args: [{ q: ' CaFe ', limit: '2', cursor: 'opaque' }], result: { rows: [{ ...profile, internal_secret: 'omit' }], next: null }, expected: { rows: [{ user_id: actorId, display_name: profile.display_name }], next: null } },
+  { operation: 'readGlobalProfile', method: 'GET', path: `/api/profiles/${targetId}`, args: [targetId], result: profile, expected: profile },
   { operation: 'listAccountBlocks', method: 'GET', path: '/api/me/blocks', query: '?limit=2&cursor=opaque', args: [{ limit: '2', cursor: 'opaque' }],
     result: { rows: [{ ...block, internal_secret: 'omit' }], next: null }, expected: { rows: [block], next: null } },
-  { operation: 'blockUser', method: 'PUT', path: `/api/me/blocks/${targetId}`, payload: blockInput, args: [targetId, blockInput],
+  { operation: 'blockUser', method: 'PUT', path: `/api/me/blocks/${targetId}`, payload: blockInput, args: [targetId],
     result: { blocked: true, internal_secret: 'omit' }, expected: { blocked: true } },
   { operation: 'unblockUser', method: 'DELETE', path: `/api/me/blocks/${targetId}`, args: [targetId],
     result: { blocked: false, internal_secret: 'omit' }, expected: { blocked: false } },
@@ -165,8 +165,9 @@ test('route schemas reject forbidden fields, invalid selectors and wrong scalar 
     { method: 'GET', url: '/api/profiles?q=one&q=two' },
     { method: 'GET', url: '/api/profiles/not-a-uuid' },
     { method: 'GET', url: '/api/me/blocks?q=private' },
-    { method: 'PUT', url: `/api/me/blocks/${targetId}`, payload: { ...blockInput, confirmed: false } },
-    { method: 'PUT', url: `/api/me/blocks/${targetId}`, payload: { confirmed: true, source: { kind: 'community_profile' } } },
+    { method: 'PUT', url: `/api/me/blocks/${targetId}`, payload: {} },
+    { method: 'PUT', url: `/api/me/blocks/${targetId}`, payload: { confirmed: false } },
+    { method: 'PUT', url: `/api/me/blocks/${targetId}`, payload: { confirmed: true, source: { kind: 'community_profile', tenantId } } },
     { method: 'PUT', url: `/api/me/blocks/${targetId}`, payload: { ...blockInput, actorId } },
     { method: 'DELETE', url: '/api/me/blocks/not-a-uuid' },
   ]
@@ -192,28 +193,13 @@ test('own profile keeps a bio at its limit and rejects an overlong bio from the 
   assertError(h, await h.app.inject(request), 503, 'unavailable')
 })
 
-test('account blocks accept each source and reject unknown or mixed source fields', async t => {
+test('blocked global profiles return only their status', async t => {
   const h = harness(t)
-  const item = cases.find(item => item.operation === 'blockUser')
-  for (const source of [{ kind: 'global_profile' }, { kind: 'community_profile', tenantId }]) {
-    const payload = { confirmed: true, source }
-    h.queue(item.operation, { blocked: true })
-    const response = await h.app.inject({ ...requestOptions(item), payload })
-    assert.equal(response.statusCode, 200)
-    assert.deepEqual(response.json(), { blocked: true })
-    assertCall(h, { ...item, args: [targetId, payload] })
-  }
-  for (const source of [
-    { kind: 'global_profile', tenantId },
-    { kind: 'community_profile' },
-    { kind: 'community_profile', tenantId: 42 },
-    { kind: 'community_profile', tenantId, extra: true },
-    { kind: 'unknown' },
-  ]) {
-    const response = await h.app.inject({ ...requestOptions(item), payload: { confirmed: true, source } })
-    assertError(h, response, 400, 'invalid_request')
-  }
-  assert.equal(h.calls.length, 2)
+  const item = cases.find(item => item.operation === 'readGlobalProfile')
+  h.queue(item.operation, { status: 'blocked' })
+  const response = await h.app.inject(requestOptions(item))
+  assert.equal(response.statusCode, 200)
+  assert.deepEqual(response.json(), { status: 'blocked' })
 })
 
 test('adapter preserves preference result branches, application errors, profile null and empty pages', async t => {
@@ -228,7 +214,7 @@ test('adapter preserves preference result branches, application errors, profile 
     ['readOwnProfile', 403, 'ineligible'], ['saveOwnProfile', 403, 'ineligible'],
     ['listMyCommunities', 400, 'invalid_cursor'], ['discoverGlobalProfiles', 400, 'invalid_cursor'],
     ['readGlobalProfile', 404, 'missing'], ['listAccountBlocks', 400, 'invalid_cursor'],
-    ['blockUser', 404, 'missing'], ['unblockUser', 400, 'invalid_target'],
+    ['blockUser', 400, 'invalid_target'], ['unblockUser', 400, 'invalid_target'],
   ]
   for (const [operation, status, code] of failures) {
     h.queue(operation, new ApplicationError(status, code))

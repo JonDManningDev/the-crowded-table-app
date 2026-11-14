@@ -86,12 +86,6 @@ export async function loadCreateCommunityFacts(tx: Tx, actor: string) {
 
 // Candidate roots are facts, not admission. Block services lock these tenant
 // and account roots, then re-evaluate sharing against only the locked set.
-export async function loadGlobalProfileSharingRoots(tx: Tx, actor: string, target: string) {
-  return tx.selectFrom('community_accounts as viewer').innerJoin('community_accounts as target', 'target.tenant_id', 'viewer.tenant_id')
-    .select('target.tenant_id').where('viewer.user_id', '=', actor).where('target.user_id', '=', target)
-    .orderBy('target.tenant_id').execute()
-}
-
 export function loadHistoryFacts(tx: Tx, actor: string, tenant: string) {
   return loadCommunityStaffFacts(tx, actor, tenant)
 }

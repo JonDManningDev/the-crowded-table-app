@@ -68,7 +68,11 @@ function response(operation) {
 }
 function result(operation, dto) {
   if (operation.name === 'reviewAccount') return { row: dto }
-  if (operation.name === 'readProfile') return { status: 200, profile: dto }
+  if (operation.name === 'readProfile') {
+    // Exact-profile responses use a closed union to distinguish withheld details.
+    const { internal_secret: _ignored, ...profile } = dto
+    return { status: 200, profile }
+  }
   return dto
 }
 function cache(operation) { return operation.public ? operation.name === 'listStandings' ? undefined : 'no-store' : 'private, no-store' }
@@ -247,19 +251,22 @@ test('public service retains projections and anonymous transaction scope without
   assert.ok(h.queries.every(q => !/begin_actor_context|request.jwt.claim.sub|ct.operation_id/.test(q.sql)))
 })
 
-test('exact profile service projects the same eight columns independently of HTTP schemas', async t => {
+test('exact community profile service returns only the blocked status when details are withheld', async t => {
   const h = createHttpHarness(t), operation = operations.find(operation => operation.name === 'readProfile')
-  h.eligible([response(operation).dto])
-  assert.equal((await h.app.inject(input(operation))).statusCode, 200)
-  assert.equal(/^select (.*?) from /.exec(h.queries.at(-1).sql)?.[1],
-    '"p"."tenant_id", "p"."user_id", "p"."display_name", "p"."bio", "p"."created_at", "p"."updated_at", "p"."created_by", "p"."updated_by"')
-  assert.deepEqual(h.queries.at(-1).parameters, [actorId, tenantId, targetId, actorId, actorId])
+  const dto = response(operation).dto
+  h.eligible([{ ...dto, blocked: false }])
+  const visible = await h.app.inject(input(operation))
+  assert.equal(visible.statusCode, 200)
+  assert.deepEqual(visible.json(), dto)
+  h.eligible([{ blocked: true }])
+  const blocked = await h.app.inject(input(operation))
+  assert.equal(blocked.statusCode, 200)
+  assert.deepEqual(blocked.json(), { status: 'blocked' })
 })
 
 test('directory and exact/owner facts retain ordered projections and bound parameters', async t => {
   const h = createHttpHarness(t)
   const facts = ['tenant_id', 'user_id', 'standing', 'first_approved_at', 'has_disciplinary_restriction', 'created_at', 'updated_at', 'created_by', 'updated_by']
-  const profile = ['tenant_id', 'user_id', 'display_name', 'bio', 'created_at', 'updated_at', 'created_by', 'updated_by']
   for (const name of ['memberDirectory', 'ownerAccounts', 'accountFacts']) {
     const operation = operations.find(operation => operation.name === name), dto = response(operation).dto
     if (name === 'memberDirectory') h.eligible([{ id: tenantId }], [{ operational_status: 'active', standing: 'approved' }], dto.rows)
@@ -270,8 +277,8 @@ test('directory and exact/owner facts retain ordered projections and bound param
     if (name === 'memberDirectory') {
       const projections = [...query.sql.matchAll(/jsonb_build_object\((.*?)\)/g)].map(match => match[1])
       assert.deepEqual(projections, [facts.map((key, index) => `$${index + 1}::text, "c"."${key}"`).join(', '),
-        profile.map((key, index) => `$${index + 10}::text, "p"."${key}"`).join(', ')])
-      assert.deepEqual(query.parameters, [...facts, ...profile, tenantId, null, null, 51])
+        "'display_name',p.display_name"])
+      assert.deepEqual(query.parameters, [...facts, tenantId, null, null, 51])
     } else {
       assert.equal(/^select (.*?) from /.exec(query.sql)?.[1], facts.map(key => `"${key}"`).join(', '))
       assert.deepEqual(query.parameters, name === 'accountFacts' ? [tenantId, targetId, true] : [tenantId, null, null, 51])
@@ -342,7 +349,7 @@ test('member directory preserves nullable profile and staff role and projects re
   h.queue(operation.name, { rows: [...dto.rows, { ...row, profile: { ...profile, internal_secret: 'omit' } }], next: null })
   const received = await h.app.inject(input(operation))
   assert.equal(received.statusCode, 200)
-  assert.deepEqual(received.json(), { rows: [...dto.rows, row], next: null })
+  assert.deepEqual(received.json(), { rows: [...dto.rows, { ...row, profile: { display_name: 'Player' } }], next: null })
 })
 
 test('community command tags accept their own fields and reject invalid variants before dispatch', async t => {

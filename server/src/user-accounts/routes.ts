@@ -43,7 +43,7 @@ export const userAccountRoutes: FastifyPluginAsyncTypebox<UserAccountRoutesOptio
   routes.get('/api/me/blocks', { schema: listAccountBlocksSchema }, request =>
     service.listAccountBlocks(getAuthenticatedContext(request), request.query))
   routes.put('/api/me/blocks/:userId', { schema: blockUserSchema }, request =>
-    service.blockUser(getAuthenticatedContext(request), request.params.userId, request.body))
+    service.blockUser(getAuthenticatedContext(request), request.params.userId))
   routes.delete('/api/me/blocks/:userId', { schema: unblockUserSchema }, request =>
     service.unblockUser(getAuthenticatedContext(request), request.params.userId))
 }

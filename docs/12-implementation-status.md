@@ -1,5 +1,13 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Account ID blocks and profile details — 2026-11-14
+
+[Revised AM-04](16-intended-access-matrix.md#am-04--blocks-and-profile-shared-community-visibility) is implemented and verified locally. `PUT /api/me/blocks/:userId` accepts `{ confirmed: true }` and creates the caller’s block for an existing account. Unknown IDs receive the same acknowledgment without a stored row. Block and unblock share the unordered pair lock. Migration `20261114000100` removes the retired block-source lock policy. The existing block rows, verified attribution and runtime grants are preserved.
+
+Either block direction yields `200 { "status": "blocked" }` on otherwise readable exact global and community profiles. These reads still enforce their ordinary audience and lifecycle rules. Global search returns only ID and display name. The member directory keeps its account and role fields and returns only the display name in its nested profile. Both lists keep eligibility and pagination independent of blocks. Future Block menu and profile views follow AM-04. Hosted deployment remains separate.
+
+Local verification passed the 76 HTTP cases, the nine real Auth/HTTP suites, actor-context and transaction-retry checks, the hosted-policy scenarios on loopback, 51 external Data API checks, policy catalog comparison, 272 pgTAP assertions, and SQL lint. Coverage includes blocked payloads in both directions, inaccessible profiles, account IDs without profiles, unknown IDs, pagination, rollback and both block/unblock lock orders. The HTTP baseline diff is limited to five approved schemas. Client tests (279), TypeScript, root lint and production build passed. The existing Vite chunk-size advisory remains.
+
 ## Account block service methods — locally verified 2026-11-14
 
 `blockUser` and `unblockUser` now own their eligibility transactions and writes in the user-account service. They share self-target validation and caller-before-pair advisory locking. The `setOwnBlock` export and the former `blockAccount` and `unblockAccount` wrappers are removed. The existing HTTP contract and block-source authorization are preserved. Integration tests use the real service with a driver hook after the insert for rollback and lock observation. Source-denial checks use the authenticated HTTP route.

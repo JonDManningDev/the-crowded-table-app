@@ -76,19 +76,15 @@ const globalProfile = Type.Object({
 }, closed)
 const discoveryQuery = Type.Object({ ...paging, q: Type.Optional(Type.String({ maxLength: 120 })) },
   { ...closed, required: [] })
-export const discoverGlobalProfilesSchema = { querystring: discoveryQuery, response: { 200: page(globalProfile), ...errors } }
-export const readGlobalProfileSchema = { params: userParams, querystring: emptyQuery, response: { 200: globalProfile, ...errors } }
+export const discoverGlobalProfilesSchema = { querystring: discoveryQuery, response: { 200: page(Type.Pick(globalProfile, ['user_id', 'display_name'])), ...errors } }
+export const readGlobalProfileSchema = { params: userParams, querystring: emptyQuery, response: { 200: Type.Union([globalProfile, Type.Object({ status: Type.Literal('blocked') }, closed)]), ...errors } }
 
 // Account blocks
 const block = Type.Object({ blocker_user_id: uuid, blocked_user_id: uuid, created_at: timestamp, created_by: uuid }, closed)
 const blocksQuery = Type.Object(paging, { ...closed, required: [] })
 export const listAccountBlocksSchema = { querystring: blocksQuery, response: { 200: page(block), ...errors } }
 
-const blockSource = Type.Union([
-  Type.Object({ kind: Type.Literal('global_profile') }, closed),
-  Type.Object({ kind: Type.Literal('community_profile'), tenantId: uuid }, closed),
-])
-const blockInput = Type.Object({ confirmed: Type.Literal(true), source: blockSource }, closed)
+const blockInput = Type.Object({ confirmed: Type.Literal(true) }, closed)
 const blockResponse = Type.Object({ blocked: Type.Boolean() }, closed)
 export const blockUserSchema = { params: userParams, querystring: emptyQuery, body: blockInput, response: { 200: blockResponse, ...errors } }
 export const unblockUserSchema = { params: userParams, querystring: emptyQuery, response: { 200: blockResponse, ...errors } }
