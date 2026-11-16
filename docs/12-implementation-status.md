@@ -1,5 +1,35 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Trusted API runtime reads — locally verified 2026-11-16
+
+The user authorized [document 26](26-trusted-api-runtime-reads-spec.md)/[issue #24](https://github.com/JonDManningDev/the-crowded-table-app/issues/24) through implement-spec. Checkpoint `cc2a276` is merged at `8d8f38d` on `implementation/trusted-api-runtime-reads`, based on `1168ecf`. Migration `20261116000100` is applied locally. All 15 already-readable application relations have permissive runtime fact reads, with seven independent G-02 fences. The catalog now has 50 policies: 22 SELECT policies (15 permissive, seven restrictive), 28 operation-specific mutation policies and no ALL policies. Runtime/external grants, all 19 function definitions, triggers, defaults, constraints and the archive-safe relationship projection are unchanged.
+
+The global-profile target and public slug/tenant setup calls are removed. Seventeen authenticated community read operations omit initial tenant context; eight existing-tenant write operations retain it, and creation retains late scope. Root lock visibility is selector-free, with the false lock-only write check and scoped mutation check retained alongside immutable root identity. Read audience conditions, field projections, cursor behavior, root-lock/fresh-facts sequencing, Auth eligibility, retries, attribution and audits are preserved. No frontend or HTTP-contract change is included. The unrelated root `database.ts` formatting edit remains unstaged and unchanged.
+
+Local verification passed 76 HTTP tests against the unchanged fixture; all nine real Auth/HTTP suites; 25 actor-context/retry/catalog cases; 51 real PostgREST checks; focused policy scenarios on loopback; 272 pgTAP assertions; SQL lint; clean replay and populated upgrade preserving every application row/history/category; generated-type drift and both compiler/catalog tests; all 279 client tests; the 134-file client boundary audit; TypeScript, lint and production build. Direct runtime probes cover every granted relation without actor/read selectors, all seven archive fences for active/archived anonymous/member/approved-owner contexts, missing/wrong write scope, absent actor, protected identity and successful scoped writes with rollback. Local commands used process-only loopback ports 54321/54322; saved environment files were not changed.
+
+### Measured baseline and candidate
+
+The unchanged baseline is pinned to exact Git source bytes at `1168ecf` and its pre-change application schema. The candidate uses the integrated implementation source and the policy migration. Two disposable local databases began with identical synthetic application fixtures; all-table count/checksum snapshots matched before and after migration and after measurement. Measurements used the real `ct_api` login and the existing benchmark approach: a minimal Auth schema contract, direct service calls, one connection, separate SQL-count probes, alternating baseline/candidate order, 16 warmups and four repetitions of 80 samples per workload, plus 12 first-connection samples per workload/variant. There are 24 count/result probes, 7,680 warm observations and 288 first-connection observations across 12 workloads. The source/migration hashes, counts and unchanged final fixtures were independently checked. Both owned benchmark databases were removed after retaining evidence.
+
+| Workload | SQL submissions baseline → candidate | Warm median ms baseline → candidate | Warm p95 ms baseline → candidate | First-connection median ms baseline → candidate |
+| --- | --- | --- | --- | --- |
+| Exact global profile through shared-community consent | 5 → 4 | 5.524 → 3.661 | 5.973 → 3.963 | 12.429 → 10.050 |
+| Public landing | 6 → 4 | 4.439 → 3.028 | 4.866 → 3.289 | 10.170 → 8.404 |
+| Public directory | 7 → 5 | 5.307 → 3.827 | 5.942 → 4.473 | 11.089 → 9.408 |
+| Missing public landing | 4 → 3 | 2.288 → 1.705 | 2.631 → 1.848 | 7.275 → 6.142 |
+| Missing public directory | 4 → 3 | 2.265 → 1.647 | 2.578 → 1.887 | 7.946 → 6.863 |
+| Community details | 6 → 6 | 4.840 → 4.156 | 5.346 → 4.630 | 10.975 → 10.198 |
+| History | 6 → 6 | 5.142 → 4.413 | 6.043 → 4.908 | 11.375 → 10.334 |
+| Own global preferences control | 4 → 4 | 2.907 → 3.035 | 3.437 → 3.206 | 8.098 → 7.785 |
+| Personal community summaries | 4 → 4 | 3.465 → 3.107 | 3.818 → 3.376 | 9.871 → 9.332 |
+
+Blocked/missing global profiles and disabled directories also retain equivalent outcomes and the expected submission reductions. Omitting already-bundled tenant read scope saves no extra submission. The unchanged preferences control's warm median increased by 0.129 ms while its p95 improved; these results do not establish a uniform latency gain. They measure local service/database work, excluding real HTTP/token verification and hosted network latency. Concurrent/saturated performance and nested function-call counts were not measured. No remote latency reduction is claimed.
+
+Evidence is retained under ignored `server/test-results/trusted-runtime-reads-24/`: `implementation-red-green.md`, `local-final/`, `candidate-r2/http.log`, `infrastructure/`, the build/lint/client logs, pinned source/schema, `benchmark-r1.log`, `benchmark.json` and `benchmark-artifact-verification.json`. The first full-run wrapper stopped on npm stderr notices; it was corrected to use exit codes. Obsolete selector-result queues and direct fact-read denial assertions were then corrected without changing the HTTP fixture or production semantics. An initial benchmark pool-probe adapter stalled before timing; the corrected run reset only its owned candidate clone and produced the retained measurements. No failed observation is treated as a passing sample.
+
+The source/catalog diff review is complete. Independent standards/spec review and tracker closure are the remaining closeout steps. No hosted migration, hosted verification or API/frontend deployment has been performed. The publication-only record below describes the preceding stage.
+
 ## Trusted API runtime reads — specification published 2026-11-16
 
 The user requested a complete read-only assessment and then invoked to-spec. The [specification](26-trusted-api-runtime-reads-spec.md) is published as [issue #24](https://github.com/JonDManningDev/the-crowded-table-app/issues/24), labelled `ready-for-agent`. The user confirmed the existing real Auth/HTTP, direct-runtime/external-client, HTTP-contract, replay/upgrade and performance-measurement boundaries before publication. Read-back verified the exact issue body, title, open state and label.

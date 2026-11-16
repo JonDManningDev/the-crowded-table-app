@@ -1,5 +1,7 @@
 # Trusted API runtime fact reads
 
+**Locally implemented and verified, 2026-11-16.** The user authorized implementation through implement-spec. Migration `20261116000100` and checkpoint `cc2a276` implement the coordinated follow-up, merged to `implementation/trusted-api-runtime-reads` at `8d8f38d`. The [implementation and measurement record](12-implementation-status.md#trusted-api-runtime-reads--locally-verified-2026-11-16) contains the passing local gates, measured baseline/candidate comparison and remaining review closeout. No hosted migration or deployment is included. The published requirements and original assessment notes below remain preserved.
+
 ## Problem Statement
 
 The persistent API is the trusted server and owns product authorization. However, several database read policies hide facts from that server until it first declares an account, tenant or public slug in transaction-local configuration. The API must make extra database submissions or carry hidden query prerequisites to obtain the facts needed to decide whether a caller may receive a result.
