@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Overlapping block and unblock commands — 2026-11-16
+
+`blockUser` and `unblockUser` now use their existing insert and delete statements without the advisory pair lock. Both still reject self-targets case-insensitively. Under [revised AM-04](16-intended-access-matrix.md#am-04--blocks-and-profile-shared-community-visibility), either final state is valid when the requests overlap. A local integration test holds the insert before commit, verifies the overlapping unblock completes, then verifies a later unblock clears the committed row. The [frontend guidance](05-frontend-patterns.md#block-confirmation-with-existing-items--accepted-target-2026-10-15) records the future shared busy state. No database migration or hosted deployment is included.
+
+Local verification passed all 76 HTTP cases, all nine real Auth/HTTP suites, actor-context and retry tests, the focused hosted-policy scenarios on loopback, 51 PostgREST checks, and 272 pgTAP assertions. Lint and the production build passed with the existing Vite chunk-size advisory. The diff review confirmed that the two writes and the eligibility transaction retain their existing SQL and that the advisory lock is removed from both paths.
+
 ## Account ID blocks and profile details — 2026-11-14
 
 [Revised AM-04](16-intended-access-matrix.md#am-04--blocks-and-profile-shared-community-visibility) is implemented and verified locally. `PUT /api/me/blocks/:userId` accepts `{ confirmed: true }` and creates the caller’s block for an existing account. Unknown IDs receive the same acknowledgment without a stored row. Block and unblock share the unordered pair lock. Migration `20261114000100` removes the retired block-source lock policy. The existing block rows, verified attribution and runtime grants are preserved.

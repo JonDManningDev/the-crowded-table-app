@@ -68,7 +68,7 @@ try {
   const search=(actor,q=prefix,suffix='',status=200)=>http(actor,'/api/profiles?q='+encodeURIComponent(q)+suffix,'GET',undefined,status)
   const list=(actor,suffix='',status=200)=>http(actor,'/api/me/blocks'+suffix,'GET',undefined,status)
   const block=(actor,user,status=200)=>http(actor,'/api/me/blocks/'+user,'PUT',{confirmed:true},status)
-  const unblock=(actor,user)=>http(actor,'/api/me/blocks/'+user,'DELETE')
+  const unblock=(actor,user,status=200)=>http(actor,'/api/me/blocks/'+user,'DELETE',undefined,status)
   const expected=['user_id','display_name','bio','created_at','updated_at','created_by','updated_by'].sort()
   assert.equal((await search(viewer)).rows.length,5)
   assert.deepEqual(Object.keys(await inspect(viewer,target.id)).sort(),expected)
@@ -159,6 +159,7 @@ try {
   await prefs(viewer,false);await prefs(target,false)
   await block(viewer,viewer.id,400)
   assert.equal((await block(viewer,viewer.id.toUpperCase(),400)).code,'invalid_target')
+  assert.equal((await unblock(viewer,viewer.id.toUpperCase(),400)).code,'invalid_target')
   assert.deepEqual(await block(viewer,randomUUID()),{blocked:true})
   assert.deepEqual((await list(viewer)).rows,[])
   assert.deepEqual(await block(viewer,missing.id),{blocked:true})
@@ -206,7 +207,7 @@ try {
   })
   await unblock(target,viewer.id)
   await assert.rejects(runBlockWriteWithHook(endpoint.href, { actorId: viewer.id, requestId: randomUUID() },
-    target.id, 'blockUser', client => client.query("do $$ begin raise exception 'injected block rollback'; end $$")),
+    target.id, client => client.query("do $$ begin raise exception 'injected block rollback'; end $$")),
     error => error.code === 'P0001' && error.message === 'injected block rollback')
   assert.deepEqual((await list(viewer)).rows, [])
   assert.equal((await inspect(viewer,target.id)).user_id,target.id)
@@ -229,40 +230,17 @@ try {
   } finally {await admin.query('rollback')}
   await unblock(viewer,target.id)
 
-  // The same unordered pair serializes block and unblock in both orders.
-  async function waitForPair(holder) {
-    const deadline=Date.now()+1800
-    while(!(await admin.query(`select exists(select from pg_stat_activity
-      where wait_event_type='Lock' and wait_event='advisory' and $1=any(pg_blocking_pids(pid))) as waiting`,[holder])).rows[0].waiting) {
-      assert.ok(Date.now()<deadline,'opposing write must wait for the pair lock')
-      await new Promise(resolve=>setTimeout(resolve,10))
-    }
-  }
-  const held=holdBlockWrite(endpoint.href,{actorId:viewer.id,requestId:randomUUID()},target.id,'blockUser')
-  let removing
+  // An unblock may complete while a new block is still uncommitted. This
+  // controlled order leaves the insert in place. A later delete clears it.
+  const held=holdBlockWrite(endpoint.href,{actorId:viewer.id,requestId:randomUUID()},target.id)
   try {
-    const holder=await Promise.race([held.started,held.result.then(()=>{throw Error('block ended before barrier')})])
-    removing=unblock(viewer,target.id)
-    removing.catch(()=>{})
-    await waitForPair(holder)
-  } finally {held.release();await Promise.allSettled([held.result,removing])}
+    await Promise.race([held.started,held.result.then(()=>{throw Error('block ended before barrier')})])
+    assert.deepEqual(await unblock(viewer,target.id),{blocked:false})
+  } finally {held.release();await held.result}
   assert.deepEqual(await held.result,{blocked:true})
-  assert.deepEqual(await removing,{blocked:false})
-  assert.deepEqual((await list(viewer)).rows,[])
-
-  await block(viewer,target.id)
-  const removeFirst=holdBlockWrite(endpoint.href,{actorId:viewer.id,requestId:randomUUID()},target.id,'unblockUser')
-  let adding
-  try {
-    const holder=await Promise.race([removeFirst.started,removeFirst.result.then(()=>{throw Error('unblock ended before barrier')})])
-    adding=block(viewer,target.id)
-    adding.catch(()=>{})
-    await waitForPair(holder)
-  } finally {removeFirst.release();await Promise.allSettled([removeFirst.result,adding])}
-  assert.deepEqual(await removeFirst.result,{blocked:false})
-  assert.deepEqual(await adding,{blocked:true})
   assert.equal((await list(viewer)).rows[0].blocked_user_id,target.id)
   await unblock(viewer,target.id)
+  assert.deepEqual((await list(viewer)).rows,[])
 
   await prefs(target,true)
   // A read already admitted by its statement may finish; the next read withholds details.
@@ -336,7 +314,7 @@ try {
   assert.deepEqual((await search(viewer,bulkName)).rows,defaultPage.rows)
   assert.equal((await search(owner,bulkName)).rows.length,50)
   await list(owner,'?cursor='+ownMax.next,400)
-  console.log('PASS global discovery vs exact consent, OR sharing and lifecycle boundaries, literal search/pages, bilateral profile withholding, independent lists, account-ID confirmation and pair locks, attribution/idempotence/rollback, snapshot revocation and REST/GraphQL/runtime bypasses')
+  console.log('PASS global discovery vs exact consent, OR sharing and lifecycle boundaries, literal search/pages, bilateral profile withholding, independent lists, account-ID confirmation and overlapping writes, attribution/idempotence/rollback, snapshot revocation and REST/GraphQL/runtime bypasses')
 
 } finally {
   try {

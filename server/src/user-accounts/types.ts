@@ -1,6 +1,4 @@
-import type { Transaction } from 'kysely'
 import type { AppDatabase } from '../database.ts'
-import type { DB } from '../database.types.ts'
 import type { DirectoryCursors } from '../directory-cursors.ts'
 import type { createUserAccountService } from './service.ts'
 
@@ -36,7 +34,6 @@ export type ProfilePage<T> = { rows: T[]; next: string | null }
 export type OutgoingBlock = { blocker_user_id: string; blocked_user_id: string; created_at: Date; created_by: string }
 
 // Internal helpers
-export type Tx = Transaction<DB>
 export interface UserAccountDependencies { db: AppDatabase; cursors: DirectoryCursors }
 export type UserAccountService = ReturnType<typeof createUserAccountService>
 export interface UserAccountRoutesOptions { service: UserAccountService }

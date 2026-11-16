@@ -17,7 +17,6 @@ import type {
   OutgoingBlock,
   ProfilePage,
   Position,
-  Tx,
   UserAccountDependencies,
 } from './types.ts'
 
@@ -34,7 +33,7 @@ export function createUserAccountService({ db, cursors }: UserAccountDependencie
     listAccountBlocks(context: AuthenticatedContext, query: DiscoveryQuery) { return listAccountBlocks(db, cursors, context, query) },
     blockUser(context: AuthenticatedContext, target: string) {
       return withEligibleActorTransaction(db, context, async tx => {
-        await lockBlockPair(tx, context.actorId, target)
+        requireOtherAccount(context.actorId, target)
         // Acknowledge the command identically when the target account is absent.
         await sql`insert into public.user_account_blocks(blocked_user_id)
           select user_id from public.user_accounts where user_id=${target}
@@ -45,7 +44,7 @@ export function createUserAccountService({ db, cursors }: UserAccountDependencie
     unblockUser(context: AuthenticatedContext, target: string) {
       return withEligibleActorTransaction(db, context, async tx => {
         const actor = context.actorId
-        await lockBlockPair(tx, actor, target)
+        requireOtherAccount(actor, target)
         await sql`delete from public.user_account_blocks where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)
         return {blocked:false}
       })
@@ -186,8 +185,6 @@ async function listAccountBlocks(db: AppDatabase, cursors: DirectoryCursors, con
   })
 }
 
-async function lockBlockPair(tx: Tx, actor: string, target: string) {
+function requireOtherAccount(actor: string, target: string) {
   if (actor.toLowerCase()===target.toLowerCase()) throw new ApplicationError(400,'invalid_target')
-  const pair = [actor,target].map(id => id.toLowerCase()).sort().join(':')
-  await sql`select pg_advisory_xact_lock(hashtextextended('ct.profile-block-pair:' || ${pair}::text,0))`.execute(tx)
 }

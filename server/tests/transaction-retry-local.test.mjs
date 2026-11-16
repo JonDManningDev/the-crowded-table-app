@@ -319,7 +319,7 @@ test('real local operations retry with fresh authorization and one committed out
       const url='/api/me/blocks/'+manager.id, input={confirmed:true}
       const result=await faulted(owner,url,input,{match:/insert into public.user_account_blocks/,codes:['40001','40P01']},200,'PUT')
       assert.equal(result.attempts,3)
-      assert.equal(result.queries.filter(q=>q.text.includes('ct.profile-block-pair:')).length,3)
+      assert.equal(result.queries.filter(q=>q.text.includes('insert into public.user_account_blocks')).length,3)
       assert.equal((await request(controlApp,owner,'/api/me/blocks')).rows.length,1)
       await request(controlApp,owner,url,undefined,200,'DELETE')
       const hidden=await faulted(owner,url,input,{match:/insert into public.user_account_blocks/,codes:['40001'],
