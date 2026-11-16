@@ -31,24 +31,8 @@ export function createUserAccountService({ db, cursors }: UserAccountDependencie
     discoverGlobalProfiles(context: AuthenticatedContext, query: DiscoveryQuery) { return discoverGlobalProfiles(db, cursors, context, query) },
     readGlobalProfile(context: AuthenticatedContext, target: string) { return readGlobalProfile(db, context, target) },
     listAccountBlocks(context: AuthenticatedContext, query: DiscoveryQuery) { return listAccountBlocks(db, cursors, context, query) },
-    blockUser(context: AuthenticatedContext, target: string) {
-      return withEligibleActorTransaction(db, context, async tx => {
-        requireOtherAccount(context.actorId, target)
-        // Acknowledge the command identically when the target account is absent.
-        await sql`insert into public.user_account_blocks(blocked_user_id)
-          select user_id from public.user_accounts where user_id=${target}
-          on conflict(blocker_user_id,blocked_user_id) do nothing`.execute(tx)
-        return { blocked: true }
-      })
-    },
-    unblockUser(context: AuthenticatedContext, target: string) {
-      return withEligibleActorTransaction(db, context, async tx => {
-        const actor = context.actorId
-        requireOtherAccount(actor, target)
-        await sql`delete from public.user_account_blocks where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)
-        return {blocked:false}
-      })
-    },
+    blockUser(context: AuthenticatedContext, target: string) { return blockUser(db, context, target) },
+    unblockUser(context: AuthenticatedContext, target: string) { return unblockUser(db, context, target) },
   }
 }
 
@@ -185,6 +169,22 @@ async function listAccountBlocks(db: AppDatabase, cursors: DirectoryCursors, con
   })
 }
 
-function requireOtherAccount(actor: string, target: string) {
-  if (actor.toLowerCase()===target.toLowerCase()) throw new ApplicationError(400,'invalid_target')
+function blockUser(db: AppDatabase, context: AuthenticatedContext, target: string) {
+  return withEligibleActorTransaction(db, context, async tx => {
+    if (context.actorId.toLowerCase() === target.toLowerCase()) throw new ApplicationError(400, 'invalid_target')
+    // Acknowledge the command identically when the target account is absent.
+    await sql`insert into public.user_account_blocks(blocked_user_id)
+      select user_id from public.user_accounts where user_id=${target}
+      on conflict(blocker_user_id,blocked_user_id) do nothing`.execute(tx)
+    return { blocked: true }
+  })
+}
+
+function unblockUser(db: AppDatabase, context: AuthenticatedContext, target: string) {
+  return withEligibleActorTransaction(db, context, async tx => {
+    const actor = context.actorId
+    if (actor.toLowerCase() === target.toLowerCase()) throw new ApplicationError(400, 'invalid_target')
+    await sql`delete from public.user_account_blocks where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)
+    return {blocked:false}
+  })
 }
