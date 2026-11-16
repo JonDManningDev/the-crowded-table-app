@@ -109,26 +109,26 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
       return withEligibleActorTransaction(db, context, tx => ownCommunityProfile(tx, context.actorId, params.tenantId, input), { initialTenantId: params.tenantId })
     },
     readOwnPreferences(context: AuthenticatedContext, params: TenantParams) {
-      return withEligibleActorTransaction(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId), { initialTenantId: params.tenantId })
+      return withEligibleActorTransaction(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId))
     },
     saveOwnPreferences(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunityPreferences>) {
       return withEligibleActorTransaction(db, context, tx => ownCommunityPreferences(tx, context.actorId, params.tenantId, input), { initialTenantId: params.tenantId })
     },
     // Configuration and copy
     readDetails(context: AuthenticatedContext, params: TenantParams) {
-      return withEligibleActorTransaction(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId), { initialTenantId: params.tenantId })
+      return withEligibleActorTransaction(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId))
     },
     saveDetails(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunityDetailsInput>) {
       return withEligibleActorTransaction(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId, input), { initialTenantId: params.tenantId })
     },
     readSettings(context: AuthenticatedContext, params: TenantParams) {
-      return withEligibleActorTransaction(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId), { initialTenantId: params.tenantId })
+      return withEligibleActorTransaction(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId))
     },
     saveSettings(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunitySettings>) {
       return withEligibleActorTransaction(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId, input), { initialTenantId: params.tenantId })
     },
     readCopy(context: AuthenticatedContext, params: TenantParams) {
-      return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId), { initialTenantId: params.tenantId })
+      return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId))
     },
     saveCopy(context: AuthenticatedContext, params: CopyParams, input: CopyInput) {
       return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey, text: input.text_value }), { initialTenantId: params.tenantId })
@@ -138,26 +138,26 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
     },
     // Directories and account facts
     memberDirectory(context: AuthenticatedContext, params: TenantParams, query: DirectoryQuery) {
-      return withEligibleActorTransaction(db, context, tx => readMemberDirectory(tx, context.actorId, params.tenantId, query, cursors), { initialTenantId: params.tenantId })
+      return withEligibleActorTransaction(db, context, tx => readMemberDirectory(tx, context.actorId, params.tenantId, query, cursors))
     },
     ownerAccounts(context: AuthenticatedContext, params: TenantParams, query: DirectoryQuery) {
-      return withEligibleActorTransaction(db, context, tx => listOwnerAccounts(tx, context.actorId, params.tenantId, query, cursors), { initialTenantId: params.tenantId })
+      return withEligibleActorTransaction(db, context, tx => listOwnerAccounts(tx, context.actorId, params.tenantId, query, cursors))
     },
     accountFacts(context: AuthenticatedContext, params: AccountParams) {
-      return withEligibleActorTransaction(db, context, tx => readAccountFacts(tx, context.actorId, params.tenantId, params.userId), { initialTenantId: params.tenantId })
+      return withEligibleActorTransaction(db, context, tx => readAccountFacts(tx, context.actorId, params.tenantId, params.userId))
     },
     // Staff and participant permissions
     listStaff(context: AuthenticatedContext, params: TenantParams, query: RecordQuery) {
-      return withEligibleActorTransaction(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'staff', query), { initialTenantId: params.tenantId })
+      return withEligibleActorTransaction(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'staff', query))
     },
     readStaff(context: AuthenticatedContext, params: AccountParams) {
-      return withEligibleActorTransaction(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'staff', params.userId), { initialTenantId: params.tenantId })
+      return withEligibleActorTransaction(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'staff', params.userId))
     },
     listParticipantPermissions(context: AuthenticatedContext, params: TenantParams, query: RecordQuery) {
-      return withEligibleActorTransaction(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'participant', query), { initialTenantId: params.tenantId })
+      return withEligibleActorTransaction(db, context, tx => listAccountRecords(tx, context.actorId, params.tenantId, 'participant', query))
     },
     readParticipantPermissions(context: AuthenticatedContext, params: AccountParams) {
-      return withEligibleActorTransaction(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'participant', params.userId), { initialTenantId: params.tenantId })
+      return withEligibleActorTransaction(db, context, tx => readAccountRecord(tx, context.actorId, params.tenantId, 'participant', params.userId))
     },
     saveParticipantPermissions(context: AuthenticatedContext, params: AccountParams, input: ParticipantPermissionInput) {
       return withEligibleActorTransaction(db, context, tx => setParticipantPermission(tx, context.actorId, params.tenantId, params.userId, input.can_post_public_events), { initialTenantId: params.tenantId })
@@ -172,10 +172,7 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
 // Public access and standing
 const standingFields = ['standing', 'enable_standard_chat_visibility', 'enable_standard_activity_visibility', 'enable_other_profile_visibility', 'enable_own_profile_management', 'enable_standard_participation', 'enable_standard_dms'] as const
 async function lockPublicCommunity(tx: Tx, slug: string) {
-  await sql`select set_config('ct.public_slug', ${slug}, true)`.execute(tx)
-  const site = await tx.selectFrom('tenants').select('id').where('slug', '=', slug).forShare().executeTakeFirst()
-  if (site) await sql`select set_config('ct.public_tenant_id', ${site.id}, true)`.execute(tx)
-  return site
+  return tx.selectFrom('tenants').select('id').where('slug', '=', slug).forShare().executeTakeFirst()
 }
 async function readCommunityLanding(db: AppDatabase, slug: string): Promise<CommunityLanding | undefined> {
   return withTransactionRetry(db, async tx => {
@@ -401,7 +398,7 @@ function ownRequest(db: AppDatabase, context: AuthenticatedContext, params: Tena
         left join app_private.community_account_requests r using(tenant_id,user_id)
         where c.tenant_id=${tenant} and c.user_id=${actor} and t.operational_status='active'`.execute(tx)).rows[0]
     return row ?? { status: 404 as const }
-  }, { initialTenantId: tenant })
+  })
 }
 function reviewAccount(db: AppDatabase, context: AuthenticatedContext, params: ReviewParams) {
   const actor = context.actorId;
@@ -416,7 +413,7 @@ function reviewAccount(db: AppDatabase, context: AuthenticatedContext, params: R
             and s.user_id=${actor} and s.status='active' and s.can_discipline_users))
           `.execute(tx)).rows[0]
     return row ? { row } : { status: 404 as const }
-  }, { initialTenantId: tenantId })
+  })
 }
 function staffCandidates(db: AppDatabase, context: AuthenticatedContext, params: TenantParams, query: AfterQuery) {
   const tenantId = params.tenantId;
@@ -431,7 +428,7 @@ function staffCandidates(db: AppDatabase, context: AuthenticatedContext, params:
             and (${query.after ?? null}::uuid is null or c.user_id>${query.after ?? null}::uuid)
           order by c.user_id limit 51`.execute(tx)).rows
     return { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].user_id : null }
-  }, { initialTenantId: tenantId })
+  })
 }
 function pendingRequests(db: AppDatabase, context: AuthenticatedContext, params: TenantParams, query: AfterQuery) {
   const actor = context.actorId;
@@ -446,7 +443,7 @@ function pendingRequests(db: AppDatabase, context: AuthenticatedContext, params:
             and (${query.after ?? null}::uuid is null or r.id>${query.after ?? null}::uuid)
           order by r.id limit 51`.execute(tx)).rows
     return { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].id : null }
-  }, { initialTenantId: tenantId })
+  })
 }
 
 // Profiles and preferences
@@ -481,7 +478,7 @@ function readProfile(db: AppDatabase, context: AuthenticatedContext, params: Acc
     if (blocked) return { status: 200 as const, profile: { status: 'blocked' as const } }
     // The lateral projection emits all profile columns when blocked is false.
     return { status: 200 as const, profile: details as CommunityProfile }
-  }, { initialTenantId: tenantId })
+  })
 }
 // Both self-edit helpers require an authenticated transaction scoped to tenant.
 export async function ownCommunityProfile(tx: Tx, actor: string, tenant: string, input: CommunityProfileInput) {
@@ -523,7 +520,7 @@ export async function ownCommunityPreferences(tx: Tx, actor: string, tenant: str
 const detailFields = sql`id,slug,name,country_code,state_province,city,timezone,operational_status,created_at,updated_at,created_by,updated_by`
 const settingsFields = sql`tenant_id,${sql.join(settingFields.map(key => sql.id(key)))},created_at,updated_at,created_by,updated_by`
 const copyFields = sql`tenant_id,content_key,text_value,created_at,updated_at,created_by,updated_by`
-// Configuration helpers run within an authenticated transaction scoped to tenant.
+// Configuration writes require tenant scope; reads use explicit tenant filters.
 async function authorizeConfiguration(tx: Tx, actor: string, tenant: string, kind: ConfigurationKind, write: boolean) {
   // Management reads share the same root so their current authority cannot be
   // revoked between the check and the full-row projection.
@@ -578,7 +575,7 @@ export async function configurationCopy(tx: Tx, actor: string, tenant: string, c
 }
 
 // Directories and account facts
-// Transaction-level helpers require the caller to establish tenant scope.
+// Directory/account reads use explicit tenant filters and API authorization.
 const factsFields = ['tenant_id', 'user_id', 'standing', 'first_approved_at', 'has_disciplinary_restriction', 'created_at', 'updated_at', 'created_by', 'updated_by']
 const jsonProjection = (alias: string, fields: string[]) => sql`jsonb_build_object(${sql.join(fields.flatMap(key => [sql`${key}::text`, sql.ref(alias + '.' + key)]))})`
 export async function readMemberDirectory(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<MemberDirectoryRow>> {
@@ -618,7 +615,7 @@ async function lockAccountFacts(tx: Tx, actor: string, tenant: string) {
 }
 
 // Staff and participant permissions
-// Transaction-level helpers require the caller to establish tenant scope.
+// Record reads use explicit tenant filters; permission writes also require tenant scope.
 const recordMetadataColumns = ['tenant_id', 'user_id', 'created_at', 'updated_at', 'created_by', 'updated_by']
 const table = { staff: 'public.tenant_staff_assignments', participant: 'public.community_account_permissions' }
 const columns = {
@@ -673,10 +670,10 @@ export async function setParticipantPermission(tx: Tx, actor: string, tenant: st
 }
 
 // Audit history
-// Transaction-level helpers require the caller to establish tenant scope.
+// History reads use explicit tenant filters and API authorization.
 function history(db: AppDatabase, context: AuthenticatedContext, params: TenantParams, query: HistoryQuery) {
   const actor = context.actorId;
-  return withEligibleActorTransaction(db, context, tx => accountHistory(tx, actor, params.tenantId, query), { initialTenantId: params.tenantId })
+  return withEligibleActorTransaction(db, context, tx => accountHistory(tx, actor, params.tenantId, query))
 }
 function cursorScope(actor: string, tenant: string, query: HistoryQuery) {
   return [actor, tenant, query.target ?? null, query.category ?? null]

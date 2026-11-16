@@ -19,7 +19,7 @@ select ok(not exists(select from pg_trigger where tgrelid='public.tenants'::regc
 select ok(not exists(select from pg_policies where schemaname='public' and policyname in
   ('configuration_settings_edit','api_copy_read','api_copy_insert','api_copy_update','api_copy_delete')),'business configuration policies retired');
 select ok(exists(select from pg_policies where schemaname='public' and tablename='tenant_website_content_overrides'
-  and policyname='command_scope' and cmd='ALL'),'copy retains tenant scope');
+  and policyname='command_update' and cmd='UPDATE' and qual like '%command_scope%' and with_check like '%command_scope%'),'copy writes retain tenant scope');
 select ok(to_regprocedure('app_private.normalize_editable_text()') is null,
   'normalization is fully API-owned after the profile checkpoint');
 select ok(exists(select from pg_policies where tablename=t and policyname=p and permissive='RESTRICTIVE'),'independent archive guard on '||t)

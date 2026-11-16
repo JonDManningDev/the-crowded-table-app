@@ -111,13 +111,11 @@ try {
   await cmd(pending,second,{kind:'join',profile:{displayName:'Pending',bio:null}})
   await inspect(pending,target.id,404)
   // Product profile/account audiences now belong to API predicates. Runtime
-  // facts retain their granted columns, self writes and explicit sharing scope.
+  // facts retain their granted columns and self writes, without read selectors.
   await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     assert.deepEqual((await sql`select user_id from public.user_accounts where user_id=${target.id}`.execute(tx)).rows,[{user_id:target.id}])
-    await sql`select set_config('ct.profile_target',${target.id},true)`.execute(tx)
     assert.equal((await sql`update public.user_accounts set user_is_discoverable=true where user_id=${target.id}`.execute(tx)).numAffectedRows,0n)
-    await sql`select set_config('ct.profile_target','',true)`.execute(tx)
-    assert.deepEqual((await sql`select user_id from public.community_account_preferences where user_id=${target.id}`.execute(tx)).rows,[])
+    assert.equal((await sql`select user_id from public.community_account_preferences where user_id=${target.id} and tenant_id=${second}`.execute(tx)).rows.length,1)
     assert.deepEqual((await sql`select user_id from public.user_account_profiles where user_id=${target.id}`.execute(tx)).rows,[{user_id:target.id}])
   })
   const communityProfile=(actor,user,status=200)=>http(actor,'/api/communities/'+second+'/accounts/'+user+'/profile','GET',undefined,status)
@@ -199,11 +197,11 @@ try {
   assert.ok((await search(viewer)).rows.some(row=>row.user_id===target.id))
   await withEligibleActorTransaction(db, { actorId: viewer.id, requestId: randomUUID() },async tx=>{
     assert.deepEqual((await sql`select user_id from public.user_account_profiles where user_id=${target.id}`.execute(tx)).rows,[{user_id:target.id}])
-    assert.deepEqual((await sql`select blocker_user_id,blocked_user_id from public.user_account_blocks`.execute(tx)).rows,[{blocker_user_id:target.id,blocked_user_id:viewer.id}])
+    assert.deepEqual((await sql`select blocker_user_id,blocked_user_id from public.user_account_blocks where blocker_user_id=${target.id} and blocked_user_id=${viewer.id}`.execute(tx)).rows,[{blocker_user_id:target.id,blocked_user_id:viewer.id}])
     assert.equal((await sql`delete from public.user_account_blocks where blocker_user_id=${target.id}`.execute(tx)).numAffectedRows,0n)
   })
   await withEligibleActorTransaction(db,{actorId:stranger.id,requestId:randomUUID()},async tx=>{
-    assert.deepEqual((await sql`select blocked_user_id from public.user_account_blocks`.execute(tx)).rows,[])
+    assert.deepEqual((await sql`select blocked_user_id from public.user_account_blocks where blocker_user_id=${target.id} and blocked_user_id=${viewer.id}`.execute(tx)).rows,[{blocked_user_id:viewer.id}])
   })
   await unblock(target,viewer.id)
   await assert.rejects(runBlockWriteWithHook(endpoint.href, { actorId: viewer.id, requestId: randomUUID() },

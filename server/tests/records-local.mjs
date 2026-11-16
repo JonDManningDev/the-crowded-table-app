@@ -254,7 +254,7 @@ try {
   await withEligibleActorTransaction(db, { actorId: manager.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     for(const relation of ['public.tenant_staff_assignments','public.community_account_permissions']) {
-      assert.deepEqual((await sql`select user_id from ${sql.table(relation)}`.execute(tx)).rows,[])
+      assert.deepEqual((await sql`select user_id from ${sql.table(relation)} where tenant_id=${tenant}`.execute(tx)).rows,[])
     }
   })
   await cmd(owner,{kind:'archive',archived:false})

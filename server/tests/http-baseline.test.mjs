@@ -85,13 +85,13 @@ test('public, protected and health scopes retain isolated authentication and cac
     }
     for (const headers of [{}, authorization]) {
       const before = h.verifications.length
-      h.queue([], [{ id: tenantId }], [], [{ ...landing, internal_secret: 'omit' }])
+      h.queue([{ id: tenantId }], [{ ...landing, internal_secret: 'omit' }])
       const publicLanding = await h.app.inject({ method, url: '/api/public/communities/test-community', headers })
       assert.equal(publicLanding.statusCode, 200)
       assert.equal(publicLanding.headers['cache-control'], 'no-store')
       if (method === 'HEAD') assert.equal(publicLanding.body, '')
       else assert.deepEqual(publicLanding.json(), landing)
-      h.queue([], [{ id: tenantId }], [], [{ operational_status: 'active', allow_public_directory_visibility: true }], [{ user_id: targetId, display_name: 'Test member', staff_role: null }])
+      h.queue([{ id: tenantId }], [{ operational_status: 'active', allow_public_directory_visibility: true }], [{ user_id: targetId, display_name: 'Test member', staff_role: null }])
       const directory = await h.app.inject({ method, url: '/api/public/communities/test-community/directory', headers })
       assert.equal(directory.statusCode, 200)
       assert.equal(directory.headers['cache-control'], 'no-store')
@@ -278,11 +278,11 @@ test('unauthorized history stays a successful empty page; authorized detail fiel
 
 test('public missing landing/directory map to 404 while a visible empty directory is 200', async t => {
   const h = createHttpHarness(t)
-  h.queue([], [])
+  h.queue([])
   errorResponse(h, await h.app.inject({ url: '/api/public/communities/test-community' }), 404, 'missing', 'no-store')
-  h.queue([], [{ id: tenantId }], [], [{ operational_status: 'active', allow_public_directory_visibility: false }])
+  h.queue([{ id: tenantId }], [{ operational_status: 'active', allow_public_directory_visibility: false }])
   errorResponse(h, await h.app.inject({ url: '/api/public/communities/test-community/directory' }), 404, 'missing', 'no-store')
-  h.queue([], [{ id: tenantId }], [], [{ operational_status: 'active', allow_public_directory_visibility: true }], [])
+  h.queue([{ id: tenantId }], [{ operational_status: 'active', allow_public_directory_visibility: true }], [])
   const response = await h.app.inject({ url: '/api/public/communities/test-community/directory' })
   assert.equal(response.statusCode, 200)
   assert.deepEqual(response.json(), { rows: [], next: null })
@@ -405,8 +405,8 @@ test('business, stale, arbitrary SQL and unconfirmed transport errors are never 
 test('public community reads retry without introducing actor context or eligibility', async t => {
   for (const [url, rows, expected] of [
     ['/api/community-standings', [[]], []],
-    ['/api/public/communities/test-community', [[], [{ id: tenantId }], [], [landing]], landing],
-    ['/api/public/communities/test-community/directory', [[], [{ id: tenantId }], [], [{ operational_status: 'active', allow_public_directory_visibility: true }], []], { rows: [], next: null }],
+    ['/api/public/communities/test-community', [[{ id: tenantId }], [landing]], landing],
+    ['/api/public/communities/test-community/directory', [[{ id: tenantId }], [{ operational_status: 'active', allow_public_directory_visibility: true }], []], { rows: [], next: null }],
   ]) {
     const h = createHttpHarness(t)
     h.queue(databaseFailure('40P01'), ...rows)

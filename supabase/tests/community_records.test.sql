@@ -9,8 +9,8 @@ select ok(to_regprocedure('app_private.can_manage_account_records(uuid,text)') i
 select ok(not exists(select from pg_policies where schemaname='public' and tablename='community_account_permissions'
   and policyname in ('participant_read','participant_edit')),'participant business policies retired');
 select ok(exists(select from pg_policies where schemaname='public' and tablename='community_account_permissions'
-  and policyname=p and cmd=c),'participant runtime retains scoped '||c)
-  from (values ('participant_scope_read','SELECT'),('participant_scope_edit','UPDATE'),('command_create','INSERT')) policies(p,c);
+  and policyname=p and cmd=c),'participant runtime retains '||c||' boundary')
+  from (values ('api_runtime_read','SELECT'),('participant_scope_edit','UPDATE'),('command_create','INSERT')) policies(p,c);
 select ok(not has_column_privilege('ct_api','public.community_account_permissions',c,'UPDATE'),'runtime cannot change participant identity or audit: '||c)
   from unnest(array['tenant_id','user_id','created_at','updated_at','created_by','updated_by']) c;
 select ok(has_column_privilege('ct_api','public.community_account_permissions','can_post_public_events','UPDATE'),'runtime has only intended participant edit');

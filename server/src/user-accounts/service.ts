@@ -132,7 +132,6 @@ const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,upd
 export async function readGlobalProfile(db: AppDatabase, context: AuthenticatedContext, target: string): Promise<GlobalProfile | BlockedProfile> {
   return withEligibleActorTransaction(db, context, async tx => {
     const actor = context.actorId
-    await sql`select set_config('ct.profile_target',${target},true)`.execute(tx)
     // Shared-community consent and standing follow the community-owned sharing rule.
     const row = (await sql<GlobalProfile & { blocked: boolean }>`select block_status.blocked, details.*
       from public.user_account_profiles p

@@ -74,7 +74,8 @@ try {
     assert.equal((await tx.updateTable('user_accounts').set(allOn).where('user_id','=', b.id).executeTakeFirst()).numUpdatedRows, 0n)
     throw new Error('rollback probe')
   }), /rollback probe/)
-  assert.deepEqual(await db.selectFrom('user_accounts').select('user_id').execute(), [])
+  assert.deepEqual(await db.selectFrom('user_accounts').select('user_id').where('user_id','in',[a.id,b.id]).orderBy('user_id').execute(),
+    [a.id,b.id].sort().map(user_id=>({user_id})))
   assert.deepEqual(await (await request(b.token)).json(), allOn)
   // Use authentic signatures with invalid identity claims, including a token
   // from another issuer sharing the local legacy test key.

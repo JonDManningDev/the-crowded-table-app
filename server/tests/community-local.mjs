@@ -107,8 +107,8 @@ try {
   await ownRequest(member, randomUUID(), 404)
   let state = await review(member, member.id)
   await assert.rejects(withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },
-    tx => communityCommand(tx, owner.id, tenant, { kind: 'approve', requestId: second.requestId, revision: state.revision }),
-    { initialTenantId: another }), { statusCode: 404, message: 'missing' })
+    tx => communityCommand(tx, owner.id, tenant, { kind: 'archive', archived: true }),
+    { initialTenantId: another }), { code: '42501' })
   assert.equal((await ownRequest(member)).request.request_id, second.requestId)
   await cmd(other, { kind: 'approve', requestId: second.requestId, revision: state.revision }, 403)
   await cmd(owner, { kind: 'approve', requestId: first.requestId, revision: state.revision }, 409)

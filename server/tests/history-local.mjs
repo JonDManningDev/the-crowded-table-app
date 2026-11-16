@@ -170,21 +170,21 @@ try {
   assert.equal(remainder.next,null)
   assert.equal(new Set([...defaultPage.rows,...remainder.rows].map(row=>row.id)).size,defaultPage.rows.length+remainder.rows.length)
 
-  // Omit API predicates: scoped runtime access is deliberately broader than HTTP.
-  // Semantic privacy belongs to API policies; PostgreSQL retains scope and provenance.
+  // Omit API audience predicates: runtime facts need no actor or tenant scope.
+  // Semantic privacy belongs to the API; writes retain scope and provenance.
   const raw=(viewer,scope=tenant)=>db.transaction().execute(async tx=>{
     if(viewer) await sql`select set_config('request.jwt.claim.sub',${viewer.id},true)`.execute(tx)
     if(scope) await sql`select set_config('ct.tenant_id',${scope},true)`.execute(tx)
-    return (await sql`select id,tenant_id,reason from public.tenant_admin_actions order by id`.execute(tx)).rows
+    return (await sql`select id,tenant_id,reason from public.tenant_admin_actions where tenant_id in (${tenant},${otherTenant}) order by id`.execute(tx)).rows
   })
-  assert.deepEqual(await raw(null),[])
-  assert.deepEqual(await raw(sr,null),[])
+  assert.ok((await raw(null,null)).some(r=>r.id===suspension.id&&r.reason===secret))
+  assert.ok((await raw(sr,null)).some(r=>r.id===suspension.id&&r.reason===secret))
   assert.ok((await raw(manager)).some(r=>r.id===suspension.id))
   assert.ok((await raw(outsider)).some(r=>r.id===suspension.id))
   assert.ok((await raw(sr)).some(r=>r.id===suspension.id&&r.reason===secret))
   assert.ok((await raw(cr)).some(r=>r.id===suspension.id&&r.reason===secret))
   assert.ok((await raw(owner)).some(r=>r.id===legacy[2].id))
-  assert.ok(!(await raw(owner)).some(r=>r.tenant_id===otherTenant))
+  assert.ok((await raw(owner)).some(r=>r.tenant_id===otherTenant))
   await assert.rejects(withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },async tx=>{
     await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
     await sql`insert into public.tenant_admin_actions(tenant_id,target_user_id,action,details)
@@ -272,7 +272,7 @@ try {
   await cmd(owner,{kind:'reappoint',target:sr.id,permissions:{...noPermissions,can_audit_staff_accounts:true}})
   await admin.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1",[sr.id])
   await history(sr,{},tenant,403)
-  assert.deepEqual(await raw(sr),[])
+  assert.ok((await raw(sr)).some(r=>r.id===suspension.id),'runtime facts do not depend on caller eligibility; HTTP still denies the banned actor')
   await admin.query('update auth.users set banned_until=null where id=$1',[sr.id])
   // Observe an actual blocked HTTP request, then commit a privilege/archive change.
   async function afterLockedChange(change,competing) {

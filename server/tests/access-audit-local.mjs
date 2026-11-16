@@ -7,7 +7,7 @@ import { sql } from 'kysely'
 import { readFileSync } from 'node:fs'
 import { accessCatalog } from '../../supabase/tests/access-catalog.mjs'
 import { buildApi } from '../src/app.ts'
-import { connectDatabase } from '../src/database.ts'
+import { connectDatabase, withEligibleActorTransaction } from '../src/database.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
 
@@ -89,8 +89,76 @@ try {
   assert.deepEqual(Object.keys(reviewed).sort(),['request_id','revision','standing']);assert.equal(reviewed.request_id,null)
   const candidates=(await http(owner,path+'/staff-candidates')).rows
   assert.ok(candidates.length);assert.deepEqual(Object.keys(candidates[0]).sort(),['display_name','staff_role','staff_status','standing','tenant_id','user_id'])
+  await http(owner,'/api/me/profile','PUT',{display_name:'Runtime fixture',bio:null})
+  await http(owner,path+'/copy/community.hero.heading','PUT',{text_value:'Runtime fixture'})
+  await http(owner,'/api/me/blocks/'+member.id,'PUT',{confirmed:true})
+  const archiveRelations=['community_accounts','community_account_profiles','community_account_preferences',
+    'community_account_permissions','tenant_settings','tenant_staff_assignments','tenant_website_content_overrides']
+  const archiveFacts=async(tx,visible)=>{
+    for(const relation of archiveRelations) {
+      const rows=(await sql`select tenant_id from ${sql.table('public.'+relation)} where tenant_id=${tenant}`.execute(tx)).rows
+      assert.equal(rows.length>0,visible,relation+' independent archive fence')
+    }
+  }
+  // The actual runtime, including anonymous API work, may read all fifteen
+  // already-granted relations without actor/public/profile/tenant selectors.
+  await db.transaction().execute(async tx=>{
+    await archiveFacts(tx,true)
+    for(const query of [
+      sql`select id from public.tenants where id=${tenant}`,
+      sql`select standing from public.community_standing`,
+      sql`select user_id from public.user_accounts where user_id=${owner.id}`,
+      sql`select user_id from public.user_account_profiles where user_id=${owner.id}`,
+      sql`select blocker_user_id from public.user_account_blocks where blocker_user_id=${owner.id}`,
+      sql`select id from app_private.community_account_requests where tenant_id=${tenant}`,
+      sql`select id from public.tenant_admin_actions where tenant_id=${tenant}`,
+      sql`select category from app_private.tenant_admin_action_categories where action_id in
+        (select id from public.tenant_admin_actions where tenant_id=${tenant})`
+    ]) assert.ok((await query.execute(tx)).rows.length,'granted runtime facts must be readable without context')
+  })
+  const mutationProbes=[
+    sql`update public.tenants set name=name where id=${tenant} returning id`,
+    sql`update public.tenant_settings set auto_approve_users=auto_approve_users where tenant_id=${tenant} returning tenant_id`,
+    sql`update public.community_accounts set standing=standing where tenant_id=${tenant} and user_id=${member.id} returning user_id`,
+    sql`update public.tenant_staff_assignments set can_modify_content=can_modify_content where tenant_id=${tenant} and user_id=${owner.id} returning user_id`,
+    sql`update public.tenant_website_content_overrides set text_value=text_value where tenant_id=${tenant} returning tenant_id`,
+    sql`delete from public.tenant_website_content_overrides where tenant_id=${tenant} returning tenant_id`,
+    sql`delete from app_private.community_account_requests where tenant_id=${tenant} returning id`,
+    sql`update public.user_account_profiles set bio=bio where user_id=${owner.id} returning user_id`
+  ]
+  async function deniedWrites(tx) {
+    for(const probe of mutationProbes) {
+      await sql`savepoint denied_write`.execute(tx)
+      try {
+        let rows=[]
+        try { rows=(await probe.execute(tx)).rows } catch(error) { assert.equal(error.code,'42501') }
+        assert.deepEqual(rows,[],'read/lock visibility must not authorize a mutation')
+      } finally { await sql`rollback to savepoint denied_write`.execute(tx) }
+    }
+  }
+  await db.transaction().execute(async tx=>{
+    await sql`select set_config('ct.tenant_id',${tenant},true)`.execute(tx)
+    await deniedWrites(tx) // A tenant alone grants neither identity nor writes.
+  })
+  for(const scope of [null,randomUUID()]) await withEligibleActorTransaction(db,
+    {actorId:outsider.id,requestId:randomUUID()},async tx=>{
+      if(scope) await sql`select set_config('ct.tenant_id',${scope},true)`.execute(tx)
+      assert.equal((await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows.length,1)
+      await deniedWrites(tx)
+      await sql`savepoint protected_identity`.execute(tx)
+      await assert.rejects(sql`update public.tenants set id=${scope??randomUUID()} where id=${tenant}`.execute(tx),{code:'42501'})
+      await sql`rollback to savepoint protected_identity`.execute(tx)
+    })
+  await assert.rejects(withEligibleActorTransaction(db,{actorId:owner.id,requestId:randomUUID()},async tx=>{
+    assert.equal((await mutationProbes[0].execute(tx)).rows.length,1,'correctly scoped root writes remain permitted')
+    throw Error('rollback permitted scope probe')
+  },{initialTenantId:tenant}),/rollback permitted scope probe/)
   await cmd(owner,{kind:'archive',archived:true});await own(owner,404);await own(member,404)
+  await db.transaction().execute(tx=>archiveFacts(tx,false))
+  await withEligibleActorTransaction(db,{actorId:member.id,requestId:randomUUID()},tx=>archiveFacts(tx,false))
+  await withEligibleActorTransaction(db,{actorId:owner.id,requestId:randomUUID()},tx=>archiveFacts(tx,true))
   await cmd(owner,{kind:'archive',archived:false});assert.equal((await own(member)).request.request_id,request.request_id)
+  await http(owner,'/api/me/blocks/'+member.id,'DELETE')
   await cmd(member,{kind:'withdraw',requestId:request.request_id});assert.deepEqual(await own(member),{request:null})
   await cmd(owner,{kind:'remove',target:member.id,revision:(await http(owner,path+'/accounts/'+member.id+'/review')).revision})
   const returning=await cmd(member,{kind:'reactivate'})
@@ -177,6 +245,8 @@ try {
     }
     await admin.query('begin')
     await admin.query('set local session_replication_role=replica')
+    await admin.query('delete from public.user_account_blocks where blocker_user_id=any($1::uuid[]) or blocked_user_id=any($1::uuid[])',[users])
+    await admin.query('delete from public.user_account_profiles where user_id=any($1::uuid[])',[users])
     await admin.query('delete from app_private.tenant_admin_action_categories where action_id in (select id from public.tenant_admin_actions where tenant_id=any($1::uuid[]))',[tenants])
     await admin.query('delete from app_private.community_account_requests where tenant_id=any($1::uuid[])',[tenants])
     for (const table of ['community_account_permissions','community_account_preferences','tenant_admin_actions','tenant_website_content_overrides','community_account_profiles','community_accounts','tenant_staff_assignments','tenant_settings']) {
