@@ -138,11 +138,13 @@ try {
   assert.equal((await readOwnProfile(db,{actorId:member.id,requestId:randomUUID()})).profile.user_id,member.id)
   // Native role checks omit the application's self predicates deliberately.
   await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
-    assert.ok((await sql`select user_id from public.community_account_preferences`.execute(tx)).rows.every(r=>r.user_id===member.id))
+    assert.deepEqual((await sql`select user_id from public.community_account_preferences
+      where tenant_id=${tenant} and user_id in (${member.id},${owner.id}) order by user_id`.execute(tx)).rows,
+      [member.id,owner.id].sort().map(user_id=>({user_id})))
     const changed=await sql`update public.community_account_profiles set bio='Own only' returning user_id`.execute(tx)
     assert.ok(changed.rows.length && changed.rows.every(r=>r.user_id===member.id))
-    const raw=await sql`select id from public.tenants`.execute(tx)
-    assert.deepEqual(raw.rows,[{id:tenant}])
+    const raw=await sql`select id from public.tenants where id in (${sql.join(tenants)}) order by id`.execute(tx)
+    assert.deepEqual(raw.rows,[...tenants].sort().map(id=>({id})))
   })
   await assert.rejects(withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },tx=>sql`update public.user_account_profiles set updated_by=${other.id}`.execute(tx)),error=>error.code==='42501')
   // Fail after the real INSERT completes but before the service can commit.
@@ -217,7 +219,7 @@ try {
   await prefs(owner,{show_global_profile:true},404)
   await global(member,{display_name:'Global still editable',bio:null})
   await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
-    assert.deepEqual((await sql`select user_id,show_global_profile from public.community_account_preferences`.execute(tx)).rows,[])
+    assert.deepEqual((await sql`select user_id,show_global_profile from public.community_account_preferences where tenant_id=${tenant}`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select * from public.community_account_profiles where tenant_id=${tenant}`.execute(tx)).rows,[])
   })
   await command(owner,{kind:'archive',archived:false})

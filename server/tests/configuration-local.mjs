@@ -223,7 +223,9 @@ try {
     await sql`insert into public.tenant_website_content_overrides(tenant_id,content_key,text_value)
       values(${tenant},'community.hero.heading','Scoped runtime')`.execute(tx)
     assert.equal((await sql`update public.tenant_website_content_overrides set text_value='Changed' where tenant_id=${tenant}`.execute(tx)).numAffectedRows,1n)
-    assert.equal((await sql`update public.tenants set name='Wrong scope' where id=${otherTenant}`.execute(tx)).numAffectedRows,0n)
+    await sql`savepoint wrong_scope`.execute(tx)
+    await assert.rejects(sql`update public.tenants set name='Wrong scope' where id=${otherTenant}`.execute(tx),{code:'42501'})
+    await sql`rollback to savepoint wrong_scope`.execute(tx)
     throw Error('rollback trusted-writer probe')
   }),/rollback trusted-writer probe/)
   for(const patch of [sql`name='  noncanonical  '`,sql`city=''`,sql`state_province=' Region '`,sql`timezone='Not/AZone'`]) {

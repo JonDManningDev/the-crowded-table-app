@@ -237,7 +237,7 @@ try {
     where oid='app_private.begin_actor_context(uuid,uuid)'::regprocedure`), 't');
   console.log('PASS populated actor-context upgrade preserves data and the existing narrow Auth definer');
   const tenantContextSnapshot = applicationSnapshot();
-  apply(...files.filter(file => file >= '20261112000100'));
+  apply(...files.filter(file => file >= '20261112000100' && file < '20261116000100'));
   assert.deepEqual(applicationSnapshot(), tenantContextSnapshot, 'initial-tenant setup preserves populated application rows and history');
   assert.equal(sql("select pg_get_functiondef('app_private.lock_eligible_actor()'::regprocedure)"), authPrimitive);
   assert.equal(sql("select to_regprocedure('app_private.begin_actor_context(uuid,uuid)') is null"), 't');
@@ -247,6 +247,13 @@ try {
       from aclexplode(proacl) a where a.privilege_type='EXECUTE')=array['ct_api','postgres']
     from pg_proc where oid='app_private.begin_actor_context(uuid,uuid,uuid)'::regprocedure`), 't');
   console.log('PASS populated initial-tenant upgrade preserves data, history, narrow Auth definer and exact replacement grant');
+  const trustedReadSnapshot = applicationSnapshot();
+  apply(...files.filter(file => file >= '20261116000100'));
+  assert.deepEqual(applicationSnapshot(), trustedReadSnapshot, 'trusted runtime read policies preserve every populated row, history/category and attribution');
+  assert.equal(sql("select pg_get_functiondef('app_private.lock_eligible_actor()'::regprocedure)"), authPrimitive);
+  assert.equal(sql("select count(*) from pg_policies where schemaname in ('public','app_private') and cmd='ALL'"), '0');
+  assert.equal(sql("select count(*) from pg_policies where schemaname in ('public','app_private') and permissive='RESTRICTIVE' and cmd='SELECT'"), '7');
+  console.log('PASS populated trusted-runtime-read upgrade preserves all data/history, the Auth primitive and seven archive fences');
   assert.equal(sql(`select jsonb_agg(to_jsonb(p) order by tenant_id,user_id) from public.community_account_profiles p`),
     profileSnapshot, 'later policy migrations preserve existing profile bytes and attribution');
   assert.equal(sql(`select bio='  Original bio  ' from public.community_account_profiles where tenant_id='${tenant}' and user_id='${owner}'`), 't');

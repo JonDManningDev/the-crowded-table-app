@@ -250,6 +250,9 @@
     },
     {
       "version": "20261114000100"
+    },
+    {
+      "version": "20261116000100"
     }
   ],
   "relations": [
@@ -727,12 +730,42 @@
     {
       "schemaname": "app_private",
       "tablename": "community_account_requests",
-      "policyname": "command_scope",
+      "policyname": "api_runtime_read",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
-      "cmd": "ALL",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "app_private",
+      "tablename": "community_account_requests",
+      "policyname": "command_delete",
+      "permissive": "PERMISSIVE",
+      "roles": "{ct_api}",
+      "cmd": "DELETE",
       "qual": "(tenant_id = app_private.command_scope())",
+      "with_check": null
+    },
+    {
+      "schemaname": "app_private",
+      "tablename": "community_account_requests",
+      "policyname": "command_insert",
+      "permissive": "PERMISSIVE",
+      "roles": "{ct_api}",
+      "cmd": "INSERT",
+      "qual": null,
       "with_check": "(tenant_id = app_private.command_scope())"
+    },
+    {
+      "schemaname": "app_private",
+      "tablename": "tenant_admin_action_categories",
+      "policyname": "api_runtime_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{ct_api}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
     },
     {
       "schemaname": "app_private",
@@ -745,13 +778,13 @@
       "with_check": "(EXISTS ( SELECT\n   FROM tenant_admin_actions a\n  WHERE ((a.id = tenant_admin_action_categories.action_id) AND (a.tenant_id = app_private.command_scope()))))"
     },
     {
-      "schemaname": "app_private",
-      "tablename": "tenant_admin_action_categories",
-      "policyname": "history_category_read",
+      "schemaname": "public",
+      "tablename": "community_account_permissions",
+      "policyname": "api_runtime_read",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
       "cmd": "SELECT",
-      "qual": "(EXISTS ( SELECT\n   FROM tenant_admin_actions a\n  WHERE (a.id = tenant_admin_action_categories.action_id)))",
+      "qual": "true",
       "with_check": null
     },
     {
@@ -786,22 +819,12 @@
     },
     {
       "schemaname": "public",
-      "tablename": "community_account_permissions",
-      "policyname": "participant_scope_read",
-      "permissive": "PERMISSIVE",
-      "roles": "{ct_api}",
-      "cmd": "SELECT",
-      "qual": "(tenant_id = app_private.command_scope())",
-      "with_check": null
-    },
-    {
-      "schemaname": "public",
       "tablename": "community_account_preferences",
-      "policyname": "api_own_preferences_read",
+      "policyname": "api_runtime_read",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
       "cmd": "SELECT",
-      "qual": "(user_id = app_private.verified_user())",
+      "qual": "true",
       "with_check": null
     },
     {
@@ -827,16 +850,6 @@
     {
       "schemaname": "public",
       "tablename": "community_account_preferences",
-      "policyname": "command_sharing_read",
-      "permissive": "PERMISSIVE",
-      "roles": "{ct_api}",
-      "cmd": "SELECT",
-      "qual": "(tenant_id = app_private.command_scope())",
-      "with_check": null
-    },
-    {
-      "schemaname": "public",
-      "tablename": "community_account_preferences",
       "policyname": "own_preferences_scope_edit",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
@@ -856,22 +869,12 @@
     },
     {
       "schemaname": "public",
-      "tablename": "community_account_preferences",
-      "policyname": "profile_target_sharing_facts",
-      "permissive": "PERMISSIVE",
-      "roles": "{ct_api}",
-      "cmd": "SELECT",
-      "qual": "((( SELECT app_private.verified_user() AS verified_user) IS NOT NULL) AND (user_id = (NULLIF(current_setting('ct.profile_target'::text, true), ''::text))::uuid))",
-      "with_check": null
-    },
-    {
-      "schemaname": "public",
       "tablename": "community_account_profiles",
-      "policyname": "api_community_profile_read",
+      "policyname": "api_runtime_read",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
       "cmd": "SELECT",
-      "qual": "(( SELECT app_private.verified_user() AS verified_user) IS NOT NULL)",
+      "qual": "true",
       "with_check": null
     },
     {
@@ -906,16 +909,6 @@
     },
     {
       "schemaname": "public",
-      "tablename": "community_account_profiles",
-      "policyname": "public_read_scope",
-      "permissive": "PERMISSIVE",
-      "roles": "{ct_api}",
-      "cmd": "SELECT",
-      "qual": "(tenant_id = (NULLIF(current_setting('ct.public_tenant_id'::text, true), ''::text))::uuid)",
-      "with_check": null
-    },
-    {
-      "schemaname": "public",
       "tablename": "community_accounts",
       "policyname": "account_archive_boundary",
       "permissive": "RESTRICTIVE",
@@ -927,37 +920,47 @@
     {
       "schemaname": "public",
       "tablename": "community_accounts",
-      "policyname": "api_community_account_facts",
+      "policyname": "api_runtime_read",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
       "cmd": "SELECT",
-      "qual": "(( SELECT app_private.verified_user() AS verified_user) IS NOT NULL)",
+      "qual": "true",
       "with_check": null
     },
     {
       "schemaname": "public",
       "tablename": "community_accounts",
-      "policyname": "command_scope",
+      "policyname": "command_insert",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
-      "cmd": "ALL",
-      "qual": "(tenant_id = app_private.command_scope())",
+      "cmd": "INSERT",
+      "qual": null,
       "with_check": "(tenant_id = app_private.command_scope())"
     },
     {
       "schemaname": "public",
       "tablename": "community_accounts",
-      "policyname": "public_read_scope",
+      "policyname": "command_update",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
-      "cmd": "SELECT",
-      "qual": "(tenant_id = (NULLIF(current_setting('ct.public_tenant_id'::text, true), ''::text))::uuid)",
-      "with_check": null
+      "cmd": "UPDATE",
+      "qual": "(tenant_id = app_private.command_scope())",
+      "with_check": "(tenant_id = app_private.command_scope())"
     },
     {
       "schemaname": "public",
       "tablename": "community_standing",
       "policyname": "api_standing_reference",
+      "permissive": "PERMISSIVE",
+      "roles": "{ct_api}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tenant_admin_actions",
+      "policyname": "api_runtime_read",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
       "cmd": "SELECT",
@@ -976,33 +979,33 @@
     },
     {
       "schemaname": "public",
-      "tablename": "tenant_admin_actions",
-      "policyname": "history_scope_read",
+      "tablename": "tenant_settings",
+      "policyname": "api_runtime_read",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
       "cmd": "SELECT",
-      "qual": "(tenant_id = app_private.command_scope())",
+      "qual": "true",
       "with_check": null
     },
     {
       "schemaname": "public",
       "tablename": "tenant_settings",
-      "policyname": "command_scope",
+      "policyname": "command_insert",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
-      "cmd": "ALL",
-      "qual": "(tenant_id = app_private.command_scope())",
+      "cmd": "INSERT",
+      "qual": null,
       "with_check": "(tenant_id = app_private.command_scope())"
     },
     {
       "schemaname": "public",
       "tablename": "tenant_settings",
-      "policyname": "public_read_scope",
+      "policyname": "command_update",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
-      "cmd": "SELECT",
-      "qual": "(tenant_id = (NULLIF(current_setting('ct.public_tenant_id'::text, true), ''::text))::uuid)",
-      "with_check": null
+      "cmd": "UPDATE",
+      "qual": "(tenant_id = app_private.command_scope())",
+      "with_check": "(tenant_id = app_private.command_scope())"
     },
     {
       "schemaname": "public",
@@ -1017,22 +1020,32 @@
     {
       "schemaname": "public",
       "tablename": "tenant_staff_assignments",
-      "policyname": "command_scope",
+      "policyname": "api_runtime_read",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
-      "cmd": "ALL",
-      "qual": "(tenant_id = app_private.command_scope())",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tenant_staff_assignments",
+      "policyname": "command_insert",
+      "permissive": "PERMISSIVE",
+      "roles": "{ct_api}",
+      "cmd": "INSERT",
+      "qual": null,
       "with_check": "(tenant_id = app_private.command_scope())"
     },
     {
       "schemaname": "public",
       "tablename": "tenant_staff_assignments",
-      "policyname": "public_read_scope",
+      "policyname": "command_update",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
-      "cmd": "SELECT",
-      "qual": "(tenant_id = (NULLIF(current_setting('ct.public_tenant_id'::text, true), ''::text))::uuid)",
-      "with_check": null
+      "cmd": "UPDATE",
+      "qual": "(tenant_id = app_private.command_scope())",
+      "with_check": "(tenant_id = app_private.command_scope())"
     },
     {
       "schemaname": "public",
@@ -1047,10 +1060,40 @@
     {
       "schemaname": "public",
       "tablename": "tenant_website_content_overrides",
-      "policyname": "command_scope",
+      "policyname": "api_runtime_read",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
-      "cmd": "ALL",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tenant_website_content_overrides",
+      "policyname": "command_delete",
+      "permissive": "PERMISSIVE",
+      "roles": "{ct_api}",
+      "cmd": "DELETE",
+      "qual": "(tenant_id = app_private.command_scope())",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tenant_website_content_overrides",
+      "policyname": "command_insert",
+      "permissive": "PERMISSIVE",
+      "roles": "{ct_api}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(tenant_id = app_private.command_scope())"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tenant_website_content_overrides",
+      "policyname": "command_update",
+      "permissive": "PERMISSIVE",
+      "roles": "{ct_api}",
+      "cmd": "UPDATE",
       "qual": "(tenant_id = app_private.command_scope())",
       "with_check": "(tenant_id = app_private.command_scope())"
     },
@@ -1066,53 +1109,53 @@
     },
     {
       "schemaname": "public",
-      "tablename": "tenant_website_content_overrides",
-      "policyname": "public_read_scope",
+      "tablename": "tenants",
+      "policyname": "api_root_lock",
+      "permissive": "PERMISSIVE",
+      "roles": "{ct_api}",
+      "cmd": "UPDATE",
+      "qual": "true",
+      "with_check": "false"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tenants",
+      "policyname": "api_runtime_read",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
       "cmd": "SELECT",
-      "qual": "(tenant_id = (NULLIF(current_setting('ct.public_tenant_id'::text, true), ''::text))::uuid)",
+      "qual": "true",
       "with_check": null
     },
     {
       "schemaname": "public",
       "tablename": "tenants",
-      "policyname": "api_own_summary",
+      "policyname": "command_insert",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
-      "cmd": "SELECT",
-      "qual": "(id IN ( SELECT my_community_relationships.tenant_id\n   FROM app_private.my_community_relationships() my_community_relationships(tenant_id, is_owned, is_managed, is_member)))",
-      "with_check": null
-    },
-    {
-      "schemaname": "public",
-      "tablename": "tenants",
-      "policyname": "command_scope",
-      "permissive": "PERMISSIVE",
-      "roles": "{ct_api}",
-      "cmd": "ALL",
-      "qual": "(id = app_private.command_scope())",
+      "cmd": "INSERT",
+      "qual": null,
       "with_check": "(id = app_private.command_scope())"
     },
     {
       "schemaname": "public",
       "tablename": "tenants",
-      "policyname": "public_exact_slug",
-      "permissive": "PERMISSIVE",
-      "roles": "{ct_api}",
-      "cmd": "SELECT",
-      "qual": "(slug = NULLIF(current_setting('ct.public_slug'::text, true), ''::text))",
-      "with_check": null
-    },
-    {
-      "schemaname": "public",
-      "tablename": "tenants",
-      "policyname": "public_root_lock",
+      "policyname": "command_update",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
       "cmd": "UPDATE",
-      "qual": "(slug = NULLIF(current_setting('ct.public_slug'::text, true), ''::text))",
-      "with_check": "false"
+      "qual": "(id = app_private.command_scope())",
+      "with_check": "(id = app_private.command_scope())"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "user_account_blocks",
+      "policyname": "api_runtime_read",
+      "permissive": "PERMISSIVE",
+      "roles": "{ct_api}",
+      "cmd": "SELECT",
+      "qual": "true",
+      "with_check": null
     },
     {
       "schemaname": "public",
@@ -1136,42 +1179,42 @@
     },
     {
       "schemaname": "public",
-      "tablename": "user_account_blocks",
-      "policyname": "related_block_facts",
+      "tablename": "user_account_profiles",
+      "policyname": "api_runtime_read",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
       "cmd": "SELECT",
-      "qual": "((( SELECT app_private.verified_user() AS verified_user) = blocker_user_id) OR (( SELECT app_private.verified_user() AS verified_user) = blocked_user_id))",
+      "qual": "true",
       "with_check": null
     },
     {
       "schemaname": "public",
       "tablename": "user_account_profiles",
-      "policyname": "api_global_profile_facts",
+      "policyname": "api_self_profile_insert",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
-      "cmd": "SELECT",
-      "qual": "(( SELECT app_private.verified_user() AS verified_user) IS NOT NULL)",
-      "with_check": null
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(user_id = ( SELECT app_private.verified_user() AS verified_user))"
     },
     {
       "schemaname": "public",
       "tablename": "user_account_profiles",
-      "policyname": "api_self_profile",
+      "policyname": "api_self_profile_update",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
-      "cmd": "ALL",
+      "cmd": "UPDATE",
       "qual": "(user_id = ( SELECT app_private.verified_user() AS verified_user))",
       "with_check": "(user_id = ( SELECT app_private.verified_user() AS verified_user))"
     },
     {
       "schemaname": "public",
       "tablename": "user_accounts",
-      "policyname": "api_account_facts",
+      "policyname": "api_runtime_read",
       "permissive": "PERMISSIVE",
       "roles": "{ct_api}",
       "cmd": "SELECT",
-      "qual": "(( SELECT app_private.verified_user() AS verified_user) IS NOT NULL)",
+      "qual": "true",
       "with_check": null
     },
     {
@@ -1737,6 +1780,21 @@
     },
     {
       "function": "app_private.command_scope()",
+      "dependent": "policy command_delete on table app_private.community_account_requests",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.command_scope()",
+      "dependent": "policy command_delete on table tenant_website_content_overrides",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.command_scope()",
+      "dependent": "policy command_insert on table app_private.community_account_requests",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.command_scope()",
       "dependent": "policy command_insert on table community_account_preferences",
       "deptype": "n"
     },
@@ -1747,67 +1805,32 @@
     },
     {
       "function": "app_private.command_scope()",
+      "dependent": "policy command_insert on table community_accounts",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.command_scope()",
       "dependent": "policy command_insert on table tenant_admin_actions",
       "deptype": "n"
     },
     {
       "function": "app_private.command_scope()",
-      "dependent": "policy command_scope on table app_private.community_account_requests",
+      "dependent": "policy command_insert on table tenant_settings",
       "deptype": "n"
     },
     {
       "function": "app_private.command_scope()",
-      "dependent": "policy command_scope on table app_private.community_account_requests",
+      "dependent": "policy command_insert on table tenant_staff_assignments",
       "deptype": "n"
     },
     {
       "function": "app_private.command_scope()",
-      "dependent": "policy command_scope on table community_accounts",
+      "dependent": "policy command_insert on table tenant_website_content_overrides",
       "deptype": "n"
     },
     {
       "function": "app_private.command_scope()",
-      "dependent": "policy command_scope on table community_accounts",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.command_scope()",
-      "dependent": "policy command_scope on table tenant_settings",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.command_scope()",
-      "dependent": "policy command_scope on table tenant_settings",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.command_scope()",
-      "dependent": "policy command_scope on table tenant_staff_assignments",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.command_scope()",
-      "dependent": "policy command_scope on table tenant_staff_assignments",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.command_scope()",
-      "dependent": "policy command_scope on table tenant_website_content_overrides",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.command_scope()",
-      "dependent": "policy command_scope on table tenant_website_content_overrides",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.command_scope()",
-      "dependent": "policy command_scope on table tenants",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.command_scope()",
-      "dependent": "policy command_scope on table tenants",
+      "dependent": "policy command_insert on table tenants",
       "deptype": "n"
     },
     {
@@ -1822,12 +1845,52 @@
     },
     {
       "function": "app_private.command_scope()",
-      "dependent": "policy command_sharing_read on table community_account_preferences",
+      "dependent": "policy command_update on table community_accounts",
       "deptype": "n"
     },
     {
       "function": "app_private.command_scope()",
-      "dependent": "policy history_scope_read on table tenant_admin_actions",
+      "dependent": "policy command_update on table community_accounts",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.command_scope()",
+      "dependent": "policy command_update on table tenant_settings",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.command_scope()",
+      "dependent": "policy command_update on table tenant_settings",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.command_scope()",
+      "dependent": "policy command_update on table tenant_staff_assignments",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.command_scope()",
+      "dependent": "policy command_update on table tenant_staff_assignments",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.command_scope()",
+      "dependent": "policy command_update on table tenant_website_content_overrides",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.command_scope()",
+      "dependent": "policy command_update on table tenant_website_content_overrides",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.command_scope()",
+      "dependent": "policy command_update on table tenants",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.command_scope()",
+      "dependent": "policy command_update on table tenants",
       "deptype": "n"
     },
     {
@@ -1838,11 +1901,6 @@
     {
       "function": "app_private.command_scope()",
       "dependent": "policy participant_scope_edit on table community_account_permissions",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.command_scope()",
-      "dependent": "policy participant_scope_read on table community_account_permissions",
       "deptype": "n"
     },
     {
@@ -1888,11 +1946,6 @@
     {
       "function": "app_private.is_approved_owner(uuid)",
       "dependent": "policy staff_archive_boundary on table tenant_staff_assignments",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.my_community_relationships()",
-      "dependent": "policy api_own_summary on table tenants",
       "deptype": "n"
     },
     {
@@ -2042,31 +2095,6 @@
     },
     {
       "function": "app_private.verified_user()",
-      "dependent": "policy api_account_facts on table user_accounts",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.verified_user()",
-      "dependent": "policy api_community_account_facts on table community_accounts",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.verified_user()",
-      "dependent": "policy api_community_profile_read on table community_account_profiles",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.verified_user()",
-      "dependent": "policy api_global_profile_facts on table user_account_profiles",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.verified_user()",
-      "dependent": "policy api_own_preferences_read on table community_account_preferences",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.verified_user()",
       "dependent": "policy api_self_edit on table user_accounts",
       "deptype": "n"
     },
@@ -2077,12 +2105,17 @@
     },
     {
       "function": "app_private.verified_user()",
-      "dependent": "policy api_self_profile on table user_account_profiles",
+      "dependent": "policy api_self_profile_insert on table user_account_profiles",
       "deptype": "n"
     },
     {
       "function": "app_private.verified_user()",
-      "dependent": "policy api_self_profile on table user_account_profiles",
+      "dependent": "policy api_self_profile_update on table user_account_profiles",
+      "deptype": "n"
+    },
+    {
+      "function": "app_private.verified_user()",
+      "dependent": "policy api_self_profile_update on table user_account_profiles",
       "deptype": "n"
     },
     {
@@ -2113,16 +2146,6 @@
     {
       "function": "app_private.verified_user()",
       "dependent": "policy own_profile_scope_edit on table community_account_profiles",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.verified_user()",
-      "dependent": "policy profile_target_sharing_facts on table community_account_preferences",
-      "deptype": "n"
-    },
-    {
-      "function": "app_private.verified_user()",
-      "dependent": "policy related_block_facts on table user_account_blocks",
       "deptype": "n"
     }
   ]
