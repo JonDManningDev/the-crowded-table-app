@@ -1,5 +1,7 @@
 # Consolidate initial tenant scope into authenticated transaction setup
 
+**Trusted runtime reads — accepted follow-up specification 2026-11-16.** [Document 26](26-trusted-api-runtime-reads-spec.md), published as [issue #24](https://github.com/JonDManningDev/the-crowded-table-app/issues/24), removes tenant context as an application fact-read prerequisite and removes public/profile read selectors. Its 17 authenticated community read callers will omit unnecessary initial tenant context once read and locking policies change together. The current setup interface, initial/late tenant scope for writes and attribution, protected Auth checks, G-02 and concurrency boundaries remain. Tenant setup is already bundled, so these read callers save no additional SQL submission. The completed consolidation evidence and specification body below remain historical; the follow-up is published but unimplemented, with hosted work separate.
+
 ## Problem Statement
 
 Authenticated community operations currently establish actor and operation context, verify and lock the actor's current Auth eligibility, and then submit a separate database command to establish a tenant that the API already knows. Users wait for that additional sequential database round trip without receiving additional functionality or protection from the separate submission itself.

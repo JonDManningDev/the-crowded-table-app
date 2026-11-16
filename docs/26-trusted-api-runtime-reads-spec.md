@@ -1,0 +1,115 @@
+# Trusted API runtime fact reads
+
+## Problem Statement
+
+The persistent API is the trusted server and owns product authorization. However, several database read policies hide facts from that server until it first declares an account, tenant or public slug in transaction-local configuration. The API must make extra database submissions or carry hidden query prerequisites to obtain the facts needed to decide whether a caller may receive a result.
+
+The exact global-profile operation illustrates the problem: the API already checks the caller, target, discoverability, shared-community standing, sharing consent and bilateral blocks, but must separately declare the target before PostgreSQL exposes the sharing preferences needed by that check. Public community landing and directory operations similarly declare a slug and then a tenant before reading explicitly filtered rows.
+
+Other policies repeat actor, tenant, relationship or parent-row restrictions without adding independent product authorization. These dependencies complicate service methods and make missing configuration look like missing data. Retaining them merely because they exist conflicts with the intended trusted-server boundary.
+
+## Solution
+
+Allow the dedicated application runtime role to read its granted application facts directly, without account-target, public-selector, tenant-selector or caller-audience prerequisites on those reads. Keep product authorization, audience conditions, field projections and pagination rules in the API. Preserve the explicitly accepted independent G-02 archive fences.
+
+Apply this as one coordinated read-policy cleanup, including the affected services, row-lock permissions, mixed read/write policies, verification expectations and documentation. Preserve mutation restrictions, protected Auth access, trusted attribution, database integrity and append-only audit storage. The browser and external Data API roles receive no new access.
+
+## User Stories
+
+1. As a maintainer, I want the persistent API to be the trusted server, so that product authorization has one authoritative owner.
+2. As a maintainer, I want the runtime to read the facts needed for authorization directly, so that database selectors do not obstruct valid decisions.
+3. As a maintainer, I want absent read configuration to stop masquerading as absent data, so that query behavior is understandable.
+4. As a person opening a global profile, I want the API to avoid a separate target-declaration call, so that it does not add unnecessary latency.
+5. As a profile owner, I want discoverability and shared-community consent enforced, so that direct runtime fact access does not publish my profile.
+6. As a community participant, I want qualifying shared communities evaluated consistently, so that any accepted sharing path can authorize a profile read.
+7. As a blocked user, I want either block direction to withhold profile details, so that the existing bilateral privacy contract remains intact.
+8. As an API caller, I want inaccessible profiles to retain their missing response, so that this change reveals no additional profile existence.
+9. As a person browsing global search, I want search eligibility and minimal fields preserved, so that broader server fact reads do not broaden results.
+10. As a visitor opening a community landing, I want the API to query the requested slug directly, so that configuration handshakes do not delay the response.
+11. As a visitor browsing a public directory, I want the API to avoid separate slug and tenant declarations, so that the request requires fewer database submissions.
+12. As a community owner, I want public visibility settings enforced after lock waits, so that a committed change governs the waiting request.
+13. As a visitor, I want inactive or unavailable public communities to keep their existing response, so that selector removal changes no public audience.
+14. As a community participant, I want authenticated read operations to use explicit tenant filters, so that the requested community remains clear in the query.
+15. As a maintainer, I want read operations to omit unnecessary initial tenant context, so that their transaction contract reflects their actual dependencies.
+16. As an applicant, I want my own request response to remain caller-scoped, so that another caller cannot inspect private request state.
+17. As a staff member, I want request queues and staff candidates to retain their distinct permissions, so that fact access does not become command authority.
+18. As a community member, I want directory standing and field restrictions preserved, so that only the intended presentation is returned.
+19. As a community profile reader, I want exact-profile lifecycle and block rules preserved, so that server access does not broaden caller access.
+20. As an account holder, I want profile and preference responses to remain caller-scoped, so that other callers cannot inspect my settings.
+21. As an authorized account-record reader, I want staff and participant records to retain their separate audiences, so that permissions remain independent.
+22. As an audit-history reader, I want category permissions applied before pagination and exact-event results, so that every returned event is authorized.
+23. As a maintainer, I want category facts readable without an extra parent-visibility policy, so that the service controls history disclosure explicitly.
+24. As an account holder, I want personal community summaries to keep their existing filters and fields, so that my community cards remain unchanged.
+25. As a maintainer, I want the summary query to avoid a repeated relationship-based tenant policy, so that the database does not duplicate the service's selection.
+26. As an account holder, I want outgoing block lists to remain caller-scoped, so that broader runtime block reads do not disclose other people's lists.
+27. As a maintainer, I want row-lock permissions to work without read selectors, so that necessary concurrency controls remain available to the API.
+28. As an operator, I want locking permission to grant no additional mutation authority, so that reads cannot bypass retained write restrictions.
+29. As an operator, I want mixed read/write policies separated deliberately, so that simplifying reads does not remove or broaden permitted writes.
+30. As a community participant, I want archived content protected by G-02, so that the database retains its explicitly accepted independent archive boundary.
+31. As a community owner, I want the authorized archived-owner exception preserved, so that legitimate archive administration continues to work.
+32. As an account holder, I want archive-safe community cards preserved without raw archived-row access, so that personal navigation remains useful and bounded.
+33. As an operator, I want existing column grants preserved, so that the change adds no unnecessary fields or table privileges.
+34. As an operator, I want external REST and GraphQL roles denied application access, so that runtime fact access remains confined to the trusted server.
+35. As an operator, I want the runtime to remain a non-owner role without RLS bypass or raw Auth access, so that its infrastructure privileges remain restricted.
+36. As a user, I want current Auth restrictions checked and locked before protected work, so that existing tokens cannot bypass bans or deletion.
+37. As a user changing data, I want trusted actor, tenant and operation attribution preserved, so that stored changes remain accountable.
+38. As a community participant, I want invalid stored states and inactive sharing rejected, so that API ownership does not weaken database integrity.
+39. As an audit reader, I want audit rows and categories to remain append-only, so that historical evidence cannot be rewritten.
+40. As a user making concurrent requests, I want root locks, fresh facts and snapshot boundaries preserved, so that authorization remains correct after waits.
+41. As a user whose transaction retries, I want fresh identity, facts and authorization on each attempt, so that retries cannot reuse stale authority.
+42. As a user sharing a connection pool, I want transaction context cleared after success or failure, so that later requests inherit no previous caller's state.
+43. As an API consumer, I want paths, validation, responses, error privacy and cursors unchanged, so that internal simplification preserves the HTTP contract.
+44. As a maintainer, I want existing real HTTP and runtime test boundaries reused, so that verification proves behavior without new production interfaces.
+45. As an operator, I want clean replay and populated forward-upgrade checks, so that policy changes preserve application data and history.
+46. As a maintainer, I want current and candidate workloads measured on equivalent fixtures, so that performance claims reflect the actual change.
+47. As a project owner, I want planning, implementation and hosted rollout reported separately, so that publication does not silently deploy changes.
+48. As a future contributor, I want obsolete selectors and their assertions removed together, so that a parallel legacy access contract cannot survive.
+
+## Implementation Decisions
+
+- **Read contract:** the dedicated runtime role may SELECT already-granted application facts without declared actor, profile target, public slug, public tenant or command tenant as a read prerequisite. Use role-specific permissive read policies without caller-audience filters. Keep the separate restrictive G-02 policies effective. No new SELECT columns, table grants, role membership, ownership, RLS bypass or external privileges are required. The action-type catalog, which currently has no runtime SELECT grant or consuming query, is not newly granted.
+- **Complete policy inventory:** cover the preference self/command/profile-target read alternatives; public exact-slug and public-tenant read policies; tenant-scoped reads on roots, settings, staff, overrides, accounts, requests, participant permissions and history; parent-dependent category reads; relationship-dependent tenant-summary reads; actor-related block reads; identity-only account/profile read gates; and the read contribution of the self-profile mixed policy. Standing reference reads already satisfy the target. Review every live SELECT and ALL policy rather than changing only the motivating operation.
+- **Global profiles:** remove profile-target setup and the preference policy dependency on it. Keep discoverability, qualifying shared communities, standing, lifecycle, consent and bilateral-block conditions inline in the result query. Preserve one statement snapshot for admission and detail projection. The former profile-target lock policy has already been retired and must not be restored.
+- **Public communities:** remove public-slug/public-tenant configuration and their read policies. Keep exact-slug selection, explicit tenant joins, minimal result fields and public-directory gates in the service and its policies. Anonymous HTTP operations continue to execute through the trusted runtime without fabricating an authenticated actor.
+- **Tenant reads:** remove unnecessary initial-tenant options from the 17 existing authenticated community read operations. This includes request/review/candidate/queue reads, exact community profile and preference reads, configuration reads, directories and account facts, record reads and history. Their queries and fact loaders must retain all required explicit tenant/actor filters. Do not remove authorization loaders, decisions or requirements.
+- **Write context:** retain the existing transaction setup interface, initial tenant support, late creation scope and command-scope helper where mutations or audit attribution require them. Removing a read prerequisite does not remove the trusted actor, operation or tenant linkage for writes. Do not replace the interface or add compatibility overloads merely because read callers omit the optional tenant.
+- **Mixed policies:** split or replace all seven current ALL policies as necessary to separate permissive reads from existing operation-specific mutation restrictions. Preserve the currently granted insert/update/delete behavior, column limits, self-write restrictions, tenant write fences and protected attribution. Do not broaden an ALL policy to make reads succeed.
+- **Locking:** account for PostgreSQL's UPDATE-policy visibility requirements on locking SELECTs. Replace the public root's selector-dependent lock permission with a selector-free lock permission that works for public and authenticated read operations. Retain explicit row filters and the distinction between permission to lock a row and permission to mutate it. Review the combined permissive USING/WITH CHECK behavior with every surviving mutation policy; a lock-only policy is not sufficient evidence by itself that writes remain restricted.
+- **History and blocks:** allow runtime reads of category and block facts without parent-visibility or caller-relationship read filters. Keep parent references, category insertion tenant linkage and append-only storage intact. The history service retains category/target/exact-event authorization before pagination; outgoing block results retain their explicit caller filter and exact-profile queries retain both directed block checks.
+- **Summaries:** remove the relationship-dependent tenant read gate. Retain the fixed caller-only archive-safe relationship function and its community-owned adapter as the accepted G-02 exception. The personal summary operation still selects its communities through that projection and applies its existing filters, fields and cursor contract.
+- **Retained safeguards:** preserve all seven G-02 restrictive policies and their owner/lifecycle helpers, protected Auth accessors and locks, trusted defaults/stamps, immutable identifiers, required roots/references, inactive-sharing rejection, and append-only audit rows/categories. Keep the runtime non-owner and without RLS bypass. The API remains responsible for semantic audit correctness/completeness.
+- **Freshness and retries:** preserve tenant-root locking followed by a separate fresh-facts statement, independent preference-save concurrency, account-before-preference coordination, existing statement snapshots, and complete retries only for confirmed serialization/deadlock failures. Keep transaction-local cleanup and the existing bounded retry/uncertain-commit behavior.
+- **Ownership and HTTP:** service result SQL retains inline audience conditions; policy fact loaders retain their fact SQL, pure decisions and denial requirements. Feature ownership, typed HTTP contracts, validation, serializers, errors, field projection, cursor scopes and route registration remain unchanged. No frontend reorganization or new endpoint is needed.
+- **Delivery:** implement the policy migration, dependent service/lock changes, revised verification expectations and documentation as one coherent change. Use forward migrations; preserve historical migrations and completed checkpoint evidence. Before application edits, reconcile current ownership guidance with this specification. Review catalog differences deliberately instead of regenerating expected fixtures to accept unexplained drift. Complete local verification and a source/catalog diff review before committing the authorized checkpoint. Hosted migration and deployment remain separate.
+
+## Testing Decisions
+
+The user confirmed these existing testing boundaries before publication. No new production testing interface is proposed.
+
+- **Primary behavioral boundary:** use real Auth/HTTP requests through the local API with the actual least-privileged runtime connection. Reuse the existing global-profile, directory, self-service, preferences, community, configuration, records, history and access-audit suites. Pair successful reads with nearest denials for identity, missing targets, cross-tenant inputs, standing, consent, discoverability, blocks, staff permissions and archive state. Verify returned fields, status/error privacy, list eligibility, pagination, cursors and independently authorized exact links.
+- **Direct runtime boundary:** prove that granted ordinary application facts can be read without the retired profile/public/tenant selectors, including on the no-actor runtime path used by public operations. Distinguish this deliberate runtime capability from caller-visible authorization. Replace assertions that relied on missing selectors hiding rows; do not preserve those assertions by adding new selectors. Keep direct denial checks for G-02-covered archived rows, unauthorized mutations, protected columns, raw Auth access, forged attribution and append-only storage. Exercise real runtime connections rather than running application work as an administrator.
+- **Lock and mutation boundary:** use the existing runtime/database concurrency harnesses to verify selector-free root locking and preserved write denial. Cover missing/wrong tenant scope, absent actor context, cross-account writes and the interaction between lock-only and mutation policies. Keep public operations unable to mutate application state. Confirm permitted self/tenant writes and audit inserts still succeed with correct context and attribution.
+- **Archive and summary boundary:** verify every retained G-02 policy for active communities, archived non-owners, missing actor context and approved active owners. Preserve authorized archived cards through the fixed projection without granting raw archived content. History and other special audiences retain their own documented contracts; do not invent new archive restrictions on relations outside G-02.
+- **Concurrency and lifecycle:** retain deterministic tests for public visibility changes and archival while requests wait on roots, staff revocation before fresh-facts reads, sharing/inactivity transitions in both orders, profile/block statement snapshots, rollback and retries. Do not merge a locking statement with a later authorization statement to save a submission. Verify context cleanup after commit/rollback/error and one-connection reuse across actors, tenants and anonymous requests.
+- **External denial:** use the existing real external REST/GraphQL client checks and privilege audit to prove no browser, anonymous, authenticated or service-role application access is introduced. These tests establish a separate trust boundary from the API's own anonymous HTTP operations.
+- **HTTP and migration gates:** preserve the reviewed HTTP fixture and run current injection/wiring checks, server TypeScript, relevant client tests/boundary checks, lint and production build. Run the complete local integration/concurrency/retry/access suites, applicable pgTAP and SQL lint, clean replay, populated forward upgrade and generated-type drift checks. Prove existing data and audit history are preserved. Update only reviewed policy/catalog expectations; distinguish retained database guarantees from product checks owned by the API.
+- **Performance evidence:** pin and measure the unchanged baseline as well as the candidate on equivalent runtime, fixtures, outcome classes and warm/cold conditions. Use existing measurement facilities and runtime/driver boundaries, without production test hooks or timing assertions in regression tests. Confirm one fewer SQL submission for an exact global-profile read, two fewer for successful public landing/directory reads, and one fewer for missing public slugs. Initial tenant setup is already bundled, so the 17 authenticated community reads have no additional submission saving from omitting that selector. Report timings and nested policy-work reductions only when actually measured; separate instrumentation from latency runs and local observations from hosted estimates.
+- **Test quality:** assert externally observable behavior and retained trust contracts rather than helper names, source layout or SQL formatting. Administrative connections may prepare and observe owned synthetic fixtures, but must not stand in for the application runtime. A failed or unavailable required gate blocks implementation completion until resolved or explicitly adjudicated by the user.
+
+## Out of Scope
+
+- New product audiences, privacy controls, profile fields, block effects, activity workflows or user interfaces.
+- Removal of G-02, the approved archive-safe relationship projection, protected Auth access or eligibility locking.
+- General removal of mutation fences, command scope, trusted attribution, integrity constraints or append-only audit protection.
+- Broader column grants, raw Auth grants, database ownership/RLS bypass, or new external Data API access.
+- General query rewrites, eligibility caching, lock removal, or combining root locks with later fresh-facts queries.
+- New testing interfaces, compatibility wrappers, legacy selector fallbacks or parallel access paths.
+- Application implementation during specification publication, hosted migration/verification, API/frontend hosting or production rollout.
+
+## Further Notes
+
+The accepted direction was clarified on 2026-11-16: the persistent API is the trusted server and must be able to read authorization facts without database audience selectors. The user then requested a complete assessment and this specification. Publication is authorized through the to-spec workflow; implementation requires a separate instruction.
+
+The read-only local assessment inspected the catalog through migration 20261114000100: 46 application policies, including 33 SELECT-applicable policies and seven restrictive G-02 archive policies; 19 application functions; and 15 runtime-readable application relations. The relevant policies, function definitions, dependencies and runtime grants matched the reviewed catalog. External application relation/function grants were empty. Capture time and rotating Supabase realtime message partitions differed; no application publication was introduced. Hosted state was not inspected.
+
+The submission savings above are source-derived expectations, not measured candidate performance. The earlier actor-context and initial-tenant consolidation checkpoints remain completed history. This specification supersedes their retention of selectors as runtime read prerequisites while preserving the write/attribution and archive boundaries. The result-SQL ownership follow-up remains authoritative for inline service audiences and policy fact gathering. Reconcile the current persistent-API proposal, policy ADR/plan, architecture guidance, tenant-setup specification, decision register, documentation index and implementation-status record with that distinction; do not rewrite historical milestones as if this cleanup were already implemented.

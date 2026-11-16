@@ -1,5 +1,17 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Trusted API runtime reads — specification published 2026-11-16
+
+The user requested a complete read-only assessment and then invoked to-spec. The [specification](26-trusted-api-runtime-reads-spec.md) is published as [issue #24](https://github.com/JonDManningDev/the-crowded-table-app/issues/24), labelled `ready-for-agent`. The user confirmed the existing real Auth/HTTP, direct-runtime/external-client, HTTP-contract, replay/upgrade and performance-measurement boundaries before publication. Read-back verified the exact issue body, title, open state and label.
+
+The assessment inspected the local catalog through `20261114000100`: 46 policies, including 33 SELECT-applicable policies and seven G-02 fences; 19 application functions; and 15 runtime-readable relations. Relevant catalog definitions/dependencies and runtime grants match the reviewed fixture; external application relation/function grants are empty. Only capture time and rotating platform realtime partitions differ. The proposed target removes fact-read selectors and audience restrictions while preserving G-02, write/attribution integrity, protected Auth and concurrency. Source-derived submission savings are one for exact global profiles and two for successful public landing/directory reads; candidate timings have not been measured. No implementation, migration, new verification run of the candidate or hosted work is included. Implementation requires a separate instruction.
+
+## Standalone block and unblock operations — 2026-11-16
+
+`blockUser` and `unblockUser` now follow the existing user-account service pattern: the factory binds `db`, and standalone functions in the Account blocks section own their eligibility transactions and SQL. Existing self-target checks, unknown-target acknowledgment, idempotence and overlapping-write behavior are preserved. The source diff was reviewed; no migration or deployment is included, and no implementation work remains for this structural change.
+
+Verification passed server TypeScript, all 76 HTTP tests against the unchanged baseline, root lint, the production build and `server/tests/global-profiles-local.mjs`. The real Auth/HTTP suite covers block/unblock, overlapping writes, attribution, idempotence, rollback, snapshot revocation and runtime/REST/GraphQL bypass denial. The saved forwarded ports were unavailable; the passing run used process-only overrides for the verified local Auth/PostgreSQL ports 54321/54322. The existing Vite chunk-size advisory remains.
+
 ## Overlapping block and unblock commands — 2026-11-16
 
 `blockUser` and `unblockUser` now use their existing insert and delete statements without the advisory pair lock. Both still reject self-targets case-insensitively. Under [revised AM-04](16-intended-access-matrix.md#am-04--blocks-and-profile-shared-community-visibility), either final state is valid when the requests overlap. A local integration test holds the insert before commit, verifies the overlapping unblock completes, then verifies a later unblock clears the committed row. The [frontend guidance](05-frontend-patterns.md#block-confirmation-with-existing-items--accepted-target-2026-10-15) records the future shared busy state. No database migration or hosted deployment is included.
