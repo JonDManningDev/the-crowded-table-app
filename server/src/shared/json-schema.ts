@@ -21,7 +21,6 @@ export const auditFields = {
   created_by: nullableUuid,
   updated_by: nullableUuid,
 } as const
-export const userParams = Type.Object({ userId: uuid }, { additionalProperties: false })
 export const paging = {
   cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
   limit: Type.Optional(Type.String({ pattern: '^(100|[1-9][0-9]?)$' })),

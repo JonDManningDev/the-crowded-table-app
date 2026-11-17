@@ -2,6 +2,8 @@
 
 ## Shared server JSON schema fragments — accepted 2026-11-17
 
+Parameter ownership follow-up accepted 2026-11-17: move `userParams` back into the user-account `json-schema.ts` as a feature-local definition and remove the shared export/import. Its UUID validation and closed-object options remain unchanged. This supersedes user-param sharing in the initial extraction below.
+
 Naming follow-up accepted 2026-11-17: rename the shared `attribution` schema fragment to `auditFields` and update its imports/spreads without an alias. Its four fields and emitted schemas are unchanged.
 
 Explicit options accepted 2026-11-17: remove `optionalFields` because its name does not convey the options it contains. Inline `additionalProperties: false` and `required: []` at its callers, retaining `minProperties: 1` where present. This supersedes that constant's inclusion in the consolidation below and preserves the HTTP schema.

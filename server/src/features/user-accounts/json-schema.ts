@@ -2,8 +2,10 @@ import { Type } from 'typebox'
 import { errorResponse } from '../../http-errors.ts'
 import {
   uuid, nullableUuid, nullableText, timestamp,
-  noQuery, emptyQuery, errors, userParams, paging, page, nullableObject,
+  noQuery, emptyQuery, errors, paging, page, nullableObject,
 } from '../../shared/json-schema.ts'
+
+const userParams = Type.Object({ userId: uuid }, { additionalProperties: false })
 
 // User account preferences
 const preferences = Type.Object({
