@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Community schema declaration sections — locally verified 2026-11-17
+
+The user's three headings now group clear matches in `communities/json-schema.ts`: ten account/profile/preferences/directory exports, eight configuration/landing/copy exports, and eight staff-review/permission exports. Each section places supporting declarations together before its exports. Cross-section params, command errors and staff badge definitions precede the headings. Creation/lifecycle retains its two exports and audit history its one export in their existing groups for this initial pass. The [architecture exception](22-fastify-architecture-refactoring-plan.md#2-feature-ownership-and-parallel-organization) records that route/service sections and operation order are unchanged.
+
+An AST comparison confirms all 62 declaration bodies and all imports are unchanged; only ordering, section comments and spacing changed. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review found no dependency-order or schema changes. Database integration suites were not rerun for this declaration-order-only change. The supplied community headings are incorporated into this checkpoint; existing user-account edits and shared-file spacing remain outside it. Vite retains its existing large-chunk advisory. No implementation work remains for this first pass; further grouping is separate. No deployment is included.
+
 ## Shared client error response map name — locally verified 2026-11-17
 
 At the user's request, the shared `errors` map is renamed to `clientErrors`, updating both feature imports/spreads and the community-specific `commandErrors` extension without an alias. The 400/401/403/404 definitions and emitted schemas are unchanged. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review confirms identifier changes only in application code; pre-existing user-account edits and shared-file spacing remain outside this checkpoint. Database integration suites were not rerun for this naming-only change. No implementation work remains; no deployment is included.

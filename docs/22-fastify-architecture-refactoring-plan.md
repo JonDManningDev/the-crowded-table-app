@@ -107,6 +107,8 @@ Shared JSON schema fragments — accepted 2026-11-17: `server/src/shared/json-sc
 
 Each feature uses identical section names and ordering across routes, HTTP schemas and services. Communities/user accounts organize their standalone contracts consistently with those operations where applicable. Within a section, route declarations, public service operations and schema exports follow the same operation order.
 
+Community schema organization exception (2026-11-17): at the user's request, `communities/json-schema.ts` groups clear matches under **Accounts and profiles**, **Tenant/community settings and configuration**, and **Staff roles, permissions, and actions**. Each section lists supporting declarations together before its exports; cross-section helpers precede the groups. Creation/lifecycle and audit history retain their existing groups for this first pass. Route/service organization and HTTP contracts remain unchanged. See the [decision](08-decisions-and-open-questions.md#community-http-schema-declaration-sections--accepted-2026-11-17).
+
 User-requested schema grouping exception (2026-11-17): `user-accounts/json-schema.ts` groups own-profile, discovery and other-profile schemas together under **User account profile**, before **User account communities**. This source grouping preserves the HTTP contracts and does not change route or service ordering.
 
 Use concise section comments. Place supporting helpers immediately after their related operations; place genuinely feature-wide helpers in a final `Internal helpers` section. Shared schema fragments may precede the operation sections.
