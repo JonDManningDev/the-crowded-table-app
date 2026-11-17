@@ -6,6 +6,8 @@ The user requested an initial grouping under **Accounts and profiles**, **Tenant
 
 ## Shared server JSON schema fragments — accepted 2026-11-17
 
+Explicit error responses accepted 2026-11-17: the user prefers seeing each error status directly in the operation response schema. Remove `clientErrors` and `commandErrors` entirely, expanding their existing 400/401/403/404 and optional 409 entries at every consumer without aliases or replacement maps. Preserve each operation's current status set, including history's explicit 400/401/403 responses. Remove the shared module's unused error-response import. This supersedes the earlier error-map sharing/naming decisions and command-error helper placement.
+
 Directory paging reuse accepted 2026-11-17: community `directoryQuery` uses the shared `paging` properties, preserving its existing cursor/limit validation and explicit closed-object/empty-required options.
 
 Client-error naming accepted 2026-11-17: rename the shared `errors` response map to `clientErrors` and update both feature consumers without an alias. Preserve its 400/401/403/404 schemas and the community-specific command error extension.

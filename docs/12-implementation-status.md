@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Explicit operation error responses — locally verified 2026-11-17
+
+At the user's request, `clientErrors` and `commandErrors` are removed entirely. Their former consumers in both feature schema files list the existing 400/401/403/404 entries individually, with 409 retained only at former command-map sites. Shared-schema error imports and the feature map imports/declarations are removed without aliases or replacement maps. History's explicit 400/401/403 responses and all other existing status sets remain unchanged. Expanded response maps list each error on its own line.
+
+Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review confirms map expansion/import cleanup only; existing community/user-account edits and shared-file spacing remain outside this checkpoint. Database integration suites were not rerun for this schema-equivalent refactor. No source references to either map remain. No implementation work remains; no deployment is included.
+
 ## Community directory shared paging — locally verified 2026-11-17
 
 At the user's request, community `directoryQuery` imports and uses the shared `paging` properties. Cursor/limit constraints and `additionalProperties: false`/`required: []` options are unchanged. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review confirms import/property reuse only; pre-existing user-account edits and shared-file spacing remain outside this checkpoint. Database integration suites were not rerun for this schema-equivalent refactor. No implementation work remains; no deployment is included.

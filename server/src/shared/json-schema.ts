@@ -1,5 +1,4 @@
 import { Type, type Static, type TObject, type TProperties, type TSchema } from 'typebox'
-import { errorResponse } from '../http-errors.ts'
 
 export const uuid = Type.String({ format: 'uuid' })
 export const nullableUuid = Type.Union([uuid, Type.Null()])
@@ -13,8 +12,6 @@ export const nullableTimestamp = Type.Union([timestamp, Type.Null()])
 // These operations originally omit `required`; keep that distinct from an empty array.
 export const noQuery = Type.Object({}, { additionalProperties: false })
 export const emptyQuery = Type.Object({}, { additionalProperties: false, required: [] })
-export const clientErrors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse } as const
-
 export const auditFields = {
   created_at: timestamp,
   updated_at: timestamp,

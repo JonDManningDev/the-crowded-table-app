@@ -2,7 +2,7 @@ import { Type } from 'typebox'
 import { errorResponse } from '../../http-errors.ts'
 import {
   uuid, nullableUuid, timestamp, nullableTimestamp, nullableText,
-  emptyQuery, noQuery, clientErrors, auditFields, nullableObject, paging,
+  emptyQuery, noQuery, auditFields, nullableObject, paging,
 } from '../../shared/json-schema.ts'
 import { copySlots, settingFields, type CopyKey, staffFlags, communityPreferenceFields } from './types.ts'
 
@@ -13,8 +13,6 @@ const accountParams = Type.Object({ tenantId: uuid, userId: uuid }, { additional
 const slugParams = Type.Object({
   slug: Type.String({ minLength: 3, maxLength: 63, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$' }),
 }, { additionalProperties: false })
-
-const commandErrors = { ...clientErrors, 409: errorResponse } as const
 
 const staffRoles = ['owner', 'admin'] as const
 
@@ -83,7 +81,10 @@ export const publicDirectorySchema = {
       rows: Type.Array(Type.Object({ display_name: Type.String(), staff_role: nullableStaffRole }, { additionalProperties: false })),
       next: nullableText,
     }, { additionalProperties: false }),
-    ...clientErrors,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
   },
 } as const
 
@@ -98,7 +99,11 @@ export const ownRequestSchema = {
         requested_at: timestamp,
       }, { additionalProperties: false })),
     }, { additionalProperties: false }),
-    ...commandErrors,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+    409: errorResponse,
   },
 } as const
 
@@ -113,20 +118,38 @@ export const saveOwnProfileSchema = {
   params: tenantParams,
   querystring: noQuery,
   body: profileInputSchema,
-  response: { 200: Type.Object({ tenantId: uuid }, { additionalProperties: false }), ...clientErrors },
+  response: {
+    200: Type.Object({ tenantId: uuid }, { additionalProperties: false }),
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 export const readOwnPreferencesSchema = {
   params: tenantParams,
   querystring: noQuery,
-  response: { 200: preferenceResponse, ...clientErrors },
+  response: {
+    200: preferenceResponse,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 export const saveOwnPreferencesSchema = {
   params: tenantParams,
   querystring: noQuery,
   body: Type.Partial(preferenceResponse, { additionalProperties: false, minProperties: 1 }),
-  response: { 200: preferenceResponse, ...clientErrors },
+  response: {
+    200: preferenceResponse,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 export const memberDirectorySchema = {
@@ -141,7 +164,10 @@ export const memberDirectorySchema = {
       }, { additionalProperties: false })),
       next: nullableText,
     }, { additionalProperties: false }),
-    ...clientErrors,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
   },
 } as const
 
@@ -150,14 +176,23 @@ export const ownerAccountsSchema = {
   querystring: directoryQuery,
   response: {
     200: Type.Object({ rows: Type.Array(accountFacts), next: nullableText }, { additionalProperties: false }),
-    ...clientErrors,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
   },
 } as const
 
 export const accountFactsSchema = {
   params: accountParams,
   querystring: emptyQuery,
-  response: { 200: accountFacts, ...clientErrors },
+  response: {
+    200: accountFacts,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 /*
@@ -219,46 +254,88 @@ export const readLandingSchema = {
 export const readDetailsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
-  response: { 200: detailsResponse, ...clientErrors },
+  response: {
+    200: detailsResponse,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 export const saveDetailsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
   body: Type.Partial(Type.Object(detailInput, { additionalProperties: false }), { additionalProperties: false, required: [], minProperties: 1 }),
-  response: { 200: detailsResponse, ...clientErrors },
+  response: {
+    200: detailsResponse,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 export const readSettingsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
-  response: { 200: settingsResponse, ...clientErrors },
+  response: {
+    200: settingsResponse,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 export const saveSettingsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
   body: Type.Partial(settingsInput, { additionalProperties: false, required: [], minProperties: 1 }),
-  response: { 200: settingsResponse, ...clientErrors },
+  response: {
+    200: settingsResponse,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 export const readCopySchema = {
   params: tenantParams,
   querystring: emptyQuery,
-  response: { 200: copyResponse, ...clientErrors },
+  response: {
+    200: copyResponse,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 export const saveCopySchema = {
   params: copyParams,
   querystring: emptyQuery,
   body: Type.Object({ text_value: Type.String({ maxLength: 2000, minLength: 1 }) }, { additionalProperties: false }),
-  response: { 200: copyResponse, ...clientErrors },
+  response: {
+    200: copyResponse,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 export const deleteCopySchema = {
   params: copyParams,
   querystring: emptyQuery,
-  response: { 200: copyResponse, ...clientErrors },
+  response: {
+    200: copyResponse,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 /*
@@ -290,7 +367,11 @@ export const reviewAccountSchema = {
   querystring: emptyQuery,
   response: {
     200: Type.Object({ standing, revision: uuid, request_id: nullableUuid }, { additionalProperties: false }),
-    ...commandErrors,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+    409: errorResponse,
   },
 } as const
 
@@ -309,7 +390,11 @@ export const staffCandidatesSchema = {
       }, { additionalProperties: false })),
       next: nullableUuid,
     }, { additionalProperties: false }),
-    ...commandErrors,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+    409: errorResponse,
   },
 } as const
 
@@ -331,7 +416,11 @@ export const pendingRequestsSchema = {
       }, { additionalProperties: false })),
       next: nullableUuid,
     }, { additionalProperties: false }),
-    ...commandErrors,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+    409: errorResponse,
   },
 } as const
 
@@ -340,14 +429,23 @@ export const listStaffSchema = {
   querystring: recordQuery,
   response: {
     200: Type.Object({ rows: Type.Array(staffRecord), next: nullableText }, { additionalProperties: false }),
-    ...clientErrors,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
   },
 } as const
 
 export const readStaffSchema = {
   params: accountParams,
   querystring: emptyQuery,
-  response: { 200: staffRecord, ...clientErrors },
+  response: {
+    200: staffRecord,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 export const listParticipantPermissionsSchema = {
@@ -355,21 +453,36 @@ export const listParticipantPermissionsSchema = {
   querystring: recordQuery,
   response: {
     200: Type.Object({ rows: Type.Array(participantPermissions), next: nullableText }, { additionalProperties: false }),
-    ...clientErrors,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
   },
 } as const
 
 export const readParticipantPermissionsSchema = {
   params: accountParams,
   querystring: emptyQuery,
-  response: { 200: participantPermissions, ...clientErrors },
+  response: {
+    200: participantPermissions,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 export const saveParticipantPermissionsSchema = {
   params: accountParams,
   querystring: emptyQuery,
   body: Type.Object({ can_post_public_events: Type.Boolean() }, { additionalProperties: false }),
-  response: { 200: participantPermissions, ...clientErrors },
+  response: {
+    200: participantPermissions,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+  },
 } as const
 
 /*
@@ -401,7 +514,14 @@ export const createCommunitySchema = {
     profile: creationProfile,
   }, { additionalProperties: false }),
   querystring: emptyQuery,
-  response: { 201: commandResponse, ...commandErrors },
+  response: {
+    201: commandResponse,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+    409: errorResponse,
+  },
 } as const
 
 export const executeCommandSchema = {
@@ -427,7 +547,14 @@ export const executeCommandSchema = {
     Type.Object({ kind: Type.Literal('archive'), archived: Type.Boolean() }, { additionalProperties: false }),
   ]),
   querystring: emptyQuery,
-  response: { 200: commandResponse, ...commandErrors },
+  response: {
+    200: commandResponse,
+    400: errorResponse,
+    401: errorResponse,
+    403: errorResponse,
+    404: errorResponse,
+    409: errorResponse,
+  },
 } as const
 
 /*
