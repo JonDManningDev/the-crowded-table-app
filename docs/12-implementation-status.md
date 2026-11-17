@@ -1,5 +1,17 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Consolidated user account profile reply schema — locally verified 2026-11-17
+
+At the user's explicit request, `profile` now uses the former `globalProfile` definition; `globalProfile` is removed and discovery/other-profile replies reference `profile`. Own-profile replies consequently no longer impose the input's display-name/bio length limits. Save input limits remain intact. The HTTP fixture was edited only to remove those six response constraint entries for GET/PUT `/api/me/profile`; it was not regenerated. The focused HTTP test verifies rejection of overlong input and preservation of longer stored text and field projection in own read/save replies. Server source/test TypeScript checks, root lint and all 30 HTTP-baseline/user-account HTTP tests pass. No deployment is included; this schema change has no remaining implementation work.
+
+## User account profile schema grouping — locally verified 2026-11-17
+
+At the user's request, the former Global profiles schema block now sits under **User account profile** in `server/src/user-accounts/json-schema.ts`. The [architecture plan](22-fastify-architecture-refactoring-plan.md#2-feature-ownership-and-parallel-organization) records this grouping exception. Schema definitions and HTTP behavior are preserved. Server source/test TypeScript checks and all 30 HTTP-baseline/user-account HTTP tests pass with the existing fixture unchanged. No deployment or remaining implementation work is included in this source reorganization.
+
+## Explicit account preference HTTP schema — locally verified 2026-11-17
+
+At the user's request, `server/src/user-accounts/json-schema.ts` declares the three required boolean preference fields directly in a closed `Type.Object`, removing its `accountPreferenceFields` import. The existing HTTP fixture passes unchanged. Server source/test TypeScript checks, root lint and all 30 HTTP-baseline/user-account HTTP tests pass. No deployment is included; no remaining work is required for this schema declaration change.
+
 ## Global-profile operation names and self audience — locally verified 2026-11-17
 
 The user authorized the [accepted operation plan](08-decisions-and-open-questions.md#global-profile-operation-names-and-self-audience--accepted-2026-11-17). Server exports/composition/routes/schema identifiers and existing client adapter/hooks/tests now use `readOwnGlobalProfile`, `readOtherGlobalProfile` and `saveGlobalProfile`. The exact-target SQL no longer grants access through self ownership. Discoverability or qualifying shared-community consent may still authorize self; no self-target rejection is added. Own read/save remain identity-derived, with existing normalization, attribution, upsert, transaction and missing-profile contracts. No compatibility aliases, other-profile client adapter, new UI, community-operation renames, database changes or deployment are included. The universal prohibition on mutating another user's global/community profile is recorded without introducing deletion or additional self-management capabilities.

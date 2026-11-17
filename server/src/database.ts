@@ -24,7 +24,9 @@ export type AppDatabase = ReturnType<typeof connectDatabase>
  */
 
 export type AuthenticatedContext = Readonly<{ actorId: string; requestId: string }>
+
 type ActorTransactionOptions = Readonly<{ initialTenantId: string }>
+
 export class IneligibleActorError extends Error {
   constructor() { super('Actor is ineligible'); this.name = 'IneligibleActorError' }
 }

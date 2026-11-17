@@ -98,6 +98,8 @@ No additional architectural directories, repository layer, DI container, validat
 
 Each feature uses identical section names and ordering across routes, HTTP schemas and services. Communities/user accounts organize their standalone contracts consistently with those operations where applicable. Within a section, route declarations, public service operations and schema exports follow the same operation order.
 
+User-requested schema grouping exception (2026-11-17): `user-accounts/json-schema.ts` groups own-profile, discovery and other-profile schemas together under **User account profile**, before **User account communities**. This source grouping preserves the HTTP contracts and does not change route or service ordering.
+
 Use concise section comments. Place supporting helpers immediately after their related operations; place genuinely feature-wide helpers in a final `Internal helpers` section. Shared schema fragments may precede the operation sections.
 
 Sections are navigation aids, not additional plugins or directories.

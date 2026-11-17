@@ -20,7 +20,6 @@ import type {
   UserAccountDependencies,
 } from './types.ts'
 
-// Composition binds resources; implementations follow the shared section order.
 export function createUserAccountService({ db, cursors }: UserAccountDependencies) {
   return {
     readAccountPreferences(context: AuthenticatedContext) { return readAccountPreferences(db, context) },

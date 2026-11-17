@@ -1,5 +1,4 @@
 import { Type, type TSchema } from 'typebox'
-import { accountPreferenceFields } from './types.ts'
 import { errorResponse } from '../http-errors.ts'
 import { nullableObject } from '../http-schema.ts'
 
@@ -21,20 +20,25 @@ const paging = {
 const page = <T extends TSchema>(items: T) =>
   Type.Object({ rows: Type.Array(items), next: nullableText }, closed)
 
-// Account preferences
-const preferences = Type.Record(Type.Enum(accountPreferenceFields), Type.Boolean(), closed)
+// User account preferences
+const preferences = Type.Object({
+  user_is_discoverable: Type.Boolean(),
+  enable_matchmaking: Type.Boolean(),
+  allow_direct_messages: Type.Boolean(),
+}, closed)
 const preferencesResponse = { 200: preferences, 403: errorResponse, 404: errorResponse }
 export const readAccountPreferencesSchema = { querystring: noQuery, response: preferencesResponse }
 export const saveAccountPreferencesSchema = { querystring: noQuery, body: preferences, response: preferencesResponse }
 
-// Own profile
+// User account profile
 const profileInputSchema = Type.Object({
   display_name: Type.String({ minLength: 1, maxLength: 80 }),
   bio: Type.Union([Type.String({ maxLength: 2000 }), Type.Null()]),
 }, closed)
 const profile = Type.Object({
   user_id: uuid,
-  ...profileInputSchema.properties,
+  display_name: Type.String(),
+  bio: nullableText,
   created_at: timestamp,
   updated_at: timestamp,
   created_by: nullableUuid,
@@ -44,7 +48,12 @@ const profileResponse = Type.Object({ profile: nullableObject(profile) }, closed
 export const readOwnGlobalProfileSchema = { querystring: noQuery, response: { 200: profileResponse, ...errors } }
 export const saveGlobalProfileSchema = { querystring: noQuery, body: profileInputSchema, response: { 200: profileResponse, ...errors } }
 
-// My communities
+const discoveryQuery = Type.Object({ ...paging, q: Type.Optional(Type.String({ maxLength: 120 })) },
+  { ...closed, required: [] })
+export const discoverGlobalProfilesSchema = { querystring: discoveryQuery, response: { 200: page(Type.Pick(profile, ['user_id', 'display_name'])), ...errors } }
+export const readOtherGlobalProfileSchema = { params: userParams, querystring: emptyQuery, response: { 200: Type.Union([profile, Type.Object({ status: Type.Literal('blocked') }, closed)]), ...errors } }
+
+// User account communities
 const summary = Type.Object({
   id: uuid,
   name: Type.String(),
@@ -63,21 +72,6 @@ const summaryQuery = Type.Object({
   limit: Type.Optional(Type.String({ pattern: '^([1-9]|[1-9][0-9]|100)$' })),
 }, closed)
 export const listMyCommunitiesSchema = { querystring: summaryQuery, response: { 200: page(summary), ...errors } }
-
-// Global profiles
-const globalProfile = Type.Object({
-  user_id: uuid,
-  display_name: Type.String(),
-  bio: nullableText,
-  created_at: timestamp,
-  updated_at: timestamp,
-  created_by: nullableUuid,
-  updated_by: nullableUuid,
-}, closed)
-const discoveryQuery = Type.Object({ ...paging, q: Type.Optional(Type.String({ maxLength: 120 })) },
-  { ...closed, required: [] })
-export const discoverGlobalProfilesSchema = { querystring: discoveryQuery, response: { 200: page(Type.Pick(globalProfile, ['user_id', 'display_name'])), ...errors } }
-export const readOtherGlobalProfileSchema = { params: userParams, querystring: emptyQuery, response: { 200: Type.Union([globalProfile, Type.Object({ status: Type.Literal('blocked') }, closed)]), ...errors } }
 
 // Account blocks
 const block = Type.Object({ blocker_user_id: uuid, blocked_user_id: uuid, created_at: timestamp, created_by: uuid }, closed)

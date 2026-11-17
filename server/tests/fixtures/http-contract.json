@@ -4611,7 +4611,6 @@
                 "bio": {
                   "anyOf": [
                     {
-                      "maxLength": 2000,
                       "type": "string"
                     },
                     {
@@ -4635,8 +4634,6 @@
                   ]
                 },
                 "display_name": {
-                  "maxLength": 80,
-                  "minLength": 1,
                   "type": "string"
                 },
                 "updated_at": {
@@ -7286,7 +7283,6 @@
                 "bio": {
                   "anyOf": [
                     {
-                      "maxLength": 2000,
                       "type": "string"
                     },
                     {
@@ -7310,8 +7306,6 @@
                   ]
                 },
                 "display_name": {
-                  "maxLength": 80,
-                  "minLength": 1,
                   "type": "string"
                 },
                 "updated_at": {

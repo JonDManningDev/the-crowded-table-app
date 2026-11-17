@@ -655,6 +655,8 @@ Declare the community command and account-block source variants directly with Ty
 
 Use native unions for nullable strings with maximum lengths. Preserve existing request limits and valid replies, including null and values at the limit. Rejecting overlong strings returned by the service is an accepted difference.
 
+User-account profile reply consolidation (2026-11-17): at the user's explicit request, replace `profile` with the former `globalProfile` definition and remove `globalProfile`. Own, discovery and other-profile replies use the same closed profile definition with unconstrained string display names and nullable text biographies. Save inputs retain their existing length limits. This supersedes the preceding overlong-reply rejection rule for user-account profiles only; community profiles retain their existing schemas. Reconsider reply constraints if the response contract independently requires them.
+
 The design interview settled these choices. See the [follow-up plan](22-fastify-architecture-refactoring-plan.md#6-workspace-ownership-and-typebox-follow-up--2026-11-09) for the checkpoints. [Issue #3](https://github.com/JonDManningDev/the-crowded-table-app/issues/3) tracks implementation.
 
 ### Persistent application API — accepted 2026-11-03

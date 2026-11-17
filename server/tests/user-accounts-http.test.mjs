@@ -177,9 +177,8 @@ test('route schemas reject forbidden fields, invalid selectors and wrong scalar 
   assert.equal(h.verifications.length, invalid.length)
 })
 
-test('own profile keeps a bio at its limit and rejects an overlong bio from the service', async t => {
+test('own profile keeps input limits while replies preserve stored profile text', async t => {
   const h = harness(t)
-  t.mock.method(console, 'error', () => {})
   const item = cases.find(item => item.operation === 'saveGlobalProfile')
   const payload = { ...profileInput, bio: 'b'.repeat(2000) }
   const expected = { profile: { ...profile, bio: payload.bio } }
@@ -190,8 +189,15 @@ test('own profile keeps a bio at its limit and rejects an overlong bio from the 
   assert.deepEqual(received.json(), expected)
   const overlongBio = 'b'.repeat(2001)
   assertError(h, await h.app.inject({ ...request, payload: { ...payload, bio: overlongBio } }), 400, 'invalid_request')
-  h.queue(item.operation, { profile: { ...profile, bio: overlongBio } })
-  assertError(h, await h.app.inject(request), 503, 'unavailable')
+  const stored = { ...profile, display_name: 'n'.repeat(81), bio: overlongBio }
+  assertError(h, await h.app.inject({ ...request, payload: { ...payload, display_name: stored.display_name } }), 400, 'invalid_request')
+  for (const operation of ['readOwnGlobalProfile', 'saveGlobalProfile']) {
+    const current = cases.find(item => item.operation === operation)
+    h.queue(operation, { profile: { ...stored, internal_secret: 'omit' } })
+    const response = await h.app.inject(requestOptions(current))
+    assert.equal(response.statusCode, 200)
+    assert.deepEqual(response.json(), { profile: stored })
+  }
 })
 
 test('blocked global profiles return only their status', async t => {
