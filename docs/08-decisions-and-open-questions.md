@@ -1,5 +1,9 @@
 # Decisions and open questions
 
+## Shared server JSON schema fragments — accepted 2026-11-17
+
+At the user's request, move the opening reusable definitions from the user-account HTTP schema into `server/src/shared/json-schema.ts`: closed-object options, UUID/nullable text/timestamp schemas, empty query variants, common errors, user params and pagination definitions. Export them directly and import them from the consuming feature. Preserve the emitted schemas, including the distinct empty-query required arrays and existing reply-only timestamp typing. This server-only sharing leaves operation schemas feature-owned and does not reintroduce cross-workspace definitions. Community fragments and the existing nullable-object helper retain their current ownership in this slice. Reconsider additional sharing only with separately authorized scope.
+
 ## Server product feature nesting — accepted 2026-11-17
 
 The user approved moving `communities` and `user-accounts` intact beneath `server/src/features/` to support further organization. Only folders corresponding to `client/src/features/` folders belong there; counterparts are created only when implemented. `health` and shared infrastructure retain their current locations. Preserve the five-file feature responsibilities, sibling dependencies, HTTP contract, SQL, authorization and plugin boundaries; update all consumers without compatibility exports. This revises the earlier root-level feature layout, not the completed checkpoint history. Reconsider the folder eligibility rule only with an explicitly accepted ownership change. Implementation and verification are recorded in document 12.

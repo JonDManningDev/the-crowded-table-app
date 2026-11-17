@@ -1,24 +1,10 @@
-import { Type, type TSchema } from 'typebox'
+import { Type } from 'typebox'
 import { errorResponse } from '../../http-errors.ts'
 import { nullableObject } from '../../http-schema.ts'
-
-const closed = { additionalProperties: false }
-const uuid = Type.String({ format: 'uuid' })
-const nullableUuid = Type.Union([uuid, Type.Null()])
-const nullableText = Type.Union([Type.String(), Type.Null()])
-// Reply serializers accept pg Dates as well as SQL-formatted timestamp text.
-// The wire contract remains a date-time string; this is reply-only typing.
-const timestamp = Type.Unsafe<string | Date>(Type.String({ format: 'date-time' }))
-const noQuery = Type.Object({}, closed)
-const emptyQuery = Type.Object({}, { ...closed, required: [] })
-const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse }
-const userParams = Type.Object({ userId: uuid }, closed)
-const paging = {
-  cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
-  limit: Type.Optional(Type.String({ pattern: '^(100|[1-9][0-9]?)$' })),
-}
-const page = <T extends TSchema>(items: T) =>
-  Type.Object({ rows: Type.Array(items), next: nullableText }, closed)
+import {
+  closed, uuid, nullableUuid, nullableText, timestamp,
+  noQuery, emptyQuery, errors, userParams, paging, page,
+} from '../../shared/json-schema.ts'
 
 // User account preferences
 const preferences = Type.Object({

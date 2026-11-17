@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Shared server JSON schema fragments — locally verified 2026-11-17
+
+At the user's request, the eleven opening reusable definitions in the user-account HTTP schema are exported from `server/src/shared/json-schema.ts` and imported by the feature. The existing timestamp typing/comment, required-array distinctions, pagination fields and common-error shapes are preserved exactly. Operation schemas, community-local fragments and the nullable-object helper retain their existing ownership. This is server-only sharing, outside the product feature folder.
+
+Server source/test TypeScript, root lint, production build and all 76 HTTP tests pass against the unchanged reviewed HTTP fixture. The real local preferences, self-service and global-profile suites pass, covering request validation, reply projections, Dates/nulls, lifecycle/authorization, bypass denial, rollback and concurrent transitions. They used verified CLI loopback endpoints through process-only overrides; saved environment files were unchanged. Diff review confirms extraction/imports only in application code; the user's pre-existing section-comment edits are preserved and excluded from this checkpoint. Vite retains its existing large-chunk advisory. No required verification or implementation work remains for this extraction; no deployment is included.
+
 ## Server product feature nesting — 2026-11-17
 
 The user authorized the [accepted relocation plan](08-decisions-and-open-questions.md#server-product-feature-nesting--accepted-2026-11-17). All ten community/user-account modules now live under `server/src/features/`, preserving the five-file structure and sibling dependency. Root composition, static/dynamic test imports, diagnostic tooling and documentation links use the new paths. `health` and shared infrastructure retain their locations. Old feature directories are removed, without forwarding modules or compatibility interfaces. Repository guidance limits `features/` to implemented server features with corresponding client feature folders.

@@ -53,6 +53,8 @@ server/src/
 ├── http-errors.ts
 ├── database.ts
 ├── directory-cursors.ts
+├── shared/
+│   └── json-schema.ts
 │
 ├── features/
 │   ├── user-accounts/
@@ -98,6 +100,8 @@ Feature-specific result-to-HTTP mappings remain in `routes.ts`. Operation-specif
 - `directory-cursors.ts`: retain the shared encrypted cursor mechanism; feature services retain their endpoint-specific scopes and other existing cursor formats.
 
 No additional architectural directories, repository layer, DI container, validation library, or `fastify-plugin` dependency are required.
+
+Shared JSON schema fragments — accepted 2026-11-17: `server/src/shared/json-schema.ts` owns the reusable definitions extracted from the user-account HTTP schema at the user's request. Operation schemas stay feature-owned. This is server-only sharing; runtime HTTP schemas remain outside policy/service logic. The existing nullable-object helper and community-local fragments are unchanged. See the [decision](08-decisions-and-open-questions.md#shared-server-json-schema-fragments--accepted-2026-11-17).
 
 ## 2. Feature ownership and parallel organization
 
