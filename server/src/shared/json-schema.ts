@@ -15,7 +15,7 @@ export const noQuery = Type.Object({}, { additionalProperties: false })
 export const emptyQuery = Type.Object({}, { additionalProperties: false, required: [] })
 export const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse } as const
 
-export const attribution = {
+export const auditFields = {
   created_at: timestamp,
   updated_at: timestamp,
   created_by: nullableUuid,

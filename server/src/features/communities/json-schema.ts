@@ -2,7 +2,7 @@ import { Type } from 'typebox'
 import { errorResponse } from '../../http-errors.ts'
 import {
   uuid, nullableUuid, timestamp, nullableTimestamp, nullableText,
-  emptyQuery, noQuery, errors, attribution, nullableObject,
+  emptyQuery, noQuery, errors, auditFields, nullableObject,
 } from '../../shared/json-schema.ts'
 import { copySlots, settingFields, type CopyKey, staffFlags, communityPreferenceFields } from './types.ts'
 
@@ -24,14 +24,14 @@ const accountFacts = Type.Object({
   standing,
   first_approved_at: nullableTimestamp,
   has_disciplinary_restriction: Type.Boolean(),
-  ...attribution,
+  ...auditFields,
 }, { additionalProperties: false })
 const communityProfile = Type.Object({
   tenant_id: uuid,
   user_id: uuid,
   display_name: Type.String(),
   bio: nullableText,
-  ...attribution,
+  ...auditFields,
 }, { additionalProperties: false })
 const directoryQuery = Type.Object({
   limit: Type.Optional(Type.String({ pattern: '^(100|[1-9][0-9]?)$' })),
@@ -261,7 +261,7 @@ const detailsResponse = Type.Object({
   slug: Type.String({ maxLength: 63, minLength: 1 }),
   ...detailInput,
   operational_status: Type.Enum(['active', 'archived'], { type: 'string' }),
-  ...attribution,
+  ...auditFields,
 }, { additionalProperties: false })
 export const readDetailsSchema = {
   params: tenantParams,
@@ -277,7 +277,7 @@ export const saveDetailsSchema = {
 } as const
 
 const settingsInput = Type.Record(Type.Enum(settingFields), Type.Boolean(), { additionalProperties: false })
-const settingsResponse = Type.Object({ tenant_id: uuid, ...settingsInput.properties, ...attribution }, { additionalProperties: false })
+const settingsResponse = Type.Object({ tenant_id: uuid, ...settingsInput.properties, ...auditFields }, { additionalProperties: false })
 export const readSettingsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
@@ -291,7 +291,7 @@ export const saveSettingsSchema = {
   response: { 200: settingsResponse, ...errors },
 } as const
 
-const copyResponse = Type.Object({ rows: Type.Array(Type.Object({ ...publicCopy, ...attribution }, { additionalProperties: false })) }, { additionalProperties: false })
+const copyResponse = Type.Object({ rows: Type.Array(Type.Object({ ...publicCopy, ...auditFields }, { additionalProperties: false })) }, { additionalProperties: false })
 const copyParams = Type.Object({ tenantId: uuid, contentKey: copyKey }, { additionalProperties: false })
 export const readCopySchema = {
   params: tenantParams,
@@ -345,7 +345,7 @@ export const accountFactsSchema = {
 } as const
 
 // Staff and participant permissions
-const accountMetadata = { tenant_id: uuid, user_id: uuid, ...attribution } as const
+const accountMetadata = { tenant_id: uuid, user_id: uuid, ...auditFields } as const
 const staffRecord = Type.Object({
   ...accountMetadata,
   role: Type.Enum(staffRoles, { type: 'string' }),

@@ -1,5 +1,9 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Shared audit field fragment name — locally verified 2026-11-17
+
+At the user's request, shared `attribution` is renamed to `auditFields`, updating the community import and all six spreads without an alias. The four field definitions and emitted schemas are unchanged. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review confirms identifier changes only in application code; pre-existing user-account edits and shared-file spacing remain outside this checkpoint. Database integration suites were not rerun for this naming-only change. No implementation work remains; no deployment is included.
+
 ## Explicit optional-object schema options — locally verified 2026-11-17
 
 At the user's request, `optionalFields` is removed because its name obscures its contents. The shared empty query and all six community consumers now inline `additionalProperties: false` and `required: []`, preserving `minProperties: 1` at the three partial-input sites. No source references remain. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review confirms options inlining only; pre-existing user-account edits and shared-file spacing remain outside this checkpoint. Database integration suites were not rerun for this schema-equivalent options change. Vite retains its existing large-chunk advisory. No implementation work remains; no deployment is included.
