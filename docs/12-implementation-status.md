@@ -1,5 +1,9 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Inline shared closed-object options — locally verified 2026-11-17
+
+At the user's request, the shared `closed` constant is removed. Its shared-module and user-account references now inline `{ additionalProperties: false }`, retaining `required: []` at the same sites. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review confirms options inlining only, with pre-existing section comments and the `profileInput` rename preserved outside this checkpoint. The independent community-local constant is outside this shared-constant removal. Database integration suites were not rerun for this schema-equivalent options change. Vite retains its existing large-chunk advisory. No implementation work remains for this change; no deployment is included.
+
 ## Nullable object schema helper relocation — locally verified 2026-11-17
 
 At the user's request, `nullableObject` now lives in `server/src/shared/json-schema.ts`; both community and user-account schemas import it there. `server/src/http-schema.ts` is deleted without a forwarding module. The helper body, TypeBox types, explanatory comment and emitted schema are preserved exactly. This completes the separately requested helper follow-up to the initial shared-fragment extraction below.

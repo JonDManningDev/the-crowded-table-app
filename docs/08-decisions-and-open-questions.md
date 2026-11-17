@@ -2,6 +2,8 @@
 
 ## Shared server JSON schema fragments — accepted 2026-11-17
 
+Options follow-up accepted 2026-11-17: remove the shared `closed` constant and inline `{ additionalProperties: false }` at its definition/consumer sites, preserving explicit `required: []` where present. This revises the shared option-constant extraction below without changing emitted schemas.
+
 Follow-up accepted 2026-11-17: the user also requested moving `nullableObject` into `server/src/shared/json-schema.ts` and deleting `server/src/http-schema.ts`. Both feature schema consumers import the helper directly from its new owner. Preserve its existing `Type.Unsafe` exception, explanatory comment and emitted schema; no forwarding module remains. This supersedes the helper-location boundary in the initial extraction below.
 
 At the user's request, move the opening reusable definitions from the user-account HTTP schema into `server/src/shared/json-schema.ts`: closed-object options, UUID/nullable text/timestamp schemas, empty query variants, common errors, user params and pagination definitions. Export them directly and import them from the consuming feature. Preserve the emitted schemas, including the distinct empty-query required arrays and existing reply-only timestamp typing. This server-only sharing leaves operation schemas feature-owned and does not reintroduce cross-workspace definitions. Community fragments and the existing nullable-object helper retain their current ownership in this slice. Reconsider additional sharing only with separately authorized scope.
