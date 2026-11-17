@@ -2,6 +2,8 @@
 
 ## Shared server JSON schema fragments — accepted 2026-11-17
 
+Client-error naming accepted 2026-11-17: rename the shared `errors` response map to `clientErrors` and update both feature consumers without an alias. Preserve its 400/401/403/404 schemas and the community-specific command error extension.
+
 Parameter ownership follow-up accepted 2026-11-17: move `userParams` back into the user-account `json-schema.ts` as a feature-local definition and remove the shared export/import. Its UUID validation and closed-object options remain unchanged. This supersedes user-param sharing in the initial extraction below.
 
 Naming follow-up accepted 2026-11-17: rename the shared `attribution` schema fragment to `auditFields` and update its imports/spreads without an alias. Its four fields and emitted schemas are unchanged.

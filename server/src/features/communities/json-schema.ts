@@ -2,7 +2,7 @@ import { Type } from 'typebox'
 import { errorResponse } from '../../http-errors.ts'
 import {
   uuid, nullableUuid, timestamp, nullableTimestamp, nullableText,
-  emptyQuery, noQuery, errors, auditFields, nullableObject,
+  emptyQuery, noQuery, clientErrors, auditFields, nullableObject,
 } from '../../shared/json-schema.ts'
 import { copySlots, settingFields, type CopyKey, staffFlags, communityPreferenceFields } from './types.ts'
 
@@ -11,7 +11,7 @@ const accountParams = Type.Object({ tenantId: uuid, userId: uuid }, { additional
 const slugParams = Type.Object({
   slug: Type.String({ minLength: 3, maxLength: 63, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$' }),
 }, { additionalProperties: false })
-const commandErrors = { ...errors, 409: errorResponse } as const
+const commandErrors = { ...clientErrors, 409: errorResponse } as const
 const standing = Type.Enum(['pending', 'approved', 'suspended', 'inactive'], { type: 'string' })
 const staffRoles = ['owner', 'admin'] as const
 const staffStatuses = ['active', 'paused', 'revoked'] as const
@@ -96,7 +96,7 @@ export const publicDirectorySchema = {
       rows: Type.Array(Type.Object({ display_name: Type.String(), staff_role: nullableStaffRole }, { additionalProperties: false })),
       next: nullableText,
     }, { additionalProperties: false }),
-    ...errors,
+    ...clientErrors,
   },
 } as const
 
@@ -238,21 +238,21 @@ export const saveOwnProfileSchema = {
   params: tenantParams,
   querystring: noQuery,
   body: profileInputSchema,
-  response: { 200: Type.Object({ tenantId: uuid }, { additionalProperties: false }), ...errors },
+  response: { 200: Type.Object({ tenantId: uuid }, { additionalProperties: false }), ...clientErrors },
 } as const
 
 const preferenceResponse = Type.Record(Type.Enum(communityPreferenceFields), Type.Boolean(), { additionalProperties: false })
 export const readOwnPreferencesSchema = {
   params: tenantParams,
   querystring: noQuery,
-  response: { 200: preferenceResponse, ...errors },
+  response: { 200: preferenceResponse, ...clientErrors },
 } as const
 
 export const saveOwnPreferencesSchema = {
   params: tenantParams,
   querystring: noQuery,
   body: Type.Partial(preferenceResponse, { additionalProperties: false, minProperties: 1 }),
-  response: { 200: preferenceResponse, ...errors },
+  response: { 200: preferenceResponse, ...clientErrors },
 } as const
 
 // Configuration and copy
@@ -266,14 +266,14 @@ const detailsResponse = Type.Object({
 export const readDetailsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
-  response: { 200: detailsResponse, ...errors },
+  response: { 200: detailsResponse, ...clientErrors },
 } as const
 
 export const saveDetailsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
   body: Type.Partial(Type.Object(detailInput, { additionalProperties: false }), { additionalProperties: false, required: [], minProperties: 1 }),
-  response: { 200: detailsResponse, ...errors },
+  response: { 200: detailsResponse, ...clientErrors },
 } as const
 
 const settingsInput = Type.Record(Type.Enum(settingFields), Type.Boolean(), { additionalProperties: false })
@@ -281,14 +281,14 @@ const settingsResponse = Type.Object({ tenant_id: uuid, ...settingsInput.propert
 export const readSettingsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
-  response: { 200: settingsResponse, ...errors },
+  response: { 200: settingsResponse, ...clientErrors },
 } as const
 
 export const saveSettingsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
   body: Type.Partial(settingsInput, { additionalProperties: false, required: [], minProperties: 1 }),
-  response: { 200: settingsResponse, ...errors },
+  response: { 200: settingsResponse, ...clientErrors },
 } as const
 
 const copyResponse = Type.Object({ rows: Type.Array(Type.Object({ ...publicCopy, ...auditFields }, { additionalProperties: false })) }, { additionalProperties: false })
@@ -296,20 +296,20 @@ const copyParams = Type.Object({ tenantId: uuid, contentKey: copyKey }, { additi
 export const readCopySchema = {
   params: tenantParams,
   querystring: emptyQuery,
-  response: { 200: copyResponse, ...errors },
+  response: { 200: copyResponse, ...clientErrors },
 } as const
 
 export const saveCopySchema = {
   params: copyParams,
   querystring: emptyQuery,
   body: Type.Object({ text_value: Type.String({ maxLength: 2000, minLength: 1 }) }, { additionalProperties: false }),
-  response: { 200: copyResponse, ...errors },
+  response: { 200: copyResponse, ...clientErrors },
 } as const
 
 export const deleteCopySchema = {
   params: copyParams,
   querystring: emptyQuery,
-  response: { 200: copyResponse, ...errors },
+  response: { 200: copyResponse, ...clientErrors },
 } as const
 
 // Directories and account facts
@@ -325,7 +325,7 @@ export const memberDirectorySchema = {
       }, { additionalProperties: false })),
       next: nullableText,
     }, { additionalProperties: false }),
-    ...errors,
+    ...clientErrors,
   },
 } as const
 
@@ -334,14 +334,14 @@ export const ownerAccountsSchema = {
   querystring: directoryQuery,
   response: {
     200: Type.Object({ rows: Type.Array(accountFacts), next: nullableText }, { additionalProperties: false }),
-    ...errors,
+    ...clientErrors,
   },
 } as const
 
 export const accountFactsSchema = {
   params: accountParams,
   querystring: emptyQuery,
-  response: { 200: accountFacts, ...errors },
+  response: { 200: accountFacts, ...clientErrors },
 } as const
 
 // Staff and participant permissions
@@ -362,14 +362,14 @@ export const listStaffSchema = {
   querystring: recordQuery,
   response: {
     200: Type.Object({ rows: Type.Array(staffRecord), next: nullableText }, { additionalProperties: false }),
-    ...errors,
+    ...clientErrors,
   },
 } as const
 
 export const readStaffSchema = {
   params: accountParams,
   querystring: emptyQuery,
-  response: { 200: staffRecord, ...errors },
+  response: { 200: staffRecord, ...clientErrors },
 } as const
 
 export const listParticipantPermissionsSchema = {
@@ -377,21 +377,21 @@ export const listParticipantPermissionsSchema = {
   querystring: recordQuery,
   response: {
     200: Type.Object({ rows: Type.Array(participantPermissions), next: nullableText }, { additionalProperties: false }),
-    ...errors,
+    ...clientErrors,
   },
 } as const
 
 export const readParticipantPermissionsSchema = {
   params: accountParams,
   querystring: emptyQuery,
-  response: { 200: participantPermissions, ...errors },
+  response: { 200: participantPermissions, ...clientErrors },
 } as const
 
 export const saveParticipantPermissionsSchema = {
   params: accountParams,
   querystring: emptyQuery,
   body: Type.Object({ can_post_public_events: Type.Boolean() }, { additionalProperties: false }),
-  response: { 200: participantPermissions, ...errors },
+  response: { 200: participantPermissions, ...clientErrors },
 } as const
 
 // Audit history

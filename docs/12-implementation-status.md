@@ -1,5 +1,9 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Shared client error response map name — locally verified 2026-11-17
+
+At the user's request, the shared `errors` map is renamed to `clientErrors`, updating both feature imports/spreads and the community-specific `commandErrors` extension without an alias. The 400/401/403/404 definitions and emitted schemas are unchanged. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review confirms identifier changes only in application code; pre-existing user-account edits and shared-file spacing remain outside this checkpoint. Database integration suites were not rerun for this naming-only change. No implementation work remains; no deployment is included.
+
 ## User-account parameter schema ownership — locally verified 2026-11-17
 
 At the user's request, `userParams` is again a local definition in `server/src/features/user-accounts/json-schema.ts`; its shared export/import is removed without an alias. UUID validation, closed-object options and the three consuming operations are unchanged. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review confirms declaration relocation/import cleanup only, with pre-existing section comments, the `profileInput` rename and shared-file spacing preserved outside this checkpoint. Database integration suites were not rerun for this schema-equivalent move. No implementation work remains; no deployment is included.

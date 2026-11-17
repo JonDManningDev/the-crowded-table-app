@@ -2,7 +2,7 @@ import { Type } from 'typebox'
 import { errorResponse } from '../../http-errors.ts'
 import {
   uuid, nullableUuid, nullableText, timestamp,
-  noQuery, emptyQuery, errors, paging, page, nullableObject,
+  noQuery, emptyQuery, clientErrors, paging, page, nullableObject,
 } from '../../shared/json-schema.ts'
 
 const userParams = Type.Object({ userId: uuid }, { additionalProperties: false })
@@ -32,13 +32,13 @@ const profile = Type.Object({
   updated_by: nullableUuid,
 }, { additionalProperties: false })
 const profileResponse = Type.Object({ profile: nullableObject(profile) }, { additionalProperties: false })
-export const readOwnGlobalProfileSchema = { querystring: noQuery, response: { 200: profileResponse, ...errors } }
-export const saveGlobalProfileSchema = { querystring: noQuery, body: profileInputSchema, response: { 200: profileResponse, ...errors } }
+export const readOwnGlobalProfileSchema = { querystring: noQuery, response: { 200: profileResponse, ...clientErrors } }
+export const saveGlobalProfileSchema = { querystring: noQuery, body: profileInputSchema, response: { 200: profileResponse, ...clientErrors } }
 
 const discoveryQuery = Type.Object({ ...paging, q: Type.Optional(Type.String({ maxLength: 120 })) },
   { additionalProperties: false, required: [] })
-export const discoverGlobalProfilesSchema = { querystring: discoveryQuery, response: { 200: page(Type.Pick(profile, ['user_id', 'display_name'])), ...errors } }
-export const readOtherGlobalProfileSchema = { params: userParams, querystring: emptyQuery, response: { 200: Type.Union([profile, Type.Object({ status: Type.Literal('blocked') }, { additionalProperties: false })]), ...errors } }
+export const discoverGlobalProfilesSchema = { querystring: discoveryQuery, response: { 200: page(Type.Pick(profile, ['user_id', 'display_name'])), ...clientErrors } }
+export const readOtherGlobalProfileSchema = { params: userParams, querystring: emptyQuery, response: { 200: Type.Union([profile, Type.Object({ status: Type.Literal('blocked') }, { additionalProperties: false })]), ...clientErrors } }
 
 // User account communities
 const summary = Type.Object({
@@ -58,14 +58,14 @@ const summaryQuery = Type.Object({
   cursor: Type.Optional(Type.String({ maxLength: 1024 })),
   limit: Type.Optional(Type.String({ pattern: '^([1-9]|[1-9][0-9]|100)$' })),
 }, { additionalProperties: false })
-export const listMyCommunitiesSchema = { querystring: summaryQuery, response: { 200: page(summary), ...errors } }
+export const listMyCommunitiesSchema = { querystring: summaryQuery, response: { 200: page(summary), ...clientErrors } }
 
 // Account blocks
 const block = Type.Object({ blocker_user_id: uuid, blocked_user_id: uuid, created_at: timestamp, created_by: uuid }, { additionalProperties: false })
 const blocksQuery = Type.Object(paging, { additionalProperties: false, required: [] })
-export const listAccountBlocksSchema = { querystring: blocksQuery, response: { 200: page(block), ...errors } }
+export const listAccountBlocksSchema = { querystring: blocksQuery, response: { 200: page(block), ...clientErrors } }
 
 const blockInput = Type.Object({ confirmed: Type.Literal(true) }, { additionalProperties: false })
 const blockResponse = Type.Object({ blocked: Type.Boolean() }, { additionalProperties: false })
-export const blockUserSchema = { params: userParams, querystring: emptyQuery, body: blockInput, response: { 200: blockResponse, ...errors } }
-export const unblockUserSchema = { params: userParams, querystring: emptyQuery, response: { 200: blockResponse, ...errors } }
+export const blockUserSchema = { params: userParams, querystring: emptyQuery, body: blockInput, response: { 200: blockResponse, ...clientErrors } }
+export const unblockUserSchema = { params: userParams, querystring: emptyQuery, response: { 200: blockResponse, ...clientErrors } }
