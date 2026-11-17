@@ -6,6 +6,8 @@ The user requested an initial grouping under **Accounts and profiles**, **Tenant
 
 ## Shared server JSON schema fragments — accepted 2026-11-17
 
+Directory paging reuse accepted 2026-11-17: community `directoryQuery` uses the shared `paging` properties, preserving its existing cursor/limit validation and explicit closed-object/empty-required options.
+
 Client-error naming accepted 2026-11-17: rename the shared `errors` response map to `clientErrors` and update both feature consumers without an alias. Preserve its 400/401/403/404 schemas and the community-specific command error extension.
 
 Parameter ownership follow-up accepted 2026-11-17: move `userParams` back into the user-account `json-schema.ts` as a feature-local definition and remove the shared export/import. Its UUID validation and closed-object options remain unchanged. This supersedes user-param sharing in the initial extraction below.

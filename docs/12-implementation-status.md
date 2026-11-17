@@ -1,5 +1,9 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Community directory shared paging — locally verified 2026-11-17
+
+At the user's request, community `directoryQuery` imports and uses the shared `paging` properties. Cursor/limit constraints and `additionalProperties: false`/`required: []` options are unchanged. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review confirms import/property reuse only; pre-existing user-account edits and shared-file spacing remain outside this checkpoint. Database integration suites were not rerun for this schema-equivalent refactor. No implementation work remains; no deployment is included.
+
 ## Community schema declaration sections — locally verified 2026-11-17
 
 The user's three headings now group clear matches in `communities/json-schema.ts`: ten account/profile/preferences/directory exports, eight configuration/landing/copy exports, and eight staff-review/permission exports. Each section places supporting declarations together before its exports. Cross-section params, command errors and staff badge definitions precede the headings. Creation/lifecycle retains its two exports and audit history its one export in their existing groups for this initial pass. The [architecture exception](22-fastify-architecture-refactoring-plan.md#2-feature-ownership-and-parallel-organization) records that route/service sections and operation order are unchanged.

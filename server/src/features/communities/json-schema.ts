@@ -2,7 +2,7 @@ import { Type } from 'typebox'
 import { errorResponse } from '../../http-errors.ts'
 import {
   uuid, nullableUuid, timestamp, nullableTimestamp, nullableText,
-  emptyQuery, noQuery, clientErrors, auditFields, nullableObject,
+  emptyQuery, noQuery, clientErrors, auditFields, nullableObject, paging,
 } from '../../shared/json-schema.ts'
 import { copySlots, settingFields, type CopyKey, staffFlags, communityPreferenceFields } from './types.ts'
 
@@ -48,10 +48,7 @@ const communityProfile = Type.Object({
   ...auditFields,
 }, { additionalProperties: false })
 
-const directoryQuery = Type.Object({
-  limit: Type.Optional(Type.String({ pattern: '^(100|[1-9][0-9]?)$' })),
-  cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
-}, { additionalProperties: false, required: [] })
+const directoryQuery = Type.Object(paging, { additionalProperties: false, required: [] })
 
 const requestKind = Type.Enum(['join', 'reactivation'], { type: 'string' })
 
