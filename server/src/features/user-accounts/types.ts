@@ -1,5 +1,5 @@
-import type { AppDatabase } from '../database.ts'
-import type { DirectoryCursors } from '../directory-cursors.ts'
+import type { AppDatabase } from '../../database.ts'
+import type { DirectoryCursors } from '../../directory-cursors.ts'
 import type { createUserAccountService } from './service.ts'
 
 // Account preferences

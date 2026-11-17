@@ -6,7 +6,7 @@ import test from 'node:test'
 import Fastify from 'fastify'
 import { ApplicationError, registerHttpErrors } from '../src/http-errors.ts'
 import { getAuthenticatedContext, registerRequiredAuthentication } from '../src/http-authentication.ts'
-import { userAccountRoutes } from '../src/user-accounts/routes.ts'
+import { userAccountRoutes } from '../src/features/user-accounts/routes.ts'
 import { actorId, authorization, createHttpHarness, targetId, tenantId } from './helpers/http-harness.mjs'
 
 const flags = { user_is_discoverable: true, enable_matchmaking: false, allow_direct_messages: true }

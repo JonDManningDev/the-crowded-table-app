@@ -1,10 +1,10 @@
-import { IneligibleActorError } from '../database.ts'
+import { IneligibleActorError } from '../../database.ts'
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox'
 import type { PublicCommunityOperations, ProtectedCommunityOperations } from './types.ts'
 import * as schemas from './json-schema.ts'
-import { optionalAuthentication, verifyOptionalIdentity, getAuthenticatedContext } from '../http-authentication.ts'
-import type { BearerVerifier } from '../token-verifier.ts'
-import { ApplicationError } from '../http-errors.ts'
+import { optionalAuthentication, verifyOptionalIdentity, getAuthenticatedContext } from '../../http-authentication.ts'
+import type { BearerVerifier } from '../../token-verifier.ts'
+import { ApplicationError } from '../../http-errors.ts'
 
 export const publicCommunityRoutes: FastifyPluginAsyncTypebox<{ service: PublicCommunityOperations; verify: BearerVerifier }> = async (routes, { service, verify }) => {
   // Public access and standing

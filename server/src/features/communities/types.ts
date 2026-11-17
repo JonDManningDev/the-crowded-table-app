@@ -1,7 +1,7 @@
 import type { Transaction } from 'kysely'
-import type { AppDatabase } from '../database.ts'
-import type { DB } from '../database.types.ts'
-import type { DirectoryCursors } from '../directory-cursors.ts'
+import type { AppDatabase } from '../../database.ts'
+import type { DB } from '../../database.types.ts'
+import type { DirectoryCursors } from '../../directory-cursors.ts'
 import type { createCommunityService } from './service.ts'
 
 // Public access and standing

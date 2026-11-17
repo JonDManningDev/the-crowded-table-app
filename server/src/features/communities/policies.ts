@@ -1,5 +1,5 @@
 import { sql } from 'kysely'
-import { ApplicationError } from '../http-errors.ts'
+import { ApplicationError } from '../../http-errors.ts'
 import { staffFlags, type CommunityCommand, type ConfigurationKind, type RecordKind, type StaffPermissions, type Tx } from './types.ts'
 
 /*

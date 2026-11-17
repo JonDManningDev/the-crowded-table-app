@@ -1,8 +1,8 @@
 import { myCommunityRelationships } from '../communities/service.ts'
 import { sql } from 'kysely'
-import { withEligibleActorTransaction, type AuthenticatedContext, type AppDatabase } from '../database.ts'
-import { ApplicationError } from '../http-errors.ts'
-import type { DirectoryCursors } from '../directory-cursors.ts'
+import { withEligibleActorTransaction, type AuthenticatedContext, type AppDatabase } from '../../database.ts'
+import { ApplicationError } from '../../http-errors.ts'
+import type { DirectoryCursors } from '../../directory-cursors.ts'
 import type {
   AccountPreferences,
   ProfileInput,

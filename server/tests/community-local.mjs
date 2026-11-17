@@ -5,7 +5,7 @@ import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
-import { communityCommand } from '../src/communities/service.ts'
+import { communityCommand } from '../src/features/communities/service.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
@@ -196,7 +196,7 @@ try {
   await cmd(owner, { kind: 'approve', requestId: selected.id, revision: selected.revision })
   await cmd(owner,{kind:'grant',target:other.id})
   await cmd(owner,{kind:'permissions',target:other.id,permissions:{can_discipline_users:true}})
-  const { staffFlags } = await import('../src/communities/types.ts')
+  const { staffFlags } = await import('../src/features/communities/types.ts')
   const permissions = Object.fromEntries(staffFlags.map(flag=>[flag,false]))
   await cmd(other,{kind:'reappoint',target:member.id,permissions},403)
   await cmd(owner,{kind:'reappoint',target:member.id,permissions})

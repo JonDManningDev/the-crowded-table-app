@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { Kysely, PostgresDialect } from 'kysely'
 import pg from 'pg'
 import { directoryCursors } from '../../src/directory-cursors.ts'
-import { createUserAccountService } from '../../src/user-accounts/service.ts'
+import { createUserAccountService } from '../../src/features/user-accounts/service.ts'
 
 // Observe a successful block insert on its real connection before commit.
 export async function runBlockWriteWithHook(endpoint, context, target, afterWrite) {

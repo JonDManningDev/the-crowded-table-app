@@ -54,16 +54,19 @@ server/src/
 ├── database.ts
 ├── directory-cursors.ts
 │
-├── user-accounts/
-│   ├── routes.ts
-│   ├── service.ts
-│   ├── json-schema.ts
-│   └── types.ts
-├── communities/
-│   ├── routes.ts
-│   ├── service.ts
-│   ├── json-schema.ts
-│   └── types.ts
+├── features/
+│   ├── user-accounts/
+│   │   ├── routes.ts
+│   │   ├── service.ts
+│   │   ├── json-schema.ts
+│   │   ├── types.ts
+│   │   └── policies.ts
+│   └── communities/
+│       ├── routes.ts
+│       ├── service.ts
+│       ├── json-schema.ts
+│       ├── types.ts
+│       └── policies.ts
 └── health/
     ├── routes.ts
     ├── service.ts
@@ -71,6 +74,8 @@ server/src/
 ```
 
 The authentication/error filenames resolve concrete responsibility overlap without adding runtime layers.
+
+Server feature nesting — accepted 2026-11-17: the current tree incorporates the five-file ownership follow-up and nests the two product features under `features/`. Only implemented server feature folders corresponding to `client/src/features/` folders belong there. Health and shared infrastructure retain their locations. This revises directory placement, preserving the completed phase/checkpoint history and runtime boundaries. See the [decision](08-decisions-and-open-questions.md#server-product-feature-nesting--accepted-2026-11-17).
 
 ### Authentication and error ownership
 

@@ -10,9 +10,9 @@ import { loadPublicDirectoryFacts, requireCanReadPublicDirectory, loadCreateComm
   loadHistoryFacts, loadMemberDirectoryFacts,
   requireCanReadMemberDirectory, type Account, type Staff, type Pending } from './policies.ts'
 import { sql } from 'kysely'
-import { type AppDatabase, withEligibleActorTransaction, withTransactionRetry, type AuthenticatedContext } from '../database.ts'
-import { ApplicationError } from '../http-errors.ts'
-import type { DirectoryCursors } from '../directory-cursors.ts'
+import { type AppDatabase, withEligibleActorTransaction, withTransactionRetry, type AuthenticatedContext } from '../../database.ts'
+import { ApplicationError } from '../../http-errors.ts'
+import type { DirectoryCursors } from '../../directory-cursors.ts'
 import {
   copySlots,
   settingFields,

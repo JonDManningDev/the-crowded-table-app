@@ -1,5 +1,9 @@
 # Application file structure and client refactor
 
+## Server product feature nesting — accepted 2026-11-17
+
+The [accepted folder rule](08-decisions-and-open-questions.md#server-product-feature-nesting--accepted-2026-11-17) puts `communities` and `user-accounts` under `server/src/features/`, retaining their five-file structure. Only implemented server features with corresponding folders in `client/src/features/` belong there. `server/src/health/` and shared infrastructure remain outside `features/`. This supersedes the earlier root-level feature locations without changing client organization or feature responsibilities.
+
 ## Accepted policy and service ownership — 2026-11-13
 
 Communities and user accounts use the five-file feature structure established by [ADR 0001](adr/0001-api-policy-ownership.md). The [service-owned result SQL follow-up](25-service-owned-result-sql-spec.md), published as [issue #23](https://github.com/JonDManningDev/the-crowded-table-app/issues/23), retains that structure and revises SQL ownership. Policies own fact loaders and their fact-gathering SQL, pure decisions, requirements and associated types. Services own their result-query SQL and express audience conditions inline, with no named audience variables or extracted predicate functions. The follow-up is locally implemented and verified in checkpoints `bf85bc5` and `32763ee`. The four-file and triad descriptions below retain their dated historical scope.

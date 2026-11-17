@@ -1,5 +1,5 @@
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox'
-import { getAuthenticatedContext } from '../http-authentication.ts'
+import { getAuthenticatedContext } from '../../http-authentication.ts'
 import type { UserAccountRoutesOptions } from './types.ts'
 import { readAccountPreferencesSchema, saveAccountPreferencesSchema,
   readOwnGlobalProfileSchema, saveGlobalProfileSchema,

@@ -1,6 +1,6 @@
 import { Type, type TSchema } from 'typebox'
-import { errorResponse } from '../http-errors.ts'
-import { nullableObject } from '../http-schema.ts'
+import { errorResponse } from '../../http-errors.ts'
+import { nullableObject } from '../../http-schema.ts'
 
 const closed = { additionalProperties: false }
 const uuid = Type.String({ format: 'uuid' })

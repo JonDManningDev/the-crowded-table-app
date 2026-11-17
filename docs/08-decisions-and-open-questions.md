@@ -1,5 +1,9 @@
 # Decisions and open questions
 
+## Server product feature nesting — accepted 2026-11-17
+
+The user approved moving `communities` and `user-accounts` intact beneath `server/src/features/` to support further organization. Only folders corresponding to `client/src/features/` folders belong there; counterparts are created only when implemented. `health` and shared infrastructure retain their current locations. Preserve the five-file feature responsibilities, sibling dependencies, HTTP contract, SQL, authorization and plugin boundaries; update all consumers without compatibility exports. This revises the earlier root-level feature layout, not the completed checkpoint history. Reconsider the folder eligibility rule only with an explicitly accepted ownership change. Implementation and verification are recorded in document 12.
+
 ## Global-profile operation names and self audience — accepted 2026-11-17
 
 The user approved `readOwnGlobalProfile`, `readOtherGlobalProfile` and `saveGlobalProfile` as the global-profile operation names. The exact-target other-profile read no longer grants access merely because the target is the caller; discoverability or qualifying shared-community consent must authorize it. There is no self-target rejection: self can still qualify through either remaining path. Own reads use the identity-derived `/api/me/profile` operation and retain `{ profile: null }` for a missing profile. Existing HTTP paths, projections, block withholding and statement snapshots remain unchanged. The client renames its existing own-profile adapter/callers; an other-profile adapter and consuming UI remain deferred.

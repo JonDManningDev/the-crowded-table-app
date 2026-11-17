@@ -16,7 +16,7 @@ Report command timing as an opportunity estimate, not a measured optimization be
 
 ## Tenant-scope inventory and proposed boundary
 
-The current [community service](../../server/src/communities/service.ts) has 26 authenticated HTTP operations. Creation generates its tenant after loading creation facts. The other **25** already know an existing tenant from the validated operation input and issue exactly one standalone scope statement before scoped application queries:
+The current [community service](../../server/src/features/communities/service.ts) has 26 authenticated HTTP operations. Creation generates its tenant after loading creation facts. The other **25** already know an existing tenant from the validated operation input and issue exactly one standalone scope statement before scoped application queries:
 
 | Operations | Count | Current scope owner and ordering |
 | --- | ---: | --- |
@@ -33,7 +33,7 @@ For these 25 operations, one successful attempt can remove **one client submissi
 Exceptions and other owners:
 
 - `createCommunity`: generates a new UUID inside the callback after creation facts. Keep its late scope assignment; moving ID generation across retries is unnecessary scope expansion.
-- [User-account operations](../../server/src/user-accounts/service.ts): preferences, own profile, summaries, discovery, exact global profiles, block lists and unblock have no initial tenant command to remove. Summaries use the retained archive-safe projection; global-profile selectors use a separate `ct.profile_target`.
+- [User-account operations](../../server/src/features/user-accounts/service.ts): preferences, own profile, summaries, discovery, exact global profiles, block lists and unblock have no initial tenant command to remove. Summaries use the retained archive-safe projection; global-profile selectors use a separate `ct.profile_target`.
 - `blockAccount` from `community_profile`: the source tenant is known at entry, but scope is currently set after advisory locks, duplicate detection and profile-target setup. Only a new eligible block reaches it. It is a conditional one-command opportunity, excluded from the proposed first change because it shares the multi-source workflow.
 - `blockAccount` from `global_profile`: a discoverable target needs no community scope. Otherwise it discovers shared roots, locks them in the existing order and sets scope for each root. Preserve all dynamic assignments; do not replace them with a single initial tenant. The returned locked-root list remains part of the later mutation predicate.
 - Anonymous landing/directory use `ct.public_slug`/`ct.public_tenant`, not authenticated scope. Standing and health paths are separate.

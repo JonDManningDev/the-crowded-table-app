@@ -8,7 +8,7 @@ import pg from 'pg'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { checkRuntime, connectDatabase } from '../src/database.ts'
-import { preferencesPath } from '../src/user-accounts/routes.ts'
+import { preferencesPath } from '../src/features/user-accounts/routes.ts'
 import { sql } from 'kysely'
 
 const local = localStack()
