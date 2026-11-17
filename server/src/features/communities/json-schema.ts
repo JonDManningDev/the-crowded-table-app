@@ -1,33 +1,17 @@
 import { Type } from 'typebox'
 import { errorResponse } from '../../http-errors.ts'
-import { nullableObject } from '../../shared/json-schema.ts'
+import {
+  optionalFields, uuid, nullableUuid, timestamp, nullableTimestamp, nullableText,
+  emptyQuery, noQuery, errors, attribution, nullableObject,
+} from '../../shared/json-schema.ts'
 import { copySlots, settingFields, type CopyKey, staffFlags, communityPreferenceFields } from './types.ts'
 
-const closed = { additionalProperties: false }
-const optionalFields = { ...closed, required: [] }
-const uuid = Type.String({ format: 'uuid' })
-const nullableUuid = Type.Union([uuid, Type.Null()])
-// Reply serializers accept pg Dates as well as SQL/JSON timestamp text.
-// The wire contract remains a date-time string; this is reply-only typing.
-const timestamp = Type.Unsafe<string | Date>(Type.String({ format: 'date-time' }))
-const nullableTimestamp = Type.Union([timestamp, Type.Null()])
-const nullableText = Type.Union([Type.String(), Type.Null()])
-const tenantParams = Type.Object({ tenantId: uuid }, closed)
-const accountParams = Type.Object({ tenantId: uuid, userId: uuid }, closed)
+const tenantParams = Type.Object({ tenantId: uuid }, { additionalProperties: false })
+const accountParams = Type.Object({ tenantId: uuid, userId: uuid }, { additionalProperties: false })
 const slugParams = Type.Object({
   slug: Type.String({ minLength: 3, maxLength: 63, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$' }),
-}, closed)
-const emptyQuery = Type.Object({}, optionalFields)
-// These operations originally omit `required`; keep that distinct from an empty array.
-const noQuery = Type.Object({}, closed)
-const errors = { 400: errorResponse, 401: errorResponse, 403: errorResponse, 404: errorResponse } as const
+}, { additionalProperties: false })
 const commandErrors = { ...errors, 409: errorResponse } as const
-const attribution = {
-  created_at: timestamp,
-  updated_at: timestamp,
-  created_by: nullableUuid,
-  updated_by: nullableUuid,
-} as const
 const standing = Type.Enum(['pending', 'approved', 'suspended', 'inactive'], { type: 'string' })
 const staffRoles = ['owner', 'admin'] as const
 const staffStatuses = ['active', 'paused', 'revoked'] as const
@@ -41,14 +25,14 @@ const accountFacts = Type.Object({
   first_approved_at: nullableTimestamp,
   has_disciplinary_restriction: Type.Boolean(),
   ...attribution,
-}, closed)
+}, { additionalProperties: false })
 const communityProfile = Type.Object({
   tenant_id: uuid,
   user_id: uuid,
   display_name: Type.String(),
   bio: nullableText,
   ...attribution,
-}, closed)
+}, { additionalProperties: false })
 const directoryQuery = Type.Object({
   limit: Type.Optional(Type.String({ pattern: '^(100|[1-9][0-9]?)$' })),
   cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
@@ -96,8 +80,8 @@ export const readLandingSchema = {
       allow_public_chat_visibility: Type.Boolean(),
       allow_public_activity_visibility: Type.Boolean(),
       allow_public_directory_visibility: Type.Boolean(),
-      overrides: Type.Array(Type.Object(publicCopy, closed)),
-    }, closed),
+      overrides: Type.Array(Type.Object(publicCopy, { additionalProperties: false })),
+    }, { additionalProperties: false }),
     400: errorResponse,
     401: errorResponse,
     404: errorResponse,
@@ -109,9 +93,9 @@ export const publicDirectorySchema = {
   querystring: directoryQuery,
   response: {
     200: Type.Object({
-      rows: Type.Array(Type.Object({ display_name: Type.String(), staff_role: nullableStaffRole }, closed)),
+      rows: Type.Array(Type.Object({ display_name: Type.String(), staff_role: nullableStaffRole }, { additionalProperties: false })),
       next: nullableText,
-    }, closed),
+    }, { additionalProperties: false }),
     ...errors,
   },
 } as const
@@ -120,13 +104,13 @@ export const publicDirectorySchema = {
 const creationProfile = Type.Object({
   displayName: Type.String({ minLength: 1, maxLength: 80 }),
   bio: Type.Union([Type.String({ maxLength: 2000 }), Type.Null()]),
-}, closed)
+}, { additionalProperties: false })
 const commandResponse = Type.Object({
   outcome: Type.String(),
   tenantId: uuid,
   revision: Type.Optional(uuid),
   requestId: Type.Optional(uuid),
-}, closed)
+}, { additionalProperties: false })
 
 export const createCommunitySchema = {
   body: Type.Object({
@@ -137,34 +121,34 @@ export const createCommunitySchema = {
     region: Type.String({ minLength: 0, maxLength: 120 }),
     city: Type.String({ minLength: 0, maxLength: 120 }),
     profile: creationProfile,
-  }, closed),
+  }, { additionalProperties: false }),
   querystring: emptyQuery,
   response: { 201: commandResponse, ...commandErrors },
 } as const
 
-const staffPermissions = Type.Record(Type.Enum(staffFlags), Type.Boolean(), closed)
+const staffPermissions = Type.Record(Type.Enum(staffFlags), Type.Boolean(), { additionalProperties: false })
 const commandReason = Type.Optional(Type.String({ minLength: 0, maxLength: 2000 }))
 export const executeCommandSchema = {
   params: tenantParams,
   body: Type.Union([
-    Type.Object({ kind: Type.Literal('join'), profile: creationProfile }, closed),
-    Type.Object({ kind: Type.Literal('deactivate') }, closed),
-    Type.Object({ kind: Type.Literal('reactivate') }, closed),
-    Type.Object({ kind: Type.Literal('withdraw'), requestId: uuid }, closed),
-    Type.Object({ kind: Type.Literal('approve'), requestId: uuid, revision: uuid }, closed),
-    Type.Object({ kind: Type.Literal('suspend'), target: uuid, revision: uuid, reason: commandReason }, closed),
-    Type.Object({ kind: Type.Literal('remove'), target: uuid, revision: uuid, reason: commandReason }, closed),
-    Type.Object({ kind: Type.Literal('clear'), target: uuid, revision: uuid, reason: commandReason }, closed),
-    Type.Object({ kind: Type.Literal('grant'), target: uuid }, closed),
-    Type.Object({ kind: Type.Literal('resume'), target: uuid }, closed),
-    Type.Object({ kind: Type.Literal('revoke'), target: uuid, reason: commandReason }, closed),
-    Type.Object({ kind: Type.Literal('reappoint'), target: uuid, permissions: staffPermissions }, closed),
+    Type.Object({ kind: Type.Literal('join'), profile: creationProfile }, { additionalProperties: false }),
+    Type.Object({ kind: Type.Literal('deactivate') }, { additionalProperties: false }),
+    Type.Object({ kind: Type.Literal('reactivate') }, { additionalProperties: false }),
+    Type.Object({ kind: Type.Literal('withdraw'), requestId: uuid }, { additionalProperties: false }),
+    Type.Object({ kind: Type.Literal('approve'), requestId: uuid, revision: uuid }, { additionalProperties: false }),
+    Type.Object({ kind: Type.Literal('suspend'), target: uuid, revision: uuid, reason: commandReason }, { additionalProperties: false }),
+    Type.Object({ kind: Type.Literal('remove'), target: uuid, revision: uuid, reason: commandReason }, { additionalProperties: false }),
+    Type.Object({ kind: Type.Literal('clear'), target: uuid, revision: uuid, reason: commandReason }, { additionalProperties: false }),
+    Type.Object({ kind: Type.Literal('grant'), target: uuid }, { additionalProperties: false }),
+    Type.Object({ kind: Type.Literal('resume'), target: uuid }, { additionalProperties: false }),
+    Type.Object({ kind: Type.Literal('revoke'), target: uuid, reason: commandReason }, { additionalProperties: false }),
+    Type.Object({ kind: Type.Literal('reappoint'), target: uuid, permissions: staffPermissions }, { additionalProperties: false }),
     Type.Object({
       kind: Type.Literal('permissions'),
       target: uuid,
       permissions: Type.Partial(staffPermissions, { ...optionalFields, minProperties: 1 }),
-    }, closed),
-    Type.Object({ kind: Type.Literal('archive'), archived: Type.Boolean() }, closed),
+    }, { additionalProperties: false }),
+    Type.Object({ kind: Type.Literal('archive'), archived: Type.Boolean() }, { additionalProperties: false }),
   ]),
   querystring: emptyQuery,
   response: { 200: commandResponse, ...commandErrors },
@@ -181,17 +165,17 @@ export const ownRequestSchema = {
         request_id: uuid,
         kind: requestKind,
         requested_at: timestamp,
-      }, closed)),
-    }, closed),
+      }, { additionalProperties: false })),
+    }, { additionalProperties: false }),
     ...commandErrors,
   },
 } as const
 
 export const reviewAccountSchema = {
-  params: Type.Object({ tenantId: uuid, target: uuid }, closed),
+  params: Type.Object({ tenantId: uuid, target: uuid }, { additionalProperties: false }),
   querystring: emptyQuery,
   response: {
-    200: Type.Object({ standing, revision: uuid, request_id: nullableUuid }, closed),
+    200: Type.Object({ standing, revision: uuid, request_id: nullableUuid }, { additionalProperties: false }),
     ...commandErrors,
   },
 } as const
@@ -209,9 +193,9 @@ export const staffCandidatesSchema = {
         display_name: nullableText,
         staff_role: nullableStaffRole,
         staff_status: nullableStaffStatus,
-      }, closed)),
+      }, { additionalProperties: false })),
       next: nullableUuid,
-    }, closed),
+    }, { additionalProperties: false }),
     ...commandErrors,
   },
 } as const
@@ -231,9 +215,9 @@ export const pendingRequestsSchema = {
         first_approved_at: nullableTimestamp,
         has_disciplinary_restriction: Type.Boolean(),
         display_name: nullableText,
-      }, closed)),
+      }, { additionalProperties: false })),
       next: nullableUuid,
-    }, closed),
+    }, { additionalProperties: false }),
     ...commandErrors,
   },
 } as const
@@ -242,22 +226,22 @@ export const pendingRequestsSchema = {
 const profileInputSchema = Type.Object({
   display_name: Type.String({ minLength: 1, maxLength: 80 }),
   bio: Type.Union([Type.String({ maxLength: 2000 }), Type.Null()]),
-}, closed)
+}, { additionalProperties: false })
 export const readProfileSchema = {
   // Preserve the original open params object; other account params are closed.
   params: Type.Object({ tenantId: uuid, userId: uuid }),
   querystring: noQuery,
-  response: { 200: Type.Union([communityProfile, Type.Object({ status: Type.Literal('blocked') }, closed)]), 403: errorResponse, 404: errorResponse },
+  response: { 200: Type.Union([communityProfile, Type.Object({ status: Type.Literal('blocked') }, { additionalProperties: false })]), 403: errorResponse, 404: errorResponse },
 } as const
 
 export const saveOwnProfileSchema = {
   params: tenantParams,
   querystring: noQuery,
   body: profileInputSchema,
-  response: { 200: Type.Object({ tenantId: uuid }, closed), ...errors },
+  response: { 200: Type.Object({ tenantId: uuid }, { additionalProperties: false }), ...errors },
 } as const
 
-const preferenceResponse = Type.Record(Type.Enum(communityPreferenceFields), Type.Boolean(), closed)
+const preferenceResponse = Type.Record(Type.Enum(communityPreferenceFields), Type.Boolean(), { additionalProperties: false })
 export const readOwnPreferencesSchema = {
   params: tenantParams,
   querystring: noQuery,
@@ -267,7 +251,7 @@ export const readOwnPreferencesSchema = {
 export const saveOwnPreferencesSchema = {
   params: tenantParams,
   querystring: noQuery,
-  body: Type.Partial(preferenceResponse, { ...closed, minProperties: 1 }),
+  body: Type.Partial(preferenceResponse, { additionalProperties: false, minProperties: 1 }),
   response: { 200: preferenceResponse, ...errors },
 } as const
 
@@ -278,7 +262,7 @@ const detailsResponse = Type.Object({
   ...detailInput,
   operational_status: Type.Enum(['active', 'archived'], { type: 'string' }),
   ...attribution,
-}, closed)
+}, { additionalProperties: false })
 export const readDetailsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
@@ -288,12 +272,12 @@ export const readDetailsSchema = {
 export const saveDetailsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
-  body: Type.Partial(Type.Object(detailInput, closed), { ...optionalFields, minProperties: 1 }),
+  body: Type.Partial(Type.Object(detailInput, { additionalProperties: false }), { ...optionalFields, minProperties: 1 }),
   response: { 200: detailsResponse, ...errors },
 } as const
 
-const settingsInput = Type.Record(Type.Enum(settingFields), Type.Boolean(), closed)
-const settingsResponse = Type.Object({ tenant_id: uuid, ...settingsInput.properties, ...attribution }, closed)
+const settingsInput = Type.Record(Type.Enum(settingFields), Type.Boolean(), { additionalProperties: false })
+const settingsResponse = Type.Object({ tenant_id: uuid, ...settingsInput.properties, ...attribution }, { additionalProperties: false })
 export const readSettingsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
@@ -307,8 +291,8 @@ export const saveSettingsSchema = {
   response: { 200: settingsResponse, ...errors },
 } as const
 
-const copyResponse = Type.Object({ rows: Type.Array(Type.Object({ ...publicCopy, ...attribution }, closed)) }, closed)
-const copyParams = Type.Object({ tenantId: uuid, contentKey: copyKey }, closed)
+const copyResponse = Type.Object({ rows: Type.Array(Type.Object({ ...publicCopy, ...attribution }, { additionalProperties: false })) }, { additionalProperties: false })
+const copyParams = Type.Object({ tenantId: uuid, contentKey: copyKey }, { additionalProperties: false })
 export const readCopySchema = {
   params: tenantParams,
   querystring: emptyQuery,
@@ -318,7 +302,7 @@ export const readCopySchema = {
 export const saveCopySchema = {
   params: copyParams,
   querystring: emptyQuery,
-  body: Type.Object({ text_value: Type.String({ maxLength: 2000, minLength: 1 }) }, closed),
+  body: Type.Object({ text_value: Type.String({ maxLength: 2000, minLength: 1 }) }, { additionalProperties: false }),
   response: { 200: copyResponse, ...errors },
 } as const
 
@@ -338,9 +322,9 @@ export const memberDirectorySchema = {
         account: accountFacts,
         profile: nullableObject(Type.Pick(communityProfile, ['display_name'])),
         staff_role: nullableStaffRole,
-      }, closed)),
+      }, { additionalProperties: false })),
       next: nullableText,
-    }, closed),
+    }, { additionalProperties: false }),
     ...errors,
   },
 } as const
@@ -349,7 +333,7 @@ export const ownerAccountsSchema = {
   params: tenantParams,
   querystring: directoryQuery,
   response: {
-    200: Type.Object({ rows: Type.Array(accountFacts), next: nullableText }, closed),
+    200: Type.Object({ rows: Type.Array(accountFacts), next: nullableText }, { additionalProperties: false }),
     ...errors,
   },
 } as const
@@ -367,8 +351,8 @@ const staffRecord = Type.Object({
   role: Type.Enum(staffRoles, { type: 'string' }),
   status: Type.Enum(staffStatuses, { type: 'string' }),
   ...staffPermissions.properties,
-}, closed)
-const participantPermissions = Type.Object({ ...accountMetadata, can_post_public_events: Type.Boolean() }, closed)
+}, { additionalProperties: false })
+const participantPermissions = Type.Object({ ...accountMetadata, can_post_public_events: Type.Boolean() }, { additionalProperties: false })
 const recordQuery = Type.Object({
   cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
   limit: Type.Optional(Type.String({ pattern: '^(100|[1-9][0-9]?)$' })),
@@ -377,7 +361,7 @@ export const listStaffSchema = {
   params: tenantParams,
   querystring: recordQuery,
   response: {
-    200: Type.Object({ rows: Type.Array(staffRecord), next: nullableText }, closed),
+    200: Type.Object({ rows: Type.Array(staffRecord), next: nullableText }, { additionalProperties: false }),
     ...errors,
   },
 } as const
@@ -392,7 +376,7 @@ export const listParticipantPermissionsSchema = {
   params: tenantParams,
   querystring: recordQuery,
   response: {
-    200: Type.Object({ rows: Type.Array(participantPermissions), next: nullableText }, closed),
+    200: Type.Object({ rows: Type.Array(participantPermissions), next: nullableText }, { additionalProperties: false }),
     ...errors,
   },
 } as const
@@ -406,7 +390,7 @@ export const readParticipantPermissionsSchema = {
 export const saveParticipantPermissionsSchema = {
   params: accountParams,
   querystring: emptyQuery,
-  body: Type.Object({ can_post_public_events: Type.Boolean() }, closed),
+  body: Type.Object({ can_post_public_events: Type.Boolean() }, { additionalProperties: false }),
   response: { 200: participantPermissions, ...errors },
 } as const
 
@@ -420,7 +404,7 @@ export const historySchema = {
     eventId: Type.Optional(uuid),
     cursor: Type.Optional(Type.String({ maxLength: 1024 })),
     limit: Type.Optional(Type.String({ pattern: '^([1-9]|[1-9][0-9]|100)$' })),
-  }, closed),
+  }, { additionalProperties: false }),
   response: {
     200: Type.Object({
       rows: Type.Array(Type.Object({
@@ -435,9 +419,9 @@ export const historySchema = {
         reason: nullableText,
         details: Type.Object({}, { additionalProperties: true }),
         categories: Type.Array(historyCategory),
-      }, closed)),
+      }, { additionalProperties: false })),
       next: nullableText,
-    }, closed),
+    }, { additionalProperties: false }),
     400: errorResponse,
     401: errorResponse,
     403: errorResponse,

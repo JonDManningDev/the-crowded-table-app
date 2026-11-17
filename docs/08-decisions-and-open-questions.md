@@ -2,6 +2,8 @@
 
 ## Shared server JSON schema fragments — accepted 2026-11-17
 
+Community consolidation accepted 2026-11-17: the user requested sharing the selected common scalar/date, query/error and attribution fragments from the community schema. Reuse existing shared definitions and add `optionalFields`, `nullableTimestamp` and `attribution` there. Preserve readonly error-map typing and the omitted-versus-empty required-array distinction. Remove the community-local `closed` constant and inline its options at every reference; no `closed` constant remains. Community-specific params, command errors and operation schemas remain feature-owned. This supersedes the community-fragment exclusion in the earlier extraction scope.
+
 Options follow-up accepted 2026-11-17: remove the shared `closed` constant and inline `{ additionalProperties: false }` at its definition/consumer sites, preserving explicit `required: []` where present. This revises the shared option-constant extraction below without changing emitted schemas.
 
 Follow-up accepted 2026-11-17: the user also requested moving `nullableObject` into `server/src/shared/json-schema.ts` and deleting `server/src/http-schema.ts`. Both feature schema consumers import the helper directly from its new owner. Preserve its existing `Type.Unsafe` exception, explanatory comment and emitted schema; no forwarding module remains. This supersedes the helper-location boundary in the initial extraction below.

@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Shared community schema fragments — locally verified 2026-11-17
+
+At the user's request, community schemas reuse the shared UUID/nullable text/timestamp, empty-query and common-error definitions. `optionalFields`, `nullableTimestamp` and `attribution` now live in `server/src/shared/json-schema.ts`; common errors retain readonly typing. The community `closed` constant is removed and every reference, including the partial-preferences spread, uses inline options. No `closed` identifier remains in schema code. Community-specific params, command errors and operation schemas retain their ownership. The omitted-versus-empty `required` distinction and all HTTP shapes are preserved.
+
+Server source/test TypeScript, root lint, production build and all 76 HTTP tests pass against the unchanged reviewed fixture. The real local community, configuration and self-service suites pass using verified loopback endpoints through process-only overrides without changing saved configuration. The first checks caught a missed `closed` spread; it was fixed before the passing reruns. Diff review confirms consolidation/options inlining only, excluding pre-existing user-account edits and shared-file spacing from this checkpoint. Vite retains its existing large-chunk advisory. No required verification or implementation work remains; no deployment is included.
+
 ## Inline shared closed-object options — locally verified 2026-11-17
 
 At the user's request, the shared `closed` constant is removed. Its shared-module and user-account references now inline `{ additionalProperties: false }`, retaining `required: []` at the same sites. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review confirms options inlining only, with pre-existing section comments and the `profileInput` rename preserved outside this checkpoint. The independent community-local constant is outside this shared-constant removal. Database integration suites were not rerun for this schema-equivalent options change. Vite retains its existing large-chunk advisory. No implementation work remains for this change; no deployment is included.

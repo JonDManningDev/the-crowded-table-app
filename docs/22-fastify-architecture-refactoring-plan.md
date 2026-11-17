@@ -101,7 +101,7 @@ Feature-specific result-to-HTTP mappings remain in `routes.ts`. Operation-specif
 
 No additional architectural directories, repository layer, DI container, validation library, or `fastify-plugin` dependency are required.
 
-Shared JSON schema fragments — accepted 2026-11-17: `server/src/shared/json-schema.ts` owns the reusable definitions extracted from the user-account HTTP schema at the user's request. The separately requested follow-up moves `nullableObject` into this module and removes `http-schema.ts`, updating both feature consumers without a forwarding module. Operation schemas stay feature-owned. This is server-only sharing; runtime HTTP schemas remain outside policy/service logic. Community-local fragments are otherwise unchanged. See the [decision](08-decisions-and-open-questions.md#shared-server-json-schema-fragments--accepted-2026-11-17).
+Shared JSON schema fragments — accepted 2026-11-17: `server/src/shared/json-schema.ts` owns the reusable definitions extracted from the user-account HTTP schema at the user's request. The separately requested follow-ups move `nullableObject` into this module, remove `http-schema.ts` and consolidate the selected common community scalar/date, query/error and attribution fragments. Both features import shared definitions directly. All `closed` constants are removed in favor of inline options. Operation schemas and community-specific params/command errors stay feature-owned. This is server-only sharing; runtime HTTP schemas remain outside policy/service logic. See the [decision](08-decisions-and-open-questions.md#shared-server-json-schema-fragments--accepted-2026-11-17).
 
 ## 2. Feature ownership and parallel organization
 
