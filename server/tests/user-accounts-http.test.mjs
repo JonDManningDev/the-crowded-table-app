@@ -21,13 +21,13 @@ const preferenceResult = { status: 200, row: { ...flags, internal_secret: 'omit'
 const cases = [
   { operation: 'readAccountPreferences', method: 'GET', path: '/api/me/preferences', result: preferenceResult, expected: flags },
   { operation: 'saveAccountPreferences', method: 'PUT', path: '/api/me/preferences', payload: flags, args: [flags], result: preferenceResult, expected: flags },
-  { operation: 'readOwnProfile', method: 'GET', path: '/api/me/profile', result: { profile: { ...profile, internal_secret: 'omit' } }, expected: { profile } },
-  { operation: 'saveOwnProfile', method: 'PUT', path: '/api/me/profile', payload: profileInput, args: [profileInput], result: { profile }, expected: { profile } },
+  { operation: 'readOwnGlobalProfile', method: 'GET', path: '/api/me/profile', result: { profile: { ...profile, internal_secret: 'omit' } }, expected: { profile } },
+  { operation: 'saveGlobalProfile', method: 'PUT', path: '/api/me/profile', payload: profileInput, args: [profileInput], result: { profile }, expected: { profile } },
   { operation: 'listMyCommunities', method: 'GET', path: '/api/me/communities', query: '?filter=managed&limit=2&cursor=opaque',
     args: [{ filter: 'managed', limit: '2', cursor: 'opaque' }], result: { rows: [{ ...summary, internal_secret: 'omit' }], next: 'next-cursor' }, expected: { rows: [summary], next: 'next-cursor' } },
   { operation: 'discoverGlobalProfiles', method: 'GET', path: '/api/profiles', query: '?q=%20CaFe%20&limit=2&cursor=opaque',
     args: [{ q: ' CaFe ', limit: '2', cursor: 'opaque' }], result: { rows: [{ ...profile, internal_secret: 'omit' }], next: null }, expected: { rows: [{ user_id: actorId, display_name: profile.display_name }], next: null } },
-  { operation: 'readGlobalProfile', method: 'GET', path: `/api/profiles/${targetId}`, args: [targetId], result: profile, expected: profile },
+  { operation: 'readOtherGlobalProfile', method: 'GET', path: `/api/profiles/${targetId}`, args: [targetId], result: profile, expected: profile },
   { operation: 'listAccountBlocks', method: 'GET', path: '/api/me/blocks', query: '?limit=2&cursor=opaque', args: [{ limit: '2', cursor: 'opaque' }],
     result: { rows: [{ ...block, internal_secret: 'omit' }], next: null }, expected: { rows: [block], next: null } },
   { operation: 'blockUser', method: 'PUT', path: `/api/me/blocks/${targetId}`, payload: blockInput, args: [targetId],
@@ -160,6 +160,7 @@ test('route schemas reject forbidden fields, invalid selectors and wrong scalar 
     { method: 'PUT', url: '/api/me/preferences', payload: {} },
     { method: 'GET', url: '/api/me/profile?extra=1' },
     { method: 'PUT', url: '/api/me/profile', payload: { display_name: 'Missing bio' } },
+    { method: 'PUT', url: '/api/me/profile', payload: { display_name: 'Forged target', bio: null, user_id: targetId } },
     { method: 'GET', url: '/api/me/communities?filter=everyone' },
     { method: 'GET', url: '/api/profiles?limit=101' },
     { method: 'GET', url: '/api/profiles?q=one&q=two' },
@@ -179,7 +180,7 @@ test('route schemas reject forbidden fields, invalid selectors and wrong scalar 
 test('own profile keeps a bio at its limit and rejects an overlong bio from the service', async t => {
   const h = harness(t)
   t.mock.method(console, 'error', () => {})
-  const item = cases.find(item => item.operation === 'saveOwnProfile')
+  const item = cases.find(item => item.operation === 'saveGlobalProfile')
   const payload = { ...profileInput, bio: 'b'.repeat(2000) }
   const expected = { profile: { ...profile, bio: payload.bio } }
   h.queue(item.operation, { profile: { ...expected.profile, internal_secret: 'omit' } })
@@ -195,7 +196,7 @@ test('own profile keeps a bio at its limit and rejects an overlong bio from the 
 
 test('blocked global profiles return only their status', async t => {
   const h = harness(t)
-  const item = cases.find(item => item.operation === 'readGlobalProfile')
+  const item = cases.find(item => item.operation === 'readOtherGlobalProfile')
   h.queue(item.operation, { status: 'blocked' })
   const response = await h.app.inject(requestOptions(item))
   assert.equal(response.statusCode, 200)
@@ -211,16 +212,16 @@ test('adapter preserves preference result branches, application errors, profile 
     assertError(h, await h.app.inject(requestOptions(item)), 404, 'missing')
   }
   const failures = [
-    ['readOwnProfile', 403, 'ineligible'], ['saveOwnProfile', 403, 'ineligible'],
+    ['readOwnGlobalProfile', 403, 'ineligible'], ['saveGlobalProfile', 403, 'ineligible'],
     ['listMyCommunities', 400, 'invalid_cursor'], ['discoverGlobalProfiles', 400, 'invalid_cursor'],
-    ['readGlobalProfile', 404, 'missing'], ['listAccountBlocks', 400, 'invalid_cursor'],
+    ['readOtherGlobalProfile', 404, 'missing'], ['listAccountBlocks', 400, 'invalid_cursor'],
     ['blockUser', 400, 'invalid_target'], ['unblockUser', 400, 'invalid_target'],
   ]
   for (const [operation, status, code] of failures) {
     h.queue(operation, new ApplicationError(status, code))
     assertError(h, await h.app.inject(requestOptions(cases.find(item => item.operation === operation))), status, code)
   }
-  h.queue('readOwnProfile', { profile: null })
+  h.queue('readOwnGlobalProfile', { profile: null })
   const own = await h.app.inject({ url: '/api/me/profile', headers: authorization })
   assert.equal(own.statusCode, 200)
   assert.deepEqual(own.json(), { profile: null })

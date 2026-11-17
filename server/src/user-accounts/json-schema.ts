@@ -41,8 +41,8 @@ const profile = Type.Object({
   updated_by: nullableUuid,
 }, closed)
 const profileResponse = Type.Object({ profile: nullableObject(profile) }, closed)
-export const readOwnProfileSchema = { querystring: noQuery, response: { 200: profileResponse, ...errors } }
-export const saveOwnProfileSchema = { querystring: noQuery, body: profileInputSchema, response: { 200: profileResponse, ...errors } }
+export const readOwnGlobalProfileSchema = { querystring: noQuery, response: { 200: profileResponse, ...errors } }
+export const saveGlobalProfileSchema = { querystring: noQuery, body: profileInputSchema, response: { 200: profileResponse, ...errors } }
 
 // My communities
 const summary = Type.Object({
@@ -77,7 +77,7 @@ const globalProfile = Type.Object({
 const discoveryQuery = Type.Object({ ...paging, q: Type.Optional(Type.String({ maxLength: 120 })) },
   { ...closed, required: [] })
 export const discoverGlobalProfilesSchema = { querystring: discoveryQuery, response: { 200: page(Type.Pick(globalProfile, ['user_id', 'display_name'])), ...errors } }
-export const readGlobalProfileSchema = { params: userParams, querystring: emptyQuery, response: { 200: Type.Union([globalProfile, Type.Object({ status: Type.Literal('blocked') }, closed)]), ...errors } }
+export const readOtherGlobalProfileSchema = { params: userParams, querystring: emptyQuery, response: { 200: Type.Union([globalProfile, Type.Object({ status: Type.Literal('blocked') }, closed)]), ...errors } }
 
 // Account blocks
 const block = Type.Object({ blocker_user_id: uuid, blocked_user_id: uuid, created_at: timestamp, created_by: uuid }, closed)

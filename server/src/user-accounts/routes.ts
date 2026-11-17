@@ -2,9 +2,9 @@ import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox'
 import { getAuthenticatedContext } from '../http-authentication.ts'
 import type { UserAccountRoutesOptions } from './types.ts'
 import { readAccountPreferencesSchema, saveAccountPreferencesSchema,
-  readOwnProfileSchema, saveOwnProfileSchema,
+  readOwnGlobalProfileSchema, saveGlobalProfileSchema,
   listMyCommunitiesSchema,
-  discoverGlobalProfilesSchema, readGlobalProfileSchema,
+  discoverGlobalProfilesSchema, readOtherGlobalProfileSchema,
   listAccountBlocksSchema, blockUserSchema, unblockUserSchema } from './json-schema.ts'
 
 export const preferencesPath = '/api/me/preferences'
@@ -25,9 +25,9 @@ export const userAccountRoutes: FastifyPluginAsyncTypebox<UserAccountRoutesOptio
   })
 
   // Own profile
-  routes.get(ownProfilePath, { schema: readOwnProfileSchema }, request => service.readOwnProfile(getAuthenticatedContext(request)))
-  routes.put(ownProfilePath, { schema: saveOwnProfileSchema }, request =>
-    service.saveOwnProfile(getAuthenticatedContext(request), request.body))
+  routes.get(ownProfilePath, { schema: readOwnGlobalProfileSchema }, request => service.readOwnGlobalProfile(getAuthenticatedContext(request)))
+  routes.put(ownProfilePath, { schema: saveGlobalProfileSchema }, request =>
+    service.saveGlobalProfile(getAuthenticatedContext(request), request.body))
 
   // My communities
   routes.get(myCommunitiesPath, { schema: listMyCommunitiesSchema }, request =>
@@ -36,8 +36,8 @@ export const userAccountRoutes: FastifyPluginAsyncTypebox<UserAccountRoutesOptio
   // Global profiles
   routes.get('/api/profiles', { schema: discoverGlobalProfilesSchema }, request =>
     service.discoverGlobalProfiles(getAuthenticatedContext(request), request.query))
-  routes.get('/api/profiles/:userId', { schema: readGlobalProfileSchema }, request =>
-    service.readGlobalProfile(getAuthenticatedContext(request), request.params.userId))
+  routes.get('/api/profiles/:userId', { schema: readOtherGlobalProfileSchema }, request =>
+    service.readOtherGlobalProfile(getAuthenticatedContext(request), request.params.userId))
 
   // Account blocks
   routes.get('/api/me/blocks', { schema: listAccountBlocksSchema }, request =>

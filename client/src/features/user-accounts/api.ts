@@ -45,14 +45,14 @@ export function readPremiumFeaturePlaceholders(): PremiumFeaturePlaceholder[] {
   }]
 }
 
-export async function readOwnProfile(userId: string) {
+export async function readOwnGlobalProfile(userId: string) {
   const result = await selfServiceRequest<OwnProfileResponse>(userId,ownProfilePath)
   if (result.profile !== null && (typeof result.profile?.display_name !== 'string' ||
     result.profile.bio !== null && typeof result.profile.bio !== 'string')) throw new Error('Invalid profile response.')
   return result.profile
 }
 
-export async function saveOwnProfile(userId: string, name: string, bio: string) {
+export async function saveGlobalProfile(userId: string, name: string, bio: string) {
   try {
     const result = await selfServiceRequest<OwnProfileResponse>(userId,ownProfilePath,'PUT',{
       display_name: name.trim(), bio: bio.trim() || null,

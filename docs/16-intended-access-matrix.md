@@ -43,6 +43,8 @@ Primary sources: [decision register](08-decisions-and-open-questions.md), [visio
 
 ### Global profile columns — accepted 2026-10-30
 
+**Operation clarification — accepted 2026-11-17.** `readOwnGlobalProfile` serves the verified caller independently of discovery/sharing. `readOtherGlobalProfile` has no ownership bypass: it requires discoverability or qualifying shared-community consent, even for self, without rejecting self as a target. `saveGlobalProfile` retains identity-derived ownership. Users may never create, update or delete another user's global or community profile, including as staff or community owners. Existing lifecycle restrictions remain; no deletion capability is introduced. See the [accepted operation decision](08-decisions-and-open-questions.md#global-profile-operation-names-and-self-audience--accepted-2026-11-17).
+
 The user approved the proposed SELECT/INSERT/UPDATE contract for `user_account_profiles`, including UUID audit actors. This is a target requirement for the forthcoming authorization migration, not deployed behavior.
 
 | Columns | SELECT by an authorized full-global-profile reader | Client INSERT | Client UPDATE |

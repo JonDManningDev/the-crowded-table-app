@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
 import { ownCommunityProfile, ownCommunityPreferences } from '../src/communities/service.ts'
-import { readOwnProfile, saveOwnProfile } from '../src/user-accounts/service.ts'
+import { readOwnGlobalProfile, saveGlobalProfile } from '../src/user-accounts/service.ts'
 import { communityCommand } from '../src/communities/service.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
@@ -135,7 +135,7 @@ try {
     }
   }
   // Global discovery has its own peer audience; the self operation stays exact.
-  assert.equal((await readOwnProfile(db,{actorId:member.id,requestId:randomUUID()})).profile.user_id,member.id)
+  assert.equal((await readOwnGlobalProfile(db,{actorId:member.id,requestId:randomUUID()})).profile.user_id,member.id)
   // Native role checks omit the application's self predicates deliberately.
   await withEligibleActorTransaction(db, { actorId: member.id, requestId: randomUUID() },async tx=>{
     assert.deepEqual((await sql`select user_id from public.community_account_preferences
@@ -159,7 +159,7 @@ try {
       return result
     },
   })
-  await assert.rejects(saveOwnProfile(failingDb,{actorId:member.id,requestId:randomUUID()},
+  await assert.rejects(saveGlobalProfile(failingDb,{actorId:member.id,requestId:randomUUID()},
     {display_name:'Rollback',bio:null}),/injected rollback/)
   assert.equal((await global(member)).profile.display_name,'Changed')
   for(const viewer of [owner,member]) {

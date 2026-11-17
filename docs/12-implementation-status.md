@@ -1,5 +1,20 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Global-profile operation names and self audience — locally verified 2026-11-17
+
+The user authorized the [accepted operation plan](08-decisions-and-open-questions.md#global-profile-operation-names-and-self-audience--accepted-2026-11-17). Server exports/composition/routes/schema identifiers and existing client adapter/hooks/tests now use `readOwnGlobalProfile`, `readOtherGlobalProfile` and `saveGlobalProfile`. The exact-target SQL no longer grants access through self ownership. Discoverability or qualifying shared-community consent may still authorize self; no self-target rejection is added. Own read/save remain identity-derived, with existing normalization, attribution, upsert, transaction and missing-profile contracts. No compatibility aliases, other-profile client adapter, new UI, community-operation renames, database changes or deployment are included. The universal prohibition on mutating another user's global/community profile is recorded without introducing deletion or additional self-management capabilities.
+
+Verification passed:
+
+- `npm.cmd run test:http -w server`: all 76 tests, including the unchanged reviewed HTTP fixture, renamed dispatch, forbidden write-target rejection, projections and error behavior.
+- `npm.cmd test -w client -- src/features/user-accounts/profile.api.test.ts src/features/user-accounts/profile.hooks.test.tsx src/features/user-accounts/profile.test.tsx`: all 21 tests across three files, including identity switches, missing profiles, normalized saves, stale completions and shared account consumers.
+- `server/tests/self-service-local.mjs` and `server/tests/global-profiles-local.mjs`: both real local Auth/HTTP suites passed using the restricted `ct_api` runtime at loopback ports 54321/54322. New assertions cover hidden-self exact-target 404 versus successful own read, direct service denial versus own service success, discoverable self and shared-consent self. Existing lifecycle/archive, bilateral-block, rollback, sharing/inactivity races in both orders, admitted-read/block snapshot, runtime writes and external REST/GraphQL bypass checks passed.
+- `npm.cmd run lint` and `npm.cmd run build`: passed, including server/client TypeScript. Vite retains its existing large-chunk warning. `git diff --check` passed.
+
+The database suites ran sequentially from `server/` with `node --env-file=.env.local --input-type=module`, validating the saved URL as loopback/`ct_api`/`postgres`, then overriding only the process URL to `127.0.0.1:54322` and `CT_LOCAL_DB_PORT=54322`, `CT_LOCAL_API_PORT=54321`. Saved environment files were unchanged. Sandbox CLI-cache/Docker access was unavailable; the authorized outside-sandbox run passed. The initial read-only sandbox CLI probe was stopped after stalling. No database suite failure is treated as a pass.
+
+Diff review checked operation/caller coverage, the isolated audience removal, preserved SQL snapshot/write protections, the unchanged HTTP fixture and community operations, and documentation consistency; no remaining findings. The unrelated existing `server/src/database.ts` whitespace edit is preserved and excluded from this checkpoint. No required local verification remains; hosted deployment and other-user frontend support remain separate.
+
 ## Trusted API runtime reads — locally verified 2026-11-16
 
 The user authorized [document 26](26-trusted-api-runtime-reads-spec.md)/[issue #24](https://github.com/JonDManningDev/the-crowded-table-app/issues/24) through implement-spec. Checkpoint `cc2a276` is merged at `8d8f38d` on `implementation/trusted-api-runtime-reads`, based on `1168ecf`. Migration `20261116000100` is applied locally. All 15 already-readable application relations have permissive runtime fact reads, with seven independent G-02 fences. The catalog now has 50 policies: 22 SELECT policies (15 permissive, seven restrictive), 28 operation-specific mutation policies and no ALL policies. Runtime/external grants, all 19 function definitions, triggers, defaults, constraints and the archive-safe relationship projection are unchanged.

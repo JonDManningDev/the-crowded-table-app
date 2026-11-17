@@ -5,7 +5,7 @@ import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
-import { readGlobalProfile } from '../src/user-accounts/service.ts'
+import { readOwnGlobalProfile, readOtherGlobalProfile } from '../src/user-accounts/service.ts'
 import { holdBlockWrite, runBlockWriteWithHook } from './helpers/block-write.mjs'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
@@ -72,9 +72,14 @@ try {
   const expected=['user_id','display_name','bio','created_at','updated_at','created_by','updated_by'].sort()
   assert.equal((await search(viewer)).rows.length,5)
   assert.deepEqual(Object.keys(await inspect(viewer,target.id)).sort(),expected)
+  assert.equal((await inspect(viewer,viewer.id)).user_id,viewer.id)
   await inspect(viewer,missing.id,404);await inspect(viewer,randomUUID(),404)
   await prefs(viewer,false);await prefs(target,false)
-  assert.equal((await inspect(viewer,viewer.id)).user_id,viewer.id)
+  await inspect(viewer,viewer.id,404)
+  assert.equal((await http(viewer,'/api/me/profile')).profile.user_id,viewer.id)
+  const ownContext={actorId:viewer.id,requestId:randomUUID()}
+  await assert.rejects(readOtherGlobalProfile(db,ownContext,viewer.id),error=>error.statusCode===404 && error.message==='missing')
+  assert.equal((await readOwnGlobalProfile(db,ownContext)).profile.user_id,viewer.id)
   await inspect(viewer,target.id,404)
   assert.equal((await search(viewer)).rows.length,3)
   const first=await community(owner),second=await community(owner),other=await community(stranger)
@@ -85,6 +90,10 @@ try {
     for(const actor of [viewer,target]) await cmd(actor,tenant,{kind:'join',profile:{displayName:'Community identity',bio:'Independent biography'}})
   }
   await sharing(target,second,true)
+  await sharing(viewer,second,true)
+  assert.equal((await inspect(viewer,viewer.id)).user_id,viewer.id)
+  await sharing(viewer,second,false)
+  await inspect(viewer,viewer.id,404)
   assert.equal((await inspect(viewer,target.id)).bio,'Global biography')
   assert.ok(!(await search(viewer)).rows.some(row=>row.user_id===target.id))
   await prefs(target,false,false)
@@ -255,7 +264,7 @@ try {
       return result
     },
   })
-  const read=readGlobalProfile(pausedDb,{actorId:viewer.id,requestId:randomUUID()},target.id)
+  const read=readOtherGlobalProfile(pausedDb,{actorId:viewer.id,requestId:randomUUID()},target.id)
   await Promise.race([started,read.then(()=>{throw Error('read ended before barrier')})])
   try {await block(target,viewer.id)} finally {release()}
   const readResult=await read

@@ -25,11 +25,11 @@ export function createUserAccountService({ db, cursors }: UserAccountDependencie
   return {
     readAccountPreferences(context: AuthenticatedContext) { return readAccountPreferences(db, context) },
     saveAccountPreferences(context: AuthenticatedContext, input: AccountPreferences) { return saveAccountPreferences(db, context, input) },
-    readOwnProfile(context: AuthenticatedContext) { return readOwnProfile(db, context) },
-    saveOwnProfile(context: AuthenticatedContext, input: ProfileInput) { return saveOwnProfile(db, context, input) },
+    readOwnGlobalProfile(context: AuthenticatedContext) { return readOwnGlobalProfile(db, context) },
+    saveGlobalProfile(context: AuthenticatedContext, input: ProfileInput) { return saveGlobalProfile(db, context, input) },
     listMyCommunities(context: AuthenticatedContext, query: CommunitySummaryQuery) { return listMyCommunities(db, context, query) },
     discoverGlobalProfiles(context: AuthenticatedContext, query: DiscoveryQuery) { return discoverGlobalProfiles(db, cursors, context, query) },
-    readGlobalProfile(context: AuthenticatedContext, target: string) { return readGlobalProfile(db, context, target) },
+    readOtherGlobalProfile(context: AuthenticatedContext, target: string) { return readOtherGlobalProfile(db, context, target) },
     listAccountBlocks(context: AuthenticatedContext, query: DiscoveryQuery) { return listAccountBlocks(db, cursors, context, query) },
     blockUser(context: AuthenticatedContext, target: string) { return blockUser(db, context, target) },
     unblockUser(context: AuthenticatedContext, target: string) { return unblockUser(db, context, target) },
@@ -58,7 +58,7 @@ function saveAccountPreferences(db: AppDatabase, context: AuthenticatedContext, 
 
 // Own profile
 
-export async function readOwnProfile(db: AppDatabase, context: AuthenticatedContext) {
+export async function readOwnGlobalProfile(db: AppDatabase, context: AuthenticatedContext) {
   return withEligibleActorTransaction(db, context, async tx => {
     const actor = context.actorId
     const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
@@ -67,7 +67,7 @@ export async function readOwnProfile(db: AppDatabase, context: AuthenticatedCont
   })
 }
 
-export async function saveOwnProfile(db: AppDatabase, context: AuthenticatedContext, input: ProfileInput) {
+export async function saveGlobalProfile(db: AppDatabase, context: AuthenticatedContext, input: ProfileInput) {
   return withEligibleActorTransaction(db, context, async tx => {
     const actor = context.actorId
     const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
@@ -129,7 +129,7 @@ async function discoverGlobalProfiles(db: AppDatabase, cursors: DirectoryCursors
   })
 }
 const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
-export async function readGlobalProfile(db: AppDatabase, context: AuthenticatedContext, target: string): Promise<GlobalProfile | BlockedProfile> {
+export async function readOtherGlobalProfile(db: AppDatabase, context: AuthenticatedContext, target: string): Promise<GlobalProfile | BlockedProfile> {
   return withEligibleActorTransaction(db, context, async tx => {
     const actor = context.actorId
     // Shared-community consent and standing follow the community-owned sharing rule.
@@ -138,8 +138,7 @@ export async function readGlobalProfile(db: AppDatabase, context: AuthenticatedC
       cross join lateral (select exists(select from public.user_account_blocks b where
         (b.blocker_user_id,b.blocked_user_id) in ((${actor}::uuid,p.user_id),(p.user_id,${actor}::uuid))) as blocked) block_status
       left join lateral (select ${fields} where not block_status.blocked) details on true
-      where p.user_id=${target} and (p.user_id=${actor}::uuid
-        or exists(select from public.user_accounts u where u.user_id=p.user_id and u.user_is_discoverable)
+      where p.user_id=${target} and (exists(select from public.user_accounts u where u.user_id=p.user_id and u.user_is_discoverable)
         or exists(select from public.community_accounts viewer
           join public.community_accounts target using(tenant_id)
           join public.community_account_preferences prefs on (prefs.tenant_id,prefs.user_id)=(target.tenant_id,target.user_id)

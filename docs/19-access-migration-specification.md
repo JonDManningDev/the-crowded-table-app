@@ -1,5 +1,7 @@
 # Access migration — packages 2 and 3 specification
 
+**Accepted 2026-11-17.** The [global-profile operation decision](08-decisions-and-open-questions.md#global-profile-operation-names-and-self-audience--accepted-2026-11-17) supersedes the exact-target self-access alternative in the historical Package 3 contract below. GET `/api/profiles/:userId` uses `readOtherGlobalProfile` and requires discoverability or qualifying shared-community consent, including for self; it adds no self-target rejection. GET `/api/me/profile` uses `readOwnGlobalProfile`, and PUT uses `saveGlobalProfile`, both deriving ownership from verified identity. Users may never create, update or delete another user's global or community profile. Existing lifecycle rules apply; paths, shapes and block behavior remain unchanged. The existing client own-reader/save names change; other-profile client support remains deferred.
+
 **Accepted 2026-11-14.** [Revised block and profile rules](16-intended-access-matrix.md#am-04--blocks-and-profile-shared-community-visibility) supersede this document’s profile-source requirement, blocked-pair search filtering, and exact-profile/list projections. The Package 3 text below records the earlier delivery contract.
 
 **Accepted 2026-11-16.** Revised AM-04 also supersedes the block-write lock requirement for the current row-only commands. The shared ordering requirement below applies when admission or other resource changes must coordinate with blocking.

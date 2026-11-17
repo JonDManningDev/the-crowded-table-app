@@ -1,5 +1,11 @@
 # Decisions and open questions
 
+## Global-profile operation names and self audience — accepted 2026-11-17
+
+The user approved `readOwnGlobalProfile`, `readOtherGlobalProfile` and `saveGlobalProfile` as the global-profile operation names. The exact-target other-profile read no longer grants access merely because the target is the caller; discoverability or qualifying shared-community consent must authorize it. There is no self-target rejection: self can still qualify through either remaining path. Own reads use the identity-derived `/api/me/profile` operation and retain `{ profile: null }` for a missing profile. Existing HTTP paths, projections, block withholding and statement snapshots remain unchanged. The client renames its existing own-profile adapter/callers; an other-profile adapter and consuming UI remain deferred.
+
+Users may never create, update or delete another user's global or community profile, including through staff or community-owner authority. Profile mutations derive ownership from verified identity; their names need no `Own` qualifier. This does not introduce deletion or additional self-management operations and preserves existing lifecycle eligibility. This checkpoint renames only the global save operation; community operation names remain unchanged. Affected owners are user-account services/routes/schemas, the client adapter/hooks, their tests and the access/API documentation. Reconsider only for an explicitly accepted change to profile audiences or ownership; preserve the historical checkpoints below.
+
 ## Trusted API runtime fact reads — accepted direction 2026-11-16
 
 **Implementation update, 2026-11-16.** The user subsequently authorized implement-spec. Checkpoint `cc2a276`, integrated at `8d8f38d`, and local migration `20261116000100` implement this direction. All required local correctness and measured baseline/candidate gates pass; [document 12](12-implementation-status.md#trusted-api-runtime-reads--locally-verified-2026-11-16) records results and review closeout. Hosted work remains separate. The publication-only statements in the original decision below describe the preceding stage.

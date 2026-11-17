@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'react'
 import { AccountContext } from './accountContext'
-import { readOwnProfile, saveOwnProfile, readAccountPreferences, saveAccountPreferences,
+import { readOwnGlobalProfile, saveGlobalProfile, readAccountPreferences, saveAccountPreferences,
   readMyCommunities, toCommunityCards } from './api'
 import type { AccountPreferences, CommunityCardData, CommunityFilter } from './types'
 
@@ -22,7 +22,7 @@ export function useUserAccount(userId?: string) {
     if (!userId) return
     const request = { userId, active: true, revision: 0 }
     lifecycle.current = request
-    void readOwnProfile(userId).then(result => {
+    void readOwnGlobalProfile(userId).then(result => {
       // A completed save takes precedence over an older profile read.
       if (request.active && request.revision === 0 && result) setProfile(previous => ({
         ...previous, displayName: result.display_name, bio: result.bio || '',
@@ -40,7 +40,7 @@ export function useUserAccount(userId?: string) {
   async function saveProfile(name: string, bio: string) {
     const request = lifecycle.current
     if (!userId || !request?.active || request.userId !== userId) throw new Error('Sign in to save your account profile.')
-    await saveOwnProfile(userId, name, bio)
+    await saveGlobalProfile(userId, name, bio)
     if (request.active) {
       request.revision += 1
       setProfile(previous => ({ ...previous, displayName: name.trim(), bio: bio.trim(), profileError: '' }))

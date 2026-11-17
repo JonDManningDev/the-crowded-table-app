@@ -121,7 +121,7 @@ Keep editor draft, open/close, validation, submitting and feedback coordination 
 
 Approved parent vocabulary: `isEditing`, `isSaving`, `displayNameDraft`, `bioDraft`, `fieldErrors`, `saveError`, `isSaved`, `openEditor`, `closeEditor`, `changeDisplayName`, `changeBio`, `submitProfile`. Modal callbacks: `onDisplayNameChange`, `onBioChange`, `onSubmit`, `onClose`. Parent handler names remain reviewable. Consider a hook later only if reuse or lifecycle complexity makes a concrete boundary useful, not as a mandatory layer.
 
-Preserve the existing AccountProfileProvider/readOwnProfile/saveOwnProfile persistence path. UserAccountPage delegates saves to account.saveProfile, which already reaches the feature API. No second provider, query, cache or direct Supabase call. Parent UI coordination is distinct from API access and business-data implementation.
+Preserve the existing AccountProfileProvider/readOwnGlobalProfile/saveGlobalProfile persistence path. UserAccountPage delegates saves to account.saveProfile, which already reaches the feature API. No second provider, query, cache or direct Supabase call. Parent UI coordination is distinct from API access and business-data implementation.
 
 ### Real/mock boundary and lifecycle
 
