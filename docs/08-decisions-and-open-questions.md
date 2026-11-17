@@ -2,6 +2,8 @@
 
 ## Shared server JSON schema fragments — accepted 2026-11-17
 
+Explicit options accepted 2026-11-17: remove `optionalFields` because its name does not convey the options it contains. Inline `additionalProperties: false` and `required: []` at its callers, retaining `minProperties: 1` where present. This supersedes that constant's inclusion in the consolidation below and preserves the HTTP schema.
+
 Community consolidation accepted 2026-11-17: the user requested sharing the selected common scalar/date, query/error and attribution fragments from the community schema. Reuse existing shared definitions and add `optionalFields`, `nullableTimestamp` and `attribution` there. Preserve readonly error-map typing and the omitted-versus-empty required-array distinction. Remove the community-local `closed` constant and inline its options at every reference; no `closed` constant remains. Community-specific params, command errors and operation schemas remain feature-owned. This supersedes the community-fragment exclusion in the earlier extraction scope.
 
 Options follow-up accepted 2026-11-17: remove the shared `closed` constant and inline `{ additionalProperties: false }` at its definition/consumer sites, preserving explicit `required: []` where present. This revises the shared option-constant extraction below without changing emitted schemas.

@@ -1,7 +1,7 @@
 import { Type } from 'typebox'
 import { errorResponse } from '../../http-errors.ts'
 import {
-  optionalFields, uuid, nullableUuid, timestamp, nullableTimestamp, nullableText,
+  uuid, nullableUuid, timestamp, nullableTimestamp, nullableText,
   emptyQuery, noQuery, errors, attribution, nullableObject,
 } from '../../shared/json-schema.ts'
 import { copySlots, settingFields, type CopyKey, staffFlags, communityPreferenceFields } from './types.ts'
@@ -36,7 +36,7 @@ const communityProfile = Type.Object({
 const directoryQuery = Type.Object({
   limit: Type.Optional(Type.String({ pattern: '^(100|[1-9][0-9]?)$' })),
   cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
-}, optionalFields)
+}, { additionalProperties: false, required: [] })
 const detailInput = {
   name: Type.String({ maxLength: 120, minLength: 1 }),
   country_code: Type.String({ pattern: '^[A-Z]{2}$' }),
@@ -146,7 +146,7 @@ export const executeCommandSchema = {
     Type.Object({
       kind: Type.Literal('permissions'),
       target: uuid,
-      permissions: Type.Partial(staffPermissions, { ...optionalFields, minProperties: 1 }),
+      permissions: Type.Partial(staffPermissions, { additionalProperties: false, required: [], minProperties: 1 }),
     }, { additionalProperties: false }),
     Type.Object({ kind: Type.Literal('archive'), archived: Type.Boolean() }, { additionalProperties: false }),
   ]),
@@ -180,7 +180,7 @@ export const reviewAccountSchema = {
   },
 } as const
 
-const requestPageQuery = Type.Object({ after: Type.Optional(uuid) }, optionalFields)
+const requestPageQuery = Type.Object({ after: Type.Optional(uuid) }, { additionalProperties: false, required: [] })
 export const staffCandidatesSchema = {
   params: tenantParams,
   querystring: requestPageQuery,
@@ -272,7 +272,7 @@ export const readDetailsSchema = {
 export const saveDetailsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
-  body: Type.Partial(Type.Object(detailInput, { additionalProperties: false }), { ...optionalFields, minProperties: 1 }),
+  body: Type.Partial(Type.Object(detailInput, { additionalProperties: false }), { additionalProperties: false, required: [], minProperties: 1 }),
   response: { 200: detailsResponse, ...errors },
 } as const
 
@@ -287,7 +287,7 @@ export const readSettingsSchema = {
 export const saveSettingsSchema = {
   params: tenantParams,
   querystring: emptyQuery,
-  body: Type.Partial(settingsInput, { ...optionalFields, minProperties: 1 }),
+  body: Type.Partial(settingsInput, { additionalProperties: false, required: [], minProperties: 1 }),
   response: { 200: settingsResponse, ...errors },
 } as const
 
@@ -356,7 +356,7 @@ const participantPermissions = Type.Object({ ...accountMetadata, can_post_public
 const recordQuery = Type.Object({
   cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
   limit: Type.Optional(Type.String({ pattern: '^(100|[1-9][0-9]?)$' })),
-}, optionalFields)
+}, { additionalProperties: false, required: [] })
 export const listStaffSchema = {
   params: tenantParams,
   querystring: recordQuery,

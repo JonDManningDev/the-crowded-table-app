@@ -1,5 +1,9 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Explicit optional-object schema options — locally verified 2026-11-17
+
+At the user's request, `optionalFields` is removed because its name obscures its contents. The shared empty query and all six community consumers now inline `additionalProperties: false` and `required: []`, preserving `minProperties: 1` at the three partial-input sites. No source references remain. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review confirms options inlining only; pre-existing user-account edits and shared-file spacing remain outside this checkpoint. Database integration suites were not rerun for this schema-equivalent options change. Vite retains its existing large-chunk advisory. No implementation work remains; no deployment is included.
+
 ## Shared community schema fragments — locally verified 2026-11-17
 
 At the user's request, community schemas reuse the shared UUID/nullable text/timestamp, empty-query and common-error definitions. `optionalFields`, `nullableTimestamp` and `attribution` now live in `server/src/shared/json-schema.ts`; common errors retain readonly typing. The community `closed` constant is removed and every reference, including the partial-preferences spread, uses inline options. No `closed` identifier remains in schema code. Community-specific params, command errors and operation schemas retain their ownership. The omitted-versus-empty `required` distinction and all HTTP shapes are preserved.
