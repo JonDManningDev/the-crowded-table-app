@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Nullable object schema helper relocation — locally verified 2026-11-17
+
+At the user's request, `nullableObject` now lives in `server/src/shared/json-schema.ts`; both community and user-account schemas import it there. `server/src/http-schema.ts` is deleted without a forwarding module. The helper body, TypeBox types, explanatory comment and emitted schema are preserved exactly. This completes the separately requested helper follow-up to the initial shared-fragment extraction below.
+
+Server source/test TypeScript, root lint, production build and all 76 HTTP tests pass against the unchanged reviewed HTTP fixture, including null objects, declared-field projections and extra-field stripping. The real local community and self-service suites also pass using verified loopback endpoints through process-only overrides, with saved configuration unchanged. Diff review confirms only the helper move and consumer imports in application code; pre-existing user-account section comments and the `profileInput` rename are preserved and excluded from this checkpoint. No source imports reference the deleted module. Vite retains its existing large-chunk advisory. No required verification or implementation work remains for this relocation; no deployment is included.
+
 ## Shared server JSON schema fragments — locally verified 2026-11-17
 
 At the user's request, the eleven opening reusable definitions in the user-account HTTP schema are exported from `server/src/shared/json-schema.ts` and imported by the feature. The existing timestamp typing/comment, required-array distinctions, pagination fields and common-error shapes are preserved exactly. Operation schemas, community-local fragments and the nullable-object helper retain their existing ownership. This is server-only sharing, outside the product feature folder.

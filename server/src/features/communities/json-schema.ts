@@ -1,6 +1,6 @@
 import { Type } from 'typebox'
 import { errorResponse } from '../../http-errors.ts'
-import { nullableObject } from '../../http-schema.ts'
+import { nullableObject } from '../../shared/json-schema.ts'
 import { copySlots, settingFields, type CopyKey, staffFlags, communityPreferenceFields } from './types.ts'
 
 const closed = { additionalProperties: false }

@@ -1,4 +1,4 @@
-import { Type, type TSchema } from 'typebox'
+import { Type, type Static, type TObject, type TProperties, type TSchema } from 'typebox'
 import { errorResponse } from '../http-errors.ts'
 
 export const closed = { additionalProperties: false }
@@ -18,3 +18,8 @@ export const paging = {
 }
 export const page = <T extends TSchema>(items: T) =>
   Type.Object({ rows: Type.Array(items), next: nullableText }, closed)
+
+// A closed object union rejects extra fields before Fastify can strip them.
+export function nullableObject<P extends TProperties>(schema: TObject<P>) {
+  return Type.Unsafe<Static<typeof schema> | null>({ ...schema, type: ['object', 'null'] })
+}

@@ -1,9 +1,8 @@
 import { Type } from 'typebox'
 import { errorResponse } from '../../http-errors.ts'
-import { nullableObject } from '../../http-schema.ts'
 import {
   closed, uuid, nullableUuid, nullableText, timestamp,
-  noQuery, emptyQuery, errors, userParams, paging, page,
+  noQuery, emptyQuery, errors, userParams, paging, page, nullableObject,
 } from '../../shared/json-schema.ts'
 
 // User account preferences
