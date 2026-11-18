@@ -173,6 +173,36 @@
     },
     {
       "authentication": "required-onRequest",
+      "bodyLimit": 8192,
+      "declaredResponseStatuses": [
+        200,
+        400,
+        401,
+        403,
+        404,
+        409
+      ],
+      "method": "GET",
+      "path": "/api/communities/:tenantId/activation-requests",
+      "schemaRef": "GET /api/communities/:tenantId/activation-requests"
+    },
+    {
+      "authentication": "required-onRequest",
+      "bodyLimit": 8192,
+      "declaredResponseStatuses": [
+        200,
+        400,
+        401,
+        403,
+        404,
+        409
+      ],
+      "method": "HEAD",
+      "path": "/api/communities/:tenantId/activation-requests",
+      "schemaRef": "GET /api/communities/:tenantId/activation-requests"
+    },
+    {
+      "authentication": "required-onRequest",
       "bodyLimit": 32768,
       "declaredResponseStatuses": [
         200,
@@ -451,36 +481,6 @@
       "method": "HEAD",
       "path": "/api/communities/:tenantId/participant-permissions",
       "schemaRef": "GET /api/communities/:tenantId/participant-permissions"
-    },
-    {
-      "authentication": "required-onRequest",
-      "bodyLimit": 8192,
-      "declaredResponseStatuses": [
-        200,
-        400,
-        401,
-        403,
-        404,
-        409
-      ],
-      "method": "GET",
-      "path": "/api/communities/:tenantId/requests",
-      "schemaRef": "GET /api/communities/:tenantId/requests"
-    },
-    {
-      "authentication": "required-onRequest",
-      "bodyLimit": 8192,
-      "declaredResponseStatuses": [
-        200,
-        400,
-        401,
-        403,
-        404,
-        409
-      ],
-      "method": "HEAD",
-      "path": "/api/communities/:tenantId/requests",
-      "schemaRef": "GET /api/communities/:tenantId/requests"
     },
     {
       "authentication": "required-onRequest",
@@ -1989,6 +1989,206 @@
         }
       }
     },
+    "GET /api/communities/:tenantId/activation-requests": {
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "tenantId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenantId"
+        ],
+        "type": "object"
+      },
+      "querystring": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "response": {
+        "200": {
+          "additionalProperties": false,
+          "properties": {
+            "next": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "rows": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "display_name": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "first_approved_at": {
+                    "anyOf": [
+                      {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "has_disciplinary_restriction": {
+                    "type": "boolean"
+                  },
+                  "id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "join",
+                      "reactivation"
+                    ],
+                    "type": "string"
+                  },
+                  "requested_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "revision": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "standing": {
+                    "enum": [
+                      "pending",
+                      "approved",
+                      "suspended",
+                      "inactive"
+                    ],
+                    "type": "string"
+                  },
+                  "user_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "kind",
+                  "user_id",
+                  "requested_at",
+                  "revision",
+                  "standing",
+                  "first_approved_at",
+                  "has_disciplinary_restriction",
+                  "display_name"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "rows",
+            "next"
+          ],
+          "type": "object"
+        },
+        "400": {
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "requestId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "requestId"
+          ],
+          "type": "object"
+        },
+        "401": {
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "requestId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "requestId"
+          ],
+          "type": "object"
+        },
+        "403": {
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "requestId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "requestId"
+          ],
+          "type": "object"
+        },
+        "404": {
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "requestId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "requestId"
+          ],
+          "type": "object"
+        },
+        "409": {
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "requestId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "requestId"
+          ],
+          "type": "object"
+        }
+      }
+    },
     "GET /api/communities/:tenantId/copy": {
       "params": {
         "additionalProperties": false,
@@ -3168,206 +3368,6 @@
           "type": "object"
         },
         "404": {
-          "properties": {
-            "code": {
-              "type": "string"
-            },
-            "requestId": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "code",
-            "requestId"
-          ],
-          "type": "object"
-        }
-      }
-    },
-    "GET /api/communities/:tenantId/requests": {
-      "params": {
-        "additionalProperties": false,
-        "properties": {
-          "tenantId": {
-            "format": "uuid",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tenantId"
-        ],
-        "type": "object"
-      },
-      "querystring": {
-        "additionalProperties": false,
-        "properties": {
-          "after": {
-            "format": "uuid",
-            "type": "string"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "response": {
-        "200": {
-          "additionalProperties": false,
-          "properties": {
-            "next": {
-              "anyOf": [
-                {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "rows": {
-              "items": {
-                "additionalProperties": false,
-                "properties": {
-                  "display_name": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "first_approved_at": {
-                    "anyOf": [
-                      {
-                        "format": "date-time",
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "has_disciplinary_restriction": {
-                    "type": "boolean"
-                  },
-                  "id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "kind": {
-                    "enum": [
-                      "join",
-                      "reactivation"
-                    ],
-                    "type": "string"
-                  },
-                  "requested_at": {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  "revision": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "standing": {
-                    "enum": [
-                      "pending",
-                      "approved",
-                      "suspended",
-                      "inactive"
-                    ],
-                    "type": "string"
-                  },
-                  "user_id": {
-                    "format": "uuid",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "id",
-                  "kind",
-                  "user_id",
-                  "requested_at",
-                  "revision",
-                  "standing",
-                  "first_approved_at",
-                  "has_disciplinary_restriction",
-                  "display_name"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            }
-          },
-          "required": [
-            "rows",
-            "next"
-          ],
-          "type": "object"
-        },
-        "400": {
-          "properties": {
-            "code": {
-              "type": "string"
-            },
-            "requestId": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "code",
-            "requestId"
-          ],
-          "type": "object"
-        },
-        "401": {
-          "properties": {
-            "code": {
-              "type": "string"
-            },
-            "requestId": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "code",
-            "requestId"
-          ],
-          "type": "object"
-        },
-        "403": {
-          "properties": {
-            "code": {
-              "type": "string"
-            },
-            "requestId": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "code",
-            "requestId"
-          ],
-          "type": "object"
-        },
-        "404": {
-          "properties": {
-            "code": {
-              "type": "string"
-            },
-            "requestId": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "code",
-            "requestId"
-          ],
-          "type": "object"
-        },
-        "409": {
           "properties": {
             "code": {
               "type": "string"

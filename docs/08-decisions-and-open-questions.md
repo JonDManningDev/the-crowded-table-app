@@ -1,5 +1,9 @@
 # Decisions and open questions
 
+## Pending activation-request queue route — accepted 2026-11-18
+
+At the user's request, rename the existing `pendingRequestsSchema` export to `pendingActivationRequestsSchema` and change its endpoint to GET `/api/communities/:tenantId/activation-requests`. Update all callers and the reviewed HTTP fixture for this intentional path change, including automatic HEAD. Remove the former `/requests` registration without an alias. Keep the service operation, query/pagination, response fields/statuses and staff queue audiences unchanged. No database change or hosted deployment is included.
+
 ## Own activation-request schema name — accepted 2026-11-18
 
 At the user's request, rename the exported `ownRequestSchema` to `readOwnActivationRequestSchema` and update its route reference without an alias. It describes reading verified self's current community join/reactivation request. The HTTP path, response fields/statuses and service operation name remain unchanged; this is a schema-export rename only.

@@ -19,7 +19,7 @@ const operations = [
   {"group":3,"name":"ownRequest","method":"GET","path":"/api/communities/:tenantId/me/request","params":true,"query":false,"body":false,"public":false},
   {"group":3,"name":"reviewAccount","method":"GET","path":"/api/communities/:tenantId/accounts/:target/review","params":true,"query":false,"body":false,"public":false},
   {"group":3,"name":"staffCandidates","method":"GET","path":"/api/communities/:tenantId/staff-candidates","params":true,"query":true,"body":false,"public":false},
-  {"group":3,"name":"pendingRequests","method":"GET","path":"/api/communities/:tenantId/requests","params":true,"query":true,"body":false,"public":false},
+  {"group":3,"name":"pendingRequests","method":"GET","path":"/api/communities/:tenantId/activation-requests","params":true,"query":true,"body":false,"public":false},
   {"group":4,"name":"readProfile","method":"GET","path":"/api/communities/:tenantId/accounts/:userId/profile","params":true,"query":false,"body":false,"public":false},
   {"group":4,"name":"saveOwnProfile","method":"PATCH","path":"/api/communities/:tenantId/me/profile","params":true,"query":false,"body":true,"public":false},
   {"group":4,"name":"readOwnPreferences","method":"GET","path":"/api/communities/:tenantId/me/preferences","params":true,"query":false,"body":false,"public":false},

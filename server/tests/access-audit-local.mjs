@@ -83,7 +83,7 @@ try {
   assert.deepEqual(Object.keys(request).sort(),['kind','request_id','requested_at'])
   assert.equal(request.request_id,joined.requestId);assert.equal(request.kind,'join');assert.ok(Number.isFinite(Date.parse(request.requested_at)))
   await http(member,path+'/me/request?userId='+owner.id,'GET',undefined,400)
-  const queued=(await http(owner,path+'/requests')).rows[0]
+  const queued=(await http(owner,path+'/activation-requests')).rows[0]
   assert.deepEqual(Object.keys(queued).sort(),['display_name','first_approved_at','has_disciplinary_restriction','id','kind','requested_at','revision','standing','user_id'])
   const reviewed=await http(owner,path+'/accounts/'+member.id+'/review')
   assert.deepEqual(Object.keys(reviewed).sort(),['request_id','revision','standing']);assert.equal(reviewed.request_id,null)

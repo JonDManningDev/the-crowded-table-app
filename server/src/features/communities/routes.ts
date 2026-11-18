@@ -54,7 +54,7 @@ export const communityRoutes: FastifyPluginAsyncTypebox<{ service: ProtectedComm
   routes.get("/api/communities/:tenantId/staff-candidates", { schema: schemas.staffCandidatesSchema }, async request => {
     return await service.staffCandidates(getAuthenticatedContext(request), request.params, request.query)
   })
-  routes.get("/api/communities/:tenantId/requests", { schema: schemas.pendingRequestsSchema }, async request => {
+  routes.get("/api/communities/:tenantId/activation-requests", { schema: schemas.pendingActivationRequestsSchema }, async request => {
     return await service.pendingRequests(getAuthenticatedContext(request), request.params, request.query)
   })
 

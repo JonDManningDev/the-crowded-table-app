@@ -404,7 +404,7 @@ export const staffCandidatesSchema = {
   },
 } as const
 
-export const pendingRequestsSchema = {
+export const pendingActivationRequestsSchema = {
   params: tenantParams,
   querystring: requestPageQuery,
   response: {

@@ -182,7 +182,7 @@ try {
   })
   await cmd(owner, { kind: 'archive', archived: false })
   await read(member, owner.id, 'Owner')
-  const queue = (viewer, after) => send(viewer, '/api/communities/' + tenant + '/requests' + (after ? '?after=' + after : ''))
+  const queue = (viewer, after) => send(viewer, '/api/communities/' + tenant + '/activation-requests' + (after ? '?after=' + after : ''))
   const pending = await user()
   const otherRequest = await cmd(other, join)
   const pendingRequest = await cmd(pending, join)
