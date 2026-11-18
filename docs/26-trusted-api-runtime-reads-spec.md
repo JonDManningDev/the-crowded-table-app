@@ -1,5 +1,7 @@
 # Trusted API runtime fact reads
 
+**Hosted database follow-up - verified 2026-11-18.** The separately authorized [database synchronization](12-implementation-status.md#hosted-database-synchronization--2026-11-18) applied all outstanding migrations through `20261118000100`. The current catalog/runtime, seven G-02 fences, original data/Auth identities, external denial and real Auth/API/concurrency checks pass. Application hosting and hosted performance measurements remain separate; earlier local-only/hosted-pending statements describe their dated checkpoints.
+
 **Locally implemented and verified, 2026-11-16.** The user authorized implementation through implement-spec. Migration `20261116000100` and checkpoint `cc2a276` implement the coordinated follow-up, merged to `implementation/trusted-api-runtime-reads` at `8d8f38d`. The [implementation and measurement record](12-implementation-status.md#trusted-api-runtime-reads--locally-verified-2026-11-16) contains the passing local gates, measured baseline/candidate comparison and independent standards/spec reviews with zero findings. No hosted migration or deployment is included. The published requirements and original assessment notes below remain preserved.
 
 ## Problem Statement

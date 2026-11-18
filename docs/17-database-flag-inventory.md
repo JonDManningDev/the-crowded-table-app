@@ -50,7 +50,7 @@ Accepted target table, not yet migrated. One row per (tenant_id,user_id); only t
 
 ## tenant_settings
 
-Retained settings default false and require effective can_manage_settings. Forward migration `20261118000100` removes the two obsolete settings locally, leaving the three below. Hosted removal has not run. Other inventory sections retain their dated baseline status unless separately refreshed.
+Retained settings default false and require effective can_manage_settings. Forward migration `20261118000100` removes the two obsolete settings locally and, following the verified 2026-11-18 synchronization, in the linked hosted database, leaving the three below. Other inventory sections retain their dated baseline status unless separately refreshed.
 
 | Latest flag name | Previous name | Status | Purpose |
 | --- | --- | --- | --- |
@@ -58,7 +58,7 @@ Retained settings default false and require effective can_manage_settings. Forwa
 | `pause_community_events` | - | Existing | Pause new non-staff community-public event/table creation, preserving existing resources/private creation and independent staff authority. |
 | `allow_public_directory_visibility` | - | Existing; retained | Enable only approved/suspended display names and effective role badges. No profile, DM or further access. |
 
-### Settings retired locally - 2026-11-18
+### Settings retired locally and hosted - 2026-11-18
 
 allow_public_chat_visibility and allow_public_activity_visibility were introduced in historical migration `20261103000600`. Forward migration `20261118000100` drops them with RESTRICT; API contracts/projections, generated query types and current runtime/catalog fixtures are reconciled. Historical SQL and audit evidence remain intact. See [implementation status](12-implementation-status.md#retired-public-visibility-settings--local-implementation-2026-11-18) for verification and deployment limits. There are no replacement settings or compatibility aliases.
 
