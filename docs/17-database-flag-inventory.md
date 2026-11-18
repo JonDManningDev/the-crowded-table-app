@@ -56,8 +56,6 @@ Retained settings default false and require effective can_manage_settings. Forwa
 | --- | --- | --- | --- |
 | `auto_approve_users` | — | Existing | Automatically approve eligible joining requests; never-approved returners use the current setting. Does not bypass disciplinary clearance. |
 | `pause_community_events` | - | Existing | Pause new non-staff community-public event/table creation, preserving existing resources/private creation and independent staff authority. |
-
-
 | `allow_public_directory_visibility` | - | Existing; retained | Enable only approved/suspended display names and effective role badges. No profile, DM or further access. |
 
 ### Settings retired locally - 2026-11-18
