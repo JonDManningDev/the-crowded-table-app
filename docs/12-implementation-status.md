@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## JSON-schema component naming — locally verified 2026-11-18
+
+At the user's request, both feature modules use `profileInput` instead of the internal `profileInputSchema` name. The already-present user-account rename is included in this checkpoint; its unrelated section comments remain outside it. The shared nullable-object helper's `schema` parameter is renamed to `definition`. Repository guidance records that internal components use purpose-based names and reserves schema terminology in declaration names for JSON-schema exports. Exported identifiers, library/framework names and emitted schemas remain unchanged.
+
+An AST inventory of all four `json-schema.ts` files finds no remaining schema-named internal declarations or parameters. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. Diff review confirms identifier changes only in application code; unrelated community/user-account edits and shared-file spacing are preserved outside this checkpoint. Database integration suites were not rerun for this naming-only change. Vite retains its existing large-chunk advisory. No implementation work remains; no deployment is included.
+
 ## Independent community preference input — locally verified 2026-11-18
 
 At the user's request, `preferencesInput` explicitly declares the three optional boolean preference fields in a closed object requiring at least one property. The PATCH body uses this schema directly rather than deriving it from the response. `preferenceResponse` is renamed to `preferencesResponse` for both read/save replies; its required fields are unchanged. Input/reply schemas retain their place among the supporting declarations above the exports. No service, policy, database or HTTP contract changes are included.

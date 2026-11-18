@@ -113,6 +113,8 @@ User-requested schema grouping exception (2026-11-17): `user-accounts/json-schem
 
 Use concise section comments. Place supporting helpers immediately after their related operations; place genuinely feature-wide helpers in a final `Internal helpers` section. Shared schema fragments may precede the operation sections.
 
+JSON-schema naming (accepted 2026-11-18): reserve `Schema` in declaration names for exports from `json-schema.ts`. Internal components use purpose-based names such as `profileInput`; helper parameters use names such as `definition`. This naming rule leaves exported contracts and framework/library-owned names intact. See the [decision](08-decisions-and-open-questions.md#json-schema-component-naming--accepted-2026-11-18).
+
 Sections are navigation aids, not additional plugins or directories.
 
 ### `user-accounts`: 10 operations

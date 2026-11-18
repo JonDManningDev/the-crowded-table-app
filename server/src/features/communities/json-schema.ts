@@ -50,7 +50,7 @@ const directoryQuery = Type.Object(paging, { additionalProperties: false, requir
 
 const requestKind = Type.Enum(['join', 'reactivation'], { type: 'string' })
 
-const profileInputSchema = Type.Object({
+const profileInput = Type.Object({
   display_name: Type.String({ minLength: 1, maxLength: 80 }),
   bio: Type.Union([Type.String({ maxLength: 2000 }), Type.Null()]),
 }, { additionalProperties: false })
@@ -123,7 +123,7 @@ export const readProfileSchema = {
 export const saveOwnProfileSchema = {
   params: tenantParams,
   querystring: noQuery,
-  body: profileInputSchema,
+  body: profileInput,
   response: {
     200: Type.Object({ tenantId: uuid }, { additionalProperties: false }),
     400: errorResponse,

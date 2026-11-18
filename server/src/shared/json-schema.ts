@@ -26,6 +26,6 @@ export const page = <T extends TSchema>(items: T) =>
   Type.Object({ rows: Type.Array(items), next: nullableText }, { additionalProperties: false })
 
 // A closed object union rejects extra fields before Fastify can strip them.
-export function nullableObject<P extends TProperties>(schema: TObject<P>) {
-  return Type.Unsafe<Static<typeof schema> | null>({ ...schema, type: ['object', 'null'] })
+export function nullableObject<P extends TProperties>(definition: TObject<P>) {
+  return Type.Unsafe<Static<typeof definition> | null>({ ...definition, type: ['object', 'null'] })
 }

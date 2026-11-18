@@ -18,7 +18,7 @@ export const readAccountPreferencesSchema = { querystring: noQuery, response: pr
 export const saveAccountPreferencesSchema = { querystring: noQuery, body: preferences, response: preferencesResponse }
 
 // User account profile
-const profileInputSchema = Type.Object({
+const profileInput = Type.Object({
   display_name: Type.String({ minLength: 1, maxLength: 80 }),
   bio: Type.Union([Type.String({ maxLength: 2000 }), Type.Null()]),
 }, { additionalProperties: false })
@@ -44,7 +44,7 @@ export const readOwnGlobalProfileSchema = {
 }
 export const saveGlobalProfileSchema = {
   querystring: noQuery,
-  body: profileInputSchema,
+  body: profileInput,
   response: {
     200: profileResponse,
     400: errorResponse,

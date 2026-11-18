@@ -1,5 +1,9 @@
 # Decisions and open questions
 
+## JSON-schema component naming — accepted 2026-11-18
+
+The user reserves the term `schema` in declaration names for exports from `json-schema.ts`, preferring purpose-based names for their internal components. Rename internal `profileInputSchema` declarations/references to `profileInput`; use `definition` for the nullable-object helper's input parameter. Exported schema identifiers retain their existing names. Library-owned type names, Fastify's required `schema` property and namespace imports representing exported schemas remain intact. Apply this convention to new internal components; reconsider it only at the user's direction.
+
 ## Community preference input schema — accepted 2026-11-18
 
 The user requested a separate explicit `preferencesInput` instead of deriving the PATCH body from the response, and renamed `preferenceResponse` to `preferencesResponse`. Declare `show_global_profile`, `allow_direct_messages` and `allow_private_invitations` as optional booleans in a closed input object requiring at least one property. Keep the response fields required and preserve the existing HTTP contract. This separates request and reply schema ownership without changing preference policy or service behavior.
