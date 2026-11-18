@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Independent community preference input — locally verified 2026-11-18
+
+At the user's request, `preferencesInput` explicitly declares the three optional boolean preference fields in a closed object requiring at least one property. The PATCH body uses this schema directly rather than deriving it from the response. `preferenceResponse` is renamed to `preferencesResponse` for both read/save replies; its required fields are unchanged. Input/reply schemas retain their place among the supporting declarations above the exports. No service, policy, database or HTTP contract changes are included.
+
+Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint, production build and diff whitespace checks pass. The real local self-service suite passes, including all eight flag combinations, partial updates, empty/wrong-type/forbidden-field rejection, lifecycle/archive boundaries, caller isolation, bypass denial, rollback and sharing/inactivity races. It used verified loopback endpoints with process-only overrides; saved configuration was unchanged. Diff review confirms the independent input and response rename only, preserving pre-existing community/user-account edits and shared-file spacing outside this checkpoint. Vite retains its existing large-chunk advisory. No required verification or implementation work remains; no deployment is included.
+
 ## Explicit operation error responses — locally verified 2026-11-17
 
 At the user's request, `clientErrors` and `commandErrors` are removed entirely. Their former consumers in both feature schema files list the existing 400/401/403/404 entries individually, with 409 retained only at former command-map sites. Shared-schema error imports and the feature map imports/declarations are removed without aliases or replacement maps. History's explicit 400/401/403 responses and all other existing status sets remain unchanged. Expanded response maps list each error on its own line.

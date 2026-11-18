@@ -1,5 +1,9 @@
 # Decisions and open questions
 
+## Community preference input schema — accepted 2026-11-18
+
+The user requested a separate explicit `preferencesInput` instead of deriving the PATCH body from the response, and renamed `preferenceResponse` to `preferencesResponse`. Declare `show_global_profile`, `allow_direct_messages` and `allow_private_invitations` as optional booleans in a closed input object requiring at least one property. Keep the response fields required and preserve the existing HTTP contract. This separates request and reply schema ownership without changing preference policy or service behavior.
+
 ## Community HTTP schema declaration sections — accepted 2026-11-17
 
 The user requested an initial grouping under **Accounts and profiles**, **Tenant/community settings and configuration**, and **Staff roles, permissions, and actions**, with each section's supporting declarations grouped before its exports. Place clear account/profile/preferences/directory, configuration/landing/copy, and staff-review/permission matches under those headings. Shared params, command errors and staff badge variants precede the sections; creation/lifecycle and audit history retain their existing groups in this first pass. Preserve every declaration body and schema contract. This is a schema-file organization exception to matching route/service section order; routes, services and ownership remain unchanged. Reconsider the remaining groups during a separately requested organization pass.

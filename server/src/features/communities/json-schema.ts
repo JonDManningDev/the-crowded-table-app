@@ -55,7 +55,13 @@ const profileInputSchema = Type.Object({
   bio: Type.Union([Type.String({ maxLength: 2000 }), Type.Null()]),
 }, { additionalProperties: false })
 
-const preferenceResponse = Type.Record(Type.Enum(communityPreferenceFields), Type.Boolean(), { additionalProperties: false })
+const preferencesInput = Type.Object({
+  show_global_profile: Type.Optional(Type.Boolean()),
+  allow_direct_messages: Type.Optional(Type.Boolean()),
+  allow_private_invitations: Type.Optional(Type.Boolean()),
+}, { additionalProperties: false, minProperties: 1 })
+
+const preferencesResponse = Type.Record(Type.Enum(communityPreferenceFields), Type.Boolean(), { additionalProperties: false })
 
 export const listStandingsSchema = {
   querystring: noQuery,
@@ -131,7 +137,7 @@ export const readOwnPreferencesSchema = {
   params: tenantParams,
   querystring: noQuery,
   response: {
-    200: preferenceResponse,
+    200: preferencesResponse,
     400: errorResponse,
     401: errorResponse,
     403: errorResponse,
@@ -142,9 +148,9 @@ export const readOwnPreferencesSchema = {
 export const saveOwnPreferencesSchema = {
   params: tenantParams,
   querystring: noQuery,
-  body: Type.Partial(preferenceResponse, { additionalProperties: false, minProperties: 1 }),
+  body: preferencesInput,
   response: {
-    200: preferenceResponse,
+    200: preferencesResponse,
     400: errorResponse,
     401: errorResponse,
     403: errorResponse,
