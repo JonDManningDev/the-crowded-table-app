@@ -7,7 +7,10 @@ import {
 
 const userParams = Type.Object({ userId: uuid }, { additionalProperties: false })
 
-// User account preferences
+/*
+ * Preferences
+ */
+
 const preferences = Type.Object({
   user_is_discoverable: Type.Boolean(),
   enable_matchmaking: Type.Boolean(),
@@ -17,7 +20,10 @@ const preferencesResponse = { 200: preferences, 403: errorResponse, 404: errorRe
 export const readAccountPreferencesSchema = { querystring: noQuery, response: preferencesResponse }
 export const saveAccountPreferencesSchema = { querystring: noQuery, body: preferences, response: preferencesResponse }
 
-// User account profile
+/*
+ * Profile
+ */
+
 const profileInput = Type.Object({
   display_name: Type.String({ minLength: 1, maxLength: 80 }),
   bio: Type.Union([Type.String({ maxLength: 2000 }), Type.Null()]),
@@ -78,7 +84,10 @@ export const readOtherGlobalProfileSchema = {
   },
 }
 
-// User account communities
+/*
+ * Communities
+ */
+
 const summary = Type.Object({
   id: uuid,
   name: Type.String(),
@@ -107,7 +116,10 @@ export const listMyCommunitiesSchema = {
   },
 }
 
-// Account blocks
+/*
+ * Blocks
+ */
+
 const block = Type.Object({ blocker_user_id: uuid, blocked_user_id: uuid, created_at: timestamp, created_by: uuid }, { additionalProperties: false })
 const blocksQuery = Type.Object(paging, { additionalProperties: false, required: [] })
 export const listAccountBlocksSchema = {
