@@ -1,6 +1,8 @@
 # The Crowded Table — planning documents
 
-**Community public access simplification - specification published 2026-11-18.** [Issue #25](https://github.com/JonDManningDev/the-crowded-table-app/issues/25) is labelled `ready-for-agent`; [document 28](28-community-public-access-checkpoint-spec.md) contains the published specification. The user confirmed the testing boundaries. [Document 27](27-community-public-access-simplification-plan.md) retains all accepted decisions: first remove two settings across database/API/contracts/tests and correct existing gates/join-status/own Profile. About, History and real admission/chat are separate work. Current requirements are reconciled; historical evidence is preserved. Implementation, migration and hosted execution have not begun.
+**Community public access simplification - delivery scope revised 2026-11-18.** [Document 27](27-community-public-access-simplification-plan.md) now limits current delivery to removing the two obsolete settings across schema/API/contracts/tests, with the mock/sample community unchanged. Gates, join/status and own-Profile behavior changes are deferred alongside the other planned features. [Issue #25](https://github.com/JonDManningDev/the-crowded-table-app/issues/25) and [document 28](28-community-public-access-checkpoint-spec.md) retain the originally published broader specification; parent modification is outside the ticket-publication workflow. No implementation, migration or hosted execution has begun.
+
+The single narrowed child is [issue #26](https://github.com/JonDManningDev/the-crowded-table-app/issues/26), verified `ready-for-agent` with native parent #25 and no blockers. No other children were published; the parent issue's content/status remained unchanged.
 
 **Server product feature nesting — locally verified 2026-11-17.** `communities` and `user-accounts` now live under `server/src/features/`; `health` and shared infrastructure retain their locations. The [accepted folder rule](08-decisions-and-open-questions.md#server-product-feature-nesting--accepted-2026-11-17) limits this folder to implemented server counterparts of client features. TypeScript, all 76 HTTP tests, the complete local integration suite, lint and build pass. See the [verification record](12-implementation-status.md#server-product-feature-nesting--2026-11-17).
 
@@ -111,7 +113,7 @@ The 2026-10-12 decisions also settle per-person event/table records, atomic grou
 | Document | Purpose |
 | --- | --- |
 | [Public access simplification](27-community-public-access-simplification-plan.md) | Accepted audiences, terminology, deferred features and first checkpoint |
-| [Public access checkpoint specification](28-community-public-access-checkpoint-spec.md) | Published issue #25; first checkpoint stories, implementation and confirmed testing boundaries |
+| [Public access checkpoint specification](28-community-public-access-checkpoint-spec.md) | Original broader issue #25 specification; current narrowed delivery is recorded in document 27 |
 | [Implementation status](12-implementation-status.md) | Account/navigation audit, deployed migrations, verification boundaries and remaining work |
 | [Vision and concept](01-vision-and-concept.md) | Community-first vision, brand, functionality, navigation, and MVP |
 | [Decisions and open questions](08-decisions-and-open-questions.md) | Established direction, proposed choices, and unresolved rules |

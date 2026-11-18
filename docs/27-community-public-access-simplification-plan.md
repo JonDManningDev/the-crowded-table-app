@@ -1,10 +1,10 @@
 # Community public access simplification
 
-Accepted product decisions and proposed first implementation specification, 2026-11-18. The user confirmed interview answers 1-14, including the official activity admission default and checkpoint scope. This documentation step does not authorize application implementation, migration execution or hosted changes. Review the completed specification and confirm shared understanding before execution.
+Accepted product decisions and revised delivery scope, 2026-11-18. The user confirmed the product interview and subsequently narrowed current delivery to the originally proposed child ticket 1: retire the two obsolete visibility settings. Preserve the mock/sample community as-is. This revision supersedes the earlier approval to bundle client gates, join/status and own-Profile changes into the first checkpoint. Planning/publication does not start application implementation, migration execution or hosted work.
 
 **Specification published 2026-11-18:** [issue #25](https://github.com/JonDManningDev/the-crowded-table-app/issues/25), labelled `ready-for-agent`. The user confirmed the existing real Auth/HTTP/PostgreSQL, observable client and retained database-safeguard testing boundaries before publication. [Document 28](28-community-public-access-checkpoint-spec.md) is the local copy of the published seven-section specification; this document retains the full accepted product/deferred-feature context. Publication does not start application implementation or hosted work.
 
-## Confirmed product decisions
+## Confirmed target product decisions (not all in current delivery)
 
 - Retain everything currently visible on Community Home, including official activity listings and entry points. The earlier suggested static-only public Home was rejected. Official activities remain visible even when non-members cannot participate.
 - Signed-in non-members may participate in official activities listed on Community Home when those activities admit non-members. Participation does not automatically create a community account. Disciplinary restrictions, blocks, capacity and other admission rules remain applicable; becoming a non-member does not bypass them. Guest attendance remains distinct from the booking account's eligibility. Visibility does not itself grant participation.
@@ -22,11 +22,11 @@ Accepted product decisions and proposed first implementation specification, 2026
 
 ## Settled scope and deferred feature design
 
-The first checkpoint removes the two obsolete settings across database/API/contracts/tests and corrects existing client section gates and the joining/status experience. Preserve current Home content. Restrict Championship alongside Meet & Play and Discussion; distinguish any-account own Profile. Replace the affected mock paid-membership gate with joining/status behavior. About, History and real activity admission/chat functionality are separate work.
+The current checkpoint is backend/schema/contract cleanup only: remove the two obsolete settings, reconcile existing dependent SQL and generated/client contract declarations where necessary, verify retained behavior and update documentation. The mock/sample community, including its routes, gates, preview toggle, Profile, paid-preview copy, activity dialogs and Home content, stays as-is. No new screens, new live community context, new adapters for joining, or user-facing behavior are included.
 
-There are no remaining product questions for this checkpoint. Deferred feature design includes About presentation/editor/storage, directory placement, exact History entitlements/UI, activity admission fields/default implementation/change rules, and future unofficial open activities. These deferred choices cannot be silently filled in by the first checkpoint.
+The agreed future audience model remains authoritative design intent. Changes to client section gates, join/status workflows and inactive own-Profile reads (including the server audience change) are deferred until community/account feature implementation. About, History, real activity admission/chat and unofficial open activities also remain deferred. Preserve existing backend authorization, archive and profile behavior in this cleanup.
 
-For restricted sections, show the actual viewer's applicable sign-in/join/request/return/restriction state. Do not silently create membership or invent new authentication return-routing behavior. Exact activity participation actions belong to the later activity design; their Home visibility is retained here.
+[Document 28](28-community-public-access-checkpoint-spec.md) remains the exact copy of the originally published, broader issue #25 specification. It is historical publication evidence for that scope, not the current child ticket's authorization. Do not edit or close parent #25 during ticket publication; its remaining product work is not satisfied by the narrowed child.
 
 ## Current implementation facts
 
@@ -47,44 +47,32 @@ This document and the decision register identify the accepted supersession. Curr
 - Documents 19, 20, 21, 23 and 25: distinguish historical checkpoints from current contracts and update affected operation/verification requirements without restarting the completed API migration.
 - Documents 12 and README: report planning, implementation, local verification and hosted deployment separately.
 
-## First checkpoint specification
+## Revised first checkpoint specification
 
-### Client
+**Single narrowed child published 2026-11-18:** [issue #26](https://github.com/JonDManningDev/the-crowded-table-app/issues/26), labelled `ready-for-agent`, with native parent #25 and zero blockers. Its full body, open state, label, parent link and blocker count were read back and verified. Parent #25's title, body, state and labels were confirmed unchanged. The originally proposed other children were not published. Publication is not implementation authorization.
 
-- Give community section eligibility one owner. Evaluate good-standing section access separately from having any own community account. Do not use a paid-membership or feature-preview boolean as live authorization.
-- Route direct navigation to restricted Meet & Play, Championship and Discussion destinations to a shared joining/status destination for non-members. A viewer without a community account also cannot open own Profile; an inactive own account can open saved Profile read-only with status/return controls. Pending/approved/suspended retain their existing edit rights. Keep owner-only archived account-content rules.
-- Use current authenticated relationship/standing and request facts for live flows; previews may use explicit fixture states but must not be reported as persistent authorization or real join completion. Reuse existing typed API operations where their contracts suffice. Establish the preview/live route and community-identity wiring before implementing dependent joins; do not silently expand this checkpoint into activity feeds or an entire community-feature cutover.
-- The joining/status destination supports sign-in, explicit joining, pending-request inspection/withdrawal and eligible return, with disciplinary restrictions enforced. Reconcile displayed state after a successful command or stale-state response. Auth return destinations retain existing policy unless separately changed. No paid plan, price or checkout is involved in this flow.
-- Keep Home content, official-activity entry points and the existing public directory contract. Do not add About/History pages or real activity admission/chat in this checkpoint. Do not put future individually authorized activity/history URLs under the blanket section gate.
-- Leave unrelated prototype checkout/promotional behavior outside the affected join gate unchanged; preserving Home content does not approve real payments. Update the affected gate's preservation record in document 15.
+### What to deliver
 
-### Server and database
+Retire allow_public_chat_visibility and allow_public_activity_visibility from tenant_settings and existing settings/landing operations. A completed checkpoint is verifiable through real HTTP behavior and database replay/upgrade while the sample client renders and behaves as before.
 
-- Remove the two keys from community settings input/output, setting field constants, landing types/schema/SQL and all typed callers. Reject removed keys through strict input validation rather than ignoring them or retaining aliases.
-- Use a new forward migration to drop the two stored columns. Preserve prior migrations and populated application/audit data; reconcile dependencies explicitly rather than using indiscriminate CASCADE. Regenerate the complete Kysely query schema from local replay and update schema manifests and test fixtures.
-- Retain auto_approve_users, pause_community_events and allow_public_directory_visibility, including their defaults and existing management authority. Preserve the public directory endpoint, pagination, minimal projection and effective badge behavior.
-- The new inactive own-Profile read is a real result-audience change: allow verified self in an active community with any community account row to read their saved profile, preserving G-02, bilateral non-self profile rules and existing field/edit contracts. Include service SQL and real Auth/HTTP/runtime verification; a client-only page change is insufficient. Pending/approved/suspended writes and inactive write denial remain unchanged.
-- Keep existing explicit joining/application/return operations. If a current operation cannot supply the facts needed by the join/status flow, define its narrow actor/rows/fields/enumeration contract in this specification before implementation; do not broaden unrelated directory/profile reads.
-- No replacement visibility flags, compatibility aliases, new activity-admission columns, arbitrary About slots, grants to external application Data API roles or product-audience database RLS are introduced. Preserve the accepted trusted-runtime boundary, G-02, mutation scope, protected Auth, attribution, integrity and audits.
+- Use one coordinated forward migration and contract update; preserve historical migrations and explicitly reconcile dependent functions, projections, grants/manifests and fixtures. Do not use indiscriminate CASCADE, add aliases or introduce replacement flags.
+- Remove the two keys from settings write/read schemas, public landing output, service field constants/SQL, server types and generated database query types. Update any actual client declaration/consumer only to maintain the changed transport contract. No preview/interface/route changes are included.
+- Strict writes containing either retired key, including mixed valid/retired fields, are rejected without partial mutation. Responses omit both keys. Preserve unrelated endpoint paths, fields and status behavior.
+- Retain auto_approve_users, pause_community_events and allow_public_directory_visibility with their defaults and management authority. Retain public slug identity, seven supported copy slots, minimal directory projection, eligibility, badges, cursor behavior and unknown/archived unavailability.
+- Preserve existing join/request/return commands, current own/other Profile audiences and edits, blocks, archive fences, semantic audits and authorization. In particular, do not implement the future inactive own-Profile read as part of this settings cleanup.
+- Preserve API-owned product authorization, service-owned result SQL, fact loaders, trusted runtime reads, least privilege, G-02, mutation scope, protected Auth, attribution, storage integrity and external Data API denial.
 
-### Verification and closeout
+### Verification
 
-- Use a route matrix covering signed out, signed-in without an account, pending, approved, suspended, inactive, restricted inactive and archived-owner/non-owner viewers. Home remains public; protected sections require good standing; own Profile requires a row and follows read/edit/archive rules. Verify direct URLs, back/forward/refresh, account switch, loading and changed standing without flashing restricted content.
-- Pair real inactive-self Profile read with inactive-other denial, inactive writes with permitted existing edits, and archived non-owner denial with retained owner management. Test known IDs, removed client filters, joins/embeddings where surfaces exist, and external Data API denial. Neither a directory row nor a history/referrer parameter grants profile access.
-- Verify settings/landing responses omit both retired keys; strict writes containing either retired key fail. Retained fields, permissions, directory on/off behavior, approved/suspended target filtering, approved-active badges, narrow row fields, cursor behavior and unknown/archived slug behavior remain intact.
-- Run clean local migration replay and a populated forward upgrade. Compare retained application/audit data and runtime safeguards; confirm the two columns and their obsolete dependencies are gone without broadening writes or external grants. Check regenerated query types against replay.
-- Run relevant HTTP integration/authorization/concurrency suites, reviewed HTTP-contract comparison, client tests, TypeScript, lint and build under documents 22/23. Review deliberate contract changes explicitly; do not regenerate the HTTP baseline merely to clear failures. Required unavailable/failed gates block checkpoint completion until resolved or adjudicated.
-- Visually verify Home preservation and the changed gate/Profile flows at mobile, tablet and desktop widths. Include pending/inactive/disciplinary states and keyboard/focus navigation. Verification of mock previews cannot establish live backend behavior.
-- Future official open admission/chat, History links and About editing need their own allow/nearest-denial, lifecycle, stale-input, retry and concurrency gates when implemented. Do not claim those pass in this checkpoint.
-- Review the scoped diff, commit the authorized checkpoint independently when implementation is approved, and update status/requirements with remaining work and variances. Hosted migration/deployment and verification require a separately identified execution step; none occurred during this documentation work.
+Use the already confirmed real Auth through HTTP API to PostgreSQL tests as the primary contract/authorization boundary, plus existing migration/runtime/external safeguards. No new internal mocking seam is needed.
 
-## Ownership and later delivery
+- Verify omitted response keys and rejected retired-key writes, including mixed patches with no partial updates. Pair allowed retained-setting edits with ordinary-member, wrong-permission and cross-tenant denials.
+- Verify retained defaults, exact-slug lookup/copy projection, public directory on/off, approved/suspended eligibility, effective badges, missing-profile handling, cursor behavior and inaccessible unknown/archived slugs.
+- Run clean local replay and a populated forward upgrade. Compare retained application/audit data, inspect exact removed dependencies and confirm unchanged runtime safeguards/external denial. Regenerate and verify complete query types from replay.
+- Review deliberate HTTP-contract changes explicitly. Run applicable integration/authorization/concurrency checks, database safeguards, client tests, TypeScript, lint and build. Do not regenerate a baseline merely to hide a failure. Required unavailable/failed checks block completion until resolved or adjudicated.
+- Verify the sample community remains unchanged, including Home and existing gate/Profile/activity behavior. Existing client tests/build plus focused browser checks support preservation; do not claim a new live join flow or new audience model was implemented.
+- Review the scoped diff, preserve unrelated edits, commit the authorized checkpoint independently when implementation is approved, and update implementation/deployment status. Hosted execution remains separately identified and is not part of this planning/publication step.
 
-Preserve these boundaries when the first checkpoint or later features are implemented:
+## Deferred implementation
 
-1. Client: centralize section eligibility and a genuine join/status destination, distinguish any-account own Profile from good-standing sections, and keep official activity detail/history authorization independent of the section gate. Scope the new public About separately when its content/presentation is designed.
-2. Server: remove the two flags from settings and landing transports/projections; retain the public directory; authorize every current or future content operation independently of navigation. Preserve service-owned result SQL and policy fact gathering.
-3. Database: a forward migration drops the two stored flags; reconcile affected integrity/runtime manifests, generated query types and fixtures. Do not add replacement visibility flags or compatibility aliases. Detailed About storage awaits its accepted content design.
-4. Verification: pair allowed and denied audiences for routes and APIs, direct deep links, own Profile, directory projection/badges, non-member official admission, unofficial-content denial, DM reporting, history links, lifecycle and archive fences. Validate stale access and concurrent state changes wherever the delivered operations require them. Intentional HTTP contract changes need reviewed fixture changes, not a baseline regeneration to hide differences.
-
-Later work is separately scheduled: public About/content management; global account History and exact resource authorization; real official activity admission/participant chat; then the future unofficial open-activity expansion. Their ordering/dependencies require their own feature specifications. This list is not authorization to implement them now.
+The remaining originally proposed children are not being published for execution in this narrowed batch: verified membership section gates/context, genuine join/application/return UI, and any-account own Profile with inactive saved content read-only. Their target product requirements remain recorded above. Public About/content management, global account History, official open admission/participant chat and later unofficial open activities also require their own feature specifications and implementation work.

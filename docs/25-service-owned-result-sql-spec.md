@@ -1,6 +1,6 @@
 # Service-owned result SQL
 
-**Public access follow-up - accepted 2026-11-18.** [document 27](27-community-public-access-simplification-plan.md) supersedes prior intended public chat/activity settings and adds verified-self inactive Profile reads. Completed migration/audit/refactor evidence below describes its original checkpoint, not implementation of this revision. Preserve API/database ownership and verification history. First checkpoint: remove two flags and update existing gates/join-status/Profile. About, History and real admission/chat are separate work.
+**Public access delivery scope revised 2026-11-18.** [Document 27](27-community-public-access-simplification-plan.md) retains the accepted future audience model but narrows current delivery to removing the two obsolete visibility settings and preserving existing behavior. Client gates/join-status and inactive own-Profile audience changes are deferred. Historical migration/audit/refactor evidence remains intact; document 28 records the originally broader published parent specification. No implementation/deployment is claimed by this revision.
 
 **Accepted 2026-11-14.** [Revised block and profile rules](16-intended-access-matrix.md#am-04--blocks-and-profile-shared-community-visibility) supersede this document’s profile-source requirement, blocked-pair search filtering, and exact-profile/list projections. This specification records the earlier SQL ownership checkpoint.
 

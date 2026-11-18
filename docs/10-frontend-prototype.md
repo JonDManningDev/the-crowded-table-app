@@ -1,6 +1,6 @@
 # Frontend prototype guide
 
-**Public access follow-up - accepted 2026-11-18.** [document 27](27-community-public-access-simplification-plan.md) defines the next checkpoint: retain Home; gate Meet & Play, Championship and Discussion by good standing; any-account own Profile with inactive read-only/status/return; replace affected paid-preview gates with join/status. This supersedes gate-preservation requirements for that checkpoint only. Completed prototype records remain historical. About, History and real admission/chat are deferred; implementation is pending.
+**Public access delivery scope revised 2026-11-18.** [Document 27](27-community-public-access-simplification-plan.md) limits the current checkpoint to retiring two stored/API visibility settings and verifying retained behavior. Preserve the mock/sample community as-is, including existing gates, routes, Profile, Home and activity simulations. The agreed good-standing section gates, join/status and any-account own-Profile model remain future feature work; earlier proposed gate-preservation exceptions are not authorized in this cleanup. About, History and real admission/chat also remain deferred.
 
 Status: interactive frontend exploration, not a production implementation.
 
