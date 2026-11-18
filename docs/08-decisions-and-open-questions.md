@@ -1,5 +1,9 @@
 # Decisions and open questions
 
+## Own activation-request schema name — accepted 2026-11-18
+
+At the user's request, rename the exported `ownRequestSchema` to `readOwnActivationRequestSchema` and update its route reference without an alias. It describes reading verified self's current community join/reactivation request. The HTTP path, response fields/statuses and service operation name remain unchanged; this is a schema-export rename only.
+
 ## JSON-schema component naming — accepted 2026-11-18
 
 The user reserves the term `schema` in declaration names for exports from `json-schema.ts`, preferring purpose-based names for their internal components. Rename internal `profileInputSchema` declarations/references to `profileInput`; use `definition` for the nullable-object helper's input parameter. Exported schema identifiers retain their existing names. Library-owned type names, Fastify's required `schema` property and namespace imports representing exported schemas remain intact. Apply this convention to new internal components; reconsider it only at the user's direction.

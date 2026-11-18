@@ -94,7 +94,7 @@ export const publicDirectorySchema = {
   },
 } as const
 
-export const ownRequestSchema = {
+export const readOwnActivationRequestSchema = {
   params: tenantParams,
   querystring: emptyQuery,
   response: {

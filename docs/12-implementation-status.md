@@ -1,5 +1,9 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Own activation-request schema export — locally verified 2026-11-18
+
+At the user's request, `ownRequestSchema` is renamed to `readOwnActivationRequestSchema`, and the GET `/api/communities/:tenantId/me/request` route references the new export. No alias, service rename, URL or response-contract change is included. Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint and production build pass. Diff review confirms the export/reference rename only. Unrelated community/user-account edits and shared-file spacing remain outside this checkpoint; the worktree's unrelated trailing whitespace is preserved. The scoped staged diff passes whitespace checks. Database integration suites were not rerun for this naming-only change. No implementation work remains; no deployment is included.
+
 ## JSON-schema component naming — locally verified 2026-11-18
 
 At the user's request, both feature modules use `profileInput` instead of the internal `profileInputSchema` name. The already-present user-account rename is included in this checkpoint; its unrelated section comments remain outside it. The shared nullable-object helper's `schema` parameter is renamed to `definition`. Repository guidance records that internal components use purpose-based names and reserves schema terminology in declaration names for JSON-schema exports. Exported identifiers, library/framework names and emitted schemas remain unchanged.

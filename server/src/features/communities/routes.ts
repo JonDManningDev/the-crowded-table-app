@@ -36,7 +36,7 @@ export const communityRoutes: FastifyPluginAsyncTypebox<{ service: ProtectedComm
   })
 
   // Requests and reviews
-  routes.get("/api/communities/:tenantId/me/request", { schema: schemas.ownRequestSchema }, async (request, reply) => {
+  routes.get("/api/communities/:tenantId/me/request", { schema: schemas.readOwnActivationRequestSchema }, async (request, reply) => {
     const result = await service.ownRequest(getAuthenticatedContext(request), request.params)
     if ('status' in result) return reply.code(result.status).send({ code: 'missing', requestId: request.id })
     return result
