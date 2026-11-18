@@ -279,8 +279,6 @@ export const readLandingSchema = {
         slug: Type.String({ maxLength: 63, minLength: 1 }),
         ...detailInput,
         auto_approve_users: Type.Boolean(),
-        allow_public_chat_visibility: Type.Boolean(),
-        allow_public_activity_visibility: Type.Boolean(),
         allow_public_directory_visibility: Type.Boolean(),
         overrides: Type.Array(
           Type.Object(publicCopy, { additionalProperties: false })),

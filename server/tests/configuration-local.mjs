@@ -80,6 +80,22 @@ try {
   const config=(actor,body,status=200)=>http(actor,path+'/settings',body?'PATCH':'GET',body,status)
   const copy=(actor,key,text,status=200)=>http(actor,path+'/copy'+(key?'/'+encodeURIComponent(key):''),key?(text===undefined?'DELETE':'PUT'):'GET',text===undefined?undefined:{text_value:text},status)
   const landing=(actor=null,handle=slug,status=200)=>http(actor,'/api/public/communities/'+handle,'GET',undefined,status)
+  const defaults=await config(owner)
+  assert.deepEqual(Object.keys(defaults).sort(),['tenant_id','auto_approve_users','pause_community_events','allow_public_directory_visibility',
+    'created_at','updated_at','created_by','updated_by'].sort())
+  assert.deepEqual([defaults.auto_approve_users,defaults.pause_community_events,defaults.allow_public_directory_visibility],[false,false,false])
+  // Retired settings are strict transport errors, including mixed patches. The
+  // authenticated interface and persisted settings/history must remain unchanged.
+  const settingsBefore=(await admin.query('select to_jsonb(s) as row from public.tenant_settings s where tenant_id=$1',[tenant])).rows
+  const historyBefore=await http(owner,path+'/history')
+  for(const key of ['allow_public_chat_visibility','allow_public_activity_visibility']) {
+    for(const patch of [{[key]:true},{auto_approve_users:true,pause_community_events:true,[key]:false}]) {
+      await config(owner,patch,400)
+      assert.deepEqual(await config(owner),defaults)
+      assert.deepEqual(await http(owner,path+'/history'),historyBefore)
+      assert.deepEqual((await admin.query('select to_jsonb(s) as row from public.tenant_settings s where tenant_id=$1',[tenant])).rows,settingsBefore)
+    }
+  }
   assert.equal((await details(owner)).state_province,'Region')
   assert.equal((await details(owner)).city,null)
   const join={kind:'join',profile:{displayName:'Configuration fixture',bio:null}}
@@ -150,11 +166,14 @@ try {
   for(const bad of [{},{tenant_id:otherTenant},{auto_approve_users:'true'},{operational_status:'archived'}]) await config(owner,bad,400)
   const initial=await config(owner)
   assert.equal(initial.pause_community_events,false)
-  for(const flag of ['pause_community_events','allow_public_chat_visibility','allow_public_activity_visibility','allow_public_directory_visibility']) {
+  for(const flag of ['auto_approve_users','pause_community_events','allow_public_directory_visibility']) {
+    for(const actor of [member,editor,outsider]) await config(actor,{[flag]:true},403)
+    await http(settings,'/api/communities/'+otherTenant+'/settings','PATCH',{[flag]:true},403)
+    await config(settings,{[flag]:false})
     const result=await config(settings,{[flag]:true})
     assert.equal(result[flag],true);assert.equal(result.updated_by,settings.id)
   }
-  const privatePause=await config(settings,{pause_community_events:true,allow_public_chat_visibility:false,allow_public_activity_visibility:false,allow_public_directory_visibility:false})
+  const privatePause=await config(settings,{pause_community_events:true,allow_public_directory_visibility:false})
   assert.equal(privatePause.pause_community_events,true)
 
   for(const [key,max] of Object.entries(copySlots)) {
@@ -170,7 +189,7 @@ try {
   await http(editor,path+'/copy/community.hero.heading','PUT',{text_value:'text',created_by:owner.id},400)
   const publicRow=await landing()
   assert.deepEqual(Object.keys(publicRow).sort(),['id','slug','name','country_code','state_province','city','timezone','auto_approve_users',
-    'allow_public_chat_visibility','allow_public_activity_visibility','allow_public_directory_visibility','overrides'].sort())
+    'allow_public_directory_visibility','overrides'].sort())
   assert.equal(publicRow.overrides.length,7)
   assert.ok(publicRow.overrides.every(r=>JSON.stringify(Object.keys(r).sort())===JSON.stringify(['tenant_id','content_key','text_value'].sort())))
   assert.ok(!JSON.stringify(publicRow).includes('pause_community_events'))

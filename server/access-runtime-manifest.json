@@ -65,9 +65,9 @@
     },
     {
       "relation": "public.tenant_settings",
-      "select": "{allow_public_activity_visibility,allow_public_chat_visibility,allow_public_directory_visibility,auto_approve_users,created_at,created_by,pause_community_events,tenant_id,updated_at,updated_by}",
+      "select": "{allow_public_directory_visibility,auto_approve_users,created_at,created_by,pause_community_events,tenant_id,updated_at,updated_by}",
       "insert": "{tenant_id}",
-      "update": "{allow_public_activity_visibility,allow_public_chat_visibility,allow_public_directory_visibility,auto_approve_users,pause_community_events}",
+      "update": "{allow_public_directory_visibility,auto_approve_users,pause_community_events}",
       "delete": false
     },
     {

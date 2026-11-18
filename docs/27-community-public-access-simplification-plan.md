@@ -2,6 +2,8 @@
 
 Accepted product decisions and revised delivery scope, 2026-11-18. The user confirmed the product interview and subsequently narrowed current delivery to the originally proposed child ticket 1: retire the two obsolete visibility settings. Preserve the mock/sample community as-is. This revision supersedes the earlier approval to bundle client gates, join/status and own-Profile changes into the first checkpoint. Planning/publication does not start application implementation, migration execution or hosted work.
 
+**Implementation follow-up, 2026-11-18:** issue #26's separately authorized local implementation removes both settings with migration `20261118000100` and coordinated API/types/manifests/tests. The sample client is unchanged. See [implementation status](12-implementation-status.md#retired-public-visibility-settings--local-implementation-2026-11-18) for local verification and the separate browser/deployment status. Broader parent #25 remains unfinished; publication-only statements below describe the earlier planning stage.
+
 **Specification published 2026-11-18:** [issue #25](https://github.com/JonDManningDev/the-crowded-table-app/issues/25), labelled `ready-for-agent`. The user confirmed the existing real Auth/HTTP/PostgreSQL, observable client and retained database-safeguard testing boundaries before publication. [Document 28](28-community-public-access-checkpoint-spec.md) is the local copy of the published seven-section specification; this document retains the full accepted product/deferred-feature context. Publication does not start application implementation or hosted work.
 
 ## Confirmed target product decisions (not all in current delivery)
@@ -32,7 +34,7 @@ The agreed future audience model remains authoritative design intent. Changes to
 
 Read against the local checkout on 2026-11-18; no hosted verification in this discussion.
 
-- Both flags slated for removal already exist in migrations, generated database types, server settings/landing contracts, SQL projections and verification fixtures. Some older documents incorrectly still call them planned. No current client consumer of these visibility-flag names was found, and real activity/chat implementations do not yet use them.
+- Migration `20261118000100` removes both obsolete columns locally. Current settings/landing contracts, service projections, complete generated query types and runtime/catalog fixtures omit both keys. Strict writes containing either key, including mixed retained/retired patches, reject before mutation. Historical migrations and the hosted-policy baseline fixture remain historical evidence. No client consumer required a change; real activity/chat implementations remain deferred. Hosted removal is unperformed.
 - Public slug landing and the independently flag-gated public directory are implemented API operations. The directory projects display_name and staff_role only, with opaque pagination. Its badge currently requires approved standing and an active assignment; suspended accounts can still be directory rows without an effective staff badge.
 - Community preview routes use mock membership. Only Meet & Play and Discussion currently have guest gates; Home renders mocked official activity content and opens activity dialogs for non-members. Championship and Profile do not yet implement the proposed authorization distinctions.
 - The existing guest gate opens a mock paid-membership flow. It is not the proposed joining/status destination.
@@ -40,7 +42,7 @@ Read against the local checkout on 2026-11-18; no hosted verification in this di
 
 ## Documentation reconciliation and delivery plan
 
-This document and the decision register identify the accepted supersession. Current audience/settings/navigation and verification requirements are reconciled in the documents below; older baseline and completed verification records retain their historical meaning. The documentation changes establish intent, not an implemented migration:
+This document and the decision register identify the accepted supersession. Current audience/settings/navigation and verification requirements are reconciled in the documents below; older baseline and completed verification records retain their historical meaning. These planning reconciliations established intent; the separately authorized settings implementation is recorded above:
 
 - Documents 01, 04, 05, 07, 09, 10 and 15: public Home/About/directory, restricted sections, own Profile, joining flows and replacement of mock gates.
 - Documents 02, 03, 08, 16 and 17: intended audiences, removal of the two flags, official versus unofficial activities, public directory, Profile, DM/history and About-copy authority. AM-07's flag-based public exploration and candidate all-pages-browsable direction are superseded where they conflict. Official activity visibility is retained.

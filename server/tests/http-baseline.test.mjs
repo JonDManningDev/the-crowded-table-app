@@ -13,7 +13,6 @@ const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/
 const community = `/api/communities/${tenantId}`
 const landing = { id: tenantId, slug: 'test-community', name: 'Test community', country_code: 'HN',
   state_province: null, city: null, timezone: 'America/Tegucigalpa', auto_approve_users: false,
-  allow_public_chat_visibility: false, allow_public_activity_visibility: false,
   allow_public_directory_visibility: false, overrides: [] }
 
 function concrete(path) {

@@ -41,7 +41,7 @@ try {
   assert.deepEqual(catalog.runtime, JSON.parse(readFileSync(new URL('../../server/access-runtime-manifest.json', import.meta.url))))
   assert.deepEqual(catalog.external_relation_grants, [])
   assert.deepEqual(catalog.external_function_grants, [])
-  assert.equal(catalog.migrations.at(-1).version, '20261116000100')
+  assert.equal(catalog.migrations.at(-1).version, '20261118000100')
   // Export a review candidate without overwriting the checked-in test fixture.
   const directory = new URL('../../server/test-results/policy/', import.meta.url)
   mkdirSync(directory, { recursive: true })

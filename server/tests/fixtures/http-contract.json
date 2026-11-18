@@ -3408,12 +3408,6 @@
         "200": {
           "additionalProperties": false,
           "properties": {
-            "allow_public_activity_visibility": {
-              "type": "boolean"
-            },
-            "allow_public_chat_visibility": {
-              "type": "boolean"
-            },
             "allow_public_directory_visibility": {
               "type": "boolean"
             },
@@ -3462,8 +3456,6 @@
             "tenant_id",
             "auto_approve_users",
             "pause_community_events",
-            "allow_public_chat_visibility",
-            "allow_public_activity_visibility",
             "allow_public_directory_visibility",
             "created_at",
             "updated_at",
@@ -5049,12 +5041,6 @@
         "200": {
           "additionalProperties": false,
           "properties": {
-            "allow_public_activity_visibility": {
-              "type": "boolean"
-            },
-            "allow_public_chat_visibility": {
-              "type": "boolean"
-            },
             "allow_public_directory_visibility": {
               "type": "boolean"
             },
@@ -5151,8 +5137,6 @@
             "city",
             "timezone",
             "auto_approve_users",
-            "allow_public_chat_visibility",
-            "allow_public_activity_visibility",
             "allow_public_directory_visibility",
             "overrides"
           ],
@@ -5978,12 +5962,6 @@
         "additionalProperties": false,
         "minProperties": 1,
         "properties": {
-          "allow_public_activity_visibility": {
-            "type": "boolean"
-          },
-          "allow_public_chat_visibility": {
-            "type": "boolean"
-          },
           "allow_public_directory_visibility": {
             "type": "boolean"
           },
@@ -6020,12 +5998,6 @@
         "200": {
           "additionalProperties": false,
           "properties": {
-            "allow_public_activity_visibility": {
-              "type": "boolean"
-            },
-            "allow_public_chat_visibility": {
-              "type": "boolean"
-            },
             "allow_public_directory_visibility": {
               "type": "boolean"
             },
@@ -6074,8 +6046,6 @@
             "tenant_id",
             "auto_approve_users",
             "pause_community_events",
-            "allow_public_chat_visibility",
-            "allow_public_activity_visibility",
             "allow_public_directory_visibility",
             "created_at",
             "updated_at",

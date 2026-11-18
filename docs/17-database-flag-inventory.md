@@ -50,7 +50,7 @@ Accepted target table, not yet migrated. One row per (tenant_id,user_id); only t
 
 ## tenant_settings
 
-Retained settings default false and require effective can_manage_settings. Repository migrations contain all five settings flags; two are now scheduled for removal. Other inventory sections retain their dated baseline status unless separately refreshed.
+Retained settings default false and require effective can_manage_settings. Forward migration `20261118000100` removes the two obsolete settings locally, leaving the three below. Hosted removal has not run. Other inventory sections retain their dated baseline status unless separately refreshed.
 
 | Latest flag name | Previous name | Status | Purpose |
 | --- | --- | --- | --- |
@@ -60,9 +60,9 @@ Retained settings default false and require effective can_manage_settings. Repos
 
 | `allow_public_directory_visibility` | - | Existing; retained | Enable only approved/suspended display names and effective role badges. No profile, DM or further access. |
 
-### Settings scheduled for removal - accepted 2026-11-18
+### Settings retired locally - 2026-11-18
 
-allow_public_chat_visibility and allow_public_activity_visibility already exist in migration 20261103000600. Document 27 retires both from the intended product. A forward migration and coordinated API/fixture changes are pending; this documentation does not apply removal. Do not add replacement settings or compatibility aliases.
+allow_public_chat_visibility and allow_public_activity_visibility were introduced in historical migration `20261103000600`. Forward migration `20261118000100` drops them with RESTRICT; API contracts/projections, generated query types and current runtime/catalog fixtures are reconciled. Historical SQL and audit evidence remain intact. See [implementation status](12-implementation-status.md#retired-public-visibility-settings--local-implementation-2026-11-18) for verification and deployment limits. There are no replacement settings or compatibility aliases.
 
 ## tenant_staff_assignments
 

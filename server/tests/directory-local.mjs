@@ -115,11 +115,12 @@ try {
     await http(null,path+endpoint,'GET',undefined,401)
     assert.equal((await http(owner,missingPath+endpoint,'GET',undefined,404)).code,'missing')
   }
-  // The public flag is independent of authorized member reads and other public flags.
+  // The public directory flag is independent of authorized member reads and
+  // retained event-creation/joining settings.
   await publicDirectory(null,'',404)
-  await config({allow_public_chat_visibility:true,allow_public_activity_visibility:true})
+  await config({pause_community_events:true,auto_approve_users:false})
   await publicDirectory(null,'',404)
-  await config({allow_public_chat_visibility:false,allow_public_activity_visibility:false,allow_public_directory_visibility:true})
+  await config({allow_public_directory_visibility:true})
   const publicPage=await publicDirectory()
   assert.equal(publicPage.rows.length,6)
   assert.equal(publicPage.rows.filter(r=>r.staff_role==='owner').length,1)

@@ -183,7 +183,7 @@ async function readCommunityLanding(db: AppDatabase, slug: string): Promise<Comm
     if (!site) return undefined
     return tx.selectFrom('tenants as t').innerJoin('tenant_settings as s', 's.tenant_id', 't.id')
       .select(['t.id', 't.slug', 't.name', 't.country_code', 't.state_province', 't.city', 't.timezone',
-        's.auto_approve_users', 's.allow_public_chat_visibility', 's.allow_public_activity_visibility', 's.allow_public_directory_visibility'])
+        's.auto_approve_users', 's.allow_public_directory_visibility'])
       .select(sql<PublicCopy[]>`coalesce((select jsonb_agg(jsonb_build_object(
         'tenant_id',o.tenant_id,'content_key',o.content_key,'text_value',o.text_value) order by o.content_key)
         from public.tenant_website_content_overrides o where o.tenant_id=t.id

@@ -127,8 +127,6 @@ export interface Tenants {
 }
 
 export interface TenantSettings {
-  allow_public_activity_visibility: Generated<boolean>;
-  allow_public_chat_visibility: Generated<boolean>;
   allow_public_directory_visibility: Generated<boolean>;
   auto_approve_users: Generated<boolean>;
   created_at: Generated<Timestamp>;

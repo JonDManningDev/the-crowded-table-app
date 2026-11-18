@@ -78,8 +78,7 @@ export type AccountParams = { tenantId: string; userId: string }
 export type AccountStanding = { standing: string }
 
 // Configuration and copy
-export const settingFields = ['auto_approve_users','pause_community_events','allow_public_chat_visibility',
-  'allow_public_activity_visibility','allow_public_directory_visibility'] as const
+export const settingFields = ['auto_approve_users','pause_community_events','allow_public_directory_visibility'] as const
 export type CommunitySettings = Record<typeof settingFields[number],boolean>
 export const copySlots = {
   'community.hero.eyebrow': 120, 'community.hero.heading': 200, 'community.hero.description': 500,
@@ -96,7 +95,7 @@ export type CommunitySettingsRecord = CommunitySettings & Attribution & { tenant
 export type PublicCopy = { tenant_id: string; content_key: CopyKey; text_value: string }
 export type CommunityCopy = PublicCopy & Attribution
 export type CommunityLanding = CommunityDetailsInput & { id: string; slug: string; auto_approve_users: boolean;
-  allow_public_chat_visibility: boolean; allow_public_activity_visibility: boolean; allow_public_directory_visibility: boolean; overrides: PublicCopy[] }
+  allow_public_directory_visibility: boolean; overrides: PublicCopy[] }
 export type ConfigurationKind = 'details' | 'settings' | 'copy'
 export type CopyParams = { tenantId: string; contentKey: CopyKey }
 export type CopyInput = { text_value: string }

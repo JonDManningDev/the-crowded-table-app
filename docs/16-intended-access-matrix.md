@@ -135,7 +135,7 @@ Creation still atomically establishes the tenant/settings, approved owner commun
 
 ### Tenant settings columns — accepted 2026-10-30
 
-The user approved the tenant_settings contract including its planned flags. Full-column SELECT is available to approved/suspended members for their active community; public readers receive the joining/exploration subset. These are intended audiences, not deployed grants.
+The user approved the tenant_settings contract. After the November 18 retirement, it retains the three controls below; migration `20261118000100` and current API contracts remove the two obsolete flags locally. Full-column SELECT is available to approved/suspended members for their active community; public readers receive the joining/directory subset. These are intended audiences, not a claim about direct Data API grants or hosted migration parity.
 
 | Columns | Readers | Client updates |
 | --- | --- | --- |
@@ -172,7 +172,7 @@ Row-level audit metadata is included in authorized full assignment reads; histor
 
 ### Website copy columns — accepted 2026-10-30
 
-In an active community, everyone can read the three hero text overrides (eyebrow, heading, description) and four welcome text overrides (eyebrow, heading, body, emphasis), even when public chat, activity and directory visibility are all off. The public projection returns only `tenant_id`, `content_key` and `text_value`. Existing member/editor audit-field access and archive rules still apply.
+In an active community, everyone can read the three hero text overrides (eyebrow, heading, description) and four welcome text overrides (eyebrow, heading, body, emphasis), including when public directory visibility is off. The public projection returns only `tenant_id`, `content_key` and `text_value`. Existing member/editor audit-field access and archive rules still apply.
 
 The user approved the tenant_website_content_overrides contract:
 

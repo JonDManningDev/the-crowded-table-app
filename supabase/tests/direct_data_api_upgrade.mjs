@@ -4,8 +4,13 @@ import assert from 'node:assert/strict';
 import { execFile, execFileSync } from 'node:child_process';
 import { promisify } from 'node:util';
 import { holdLocalTransaction } from './hold-local-transaction.mjs';
-import { readdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { Kysely, PostgresDialect } from 'kysely';
+import { generate, PostgresDialect as CodegenPostgresDialect } from 'kysely-codegen';
+import pg from 'pg';
+import { localStack } from './local-stack.mjs';
 
 const container = 'supabase_db_the-crowded-table-app';
 const database = `crowded_table_api_test_${randomUUID().replaceAll('-', '')}`;
@@ -173,12 +178,55 @@ async function verifySharingRace() {
 function apply(...names) {
   sql(names.map(file => readFileSync(new URL(file, migrations), 'utf8')).join('\n'));
 }
-function applicationSnapshot() {
+function applicationSnapshot(omitRetiredSettings = false) {
   const relations = JSON.parse(sql(`select jsonb_agg(format('%I.%I',n.nspname,c.relname) order by n.nspname,c.relname)
     from pg_class c join pg_namespace n on n.oid=c.relnamespace
     where n.nspname in ('public','app_private') and c.relkind in ('r','p')`));
   return Object.fromEntries(relations.map(relation => [relation,
-    sql(`select coalesce(jsonb_agg(row order by row::text),'[]'::jsonb) from (select to_jsonb(t) as row from ${relation} t) snapshot`)]));
+    sql(`select coalesce(jsonb_agg(row order by row::text),'[]'::jsonb) from (select to_jsonb(t)
+      ${omitRetiredSettings && relation === 'public.tenant_settings' ? "-array['allow_public_chat_visibility','allow_public_activity_visibility']" : ''}
+      as row from ${relation} t) snapshot`)]));
+}
+function settingsRetirementMetadata() {
+  // Compare all application functions/policies/triggers and retained columns,
+  // defaults and grants, without depending on transient catalog OIDs.
+  return sql(`select jsonb_build_object(
+    'functions',(select jsonb_agg(pg_get_functiondef(p.oid) order by p.oid::regprocedure::text)
+      from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','app_private')),
+    'policies',(select jsonb_agg(to_jsonb(p) order by schemaname,tablename,policyname)
+      from pg_policies p where schemaname in ('public','app_private')),
+    'triggers',(select jsonb_agg(pg_get_triggerdef(t.oid) order by t.tgrelid::regclass::text,t.tgname)
+      from pg_trigger t join pg_class c on c.oid=t.tgrelid join pg_namespace n on n.oid=c.relnamespace
+      where not t.tgisinternal and n.nspname in ('public','app_private')),
+    'constraints',(select jsonb_agg(jsonb_build_array(c.conrelid::regclass::text,c.conname,pg_get_constraintdef(c.oid))
+      order by c.conrelid::regclass::text,c.conname) from pg_constraint c join pg_namespace n on n.oid=c.connamespace
+      where n.nspname in ('public','app_private')),
+    'indexes',(select jsonb_agg(to_jsonb(i) order by schemaname,tablename,indexname)
+      from pg_indexes i where schemaname in ('public','app_private')),
+    'columns',(select jsonb_agg(to_jsonb(c) order by table_schema,table_name,ordinal_position)
+      from information_schema.columns c where table_schema in ('public','app_private')
+      and column_name not in ('allow_public_chat_visibility','allow_public_activity_visibility')),
+    'grants',(select jsonb_agg(to_jsonb(g) order by table_schema,table_name,column_name,grantee,privilege_type)
+      from information_schema.column_privileges g where table_schema in ('public','app_private')
+      and column_name not in ('allow_public_chat_visibility','allow_public_activity_visibility')))`);
+}
+async function verifyReplayTypes() {
+  const endpoint = new URL(localStack().DB_URL);
+  assert.ok(['127.0.0.1','localhost'].includes(endpoint.hostname));
+  assert.equal(endpoint.pathname, '/postgres');
+  assert.match(database, /^crowded_table_api_test_[0-9a-f]{32}$/);
+  endpoint.pathname = '/' + database;
+  const db = new Kysely({ dialect: new PostgresDialect({ pool: new pg.Pool({ connectionString: endpoint.href, max: 1 }) }) });
+  const directory = new URL('../../server/test-results/migration-replay/', import.meta.url);
+  mkdirSync(directory, { recursive: true });
+  const output = new URL('database.types.ts', directory);
+  try {
+    const config = JSON.parse(readFileSync(new URL('../../server/kysely-codegen.json', import.meta.url), 'utf8'));
+    await generate({ ...config, db, dialect: new CodegenPostgresDialect(), outFile: fileURLToPath(output) });
+    assert.equal(readFileSync(output, 'utf8').replaceAll('\r\n','\n'),
+      readFileSync(new URL('../../server/src/database.types.ts', import.meta.url), 'utf8').replaceAll('\r\n','\n'));
+    console.log('PASS complete query types regenerated from isolated clean replay match checked-in types');
+  } finally { await db.destroy(); }
 }
 try {
   init();
@@ -191,7 +239,10 @@ try {
   assert.equal(sql(`select count(*) from pg_policies where schemaname='public' and cmd<>'SELECT';`), '10');
   runCommunityCutover();
   apply(...files.filter(file => file > cutover));
+  assert.equal(sql(`select count(*) from information_schema.columns where table_schema='public' and table_name='tenant_settings'
+    and column_name in ('allow_public_chat_visibility','allow_public_activity_visibility')`), '0', 'clean replay retires both settings');
   assert.equal(sql('select count(*) from public.community_account_preferences'), '0');
+  await verifyReplayTypes();
   cleanup();
   init();
   apply(...files.filter(file => file < '20261024000200_direct_data_api.sql'));
@@ -248,12 +299,33 @@ try {
     from pg_proc where oid='app_private.begin_actor_context(uuid,uuid,uuid)'::regprocedure`), 't');
   console.log('PASS populated initial-tenant upgrade preserves data, history, narrow Auth definer and exact replacement grant');
   const trustedReadSnapshot = applicationSnapshot();
-  apply(...files.filter(file => file >= '20261116000100'));
+  apply(...files.filter(file => file >= '20261116000100' && file < '20261118000100'));
   assert.deepEqual(applicationSnapshot(), trustedReadSnapshot, 'trusted runtime read policies preserve every populated row, history/category and attribution');
   assert.equal(sql("select pg_get_functiondef('app_private.lock_eligible_actor()'::regprocedure)"), authPrimitive);
   assert.equal(sql("select count(*) from pg_policies where schemaname in ('public','app_private') and cmd='ALL'"), '0');
   assert.equal(sql("select count(*) from pg_policies where schemaname in ('public','app_private') and permissive='RESTRICTIVE' and cmd='SELECT'"), '7');
   console.log('PASS populated trusted-runtime-read upgrade preserves all data/history, the Auth primitive and seven archive fences');
+  sql(`update public.tenant_settings set allow_public_chat_visibility=true,allow_public_activity_visibility=true,
+    pause_community_events=true,allow_public_directory_visibility=true`);
+  const settingsSnapshot = applicationSnapshot(true);
+  const settingsMetadata = settingsRetirementMetadata();
+  const settingsDependencies = JSON.parse(sql(`select jsonb_agg(jsonb_build_object('class',d.classid::regclass::text,
+    'type',d.deptype,'column',a.attname) order by a.attname) from pg_depend d
+    join pg_attribute a on a.attrelid=d.refobjid and a.attnum=d.refobjsubid
+    where d.refclassid='pg_class'::regclass and a.attrelid='public.tenant_settings'::regclass
+    and a.attname in ('allow_public_chat_visibility','allow_public_activity_visibility')`));
+  assert.deepEqual(settingsDependencies,[
+    {class:'pg_attrdef',type:'a',column:'allow_public_activity_visibility'},
+    {class:'pg_attrdef',type:'a',column:'allow_public_chat_visibility'},
+  ], 'only the two column defaults depend on the retired settings');
+  apply(...files.filter(file => file >= '20261118000100'));
+  assert.deepEqual(applicationSnapshot(), settingsSnapshot,
+    'retirement preserves every retained application value, audit event/category and attribution');
+  assert.equal(settingsRetirementMetadata(), settingsMetadata,
+    'retirement preserves retained columns/defaults/grants, all functions, policies and triggers');
+  assert.equal(sql(`select count(*) from information_schema.columns where table_schema='public' and table_name='tenant_settings'
+    and column_name in ('allow_public_chat_visibility','allow_public_activity_visibility')`), '0');
+  console.log('PASS populated visibility-settings retirement preserves retained rows/history and exact retained schema/runtime dependencies');
   assert.equal(sql(`select jsonb_agg(to_jsonb(p) order by tenant_id,user_id) from public.community_account_profiles p`),
     profileSnapshot, 'later policy migrations preserve existing profile bytes and attribution');
   assert.equal(sql(`select bio='  Original bio  ' from public.community_account_profiles where tenant_id='${tenant}' and user_id='${owner}'`), 't');
