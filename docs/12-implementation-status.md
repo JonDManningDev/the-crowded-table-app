@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Public visibility branch closeout — 2026-11-18
+
+At the user's request, `architecture/move-to-persistent-api` was fast-forwarded from `933acaa` to verified/deployed tip `b7b7e13`. The checkout's thirteen uncommitted scope-document changes were verified identical to the already integrated `ad530ea` scope commit, preserved in a patch/archive and temporary stash, and reconciled by the fast-forward. Existing untracked scratch files were left untouched.
+
+The integrated `implementation/public-visibility-settings` and `ticket/26-retire-public-visibility-settings` branches and the remaining integration worktree were removed after ancestor/cleanliness checks. All 111 verification/deployment evidence files and Supabase metadata were copied and checksum-verified under ignored `server/test-results/public-visibility-closeout-b7b7e13/` before removal; the duplicate temporary stash was then dropped. The current checkout now contains the matching API/schema/migration state. No application behavior, database state or remote branch was changed during closeout; the earlier verification and hosted deployment records below remain authoritative.
+
 ## Hosted database synchronization — 2026-11-18
 
 At the user's explicit request, the selected linked hosted development project `fsnipgsrlclbnfepcbvz` was updated from 33 migrations through `20261110000800` to all 38 migrations through `20261118000100`, matching the verified `implementation/public-visibility-settings` integration branch. The original checkout/branch and its existing working changes were not altered by the deployment.
