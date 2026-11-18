@@ -1,5 +1,7 @@
 # Incremental page presentation refactor
 
+**Public access follow-up - accepted 2026-11-18.** [document 27](27-community-public-access-simplification-plan.md) defines the next checkpoint: retain Home; gate Meet & Play, Championship and Discussion by good standing; any-account own Profile with inactive read-only/status/return; replace affected paid-preview gates with join/status. This supersedes gate-preservation requirements for that checkpoint only. Completed prototype records remain historical. About, History and real admission/chat are deferred; implementation is pending.
+
 Recorded 2026-10-25. Workflow and all four account-tab slices are approved and completed: Settings 5b3f5a4, AccountHomeTab 31dea35, independent InsightsCarousel f4e86ab, Profile b918fea, and Communities/account-auth simplification 3a68cb9. Community Home was accepted and committed as 6defc2b; Meet & Play was accepted and committed as 5e2fee8; Championship was accepted and committed as bccabe7; Discussion was accepted and committed as 58be746; Community Profile was accepted and committed as f9007cb; Authentication was accepted and committed as a035181. Create Community was accepted and committed as 89696c4. Shared ActivityDialog was accepted and committed as 594470c. App dialogs/preview actions are implemented, verified locally and accepted for commit. The original page/dialog inventory is covered; remaining follow-ups are distinguished below. No deployment occurred. See docs/12 for evidence and verification limits.
 
 ## Accepted working agreement

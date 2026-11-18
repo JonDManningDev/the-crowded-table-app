@@ -50,15 +50,19 @@ Accepted target table, not yet migrated. One row per (tenant_id,user_id); only t
 
 ## tenant_settings
 
-Existing table. All five flags default false; edits require effective can_manage_settings.
+Retained settings default false and require effective can_manage_settings. Repository migrations contain all five settings flags; two are now scheduled for removal. Other inventory sections retain their dated baseline status unless separately refreshed.
 
 | Latest flag name | Previous name | Status | Purpose |
 | --- | --- | --- | --- |
 | `auto_approve_users` | — | Existing | Automatically approve eligible joining requests; never-approved returners use the current setting. Does not bypass disciplinary clearance. |
-| `pause_community_events` | — | Planned | Pause new non-staff community-public event/table creation. Existing activities and private creation remain; effective staff still need ordinary creation authority. |
-| `allow_public_chat_visibility` | — | Planned | Allow non-members, including signed-out/pending/inactive viewers, read-only community-public chats; independent of activity visibility. |
-| `allow_public_activity_visibility` | — | Planned | Allow non-member reads of community-account-hosted public activities and their agreed participant/queue/statistics fields. Official activities remain visible independently; chats have a separate flag. |
-| `allow_public_directory_visibility` | — | Planned | Allow non-members to read minimal approved/suspended directory rows, without full community-profile access. |
+| `pause_community_events` | - | Existing | Pause new non-staff community-public event/table creation, preserving existing resources/private creation and independent staff authority. |
+
+
+| `allow_public_directory_visibility` | - | Existing; retained | Enable only approved/suspended display names and effective role badges. No profile, DM or further access. |
+
+### Settings scheduled for removal - accepted 2026-11-18
+
+allow_public_chat_visibility and allow_public_activity_visibility already exist in migration 20261103000600. Document 27 retires both from the intended product. A forward migration and coordinated API/fixture changes are pending; this documentation does not apply removal. Do not add replacement settings or compatibility aliases.
 
 ## tenant_staff_assignments
 
@@ -86,8 +90,8 @@ One application-wide `public.community_standing` table defines standing capabili
 
 | Latest flag name | Previous name | Status | Purpose |
 | --- | --- | --- | --- |
-| `enable_standard_chat_visibility` | `enable_chat_visibility` | Proposed | Baseline member access to standard community chat reads; public fallbacks, private resource audiences and retained history are evaluated separately. |
-| `enable_standard_activity_visibility` | `enable_activity_visibility` | Proposed | Baseline member access to standard activity reads; independent public visibility and resource restrictions still apply. |
+| `enable_standard_chat_visibility` | `enable_chat_visibility` | Proposed | Baseline member chat eligibility; official open-activity participant, private-resource and retained-history rights remain separate. No generic public chat fallback. |
+| `enable_standard_activity_visibility` | `enable_activity_visibility` | Proposed | Baseline member activity eligibility; official Home visibility, open admission and independent resource/history rights remain separate. |
 | `enable_other_profile_visibility` | — | Proposed | Baseline eligibility to inspect other community profiles; does not grant global-profile access. |
 | `enable_own_profile_management` | `enable_profile_management` | Proposed | Allow own curated community-profile management: proposed true for pending/approved/suspended and false for inactive. |
 | `enable_standard_participation` | `enable_participation` | Proposed | Baseline ordinary community-public participation/shared-chat eligibility. Suspended false must not block private activities or automatically cancel existing public commitments; final mapping must preserve those exceptions. |

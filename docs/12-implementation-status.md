@@ -1,5 +1,9 @@
 # Account and navigation implementation audit — 2026-10-16
 
+**Public access checkpoint specification published 2026-11-18.** [Issue #25](https://github.com/JonDManningDev/the-crowded-table-app/issues/25) is open with `ready-for-agent`; [document 28](28-community-public-access-checkpoint-spec.md) is its local specification copy. The user confirmed the testing boundaries before publication. The published body, label and open state were read back and verified. No application implementation, migration execution, application tests or hosted work occurred during publication.
+
+**Public access simplification - documentation complete 2026-11-18; implementation pending.** [Document 27](27-community-public-access-simplification-plan.md) records fourteen confirmed decisions and the proposed checkpoint. Current requirements/vocabulary are reconciled. Retired columns still exist; inactive own-Profile reads and revised client gates/join-status are not implemented by this documentation. About, History and real admission/chat are separate work. Documentation checks only; no application tests, migrations or hosted verification run for this change.
+
 ## Community standing reference service — locally verified 2026-11-18
 
 At the user's request, the factory's returned `getCommunityStandingReference` method delegates to a same-named standalone service function. That function owns the `community_standing` query, using `.selectAll()` with the existing standing ordering and transaction retry boundary; `standingFields` is removed. Composition, public service typing, the route call and test dispatch use the new name without an alias. The HTTP URL and `listStandingsSchema` export remain unchanged. All seven current table columns match the former projection and G-03f's public reference audience; no grants or database definitions change.

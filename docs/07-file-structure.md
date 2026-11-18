@@ -1,5 +1,7 @@
 # Application file structure and client refactor
 
+**Public access follow-up - accepted 2026-11-18.** [document 27](27-community-public-access-simplification-plan.md) defines the next checkpoint: retain Home; gate Meet & Play, Championship and Discussion by good standing; any-account own Profile with inactive read-only/status/return; replace affected paid-preview gates with join/status. This supersedes gate-preservation requirements for that checkpoint only. Completed prototype records remain historical. About, History and real admission/chat are deferred; implementation is pending.
+
 ## Server product feature nesting — accepted 2026-11-17
 
 The [accepted folder rule](08-decisions-and-open-questions.md#server-product-feature-nesting--accepted-2026-11-17) puts `communities` and `user-accounts` under `server/src/features/`, retaining their five-file structure. Only implemented server features with corresponding folders in `client/src/features/` belong there. `server/src/health/` and shared infrastructure remain outside `features/`. This supersedes the earlier root-level feature locations without changing client organization or feature responsibilities.

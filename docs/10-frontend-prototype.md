@@ -1,5 +1,7 @@
 # Frontend prototype guide
 
+**Public access follow-up - accepted 2026-11-18.** [document 27](27-community-public-access-simplification-plan.md) defines the next checkpoint: retain Home; gate Meet & Play, Championship and Discussion by good standing; any-account own Profile with inactive read-only/status/return; replace affected paid-preview gates with join/status. This supersedes gate-preservation requirements for that checkpoint only. Completed prototype records remain historical. About, History and real admission/chat are deferred; implementation is pending.
+
 Status: interactive frontend exploration, not a production implementation.
 
 This guide describes the five mock sections. Real Supabase Auth, community creation, and the owner-only community list have since been added alongside them; see the [root README](../README.md). The [canonical client architecture](05-frontend-patterns.md) and [refactor inventory](07-file-structure.md#current-conflicts-and-refactor-candidates) guide the upcoming structural changes without requiring the current prototype to match the illustrative tree immediately.
