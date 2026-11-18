@@ -1,5 +1,9 @@
 # Decisions and open questions
 
+## Community standing reference service — accepted 2026-11-18
+
+The user requested renaming the service operation `listStandings` to `getCommunityStandingReference`, with a same-named standalone function behind the factory's returned method. The function owns its query, selecting all columns from `community_standing` with standing ordering and the existing transaction retry boundary; remove `standingFields`. All seven current reference columns are publicly readable under G-03f and match the former field list. Update composition, public service typing, the route call and test dispatch without an alias. The HTTP path, HTTP schema export, serialized contract and database grants remain unchanged.
+
 ## Pending activation-request queue route — accepted 2026-11-18
 
 At the user's request, rename the existing `pendingRequestsSchema` export to `pendingActivationRequestsSchema` and change its endpoint to GET `/api/communities/:tenantId/activation-requests`. Update all callers and the reviewed HTTP fixture for this intentional path change, including automatic HEAD. Remove the former `/requests` registration without an alias. Keep the service operation, query/pagination, response fields/statuses and staff queue audiences unchanged. No database change or hosted deployment is included.

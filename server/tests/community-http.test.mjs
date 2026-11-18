@@ -11,7 +11,7 @@ import { staffFlags } from '../src/features/communities/types.ts'
 import { actorId, targetId, tenantId, authorization, createHttpHarness } from './helpers/http-harness.mjs'
 
 const operations = [
-  {"group":1,"name":"listStandings","method":"GET","path":"/api/community-standings","params":false,"query":false,"body":false,"public":true},
+  {"group":1,"name":"getCommunityStandingReference","method":"GET","path":"/api/community-standings","params":false,"query":false,"body":false,"public":true},
   {"group":1,"name":"readLanding","method":"GET","path":"/api/public/communities/:slug","params":true,"query":false,"body":false,"public":true},
   {"group":1,"name":"publicDirectory","method":"GET","path":"/api/public/communities/:slug/directory","params":true,"query":true,"body":false,"public":true},
   {"group":2,"name":"createCommunity","method":"POST","path":"/api/communities","params":false,"query":false,"body":true,"public":false},
@@ -75,7 +75,7 @@ function result(operation, dto) {
   }
   return dto
 }
-function cache(operation) { return operation.public ? operation.name === 'listStandings' ? undefined : 'no-store' : 'private, no-store' }
+function cache(operation) { return operation.public ? operation.name === 'getCommunityStandingReference' ? undefined : 'no-store' : 'private, no-store' }
 function harness(t) {
   const pending = [], calls = [], unexpected = [], verified = [], requests = [], registered = [], hits = []
   const all = Object.fromEntries(operations.map(operation => [operation.name, async (...args) => {
@@ -179,7 +179,7 @@ test('migrated routes validate before service calls and preserve public/protecte
       error(h, operation, await h.app.inject({ ...request, payload: { ...request.payload, actorId } }), 400, 'invalid_request')
     }
   }
-  const standing = operations.find(operation => operation.name === 'listStandings'), before = h.verified.length
+  const standing = operations.find(operation => operation.name === 'getCommunityStandingReference'), before = h.verified.length
   error(h, standing, await h.app.inject({ url: '/api/community-standings?forged_identity=1', headers: { authorization: 'Bearer invalid' } }), 400, 'invalid_request')
   assert.equal(h.verified.length, before)
   assert.equal(h.calls.length, 0)

@@ -10,7 +10,7 @@ export const publicCommunityRoutes: FastifyPluginAsyncTypebox<{ service: PublicC
   // Public access and standing
   routes.get("/api/community-standings", { schema: schemas.listStandingsSchema }, async (request, reply) => {
     if (!await verifyOptionalIdentity(request, reply, verify)) return reply
-    return service.listStandings()
+    return service.getCommunityStandingReference()
   })
   routes.get("/api/public/communities/:slug", { onRequest: optionalAuthentication(verify), schema: schemas.readLandingSchema }, async (request, reply) => {
     const row = await service.readLanding(request.params)

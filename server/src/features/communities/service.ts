@@ -72,8 +72,8 @@ import {
 export function createCommunityService({ db, cursors }: CommunityDependencies) {
   return {
     // Public access and standing
-    listStandings() {
-      return withTransactionRetry(db, tx => tx.selectFrom('community_standing').select(standingFields).orderBy('standing').execute())
+    getCommunityStandingReference() {
+      return getCommunityStandingReference(db)
     },
     readLanding(params: SlugParams) {
       return readCommunityLanding(db, params.slug)
@@ -170,7 +170,10 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
 }
 
 // Public access and standing
-const standingFields = ['standing', 'enable_standard_chat_visibility', 'enable_standard_activity_visibility', 'enable_other_profile_visibility', 'enable_own_profile_management', 'enable_standard_participation', 'enable_standard_dms'] as const
+function getCommunityStandingReference(db: AppDatabase) {
+  return withTransactionRetry(db, tx => tx.selectFrom('community_standing').selectAll().orderBy('standing').execute())
+}
+
 async function lockPublicCommunity(tx: Tx, slug: string) {
   return tx.selectFrom('tenants').select('id').where('slug', '=', slug).forShare().executeTakeFirst()
 }

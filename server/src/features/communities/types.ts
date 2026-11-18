@@ -160,7 +160,7 @@ export type Tx = Transaction<DB>
 export type TenantParams = { tenantId: string }
 export interface CommunityDependencies { db: AppDatabase; cursors: DirectoryCursors }
 export type CommunityService = ReturnType<typeof createCommunityService>
-export type PublicCommunityOperations = Pick<CommunityService, "listStandings" | "readLanding" | "publicDirectory">
+export type PublicCommunityOperations = Pick<CommunityService, "getCommunityStandingReference" | "readLanding" | "publicDirectory">
 export type ProtectedCommunityOperations = Pick<CommunityService,
   "createCommunity"
   | "executeCommand"

@@ -30,7 +30,7 @@ export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
   app.register(healthRoutes, { service: healthService })
   app.register(publicCommunityRoutes, {
     service: {
-      listStandings: communityService.listStandings,
+      getCommunityStandingReference: communityService.getCommunityStandingReference,
       readLanding: communityService.readLanding,
       publicDirectory: communityService.publicDirectory,
     },

@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Community standing reference service — locally verified 2026-11-18
+
+At the user's request, the factory's returned `getCommunityStandingReference` method delegates to a same-named standalone service function. That function owns the `community_standing` query, using `.selectAll()` with the existing standing ordering and transaction retry boundary; `standingFields` is removed. Composition, public service typing, the route call and test dispatch use the new name without an alias. The HTTP URL and `listStandingsSchema` export remain unchanged. All seven current table columns match the former projection and G-03f's public reference audience; no grants or database definitions change.
+
+Server source/test TypeScript, all 76 HTTP tests against the unchanged reviewed fixture, root lint and production build pass. The local community suite passes with the real runtime role, verifying anonymous standing reads, all four sorted standings, exactly seven response fields and every capability value, plus invalid identity/query denials and existing lifecycle/concurrency checks. It used verified loopback endpoints through process-only overrides without altering saved configuration. Diff review confirms the operation rename, standalone query extraction and select-all change only. Scoped whitespace checks pass; unrelated schema-file edits remain outside this checkpoint. Vite retains its existing large-chunk advisory. No required verification or implementation work remains; no deployment is included.
+
 ## Pending activation-request queue route — locally verified 2026-11-18
 
 At the user's request, the existing `pendingRequestsSchema` export is renamed to `pendingActivationRequestsSchema`. Its endpoint is now GET `/api/communities/:tenantId/activation-requests`, with automatic HEAD at the same path. The former `/requests` registration is removed without an alias. Both real-test callers, HTTP dispatch inventory, current API documentation and reviewed fixture use the new path. The `pendingRequests` service operation, staff authorization, query/pagination, projection and response status sets are unchanged; no frontend queue caller currently requires an update.
