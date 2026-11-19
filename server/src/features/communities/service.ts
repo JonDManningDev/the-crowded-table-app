@@ -5,7 +5,7 @@ import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActio
   requireCanApproveCommunityRequest, requireCanReturnToCommunity, loadJoinCommunityFacts, decideCommunityEntry,
   requireCanChangeCommunityStanding, loadStaffGrantFacts, requireCanManageCommunityStaff,
   loadConfigurationFacts, requireCanEditConfiguration,
-  loadAccountRecordFacts, requireCanReadAccountRecord, requireCanManageAccountRecords,
+  loadAccountRecordFacts, requireCanManageParticipantPermissions,
   selectHistoryViewerFacts, type Account, type Staff, type Pending } from './policies.ts'
 import { sql } from 'kysely'
 import { jsonArrayFrom } from 'kysely/helpers/postgres'
@@ -687,48 +687,70 @@ export async function readAccountFacts(tx: Tx, actor: string, tenant: string, ta
 }
 
 // Staff and participant permissions
-// Record reads use explicit tenant filters; permission writes also require tenant scope.
 const recordMetadataColumns = ['tenant_id', 'user_id', 'created_at', 'updated_at', 'created_by', 'updated_by']
-const table = { staff: 'public.tenant_staff_assignments', participant: 'public.community_account_permissions' }
+const recordTables = { staff: 'public.tenant_staff_assignments', participant: 'public.community_account_permissions' }
 const columns = {
   staff: [...recordMetadataColumns, 'role', 'status', ...staffFlags],
   participant: [...recordMetadataColumns, 'can_post_public_events'],
 }
-async function authorizeRecords(tx: Tx, actor: string, tenant: string, kind: RecordKind, target?: string, write = false) {
-  const site = (await sql`select id from public.tenants where id=${tenant} ${write ? sql`for update` : sql`for share`}`.execute(tx)).rows[0]
-  if (!site) throw new ApplicationError(404, 'missing')
-  const facts = await loadAccountRecordFacts(tx, actor, tenant)
-  if (write) requireCanManageAccountRecords(facts, kind)
-  else requireCanReadAccountRecord(facts, kind, target === actor)
-}
-export async function readAccountRecord<K extends RecordKind>(tx: Tx, actor: string, tenant: string, kind: K, target: string): Promise<Records[K]> {
-  await authorizeRecords(tx, actor, tenant, kind, target)
-  const row = (await sql<Records[K]>`select ${sql.join(columns[kind].map(key => sql.id(key)))} from ${sql.table(table[kind])}
-    where tenant_id=${tenant} and user_id=${target}`.execute(tx)).rows[0]
+async function readAccountRecord<K extends RecordKind>(tx: Tx, actor: string, tenant: string, kind: K, target: string): Promise<Records[K]> {
+  // Keep the exact route and verified identity strings for self-access.
+  const row = (await sql<Records[K]>`
+    select ${sql.join(columns[kind].map(key => sql.ref(`r.${key}`)))}
+    from ${sql.table(recordTables[kind])} r
+    join public.tenants t on t.id=r.tenant_id
+    left join public.community_accounts viewer on viewer.tenant_id=t.id and viewer.user_id=${actor}
+    left join public.tenant_staff_assignments staff on staff.tenant_id=t.id and staff.user_id=${actor}
+    where r.tenant_id=${tenant} and r.user_id=${target}
+      and ((t.operational_status='active' and ${target}::text=${actor}::text)
+        or (viewer.standing='approved' and staff.status='active'
+          and ${sql.ref(kind === 'staff' ? 'staff.can_grant_staff' : 'staff.can_manage_community_permissions')}
+          and (t.operational_status='active' or staff.role='owner')))
+  `.execute(tx)).rows[0]
   if (!row) throw new ApplicationError(404, 'missing')
   return row
 }
-export async function listAccountRecords<K extends RecordKind>(tx: Tx, actor: string, tenant: string, kind: K, query: RecordQuery): Promise<RecordPage<Records[K]>> {
-  await authorizeRecords(tx, actor, tenant, kind)
+async function listAccountRecords<K extends RecordKind>(tx: Tx, actor: string, tenant: string, kind: K, query: RecordQuery): Promise<RecordPage<Records[K]>> {
   const scope = [actor, tenant, kind]
   let position: string | null = null
+  let invalidCursor = false
   if (query.cursor) {
     try {
       const value: unknown = JSON.parse(Buffer.from(query.cursor, 'base64url').toString('utf8'))
       if (!Array.isArray(value) || value.length !== 4 || JSON.stringify(value.slice(0, 3)) !== JSON.stringify(scope)
         || typeof value[3] !== 'string' || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value[3])) throw new Error()
       position = value[3]
-    } catch { throw new ApplicationError(400, 'invalid_cursor') }
+    } catch { invalidCursor = true }
   }
   const limit = query.limit ? Number(query.limit) : 50
-  const rows = (await sql<Records[K]>`select ${sql.join(columns[kind].map(key => sql.id(key)))} from ${sql.table(table[kind])}
-    where tenant_id=${tenant} and (${position}::uuid is null or user_id>${position}::uuid)
-    order by user_id limit ${limit + 1}`.execute(tx)).rows
+  // The lateral join retains native timestamp values and a null row for an authorized empty page.
+  const page = (await sql<Records[K] | { user_id: null }>`
+    select page.*
+    from public.tenants t
+    join public.community_accounts viewer on viewer.tenant_id=t.id and viewer.user_id=${actor}
+    join public.tenant_staff_assignments staff on staff.tenant_id=t.id and staff.user_id=${actor}
+    left join lateral (
+      select ${sql.join(columns[kind].map(key => sql.ref(`r.${key}`)))}
+      from ${sql.table(recordTables[kind])} r
+      where r.tenant_id=t.id and (${position}::uuid is null or r.user_id>${position}::uuid)
+      order by r.user_id limit ${invalidCursor ? 0 : limit + 1}
+    ) page on true
+    where t.id=${tenant} and viewer.standing='approved' and staff.status='active'
+      and ${sql.ref(kind === 'staff' ? 'staff.can_grant_staff' : 'staff.can_manage_community_permissions')}
+      and (t.operational_status='active' or staff.role='owner')
+    order by page.user_id
+  `.execute(tx)).rows
+  // Only an authorized requester gets an empty page or a cursor error.
+  if (!page.length) throw new ApplicationError(404, 'missing')
+  if (invalidCursor) throw new ApplicationError(400, 'invalid_cursor')
+  const rows = page.filter(row => row.user_id !== null)
   const visible = rows.slice(0, limit), last = visible.at(-1)
   return { rows: visible, next: rows.length > limit && last ? Buffer.from(JSON.stringify([...scope, last.user_id])).toString('base64url') : null }
 }
 export async function setParticipantPermission(tx: Tx, actor: string, tenant: string, target: string, enabled: boolean) {
-  await authorizeRecords(tx, actor, tenant, 'participant', target, true)
+  const site = (await sql`select id from public.tenants where id=${tenant} for update`.execute(tx)).rows[0]
+  if (!site) throw new ApplicationError(404, 'missing')
+  requireCanManageParticipantPermissions(await loadAccountRecordFacts(tx, actor, tenant))
   const before = (await sql<Records['participant']>`select ${sql.join(columns.participant.map(key => sql.id(key)))} from public.community_account_permissions
     where tenant_id=${tenant} and user_id=${target} for update`.execute(tx)).rows[0]
   if (!before) throw new ApplicationError(404, 'missing')

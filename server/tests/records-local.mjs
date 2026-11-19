@@ -5,7 +5,7 @@ import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
-import { readAccountRecord, setParticipantPermission } from '../src/features/communities/service.ts'
+import { setParticipantPermission } from '../src/features/communities/service.ts'
 import { staffFlags } from '../src/features/communities/types.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
@@ -16,7 +16,15 @@ const endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
-const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
+let pauseRecordResult
+const apiDb = db.withPlugin({
+  transformQuery({ node }) { return node },
+  async transformResult({ result }) {
+    await pauseRecordResult?.(result.rows[0])
+    return result
+  },
+})
+const app = buildApi({ db: apiDb, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -80,6 +88,7 @@ try {
     assert.equal((await list(actor,'staff')).rows.length,3)
   }
   for(const actor of [manager,grant]) assert.equal((await staff(actor,actor.id)).status,'active')
+  if(manager.id.toUpperCase()!==manager.id) await staff(manager,manager.id.toUpperCase(),404)
   for(const actor of [manager,member,pending,outsider]) {
     await staff(actor,owner.id,404);await list(actor,'staff','',404)
   }
@@ -94,6 +103,7 @@ try {
     await permissions(actor,actor.id,true,403)
     await list(actor,'participant-permissions','',404)
   }
+  if(pending.id.toUpperCase()!==pending.id) await permissions(pending,pending.id.toUpperCase(),undefined,404)
   await permissions(outsider,outsider.id,undefined,404)
   const missingPath='/api/communities/'+randomUUID()
   for(const endpoint of ['/staff/'+owner.id,'/staff','/participant-permissions','/accounts/'+member.id+'/permissions']) {
@@ -115,7 +125,13 @@ try {
   await list(owner,'staff','?limit=0',400);await list(owner,'staff','?limit=101',400)
   await list(owner,'staff','?target='+member.id,400);await list(owner,'staff','?cursor=garbage',400)
   for(const kind of ['staff','participant-permissions']) {
-    const all=(await list(owner,kind)).rows.map(r=>r.user_id)
+    const records=(await list(owner,kind)).rows
+    const all=records.map(r=>r.user_id)
+    for(const row of records) {
+      const exact=kind==='staff'?await staff(owner,row.user_id):await permissions(owner,row.user_id)
+      assert.deepEqual(row,exact)
+      for(const field of ['created_at','updated_at']) assert.equal(row[field],new Date(row[field]).toISOString())
+    }
     const collected=[];let next=null
     do {
       const page=await list(owner,kind,'?limit=1'+(next?'&cursor='+next:''))
@@ -128,13 +144,81 @@ try {
     } while(next)
     assert.deepEqual(collected,all);assert.deepEqual([...all].sort(),all)
     assert.equal((await list(owner,kind,'?limit=100')).next,null)
+    const afterAll=Buffer.from(JSON.stringify([owner.id,tenant,kind==='staff'?'staff':'participant','ffffffff-ffff-ffff-ffff-ffffffffffff'])).toString('base64url')
+    assert.deepEqual(await list(owner,kind,'?cursor='+afterAll),{rows:[],next:null})
   }
+  async function duringLockedChange(change,read) {
+    await admin.query('begin')
+    let response
+    try {
+      await admin.query('select id from public.tenants where id=$1 for update',[tenant])
+      await change()
+      response=read()
+      let done=false
+      const finish=()=>{done=true}
+      response.then(finish,finish)
+      const deadline=Date.now()+4000
+      while(!done) {
+        const {waiting}=(await admin.query("select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as waiting")).rows[0]
+        assert.equal(waiting,false,'record reads must complete while the community write holds the root')
+        assert.ok(Date.now()<deadline,'record reads must complete before the change commits')
+        await new Promise(resolve=>setTimeout(resolve,10))
+      }
+      const result=await response
+      await admin.query('commit')
+      return result
+    } finally {
+      await admin.query('rollback')
+      await response?.catch(()=>{})
+    }
+  }
+
+  async function changeBeforeDelivery(field,read,expected,change,verify) {
+    const selected=Promise.withResolvers(), deliver=Promise.withResolvers()
+    let remaining=expected.length
+    pauseRecordResult=async row=>{
+      if(row?.tenant_id!==tenant || !Object.hasOwn(row,field)) return
+      if(--remaining===0) {
+        pauseRecordResult=undefined
+        selected.resolve()
+      }
+      await deliver.promise
+    }
+    const reader=read()
+    let mutation,timer
+    const deadline=new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Record snapshots and the overlapping command must complete before delivery')),4000)})
+    try {
+      await Promise.race([selected.promise,reader.then(()=>assert.fail('Record reads ended before the result barrier')),deadline])
+      mutation=change()
+      await Promise.race([mutation,deadline])
+      await Promise.race([verify(),deadline])
+    } finally {
+      clearTimeout(timer)
+      pauseRecordResult=undefined
+      deliver.resolve()
+      await Promise.allSettled([reader,mutation])
+    }
+    assert.deepEqual(await reader,expected)
+  }
+
   const staffCursor=(await list(grant,'staff','?limit=1')).next
-  await afterLockedChange(
+  assert.ok(staffCursor)
+  const staffPage='?limit=1&cursor='+staffCursor
+  const readStaff=()=>Promise.all([staff(grant,manager.id),list(grant,'staff',staffPage)])
+  const verifyStaffRevocation=async()=>{
+    await staff(grant,manager.id,404)
+    await list(grant,'staff',staffPage,404)
+    assert.equal((await list(grant,'staff','?cursor=garbage',404)).code,'missing')
+    assert.equal((await staff(grant,grant.id)).can_grant_staff,false)
+  }
+  const permittedStaff=await readStaff()
+  assert.deepEqual(await duringLockedChange(
     ()=>admin.query('update public.tenant_staff_assignments set can_grant_staff=false where tenant_id=$1 and user_id=$2',[tenant,grant.id]),
-    ()=>staff(grant,manager.id,404))
-  await list(grant,'staff','?cursor='+staffCursor,404)
-  assert.equal((await staff(grant,grant.id)).can_grant_staff,false)
+    readStaff),permittedStaff)
+  await verifyStaffRevocation()
+  await cmd(owner,{kind:'permissions',target:grant.id,permissions:{can_grant_staff:true}})
+  await changeBeforeDelivery('can_grant_staff',readStaff,await readStaff(),
+    ()=>cmd(owner,{kind:'permissions',target:grant.id,permissions:{can_grant_staff:false}}),verifyStaffRevocation)
   await cmd(owner,{kind:'permissions',target:grant.id,permissions:{can_grant_staff:true}})
   const priorReview=await http(grant,path+'/accounts/'+grant.id+'/review')
   const changed=await permissions(manager,grant.id,true)
@@ -215,6 +299,7 @@ try {
   assert.equal((await staff(grant,grant.id)).status,'revoked');await list(grant,'staff','',404)
   await admin.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1",[manager.id])
   await permissions(manager,manager.id,undefined,403);await permissions(manager,member.id,true,403)
+  assert.equal((await list(manager,'participant-permissions','?cursor=garbage',403)).code,'ineligible')
   await admin.query('update auth.users set banned_until=null where id=$1',[manager.id])
 
   async function afterLockedChange(change,compete) {
@@ -226,7 +311,7 @@ try {
       response=compete();response.catch(()=>{})
       const deadline=Date.now()+1800
       while(!(await admin.query("select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as waiting")).rows[0].waiting) {
-        assert.ok(Date.now()<deadline,'configuration operation must wait for current authority')
+        assert.ok(Date.now()<deadline,'participant permission write must wait for current authority')
         await new Promise(resolve=>setTimeout(resolve,10))
       }
       await admin.query('commit')
@@ -235,6 +320,24 @@ try {
   }
 
   const savedCursor=(await list(manager,'participant-permissions','?limit=1')).next
+  assert.ok(savedCursor)
+  const permissionPage='?limit=1&cursor='+savedCursor
+  const readPermissions=()=>Promise.all([permissions(manager,member.id),list(manager,'participant-permissions',permissionPage)])
+  const verifyPermissionRevocation=async()=>{
+    await permissions(manager,member.id,undefined,404)
+    await list(manager,'participant-permissions',permissionPage,404)
+    assert.equal((await list(manager,'participant-permissions','?cursor=garbage',404)).code,'missing')
+    assert.equal((await permissions(manager,manager.id)).user_id,manager.id)
+  }
+  const permittedPermissions=await readPermissions()
+  assert.deepEqual(await duringLockedChange(
+    ()=>admin.query('update public.tenant_staff_assignments set can_manage_community_permissions=false where tenant_id=$1 and user_id=$2',[tenant,manager.id]),
+    readPermissions),permittedPermissions)
+  await verifyPermissionRevocation()
+  await cmd(owner,{kind:'permissions',target:manager.id,permissions:{can_manage_community_permissions:true}})
+  await changeBeforeDelivery('can_post_public_events',readPermissions,await readPermissions(),
+    ()=>cmd(owner,{kind:'permissions',target:manager.id,permissions:{can_manage_community_permissions:false}}),verifyPermissionRevocation)
+  await cmd(owner,{kind:'permissions',target:manager.id,permissions:{can_manage_community_permissions:true}})
   await afterLockedChange(
     ()=>admin.query('update public.tenant_staff_assignments set can_manage_community_permissions=false where tenant_id=$1 and user_id=$2',[tenant,manager.id]),
     ()=>permissions(manager,member.id,true,403))
@@ -258,7 +361,7 @@ try {
     }
   })
   await cmd(owner,{kind:'archive',archived:false})
-  // A checked read holds its tenant snapshot until it finishes; revocation waits.
+  // An admitted permission write holds the tenant root through its effects.
   async function admittedOperation(work,compete) {
     let release,ready
     const gate=new Promise(resolve=>{release=resolve}),started=new Promise(resolve=>{ready=resolve})
@@ -279,10 +382,6 @@ try {
     const result=await operation;await response
     return result
   }
-  assert.equal((await admittedOperation(tx=>readAccountRecord(tx,manager.id,tenant,'participant',member.id),
-    ()=>cmd(owner,{kind:'permissions',target:manager.id,permissions:{can_manage_community_permissions:false}}))).can_post_public_events,true)
-  await permissions(manager,member.id,undefined,404)
-  await cmd(owner,{kind:'permissions',target:manager.id,permissions:{can_manage_community_permissions:true}})
   await admittedOperation(tx=>setParticipantPermission(tx,manager.id,tenant,member.id,false),
     ()=>cmd(owner,{kind:'permissions',target:manager.id,permissions:{can_manage_community_permissions:false}}))
   assert.equal((await permissions(owner,member.id)).can_post_public_events,false)
@@ -296,7 +395,7 @@ try {
   assert.equal((await permissions(owner,member.id)).can_post_public_events,false)
   assert.deepEqual((await permissionEvents()).slice(beforeConcurrent.length),[{before:false,after:true},{before:true,after:false}],
     'serialized updates derive each event from the locked committed value')
-  console.log('PASS staff holder/manager reads, participant permission separation, bounded scoped pages, standing/archive/Auth boundaries, immutable attribution and community-only audit, no-op/rollback, raw bypasses and both serialization orders')
+  console.log('PASS staff holder/manager reads, participant permission separation, bounded scoped pages, standing/archive/Auth boundaries, immutable attribution and community-only audit, no-op/rollback, raw bypasses, both read snapshot orders and write serialization')
 
 } finally {
   try {
