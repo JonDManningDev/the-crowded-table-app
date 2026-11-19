@@ -4,7 +4,6 @@ import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
-import { readMemberDirectory, readPublicDirectory } from '../src/features/communities/service.ts'
 import { directoryCursors } from '../src/directory-cursors.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
@@ -16,11 +15,12 @@ assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
 const cursorKey=randomBytes(32).toString('hex'), cursors=directoryCursors(cursorKey)
-let pauseLandingResult
+let pauseLandingResult, pauseDirectoryResult
 const apiDb = db.withPlugin({
   transformQuery({node}) {return node},
   async transformResult({result}) {
     await pauseLandingResult?.(result.rows[0])
+    await pauseDirectoryResult?.(result.rows[0]?.rows?.[0] ?? result.rows[0])
     return result
   },
 })
@@ -223,45 +223,68 @@ try {
     await sql`rollback to savepoint rejected_write`.execute(tx)
   })
   assert.equal((await sql`select to_regprocedure('app_private.public_community_directory(text,uuid,integer)') as fn`.execute(db)).rows[0].fn,null)
-  async function afterLockedChange(change,compete) {
+  async function readDuringChange(change, read) {
     await admin.query('begin')
-    let response
+    let pendingRead
     try {
       await admin.query('select id from public.tenants where id=$1 for update',[tenant])
       await change()
-      response=compete();response.catch(()=>{})
-      const deadline=Date.now()+1800
-      while(!(await admin.query("select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as waiting")).rows[0].waiting) {
-        assert.ok(Date.now()<deadline,'configuration operation must wait for current authority')
-        await new Promise(resolve=>setTimeout(resolve,10))
+      pendingRead = read()
+      // Detect a waiting read explicitly before the runtime lock timeout.
+      let finished = false
+      void pendingRead.finally(() => { finished = true }).catch(() => {})
+      const deadline = Date.now() + 1800
+      while (!finished) {
+        const { rows: [{ blocked }] } = await admin.query(
+          "select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as blocked")
+        assert.equal(blocked, false, 'directory read must not wait for the community row')
+        assert.ok(Date.now() < deadline, 'directory read did not finish during the change')
+        await new Promise(resolve => setTimeout(resolve, 10))
       }
+      const result = await pendingRead
       await admin.query('commit')
-    } finally {await admin.query('rollback')}
-    return response
+      return result
+    } finally {
+      await admin.query('rollback')
+      await pendingRead?.catch(() => {})
+    }
   }
 
-
-  await afterLockedChange(
+  const continuingPublicDirectory = () => publicDirectory(null,'?cursor='+publicCursor)
+  const publicNext = await continuingPublicDirectory()
+  assert.deepEqual(await readDuringChange(
     ()=>admin.query('update public.tenant_settings set allow_public_directory_visibility=false where tenant_id=$1',[tenant]),
-    ()=>publicDirectory(null,'?cursor='+publicCursor,404))
+    continuingPublicDirectory), publicNext)
+  assert.equal((await publicDirectory(null,'?cursor='+publicCursor,404)).code,'missing')
+  assert.equal((await publicDirectory(null,'?cursor=invalid',400)).code,'invalid_cursor')
   assert.equal((await directory(member)).rows.length,7)
   await config({allow_public_directory_visibility:true})
   const savedCursor=(await directory(member,'?limit=1')).next
-  await afterLockedChange(
+  const continuingMemberDirectory = () => directory(member,'?cursor='+savedCursor)
+  const memberNext = await continuingMemberDirectory()
+  assert.deepEqual(await readDuringChange(
     ()=>admin.query("update public.community_accounts set standing='inactive' where tenant_id=$1 and user_id=$2",[tenant,member.id]),
-    ()=>directory(member,'?cursor='+savedCursor,404))
+    continuingMemberDirectory), memberNext)
+  assert.equal((await directory(member,'?cursor='+savedCursor,404)).code,'missing')
+  assert.equal((await directory(member,'?cursor=invalid',404)).code,'missing')
   assert.equal((await facts(member,member.id)).standing,'inactive')
   await cmd(member,{kind:'reactivate'})
+  assert.equal((await directory(member,'?cursor=invalid',400)).code,'invalid_cursor')
+  const finalMemberCursor=cursors.encode(['member-directory',member.id,tenant],expected.at(-1))
+  assert.deepEqual(await directory(member,'?cursor='+finalMemberCursor),{rows:[],next:null})
   await http(owner,path+'/copy/community.hero.heading','PUT',{text_value:'Published heading'})
   const publishedLanding=await landing()
   assert.deepEqual(publishedLanding.overrides,[{tenant_id:tenant,content_key:'community.hero.heading',text_value:'Published heading'}])
-  await afterLockedChange(
+  await readDuringChange(
+    ()=>admin.query("update public.tenants set operational_status='archived' where id=$1",[tenant]),
     async ()=>{
-      await admin.query("update public.tenants set operational_status='archived' where id=$1",[tenant])
       assert.deepEqual(await landing(),publishedLanding)
-    },
-    ()=>publicDirectory(null,'',404))
+      assert.deepEqual(await publicDirectory(),publicPage)
+      assert.deepEqual((await directory(member)).rows.map(r=>r.account.user_id),expected)
+    })
   assert.equal((await landing(404)).code,'missing')
+  assert.equal((await publicDirectory(null,'?cursor='+publicCursor,404)).code,'missing')
+  assert.equal((await directory(member,'?cursor='+savedCursor,404)).code,'missing')
   await db.transaction().execute(async tx=>{
     for(const relation of ['community_accounts','community_account_profiles','tenant_staff_assignments','tenant_settings','tenant_website_content_overrides']) {
       assert.deepEqual((await sql`select tenant_id from ${sql.table(relation)} where tenant_id=${tenant}`.execute(tx)).rows,[])
@@ -309,35 +332,49 @@ try {
   assert.deepEqual(await inFlightLanding,publishedLanding)
   await cmd(owner,{kind:'archive',archived:false})
 
-  // Once admitted, a page finishes before a gate/standing change can commit.
-  async function admittedRead(read,compete,actor) {
-    let release,ready
-    const gate=new Promise(resolve=>{release=resolve}),started=new Promise(resolve=>{ready=resolve})
-    const work=async tx=>{
-      const result=await read(tx)
-      ready((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
-      await gate;return result
+  // Hold a selected directory page before delivery while a real write commits.
+  async function changeBeforeDirectoryDelivery(read, change, match) {
+    const selected=Promise.withResolvers(), deliver=Promise.withResolvers()
+    pauseDirectoryResult=async row=>{
+      if(!match(row)) return
+      pauseDirectoryResult=undefined
+      selected.resolve()
+      await deliver.promise
     }
-    const operation=actor?withEligibleActorTransaction(db, { actorId: actor.id, requestId: randomUUID() },work,{ initialTenantId: tenant }):db.transaction().execute(work)
-    const holder=await Promise.race([started,operation.then(()=>{throw Error('read exited before barrier')})])
-    const change=compete();change.catch(()=>{})
+    const inFlight=read()
     try {
-      const deadline=Date.now()+1800
-      while(!(await admin.query('select exists(select from pg_stat_activity where $1=any(pg_blocking_pids(pid))) as waiting',[holder])).rows[0].waiting) {
-        assert.ok(Date.now()<deadline,'gate change must wait for admitted directory read')
-        await new Promise(resolve=>setTimeout(resolve,10))
-      }
-    } finally {release()}
-    const result=await operation;await change
-    return result
+      await Promise.race([selected.promise,inFlight.then(()=>assert.fail('Directory ended before the result barrier'))])
+      await change()
+    } finally {
+      pauseDirectoryResult=undefined
+      deliver.resolve()
+      await inFlight.catch(()=>{})
+    }
+    return inFlight
   }
-  assert.equal((await admittedRead(tx=>readPublicDirectory(tx,slug,{},cursors),
-    ()=>config({allow_public_directory_visibility:false}))).rows.length,6)
-  await publicDirectory(null,'',404)
-  assert.equal((await admittedRead(tx=>readMemberDirectory(tx,member.id,tenant,{},cursors),
-    ()=>cmd(member,{kind:'deactivate'}),member)).rows.length,7)
-  await directory(member,'',404)
-  console.log('PASS member/public directories, exact and owner account facts, safe field/badge projections, opaque cursor boundaries and tampering, full page limits, lifecycle and archive gates, raw bypasses, both directory serialization orders and both landing/archive snapshot orders')
+  const publicPageSelected = row => typeof row?.display_name === 'string'
+  const memberPageSelected = row => row?.account?.tenant_id === tenant
+  for (const [read, match, afterArchive] of [
+    [continuingPublicDirectory, publicPageSelected, ()=>publicDirectory(null,'?cursor='+publicCursor,404)],
+    [continuingMemberDirectory, memberPageSelected, ()=>directory(member,'?cursor='+savedCursor,404)],
+  ]) {
+    const visible = await read()
+    assert.deepEqual(await changeBeforeDirectoryDelivery(read, async ()=>{
+      await cmd(owner,{kind:'archive',archived:true})
+      assert.equal((await afterArchive()).code,'missing')
+    }, match), visible)
+    await cmd(owner,{kind:'archive',archived:false})
+  }
+  assert.deepEqual(await changeBeforeDirectoryDelivery(continuingPublicDirectory, async ()=>{
+    await config({allow_public_directory_visibility:false})
+    assert.equal((await publicDirectory(null,'?cursor='+publicCursor,404)).code,'missing')
+  }, publicPageSelected), publicNext)
+  const reactivatedMemberNext = await continuingMemberDirectory()
+  assert.deepEqual(await changeBeforeDirectoryDelivery(continuingMemberDirectory, async ()=>{
+    await cmd(member,{kind:'deactivate'})
+    assert.equal((await directory(member,'?cursor='+savedCursor,404)).code,'missing')
+  }, memberPageSelected), reactivatedMemberNext)
+  console.log('PASS member/public directories, exact and owner account facts, safe field/badge projections, opaque cursor boundaries and tampering, full page limits, lifecycle and archive gates, raw bypasses, both directory snapshot orders and both landing/archive snapshot orders')
 
 } finally {
   try {

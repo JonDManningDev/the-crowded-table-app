@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { loadPublicDirectoryFacts, requireCanReadPublicDirectory, loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActionFacts,
+import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActionFacts,
   loadLifecycleAccountFacts, loadStaffAssignmentFacts, loadCommunityRequestFacts,
   requireCanEnterCommunityAction, requireCanSelectCommunityRequest, requireCanTargetCommunityAccount,
   requireCanApproveCommunityRequest, requireCanReturnToCommunity, loadJoinCommunityFacts, decideCommunityEntry,
@@ -7,9 +7,9 @@ import { loadPublicDirectoryFacts, requireCanReadPublicDirectory, loadCreateComm
   loadConfigurationFacts, requireCanReadConfiguration, requireCanEditConfiguration,
   loadAccountRecordFacts, requireCanReadAccountRecord, requireCanManageAccountRecords,
   canListCommunityAccounts, requireCanListCommunityAccounts, requireCanReadCommunityAccountFacts,
-  loadHistoryFacts, loadMemberDirectoryFacts,
-  requireCanReadMemberDirectory, type Account, type Staff, type Pending } from './policies.ts'
+  loadHistoryFacts, type Account, type Staff, type Pending } from './policies.ts'
 import { sql } from 'kysely'
+import { jsonArrayFrom } from 'kysely/helpers/postgres'
 import { type AppDatabase, withEligibleActorTransaction, withTransactionRetry, type AuthenticatedContext } from '../../database.ts'
 import { ApplicationError } from '../../http-errors.ts'
 import type { DirectoryCursors } from '../../directory-cursors.ts'
@@ -174,9 +174,6 @@ function getCommunityStandingReference(db: AppDatabase) {
   return withTransactionRetry(db, tx => tx.selectFrom('community_standing').selectAll().orderBy('standing').execute())
 }
 
-async function lockPublicCommunity(tx: Tx, slug: string) {
-  return tx.selectFrom('tenants').select('id').where('slug', '=', slug).forShare().executeTakeFirst()
-}
 async function readCommunityLanding(db: AppDatabase, slug: string): Promise<CommunityLanding | undefined> {
   return withTransactionRetry(db, tx =>
     tx.selectFrom('tenants as t').innerJoin('tenant_settings as s', 's.tenant_id', 't.id')
@@ -188,19 +185,22 @@ async function readCommunityLanding(db: AppDatabase, slug: string): Promise<Comm
         and o.content_key in (${sql.join(Object.keys(copySlots))})), '[]'::jsonb)`.as('overrides'))
       .where('t.slug', '=', slug).where('t.operational_status', '=', 'active').executeTakeFirst())
 }
-export async function readPublicDirectory(tx: Tx, slug: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<PublicDirectoryRow>> {
+async function readPublicDirectory(tx: Tx, slug: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<PublicDirectoryRow>> {
   const scope = ['public-directory', slug], after = cursors.decode(scope, query.cursor), limit = Number(query.limit ?? 50)
-  const site = await lockPublicCommunity(tx, slug)
-  if (!site) throw new ApplicationError(404, 'missing')
-  requireCanReadPublicDirectory(await loadPublicDirectoryFacts(tx, site.id))
-  const rows = await tx.selectFrom('community_accounts as c')
-    .innerJoin('community_account_profiles as p', join => join.onRef('p.tenant_id', '=', 'c.tenant_id').onRef('p.user_id', '=', 'c.user_id'))
-    .leftJoin('tenant_staff_assignments as s', join => join.onRef('s.tenant_id', '=', 'c.tenant_id').onRef('s.user_id', '=', 'c.user_id'))
-    .select(['c.user_id', 'p.display_name'])
-    .select(sql<PublicDirectoryRow['staff_role']>`case when c.standing='approved' and s.status='active' then s.role end`.as('staff_role'))
-    .where('c.tenant_id', '=', site.id).where(sql<boolean>`c.standing in ('approved','suspended')`)
-    .$if(after !== null, q => q.where('c.user_id', '>', after!))
-    .orderBy('c.user_id').limit(limit + 1).execute()
+  const page = await tx.selectFrom('tenants as t').innerJoin('tenant_settings as settings', 'settings.tenant_id', 't.id')
+    .where('t.slug', '=', slug).where('t.operational_status', '=', 'active')
+    .where('settings.allow_public_directory_visibility', '=', true)
+    .select(eb => jsonArrayFrom(eb.selectFrom('community_accounts as c')
+      .innerJoin('community_account_profiles as p', join => join.onRef('p.tenant_id', '=', 'c.tenant_id').onRef('p.user_id', '=', 'c.user_id'))
+      .leftJoin('tenant_staff_assignments as s', join => join.onRef('s.tenant_id', '=', 'c.tenant_id').onRef('s.user_id', '=', 'c.user_id'))
+      .select(['c.user_id', 'p.display_name'])
+      .select(sql<PublicDirectoryRow['staff_role']>`case when c.standing='approved' and s.status='active' then s.role end`.as('staff_role'))
+      .whereRef('c.tenant_id', '=', 't.id').where('c.standing', 'in', ['approved', 'suspended'])
+      .$if(after !== null, q => q.where('c.user_id', '>', after!))
+      .orderBy('c.user_id').limit(limit + 1)).as('rows'))
+    .executeTakeFirst()
+  if (!page) throw new ApplicationError(404, 'missing')
+  const { rows } = page
   const visible = rows.slice(0, limit), last = visible.at(-1)
   return {
     rows: visible.map(({ display_name, staff_role }) => ({ display_name, staff_role })),
@@ -577,18 +577,36 @@ export async function configurationCopy(tx: Tx, actor: string, tenant: string, c
 // Directories and account facts
 // Directory/account reads use explicit tenant filters and API authorization.
 const factsFields = ['tenant_id', 'user_id', 'standing', 'first_approved_at', 'has_disciplinary_restriction', 'created_at', 'updated_at', 'created_by', 'updated_by']
-const jsonProjection = (alias: string, fields: string[]) => sql`jsonb_build_object(${sql.join(fields.flatMap(key => [sql`${key}::text`, sql.ref(alias + '.' + key)]))})`
-export async function readMemberDirectory(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<MemberDirectoryRow>> {
-  if (!(await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows[0]) throw new ApplicationError(404, 'missing')
-  requireCanReadMemberDirectory(await loadMemberDirectoryFacts(tx, actor, tenant))
-  const cursorScope = ['member-directory', actor, tenant], after = cursors.decode(cursorScope, query.cursor), limit = Number(query.limit ?? 50)
-  const rows = (await sql<MemberDirectoryRow>`select ${jsonProjection('c', factsFields)} as account,
-    case when p.user_id is not null then jsonb_build_object('display_name',p.display_name) end as profile,
-    case when c.standing='approved' and s.status='active' then s.role end as staff_role
-    from public.community_accounts c left join public.community_account_profiles p using(tenant_id,user_id)
-    left join public.tenant_staff_assignments s using(tenant_id,user_id)
-    where c.tenant_id=${tenant} and c.standing in ('approved','suspended') and (${after}::uuid is null or c.user_id>${after}::uuid)
-    order by c.user_id limit ${limit + 1}`.execute(tx)).rows
+async function readMemberDirectory(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<MemberDirectoryRow>> {
+  const cursorScope = ['member-directory', actor, tenant], limit = Number(query.limit ?? 50)
+  let after: string | null = null
+  let cursorError: ApplicationError | undefined
+  try {
+    after = cursors.decode(cursorScope, query.cursor)
+  } catch (error) {
+    if (!(error instanceof ApplicationError) || error.message !== 'invalid_cursor') throw error
+    cursorError = error
+  }
+
+  const page = await tx.selectFrom('tenants as t')
+    .innerJoin('community_accounts as viewer', join => join.onRef('viewer.tenant_id', '=', 't.id').on('viewer.user_id', '=', actor))
+    .where('t.id', '=', tenant).where('t.operational_status', '=', 'active').where('viewer.standing', 'in', ['approved', 'suspended'])
+    .select(eb => jsonArrayFrom(eb.selectFrom('community_accounts as c')
+      .leftJoin('community_account_profiles as p', join => join.onRef('p.tenant_id', '=', 'c.tenant_id').onRef('p.user_id', '=', 'c.user_id'))
+      .leftJoin('tenant_staff_assignments as s', join => join.onRef('s.tenant_id', '=', 'c.tenant_id').onRef('s.user_id', '=', 'c.user_id'))
+      .select([
+        sql<MemberDirectoryRow['account']>`jsonb_build_object(${sql.join(factsFields.flatMap(key => [sql`${key}::text`, sql.ref('c.' + key)]))})`.as('account'),
+        sql<MemberDirectoryRow['profile']>`case when p.user_id is not null then jsonb_build_object('display_name',p.display_name) end`.as('profile'),
+        sql<MemberDirectoryRow['staff_role']>`case when c.standing='approved' and s.status='active' then s.role end`.as('staff_role'),
+      ])
+      .whereRef('c.tenant_id', '=', 't.id').where('c.standing', 'in', ['approved', 'suspended'])
+      .$if(after !== null, q => q.where('c.user_id', '>', after!))
+      .orderBy('c.user_id').limit(cursorError ? 0 : limit + 1)).as('rows'))
+    .executeTakeFirst()
+  // Preserve the member route's 404 before reporting a malformed cursor.
+  if (!page) throw new ApplicationError(404, 'missing')
+  if (cursorError) throw cursorError
+  const { rows } = page
   const visible = rows.slice(0, limit), last = visible.at(-1)
   return { rows: visible, next: rows.length > limit && last ? cursors.encode(cursorScope, last.account.user_id) : null }
 }

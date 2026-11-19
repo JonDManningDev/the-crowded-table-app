@@ -19,7 +19,6 @@ type ConfigurationFacts = Awaited<ReturnType<typeof loadConfigurationFacts>>
 
 type Decision = 'allowed' | 'missing' | 'forbidden' | 'stale'
 
-type MemberDirectoryFacts = Awaited<ReturnType<typeof loadMemberDirectoryFacts>>
 
 export type Pending = { id: string; user_id: string; kind: 'join' | 'reactivation' }
 
@@ -104,20 +103,6 @@ export async function loadLifecycleAccountFacts(tx: Tx, tenant: string, user: st
   return (await sql<Account>`select standing,revision,first_approved_at is not null as approved,
     has_disciplinary_restriction as restricted from public.community_accounts
     where tenant_id=${tenant} and user_id=${user} for update`.execute(tx)).rows[0]
-}
-
-// Member-directory services hold the tenant SHARE lock before loading facts.
-export function loadMemberDirectoryFacts(tx: Tx, actor: string, tenant: string) {
-  return tx.selectFrom('tenants as t').leftJoin('community_accounts as c', join => join
-    .onRef('c.tenant_id', '=', 't.id').on('c.user_id', '=', actor))
-    .select(['t.operational_status','c.standing']).where('t.id', '=', tenant).executeTakeFirst()
-}
-
-// Public reads use no actor context. The service locks the exact slug's root,
-// then loads these gates in a new statement after any lock wait.
-export async function loadPublicDirectoryFacts(tx: Tx, tenant: string) {
-  return tx.selectFrom('tenants as t').innerJoin('tenant_settings as s', 's.tenant_id', 't.id')
-    .select(['t.operational_status', 's.allow_public_directory_visibility']).where('t.id', '=', tenant).executeTakeFirst()
 }
 
 export async function loadStaffAssignmentFacts(tx: Tx, tenant: string, user: string) {
@@ -262,23 +247,6 @@ export function canReadConfiguration(facts: ConfigurationFacts): Decision {
   const owner = facts.account?.standing === 'approved' && facts.assignment?.status === 'active' && facts.assignment.role === 'owner'
   return owner || (facts.site.operational_status === 'active'
     && (facts.account?.standing === 'approved' || facts.account?.standing === 'suspended')) ? 'allowed' : 'missing'
-}
-
-export function requireCanReadMemberDirectory(facts: MemberDirectoryFacts) {
-  requireDecision(canReadMemberDirectory(facts))
-}
-
-export function canReadMemberDirectory(facts: MemberDirectoryFacts): Decision {
-  return facts?.operational_status === 'active'
-    && (facts.standing === 'approved' || facts.standing === 'suspended') ? 'allowed' : 'missing'
-}
-
-export function requireCanReadPublicDirectory(facts: Awaited<ReturnType<typeof loadPublicDirectoryFacts>>) {
-  requireDecision(canReadPublicDirectory(facts))
-}
-
-export function canReadPublicDirectory(facts: Awaited<ReturnType<typeof loadPublicDirectoryFacts>>): Decision {
-  return facts?.operational_status === 'active' && facts.allow_public_directory_visibility ? 'allowed' : 'missing'
 }
 
 export function requireCanReturnToCommunity(account: Account | undefined, kind: 'join' | 'reactivate') {

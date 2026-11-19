@@ -90,7 +90,7 @@ test('public, protected and health scopes retain isolated authentication and cac
       assert.equal(publicLanding.headers['cache-control'], 'no-store')
       if (method === 'HEAD') assert.equal(publicLanding.body, '')
       else assert.deepEqual(publicLanding.json(), landing)
-      h.queue([{ id: tenantId }], [{ operational_status: 'active', allow_public_directory_visibility: true }], [{ user_id: targetId, display_name: 'Test member', staff_role: null }])
+      h.queue([{ rows: [{ user_id: targetId, display_name: 'Test member', staff_role: null }] }])
       const directory = await h.app.inject({ method, url: '/api/public/communities/test-community/directory', headers })
       assert.equal(directory.statusCode, 200)
       assert.equal(directory.headers['cache-control'], 'no-store')
@@ -279,9 +279,9 @@ test('public missing landing/directory map to 404 while a visible empty director
   const h = createHttpHarness(t)
   h.queue([])
   errorResponse(h, await h.app.inject({ url: '/api/public/communities/test-community' }), 404, 'missing', 'no-store')
-  h.queue([{ id: tenantId }], [{ operational_status: 'active', allow_public_directory_visibility: false }])
+  h.queue([])
   errorResponse(h, await h.app.inject({ url: '/api/public/communities/test-community/directory' }), 404, 'missing', 'no-store')
-  h.queue([{ id: tenantId }], [{ operational_status: 'active', allow_public_directory_visibility: true }], [])
+  h.queue([{ rows: [] }])
   const response = await h.app.inject({ url: '/api/public/communities/test-community/directory' })
   assert.equal(response.statusCode, 200)
   assert.deepEqual(response.json(), { rows: [], next: null })
@@ -405,7 +405,7 @@ test('public community reads retry without introducing actor context or eligibil
   for (const [url, rows, expected] of [
     ['/api/community-standings', [[]], []],
     ['/api/public/communities/test-community', [[landing]], landing],
-    ['/api/public/communities/test-community/directory', [[{ id: tenantId }], [{ operational_status: 'active', allow_public_directory_visibility: true }], []], { rows: [], next: null }],
+    ['/api/public/communities/test-community/directory', [[{ rows: [] }]], { rows: [], next: null }],
   ]) {
     const h = createHttpHarness(t)
     h.queue(databaseFailure('40P01'), ...rows)
