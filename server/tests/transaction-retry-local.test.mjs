@@ -134,11 +134,11 @@ test('real local operations retry with fresh authorization and one committed out
       assert.deepEqual((await events(write.operation)).map(row => row.action), ['tenants.update'])
     })
 
-    await t.test('history uses six submissions and preserves cursor validation before the root lock', async () => {
+    await t.test('history uses four submissions and validates cursors before selecting the page', async () => {
       const noFault = { match: /never/, codes: [] }
       const read = await faulted(owner, path + '/history', undefined, noFault, 200, 'GET')
       assert.ok(read.value.rows.length > 0)
-      assert.equal(read.queries.length, 6)
+      assert.equal(read.queries.length, 4)
       const invalid = await faulted(owner, path + '/history?cursor=garbage', undefined, noFault, 400, 'GET')
       assert.equal(invalid.value.code, 'invalid_cursor')
       assert.equal(invalid.queries.length, 3)

@@ -84,10 +84,13 @@ export async function loadCreateCommunityFacts(tx: Tx, actor: string) {
   return { account: await tx.selectFrom('user_accounts').select('user_id').where('user_id', '=', actor).executeTakeFirst() }
 }
 
-// Candidate roots are facts, not admission. Block services lock these tenant
-// and account roots, then re-evaluate sharing against only the locked set.
-export function loadHistoryFacts(tx: Tx, actor: string, tenant: string) {
-  return loadCommunityStaffFacts(tx, actor, tenant)
+// History joins these facts into the statement that reads the audit rows.
+export function historyViewerFacts(tx: Tx, actor: string) {
+  return tx.selectFrom('tenants as t')
+    .innerJoin('community_accounts as c', join => join.onRef('c.tenant_id', '=', 't.id').on('c.user_id', '=', actor))
+    .innerJoin('tenant_staff_assignments as s', join => join.onRef('s.tenant_id', '=', 't.id').on('s.user_id', '=', actor))
+    .select(['t.id as tenant_id', 't.operational_status', 'c.standing', 's.role', 's.status',
+      's.can_audit_community_accounts', 's.can_audit_staff_accounts'])
 }
 
 export async function loadJoinCommunityFacts(tx: Tx, tenant: string, actor: string, restricted: boolean) {
