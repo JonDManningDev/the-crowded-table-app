@@ -1,6 +1,6 @@
 # Community reads from a single statement snapshot
 
-**Status.** Read timing and scope accepted 2026-11-19. Public landing was implemented and measured locally at checkpoint `a0b2ca4`. [Implementation status](12-implementation-status.md#public-landing-snapshot-checkpoint---2026-11-19) records the results. Checkpoints 2 and 3 await implementation authorization.
+**Status.** Read timing and scope accepted 2026-11-19. Public landing was implemented and measured locally at checkpoint `a0b2ca4`. [Implementation status](12-implementation-status.md#public-landing-snapshot-checkpoint---2026-11-19) records the results. Directory and audit history reads were [implemented, verified and measured locally](12-implementation-status.md#directory-and-audit-history-snapshot-checkpoint---2026-11-19). Checkpoint 3 awaits implementation authorization.
 
 ## Read contract
 

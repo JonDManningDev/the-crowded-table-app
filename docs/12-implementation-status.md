@@ -1,5 +1,28 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Directory and audit history snapshot checkpoint - 2026-11-19
+
+[Document 29](29-community-read-snapshot-spec.md) checkpoint 2 is locally verified on `implementation/public-landing-snapshot`. The public and member directories and community audit history evaluate access and select results in one SQL statement without taking the community row lock. The directory queries distinguish denied access from an authorized empty page and preserve cursor error precedence. History retains independent audit categories, exact event filters, owner archive access and microsecond cursor ordering. Existing Auth eligibility, write coordination and G-02 safeguards were retained.
+
+The real integration tests reproduced the old read waits and passed both ordering cases with the candidate. They cover archive, public directory visibility, viewer and listed-member standing, auditor deactivation and permission changes. Existing cursors were exercised before and after commits. The PostgreSQL standing/assignment constraint remained active and the auditor deactivation fixture uses the reachable inactive-account and paused-assignment state.
+
+All 76 HTTP tests passed against the reviewed HTTP contract. The nine real local Auth/HTTP suites, eligibility and retry checks, direct runtime and external access checks, client boundary audit, server TypeScript, lint, production build and 279 client tests passed. Independent standards and spec review led to alphabetizing the facts query, checking bound actor/tenant scope without depending on SQL parameter order, and extending standing-change case coverage. The reviewed changes are integrated through `5e105ed`. Root lint passed after removing the temporary nested checkouts, which had caused parser root ambiguity on the initial run. The build retains the existing Vite chunk-size advisory. Checkpoint 3 awaits implementation authorization.
+
+### Local measurements
+
+The unchanged baseline is pinned to `3907dab`. A separate baseline and the final paired run used actual loopback HTTP, the real `ct_api` role and the same owned local fixtures. Six repetitions alternated variant order using four-connection API pools. The initial fixture used three actors and two-row pages, with three concurrent readers and one real archive/restore writer for mixed traffic. The larger fixture added 105 member and audit records and measured 100-row pages separately. Each route and variant contributes 288 serial, 360 mixed and 150 full-page observations. The mixed writer contributes 144 observations per variant. The harness verified cleanup.
+
+| Local HTTP workload | Serial median / p95 ms | Mixed median / p95 ms | 100-row median / p95 ms |
+| --- | ---: | ---: | ---: |
+| Public directory | 4.427 / 5.836 to 2.439 / 2.994 | 4.950 / 34.464 to 2.776 / 3.671 | 16.283 / 17.697 to 3.116 / 3.973 |
+| Member directory | 5.237 / 7.945 to 4.003 / 6.226 | 5.928 / 34.854 to 4.075 / 5.742 | 18.050 / 20.919 to 5.536 / 6.626 |
+| Community audit history | 5.099 / 6.671 to 3.831 / 4.919 | 6.084 / 35.549 to 4.629 / 6.029 | 6.149 / 7.783 to 5.955 / 7.493 |
+| Archive and restore | - | 32.178 / 42.604 to 29.072 / 36.699 | - |
+
+The public directory went from five database submissions to three. Member directory and audit history went from six to four. Counts include transaction boundaries and the retained protected Auth check where applicable. In a separate controlled overlap, the baseline waited behind the held archive for every read. The candidate reads returned the committed page while the archive was open, and the first read after commit enforced the new state. The observer records lock-wait presence. These times are HTTP latencies from synthetic loopback workloads.
+
+The first large fixture was rejected by the database's audit-details validator. The fixture was corrected and the failed run was excluded. Raw final samples, the failed and pre-review runs, the benchmark runner and local regression output are under ignored `server/test-results/community-read-checkpoint2/`.
+
 ## Public landing snapshot checkpoint - 2026-11-19
 
 [Document 29](29-community-read-snapshot-spec.md) checkpoint 1 selects the existing public landing projection by exact slug and active status in one statement. The API retains transaction retries and returns the existing 404 for a missing or archived community. The existing public-directory lock continues to serialize directory reads with overlapping community writes.

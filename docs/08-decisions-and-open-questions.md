@@ -6,7 +6,7 @@ Apply the previously accepted statement-snapshot rule to the remaining community
 
 Retain the separate Auth account share lock for protected reads and writes, including its ordering with Auth bans and deletion. Its contention and eligibility boundary is account-wide. This follow-up targets waits on the community row. Reconsider the Auth lock separately if measured contention or a change to the account-lifecycle contract warrants it.
 
-[Document 29](29-community-read-snapshot-spec.md) consolidates the thirteen affected reads and their implementation and verification plan. Public landing is the completed local checkpoint. Implementation authorization and measurement remain pending for the other checkpoints.
+[Document 29](29-community-read-snapshot-spec.md) consolidates the thirteen affected reads and their implementation and verification plan. Public landing and [directory and audit history reads](12-implementation-status.md#directory-and-audit-history-snapshot-checkpoint---2026-11-19) are locally verified. Configuration and records await implementation authorization.
 
 ## Community directory and audit history reads during access changes — accepted 2026-11-19
 
@@ -14,7 +14,7 @@ Apply the [public landing snapshot rule](#public-community-landing-read-during-a
 
 Preserve the [existing access matrix](16-intended-access-matrix.md), authorized fields, denial and empty-result behavior, owner archive rules and G-02. Apply row visibility before ordering and pagination. For audit history, each audit permission continues to grant only its authorized category, with existing owner and dual-category behavior. The directory and history reads can proceed during an overlapping community write without taking the community row lock. This revises [document 26's concurrency requirement](26-trusted-api-runtime-reads-spec.md#implementation-decisions) for these reads. Revisit if these endpoints gain fields or workflows that require reads to wait for an overlapping change.
 
-Implementation and measurement are pending. The affected service queries and local concurrency suites are `server/src/features/communities/service.ts`, `server/tests/directory-local.mjs` and `server/tests/history-local.mjs`. Verify both sides of the commit boundary, including continued pagination after a visibility, standing or audit-permission change. The follow-up above records the decision for the remaining community reads and the separate Auth lock.
+[Implementation and paired local measurement are complete](12-implementation-status.md#directory-and-audit-history-snapshot-checkpoint---2026-11-19). The affected service queries and local concurrency suites are `server/src/features/communities/service.ts`, `server/tests/directory-local.mjs` and `server/tests/history-local.mjs`. Verify both sides of the commit boundary, including continued pagination after a visibility, standing or audit-permission change. The follow-up above records the decision for the remaining community reads and the separate Auth lock.
 
 ## Public community landing read during archival — accepted 2026-11-19
 
