@@ -1,6 +1,6 @@
 # Community reads from a single statement snapshot
 
-**Status.** Read timing and scope accepted 2026-11-19. Public landing was implemented and measured locally at checkpoint `a0b2ca4`. [Implementation status](12-implementation-status.md#public-landing-snapshot-checkpoint---2026-11-19) records the results. Directory and audit history reads were [implemented, verified and measured locally](12-implementation-status.md#directory-and-audit-history-snapshot-checkpoint---2026-11-19). Checkpoint 3 awaits implementation authorization.
+**Status.** Read timing and scope accepted 2026-11-19. Public landing was implemented and measured locally at checkpoint `a0b2ca4`. [Implementation status](12-implementation-status.md#public-landing-snapshot-checkpoint---2026-11-19) records the results. Directory and audit history reads were [implemented, verified and measured locally](12-implementation-status.md#directory-and-audit-history-snapshot-checkpoint---2026-11-19). Configuration and records were [implemented, verified and measured locally](12-implementation-status.md#configuration-and-records-snapshot-checkpoint---2026-11-19), completing the three local checkpoints.
 
 ## Read contract
 
@@ -30,8 +30,6 @@ One possible landing implementation is to filter the existing projection directl
 2. Use explicit transaction barriers and a separate connection to verify both orderings. While a relevant change is uncommitted, a read can complete against the last committed state without waiting on the community row. With a result already selected, the change can commit before that result is delivered. A new read after commit applies the new access rules, including a request carrying a pre-change cursor. Verify relevant archive, directory visibility, standing and permission changes. Keep the existing write and Auth race, rollback and retry coverage.
 3. Measure the pinned current implementation and each candidate on equivalent local fixtures, using the real runtime role. Start with public landing and compare ordinary reads and overlapping reads and writes for the same community. Include an uncontended control and the response outcomes relevant to each checkpoint. Report SQL submissions, latency for both reads and writes under mixed load, and time spent waiting on the community row separately where measurable. Record variability, errors and repeat conditions. Keep local measurements distinct from any hosted latency estimate.
 4. Follow the applicable gates in [document 22](22-fastify-architecture-refactoring-plan.md) and [document 23](23-api-policy-implementation-plan.md), including server type checks, the reviewed HTTP baseline, relevant real integration suites, lint and build. Review each checkpoint diff and record its verification and any unresolved regressions in [implementation status](12-implementation-status.md). Commit verified checkpoints independently.
-
-The proposed initial comparison is local. Review the landing result before drawing performance conclusions about directories, audit history or management reads.
 
 ## Decisions
 

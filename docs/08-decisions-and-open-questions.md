@@ -6,7 +6,7 @@ Apply the previously accepted statement-snapshot rule to the remaining community
 
 Retain the separate Auth account share lock for protected reads and writes, including its ordering with Auth bans and deletion. Its contention and eligibility boundary is account-wide. This follow-up targets waits on the community row. Reconsider the Auth lock separately if measured contention or a change to the account-lifecycle contract warrants it.
 
-[Document 29](29-community-read-snapshot-spec.md) consolidates the thirteen affected reads and their implementation and verification plan. Public landing and [directory and audit history reads](12-implementation-status.md#directory-and-audit-history-snapshot-checkpoint---2026-11-19) are locally verified. Configuration and records await implementation authorization.
+[Document 29](29-community-read-snapshot-spec.md) consolidates the thirteen affected reads and their implementation and verification plan. Public landing and [directory and audit history reads](12-implementation-status.md#directory-and-audit-history-snapshot-checkpoint---2026-11-19) are locally verified. [Configuration and records](12-implementation-status.md#configuration-and-records-snapshot-checkpoint---2026-11-19) are locally verified and measured, completing the three-checkpoint plan.
 
 ## Community directory and audit history reads during access changes — accepted 2026-11-19
 

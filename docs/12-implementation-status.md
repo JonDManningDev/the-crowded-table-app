@@ -1,12 +1,42 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Configuration and records snapshot checkpoint - 2026-11-19
+
+[Document 29](29-community-read-snapshot-spec.md) checkpoint 3 is locally verified on `implementation/public-landing-snapshot` through `4b0c6b5`. All thirteen reads identified in the community lock review now authorize and select results from one statement snapshot without locking the community row. This checkpoint covers details, settings, copy, owner account enumeration, exact account facts, and staff and participant-permission list and exact reads. The separate Auth account lock and write lock order, fresh write facts, archive safeguards and audit effects continue to apply.
+
+The real Auth/HTTP suites reproduced waits on the pinned baseline and verified both overlap orders with the candidate. They cover archive and standing, removal of staff authority, exact and self access, and fresh continuations with an existing cursor. The permitted-empty and missing outcomes and cursor error precedence were verified. Original timestamp serialization was verified by equal live response bodies across the nine routes and the three 100-row lists. The comparison allows randomized cursor bytes and preserves cursor presence. Tests also preserve the existing exact self UUID comparison.
+
+All 77 HTTP tests passed against the reviewed fixture. All nine real Auth/HTTP suites, eligibility and retry checks, real runtime and external API boundary checks, the client boundary audit, server TypeScript, lint, production build and all 279 client tests passed. The build retains the existing Vite chunk-size advisory. Independent standards and spec reviews passed after review follow-up. This checkpoint is an API-only change. Hosted release is separate.
+
+### Local measurements
+
+The unchanged baseline is pinned to `01bbf11`. The standalone baseline and final paired run used actual loopback HTTP and the real `ct_api` role. The paired comparison used the same owned fixture and four-connection app pools with six repetitions in alternating order. Three readers cycled through configuration, account facts and records while one writer issued real archive and restore commands. Each route and variant contributes 192 serial and 180 mixed observations. The 100-row lists use a fixture with 105 additional approved accounts and staff rows and contribute 150 observations per list and variant. The mixed writer contributes 144 observations per variant. The harness verified fixture cleanup.
+
+| Local HTTP workload | Serial median / p95 ms | Mixed median / p95 ms | 100-row median / p95 ms |
+| --- | ---: | ---: | ---: |
+| Details | 4.644 / 5.411 to 3.687 / 4.301 | 5.094 / 33.048 to 3.763 / 4.848 | - |
+| Settings | 4.703 / 5.765 to 3.626 / 4.056 | 5.157 / 31.953 to 3.788 / 4.938 | - |
+| Copy | 4.758 / 6.265 to 3.746 / 4.900 | 5.049 / 32.753 to 3.899 / 4.808 | - |
+| Owner account list | 4.825 / 7.174 to 3.837 / 4.761 | 6.005 / 35.517 to 4.667 / 6.070 | 5.696 / 7.805 to 4.727 / 5.755 |
+| Exact account facts | 4.655 / 5.310 to 3.805 / 4.627 | 5.519 / 30.884 to 3.917 / 4.845 | - |
+| Staff list | 4.819 / 5.760 to 3.922 / 6.014 | 5.073 / 32.087 to 3.753 / 5.104 | 6.037 / 8.275 to 4.715 / 5.889 |
+| Exact staff assignment | 4.797 / 5.872 to 3.833 / 4.865 | 5.105 / 31.545 to 3.751 / 4.714 | - |
+| Participant-permission list | 4.820 / 5.869 to 3.773 / 5.243 | 5.056 / 32.695 to 3.733 / 4.816 | 5.401 / 7.396 to 4.359 / 5.240 |
+| Exact participant permissions | 4.644 / 5.472 to 3.728 / 5.417 | 5.036 / 30.966 to 3.680 / 4.709 | - |
+| Archive and restore | - | 29.999 / 36.997 to 28.639 / 34.361 | - |
+| Member directory control | 3.938 / 4.623 to 4.063 / 5.072 | - | - |
+
+Each checkpoint 3 read dropped from six to four database submissions, including transaction boundaries and the retained Auth eligibility check. In a controlled held-archive scenario the observer saw a community-row wait for every baseline request and no such wait for candidate reads. Each candidate completed against the pre-commit state and the first subsequent read applied the archived state. The archived owner kept account-list access. The observer measured wait presence and HTTP latency. Mixed outcomes differed across variants because readers and the writer proceeded at different rates. The p95 for authorized responses still fell on every route. The member-directory control varied from 4.623 to 5.072 ms p95. Uncontended staff-list p95 rose from 5.760 to 6.014 ms while its median and full-page p95 improved.
+
+These are synthetic loopback results. The first full-page fixture lacked required preferences and was rejected by the database. The fixture was corrected, cleanup was verified, and that run was excluded. The benchmark runner, raw paired and baseline samples, rejected run, and local regression output are retained under ignored `server/test-results/community-read-checkpoint3/`.
+
 ## Directory and audit history snapshot checkpoint - 2026-11-19
 
 [Document 29](29-community-read-snapshot-spec.md) checkpoint 2 is locally verified on `implementation/public-landing-snapshot`. The public and member directories and community audit history evaluate access and select results in one SQL statement without taking the community row lock. The directory queries distinguish denied access from an authorized empty page and preserve cursor error precedence. History retains independent audit categories, exact event filters, owner archive access and microsecond cursor ordering. Existing Auth eligibility, write coordination and G-02 safeguards were retained.
 
 The real integration tests reproduced the old read waits and passed both ordering cases with the candidate. They cover archive, public directory visibility, viewer and listed-member standing, auditor deactivation and permission changes. Existing cursors were exercised before and after commits. The PostgreSQL standing/assignment constraint remained active and the auditor deactivation fixture uses the reachable inactive-account and paused-assignment state.
 
-All 76 HTTP tests passed against the reviewed HTTP contract. The nine real local Auth/HTTP suites, eligibility and retry checks, direct runtime and external access checks, client boundary audit, server TypeScript, lint, production build and 279 client tests passed. Independent standards and spec review led to alphabetizing the facts query, checking bound actor/tenant scope without depending on SQL parameter order, and extending standing-change case coverage. The reviewed changes are integrated through `5e105ed`. Root lint passed after removing the temporary nested checkouts, which had caused parser root ambiguity on the initial run. The build retains the existing Vite chunk-size advisory. Checkpoint 3 awaits implementation authorization.
+All 76 HTTP tests passed against the reviewed HTTP contract. The nine real local Auth/HTTP suites, eligibility and retry checks, direct runtime and external access checks, client boundary audit, server TypeScript, lint, production build and 279 client tests passed. Independent standards and spec review led to alphabetizing the facts query, checking bound actor/tenant scope without depending on SQL parameter order, and extending standing-change case coverage. The reviewed changes are integrated through `5e105ed`. Root lint passed after removing the temporary nested checkouts, which had caused parser root ambiguity on the initial run. The build retains the existing Vite chunk-size advisory. [The subsequent configuration and records checkpoint](12-implementation-status.md#configuration-and-records-snapshot-checkpoint---2026-11-19) completed locally.
 
 ### Local measurements
 
