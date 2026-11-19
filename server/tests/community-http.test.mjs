@@ -258,6 +258,25 @@ test('public service retains projections and anonymous transaction scope without
   assert.ok(h.queries.every(q => !/begin_actor_context|request.jwt.claim.sub|ct.operation_id/.test(q.sql)))
 })
 
+test('configuration reads preserve row projections, dates, and empty-copy and missing outcomes', async t => {
+  const h = createHttpHarness(t)
+  for (const name of ['readDetails', 'readSettings', 'readCopy']) {
+    const operation = operations.find(operation => operation.name === name), dto = response(operation).dto
+    const projectedRows = name === 'readCopy' ? dto.rows : [dto]
+    h.eligible(projectedRows.map(row => ({ ...row, created_at: new Date(row.created_at), updated_at: new Date(row.updated_at) })))
+    const visible = await h.app.inject(input(operation))
+    assert.equal(visible.statusCode, 200)
+    assert.deepEqual(visible.json(), dto)
+    h.eligible([])
+    error(h, operation, await h.app.inject(input(operation)), 404, 'missing')
+  }
+  const copy = operations.find(operation => operation.name === 'readCopy')
+  h.eligible([Object.fromEntries(Object.keys(response(copy).dto.rows[0]).map(field => [field, null]))])
+  const empty = await h.app.inject(input(copy))
+  assert.equal(empty.statusCode, 200)
+  assert.deepEqual(empty.json(), { rows: [] })
+})
+
 test('exact community profile service returns only the blocked status when details are withheld', async t => {
   const h = createHttpHarness(t), operation = operations.find(operation => operation.name === 'readProfile')
   const dto = response(operation).dto

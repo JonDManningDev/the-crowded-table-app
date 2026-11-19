@@ -4,7 +4,7 @@ import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActio
   requireCanEnterCommunityAction, requireCanSelectCommunityRequest, requireCanTargetCommunityAccount,
   requireCanApproveCommunityRequest, requireCanReturnToCommunity, loadJoinCommunityFacts, decideCommunityEntry,
   requireCanChangeCommunityStanding, loadStaffGrantFacts, requireCanManageCommunityStaff,
-  loadConfigurationFacts, requireCanReadConfiguration, requireCanEditConfiguration,
+  loadConfigurationFacts, requireCanEditConfiguration,
   loadAccountRecordFacts, requireCanReadAccountRecord, requireCanManageAccountRecords,
   canListCommunityAccounts, requireCanListCommunityAccounts, requireCanReadCommunityAccountFacts,
   selectHistoryViewerFacts, type Account, type Staff, type Pending } from './policies.ts'
@@ -115,19 +115,19 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
     },
     // Configuration and copy
     readDetails(context: AuthenticatedContext, params: TenantParams) {
-      return withEligibleActorTransaction(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId))
+      return withEligibleActorTransaction(db, context, tx => readConfigurationDetails(tx, context.actorId, params.tenantId))
     },
     saveDetails(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunityDetailsInput>) {
       return withEligibleActorTransaction(db, context, tx => configurationDetails(tx, context.actorId, params.tenantId, input), { initialTenantId: params.tenantId })
     },
     readSettings(context: AuthenticatedContext, params: TenantParams) {
-      return withEligibleActorTransaction(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId))
+      return withEligibleActorTransaction(db, context, tx => readConfigurationSettings(tx, context.actorId, params.tenantId))
     },
     saveSettings(context: AuthenticatedContext, params: TenantParams, input: Partial<CommunitySettings>) {
       return withEligibleActorTransaction(db, context, tx => configurationSettings(tx, context.actorId, params.tenantId, input), { initialTenantId: params.tenantId })
     },
     readCopy(context: AuthenticatedContext, params: TenantParams) {
-      return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId))
+      return withEligibleActorTransaction(db, context, tx => readConfigurationCopy(tx, context.actorId, params.tenantId))
     },
     saveCopy(context: AuthenticatedContext, params: CopyParams, input: CopyInput) {
       return withEligibleActorTransaction(db, context, tx => configurationCopy(tx, context.actorId, params.tenantId, { key: params.contentKey, text: input.text_value }), { initialTenantId: params.tenantId })
@@ -519,58 +519,87 @@ export async function ownCommunityPreferences(tx: Tx, actor: string, tenant: str
 const detailFields = sql`id,slug,name,country_code,state_province,city,timezone,operational_status,created_at,updated_at,created_by,updated_by`
 const settingsFields = sql`tenant_id,${sql.join(settingFields.map(key => sql.id(key)))},created_at,updated_at,created_by,updated_by`
 const copyFields = sql`tenant_id,content_key,text_value,created_at,updated_at,created_by,updated_by`
-// Configuration writes require tenant scope; reads use explicit tenant filters.
-async function authorizeConfiguration(tx: Tx, actor: string, tenant: string, kind: ConfigurationKind, write: boolean) {
-  // Management reads share the same root so their current authority cannot be
-  // revoked between the check and the full-row projection.
-  const site = (await sql`select id from public.tenants where id=${tenant} ${write ? sql`for update` : sql`for share`}`.execute(tx)).rows[0]
-  if (!site) throw new ApplicationError(404, 'missing')
-  const facts = await loadConfigurationFacts(tx, actor, tenant)
-  if (write) requireCanEditConfiguration(facts, kind)
-  else requireCanReadConfiguration(facts)
+
+export async function readConfigurationDetails(tx: Tx, actor: string, tenant: string): Promise<CommunityDetails> {
+  const result = await sql<CommunityDetails>`select ${detailFields} from public.tenants t where t.id=${tenant}
+    and exists(select from public.community_accounts viewer where viewer.tenant_id=t.id and viewer.user_id=${actor}
+      and ((t.operational_status='active' and viewer.standing in ('approved','suspended'))
+        or (t.operational_status='archived' and viewer.standing='approved' and exists(
+          select from public.tenant_staff_assignments s where s.tenant_id=t.id and s.user_id=viewer.user_id
+          and s.role='owner' and s.status='active'))))`.execute(tx)
+  const row = result.rows[0]
+  if (!row) throw new ApplicationError(404, 'missing')
+  return row
 }
-export async function configurationDetails(tx: Tx, actor: string, tenant: string, input?: Partial<CommunityDetailsInput>) {
-  await authorizeConfiguration(tx, actor, tenant, 'details', Boolean(input))
-  if (input) {
-    if (['name', 'country_code', 'timezone'].some(key => key in input && !String(input[key as keyof CommunityDetailsInput]).trim())) {
-      throw new ApplicationError(400, 'invalid_details')
-    }
-    const entries = Object.entries(input).map(([key, value]) => [key, typeof value === 'string' ? value.trim() || null : value] as const)
-    const changed = await sql`update public.tenants set ${sql.join(entries.map(([key, value]) => sql`${sql.id(key)}=${value}`))}
-      where id=${tenant} and (${sql.join(entries.map(([key, value]) => sql`${sql.id(key)} is distinct from ${value}`), sql` or `)})`.execute(tx)
-    if (changed.numAffectedRows) await event({ tx, actor, tenant }, null, 'tenants.update')
+export async function configurationDetails(tx: Tx, actor: string, tenant: string, input: Partial<CommunityDetailsInput>) {
+  await authorizeConfigurationWrite(tx, actor, tenant, 'details')
+  if (['name', 'country_code', 'timezone'].some(key => key in input && !String(input[key as keyof CommunityDetailsInput]).trim())) {
+    throw new ApplicationError(400, 'invalid_details')
   }
+  const entries = Object.entries(input).map(([key, value]) => [key, typeof value === 'string' ? value.trim() || null : value] as const)
+  const changed = await sql`update public.tenants set ${sql.join(entries.map(([key, value]) => sql`${sql.id(key)}=${value}`))}
+    where id=${tenant} and (${sql.join(entries.map(([key, value]) => sql`${sql.id(key)} is distinct from ${value}`), sql` or `)})`.execute(tx)
+  if (changed.numAffectedRows) await event({ tx, actor, tenant }, null, 'tenants.update')
   return (await sql<CommunityDetails>`select ${detailFields} from public.tenants where id=${tenant}`.execute(tx)).rows[0]
 }
-export async function configurationSettings(tx: Tx, actor: string, tenant: string, input?: Partial<CommunitySettings>) {
-  await authorizeConfiguration(tx, actor, tenant, 'settings', Boolean(input))
-  if (input) {
-    const entries = Object.entries(input)
-    const changed = await sql`update public.tenant_settings set ${sql.join(entries.map(([key, value]) => sql`${sql.id(key)}=${value}`))}
-      where tenant_id=${tenant} and (${sql.join(entries.map(([key, value]) => sql`${sql.id(key)} is distinct from ${value}`), sql` or `)})`.execute(tx)
-    if (changed.numAffectedRows) await event({ tx, actor, tenant }, null, 'tenant_settings.update')
-  }
+async function readConfigurationSettings(tx: Tx, actor: string, tenant: string): Promise<CommunitySettingsRecord> {
+  const result = await sql<CommunitySettingsRecord>`select ${settingsFields} from public.tenant_settings settings
+    where settings.tenant_id=${tenant} and exists(select from public.tenants t
+      join public.community_accounts viewer on viewer.tenant_id=t.id
+      where t.id=settings.tenant_id and viewer.user_id=${actor}
+        and ((t.operational_status='active' and viewer.standing in ('approved','suspended'))
+          or (t.operational_status='archived' and viewer.standing='approved' and exists(
+            select from public.tenant_staff_assignments s where s.tenant_id=t.id and s.user_id=viewer.user_id
+            and s.role='owner' and s.status='active'))))`.execute(tx)
+  const row = result.rows[0]
+  if (!row) throw new ApplicationError(404, 'missing')
+  return row
+}
+export async function configurationSettings(tx: Tx, actor: string, tenant: string, input: Partial<CommunitySettings>) {
+  await authorizeConfigurationWrite(tx, actor, tenant, 'settings')
+  const entries = Object.entries(input)
+  const changed = await sql`update public.tenant_settings set ${sql.join(entries.map(([key, value]) => sql`${sql.id(key)}=${value}`))}
+    where tenant_id=${tenant} and (${sql.join(entries.map(([key, value]) => sql`${sql.id(key)} is distinct from ${value}`), sql` or `)})`.execute(tx)
+  if (changed.numAffectedRows) await event({ tx, actor, tenant }, null, 'tenant_settings.update')
   return (await sql<CommunitySettingsRecord>`select ${settingsFields} from public.tenant_settings where tenant_id=${tenant}`.execute(tx)).rows[0]
 }
-export async function configurationCopy(tx: Tx, actor: string, tenant: string, change?: CopyChange) {
-  await authorizeConfiguration(tx, actor, tenant, 'copy', Boolean(change))
-  if (change) {
-    if (change.text === undefined) {
-      const deleted = await sql`delete from public.tenant_website_content_overrides where tenant_id=${tenant} and content_key=${change.key} returning content_key`.execute(tx)
-      if (!deleted.rows.length) throw new ApplicationError(404, 'missing')
-      await event({ tx, actor, tenant }, null, 'tenant_website_content_overrides.delete', {}, undefined, change.key)
-    } else {
-      if (!change.text.trim() || Array.from(change.text).length > copySlots[change.key]) throw new ApplicationError(400, 'invalid_copy')
-      const existing = await tx.selectFrom('tenant_website_content_overrides').select('text_value')
-        .where('tenant_id', '=', tenant).where('content_key', '=', change.key).forUpdate().executeTakeFirst()
-      const changed = await sql`insert into public.tenant_website_content_overrides(tenant_id,content_key,text_value) values(${tenant},${change.key},${change.text})
-        on conflict(tenant_id,content_key) do update set text_value=excluded.text_value
-        where tenant_website_content_overrides.text_value is distinct from excluded.text_value`.execute(tx)
-      if (changed.numAffectedRows) await event({ tx, actor, tenant }, null,
-        existing ? 'tenant_website_content_overrides.update' : 'tenant_website_content_overrides.insert', {}, undefined, change.key)
-    }
+async function readConfigurationCopy(tx: Tx, actor: string, tenant: string): Promise<{ rows: CommunityCopy[] }> {
+  // The left join represents an authorized community with no overrides by a null row.
+  const { rows } = await sql<CommunityCopy | Record<keyof CommunityCopy, null>>`select o.* from public.tenants t
+    left join lateral (select ${copyFields} from public.tenant_website_content_overrides where tenant_id=t.id) o on true
+    where t.id=${tenant} and exists(select from public.community_accounts viewer
+      where viewer.tenant_id=t.id and viewer.user_id=${actor}
+        and ((t.operational_status='active' and viewer.standing in ('approved','suspended'))
+          or (t.operational_status='archived' and viewer.standing='approved' and exists(
+            select from public.tenant_staff_assignments s where s.tenant_id=t.id and s.user_id=viewer.user_id
+            and s.role='owner' and s.status='active')))) order by o.content_key`.execute(tx)
+  if (!rows.length) throw new ApplicationError(404, 'missing')
+  return { rows: rows.filter(row => row.tenant_id !== null) }
+}
+export async function configurationCopy(tx: Tx, actor: string, tenant: string, change: CopyChange) {
+  await authorizeConfigurationWrite(tx, actor, tenant, 'copy')
+  if (change.text === undefined) {
+    const deleted = await sql`delete from public.tenant_website_content_overrides where tenant_id=${tenant} and content_key=${change.key} returning content_key`.execute(tx)
+    if (!deleted.rows.length) throw new ApplicationError(404, 'missing')
+    await event({ tx, actor, tenant }, null, 'tenant_website_content_overrides.delete', {}, undefined, change.key)
+  } else {
+    if (!change.text.trim() || Array.from(change.text).length > copySlots[change.key]) throw new ApplicationError(400, 'invalid_copy')
+    const existing = await tx.selectFrom('tenant_website_content_overrides').select('text_value')
+      .where('tenant_id', '=', tenant).where('content_key', '=', change.key).forUpdate().executeTakeFirst()
+    const changed = await sql`insert into public.tenant_website_content_overrides(tenant_id,content_key,text_value) values(${tenant},${change.key},${change.text})
+      on conflict(tenant_id,content_key) do update set text_value=excluded.text_value
+      where tenant_website_content_overrides.text_value is distinct from excluded.text_value`.execute(tx)
+    if (changed.numAffectedRows) await event({ tx, actor, tenant }, null,
+      existing ? 'tenant_website_content_overrides.update' : 'tenant_website_content_overrides.insert', {}, undefined, change.key)
   }
   return { rows: (await sql<CommunityCopy>`select ${copyFields} from public.tenant_website_content_overrides where tenant_id=${tenant} order by content_key`.execute(tx)).rows }
+}
+// Configuration writes require tenant scope and fresh facts after the root lock.
+async function authorizeConfigurationWrite(tx: Tx, actor: string, tenant: string, kind: ConfigurationKind) {
+  const site = (await sql`select id from public.tenants where id=${tenant} for update`.execute(tx)).rows[0]
+  if (!site) throw new ApplicationError(404, 'missing')
+  const facts = await loadConfigurationFacts(tx, actor, tenant)
+  requireCanEditConfiguration(facts, kind)
 }
 
 // Directories and account facts

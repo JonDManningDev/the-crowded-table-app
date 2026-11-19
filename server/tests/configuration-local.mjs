@@ -5,7 +5,7 @@ import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
-import { configurationDetails, configurationSettings, configurationCopy, communityCommand } from '../src/features/communities/service.ts'
+import { configurationDetails, configurationSettings, configurationCopy, communityCommand, readConfigurationDetails } from '../src/features/communities/service.ts'
 import { copySlots, staffFlags } from '../src/features/communities/types.ts'
 import { loadConfigurationFacts, loadAccountRecordFacts } from '../src/features/communities/policies.ts'
 import { buildApi } from '../src/app.ts'
@@ -17,7 +17,15 @@ const endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
-const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
+let pauseConfigurationResult
+const apiDb = db.withPlugin({
+  transformQuery({ node }) { return node },
+  async transformResult({ result }) {
+    await pauseConfigurationResult?.(result.rows[0])
+    return result
+  },
+})
+const app = buildApi({ db: apiDb, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -79,6 +87,7 @@ try {
   const details=(actor,body,status=200)=>http(actor,path+'/details',body?'PATCH':'GET',body,status)
   const config=(actor,body,status=200)=>http(actor,path+'/settings',body?'PATCH':'GET',body,status)
   const copy=(actor,key,text,status=200)=>http(actor,path+'/copy'+(key?'/'+encodeURIComponent(key):''),key?(text===undefined?'DELETE':'PUT'):'GET',text===undefined?undefined:{text_value:text},status)
+  const readConfiguration=(actor,status=200)=>Promise.all([details(actor,undefined,status),config(actor,undefined,status),copy(actor,undefined,undefined,status)])
   const landing=(actor=null,handle=slug,status=200)=>http(actor,'/api/public/communities/'+handle,'GET',undefined,status)
   const defaults=await config(owner)
   assert.deepEqual(Object.keys(defaults).sort(),['tenant_id','auto_approve_users','pause_community_events','allow_public_directory_visibility',
@@ -308,11 +317,66 @@ try {
   assert.equal((await staffFacts(editor)).assignment.status,'paused')
   await cmd(owner,{kind:'resume',target:editor.id})
   const priorMemberStanding=(await staffFacts(member)).account.standing
-  await afterLockedChange(
-    ()=>admin.query("update public.community_accounts set standing='inactive' where tenant_id=$1 and user_id=$2",[tenant,member.id]),
-    ()=>details(member,undefined,404))
+  const previousConfiguration = await readConfiguration(member)
+  assert.ok(previousConfiguration[2].rows.length, 'snapshot captures persisted copy')
+  await admin.query('begin')
+  let inFlightConfiguration
+  try {
+    await admin.query('select id from public.tenants where id=$1 for update',[tenant])
+    await admin.query("update public.community_accounts set standing='inactive' where tenant_id=$1 and user_id=$2",[tenant,member.id])
+    inFlightConfiguration = readConfiguration(member)
+    let finished = false
+    void inFlightConfiguration.finally(() => { finished = true }).catch(() => {})
+    const deadline = Date.now() + 1800
+    while (!finished) {
+      const { rows: [{ blocked }] } = await admin.query(
+        "select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as blocked")
+      assert.equal(blocked, false, 'configuration read must not wait for the community row')
+      assert.ok(Date.now() < deadline, 'configuration read did not finish during the change')
+      await new Promise(resolve => setTimeout(resolve, 10))
+    }
+    assert.deepEqual(await inFlightConfiguration, previousConfiguration)
+    await admin.query('commit')
+  } finally {
+    await admin.query('rollback')
+    await inFlightConfiguration?.catch(() => {})
+  }
+  assert.ok((await readConfiguration(member,404)).every(row=>row.code==='missing'))
   assert.deepEqual((await staffFacts(member)).account,{standing:'inactive'})
   await admin.query('update public.community_accounts set standing=$3 where tenant_id=$1 and user_id=$2',[tenant,member.id,priorMemberStanding])
+
+  // Delay delivery inside the reader's transaction after each result is selected.
+  const selected = Promise.withResolvers(), deliver = Promise.withResolvers()
+  const awaiting = new Set(['details','settings','copy'])
+  pauseConfigurationResult = async row => {
+    if (!row) return
+    if (row.id === tenant && row.slug === slug) awaiting.delete('details')
+    else if (row.tenant_id === tenant && 'pause_community_events' in row) awaiting.delete('settings')
+    else if (row.tenant_id === tenant && 'content_key' in row) awaiting.delete('copy')
+    else return
+    if (!awaiting.size) {
+      pauseConfigurationResult = undefined
+      selected.resolve()
+    }
+    await deliver.promise
+  }
+  const reader = readConfiguration(member)
+  let barrierTimeout
+  try {
+    const deadline = new Promise((_, reject) => {
+      barrierTimeout = setTimeout(() => reject(new Error('Configuration did not reach the result barrier')), 3000)
+    })
+    await Promise.race([selected.promise,deadline,reader.then(()=>assert.fail('Configuration ended before the result barrier'))])
+    await cmd(owner,{kind:'archive',archived:true})
+    assert.ok((await readConfiguration(member,404)).every(row=>row.code==='missing'))
+  } finally {
+    clearTimeout(barrierTimeout)
+    pauseConfigurationResult = undefined
+    deliver.resolve()
+    await reader
+  }
+  assert.deepEqual(await reader,previousConfiguration)
+  await cmd(owner,{kind:'archive',archived:false})
   await afterLockedChange(
     ()=>admin.query('update public.tenant_staff_assignments set can_modify_content=false where tenant_id=$1 and user_id=$2',[tenant,editor.id]),
     ()=>copy(editor,'community.hero.heading','Revoked content race',403))
@@ -333,9 +397,10 @@ try {
   assert.deepEqual(archivedOwner.account,{standing:'approved'})
   assert.equal(archivedOwner.assignment.role,'owner')
   assert.equal((await landing(null,slug,404)).code,(await landing(null,'missing-'+randomUUID(),404)).code)
-  await details(owner,{name:'Archived owner detail'})
-  await config(owner,{auto_approve_users:false,pause_community_events:false})
-  await copy(owner,'community.hero.heading','Archived owner copy')
+  const archivedDetails=await details(owner,{name:'Archived owner detail'})
+  const archivedSettings=await config(owner,{auto_approve_users:false,pause_community_events:false})
+  const archivedCopy=await copy(owner,'community.hero.heading','Archived owner copy')
+  assert.deepEqual(await readConfiguration(owner),[archivedDetails,archivedSettings,archivedCopy])
   await withEligibleActorTransaction(db, { actorId: editor.id, requestId: randomUUID() },async tx=>{
     assert.deepEqual((await sql`select tenant_id from public.tenant_settings where tenant_id=${tenant}`.execute(tx)).rows,[])
     assert.deepEqual((await sql`select tenant_id from public.tenant_website_content_overrides where tenant_id=${tenant}`.execute(tx)).rows,[])
@@ -473,24 +538,24 @@ try {
   try {
     const cleared=async()=>assert.deepEqual((await sql`select nullif(current_setting('request.jwt.claim.sub',true),'') as actor,
       nullif(current_setting('ct.operation_id',true),'') as operation,nullif(current_setting('ct.tenant_id',true),'') as tenant`.execute(singleDb)).rows[0],{actor:null,operation:null,tenant:null})
-    await withEligibleActorTransaction(singleDb,{actorId:owner.id,requestId:randomUUID()},tx=>configurationDetails(tx,owner.id,tenant), { initialTenantId: tenant })
+    await withEligibleActorTransaction(singleDb,{actorId:owner.id,requestId:randomUUID()},tx=>readConfigurationDetails(tx,owner.id,tenant), { initialTenantId: tenant })
     await cleared()
-    await assert.rejects(withEligibleActorTransaction(singleDb,{actorId:outsider.id,requestId:randomUUID()},tx=>configurationDetails(tx,outsider.id,tenant), { initialTenantId: tenant }),error=>error.statusCode===404)
+    await assert.rejects(withEligibleActorTransaction(singleDb,{actorId:outsider.id,requestId:randomUUID()},tx=>readConfigurationDetails(tx,outsider.id,tenant), { initialTenantId: tenant }),error=>error.statusCode===404)
     await cleared()
     await assert.rejects(withEligibleActorTransaction(singleDb,{actorId:owner.id,requestId:randomUUID()},async tx=>{
-      await configurationDetails(tx,owner.id,tenant);throw new Error('pool isolation rollback')
+      await readConfigurationDetails(tx,owner.id,tenant);throw new Error('pool isolation rollback')
     }, { initialTenantId: tenant }),/pool isolation rollback/)
     await cleared()
     await withEligibleActorTransaction(singleDb,{actorId:editor.id,requestId:randomUUID()},async tx=>{
       assert.equal((await sql`select current_setting('request.jwt.claim.sub') as actor`.execute(tx)).rows[0].actor,editor.id)
-      await configurationDetails(tx,editor.id,tenant)
+      await readConfigurationDetails(tx,editor.id,tenant)
     }, { initialTenantId: tenant })
     await cleared()
     const anonymousApp=buildApi({db:singleDb,verify:verifyBearer(local.API_URL,local.ANON_KEY,local.issuer),cursors:directoryCursors(randomBytes(32).toString('hex')),cleanup:async()=>{}})
     try {assert.equal((await anonymousApp.inject({method:'GET',url:'/api/public/communities/'+slug})).statusCode,200);await cleared()}
     finally {await anonymousApp.close()}
   } finally {await singleDb.destroy()}
-  console.log('PASS public exact-slug landing, safe copy projection, full configuration audience/field matrix, archive and eligibility boundaries, immutable attribution, no-op/retry/reset, rollback, raw bypasses and both authority serialization orders')
+  console.log('PASS public exact-slug landing, safe copy projection, full configuration audience/field matrix, archive and eligibility boundaries, immutable attribution, no-op/retry/reset, rollback, raw bypasses, both read snapshot orders and both write authority serialization orders')
 } finally {
   try {
     await admin.query('begin')

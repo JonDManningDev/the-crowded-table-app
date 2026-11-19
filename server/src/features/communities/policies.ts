@@ -243,15 +243,6 @@ export function canReadCommunityAccountFacts(facts: AccountRecordFacts, own: boo
     && (own || facts.account?.standing === 'approved' || facts.account?.standing === 'suspended')) ? 'allowed' : 'missing'
 }
 
-export function requireCanReadConfiguration(facts: ConfigurationFacts) { requireDecision(canReadConfiguration(facts)) }
-
-export function canReadConfiguration(facts: ConfigurationFacts): Decision {
-  if (!facts.site) return 'missing'
-  const owner = facts.account?.standing === 'approved' && facts.assignment?.status === 'active' && facts.assignment.role === 'owner'
-  return owner || (facts.site.operational_status === 'active'
-    && (facts.account?.standing === 'approved' || facts.account?.standing === 'suspended')) ? 'allowed' : 'missing'
-}
-
 export function requireCanReturnToCommunity(account: Account | undefined, kind: 'join' | 'reactivate') {
   requireDecision(canReturnToCommunity(account, kind))
 }

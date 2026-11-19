@@ -122,11 +122,14 @@ test('real local operations retry with fresh authorization and one committed out
     await command(owner, { kind: 'permissions', target: manager.id, permissions: { can_manage_settings: true } })
     await settings({ auto_approve_users: false })
 
-    await t.test('configuration details use one fewer submission for a read and a genuine write', async () => {
+    await t.test('configuration reads use four submissions and a genuine details write uses eight', async () => {
       const noFault = { match: /never/, codes: [] }
-      const read = await faulted(owner, path + '/details', undefined, noFault, 200, 'GET')
-      assert.equal(read.value.id, tenant)
-      assert.equal(read.queries.length, 6)
+      for (const operation of ['details', 'settings', 'copy']) {
+        const read = await faulted(owner, path + '/' + operation, undefined, noFault, 200, 'GET')
+        assert.equal(read.queries.length, 4)
+        if (operation === 'copy') assert.deepEqual(read.value, { rows: [] })
+        else assert.equal(read.value.id ?? read.value.tenant_id, tenant)
+      }
       const write = await faulted(owner, path + '/details', { city: 'Submission-count fixture' }, noFault, 200, 'PATCH')
       assert.equal(write.value.city, 'Submission-count fixture')
       assert.equal(write.value.updated_by, owner.id)
