@@ -83,15 +83,6 @@ export async function loadCreateCommunityFacts(tx: Tx, actor: string) {
   return { account: await tx.selectFrom('user_accounts').select('user_id').where('user_id', '=', actor).executeTakeFirst() }
 }
 
-// History joins these facts into the statement that reads the audit rows.
-export function historyViewerFacts(tx: Tx, actor: string) {
-  return tx.selectFrom('tenants as t')
-    .innerJoin('community_accounts as c', join => join.onRef('c.tenant_id', '=', 't.id').on('c.user_id', '=', actor))
-    .innerJoin('tenant_staff_assignments as s', join => join.onRef('s.tenant_id', '=', 't.id').on('s.user_id', '=', actor))
-    .select(['t.id as tenant_id', 't.operational_status', 'c.standing', 's.role', 's.status',
-      's.can_audit_community_accounts', 's.can_audit_staff_accounts'])
-}
-
 export async function loadJoinCommunityFacts(tx: Tx, tenant: string, actor: string, restricted: boolean) {
   if (restricted) {
     const request = (await sql<Pending>`select id,kind,user_id from app_private.community_account_requests
@@ -118,6 +109,15 @@ export async function loadStaffGrantFacts(tx: Tx, target: string, account: Accou
   // authority are evaluated here in the API, never by the private primitive.
   if (account.standing !== 'approved' || assignment) return { authEligible: false }
   return (await sql<{ authEligible: boolean }>`select app_private.auth_identity_eligible(${target},true) as "authEligible"`.execute(tx)).rows[0]
+}
+
+// History joins these facts into the statement that reads the audit rows.
+export function selectHistoryViewerFacts(tx: Tx, actor: string) {
+  return tx.selectFrom('tenants as t')
+    .innerJoin('community_accounts as c', join => join.onRef('c.tenant_id', '=', 't.id').on('c.user_id', '=', actor))
+    .innerJoin('tenant_staff_assignments as s', join => join.onRef('s.tenant_id', '=', 't.id').on('s.user_id', '=', actor))
+    .select(['t.id as tenant_id', 't.operational_status', 'c.standing', 's.role', 's.status',
+      's.can_audit_community_accounts', 's.can_audit_staff_accounts'])
 }
 
 /*

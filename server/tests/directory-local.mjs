@@ -369,12 +369,34 @@ try {
     await config({allow_public_directory_visibility:false})
     assert.equal((await publicDirectory(null,'?cursor='+publicCursor,404)).code,'missing')
   }, publicPageSelected), publicNext)
+
+  // Either candidate can leave, and the first page can contain at most one of them.
+  const beforeListedMemberLeaves = await continuingMemberDirectory()
+  const listedMember = [paused, revoked].find(actor =>
+    beforeListedMemberLeaves.rows.some(row => row.account.user_id === actor.id))
+  assert.ok(listedMember)
+  const afterListedMemberLeaves = {
+    rows: beforeListedMemberLeaves.rows.filter(row => row.account.user_id !== listedMember.id),
+    next: null,
+  }
+  assert.deepEqual(await readDuringChange(
+    ()=>admin.query("update public.community_accounts set standing='inactive' where tenant_id=$1 and user_id=$2",[tenant,listedMember.id]),
+    continuingMemberDirectory), beforeListedMemberLeaves)
+  assert.deepEqual(await continuingMemberDirectory(), afterListedMemberLeaves)
+  await cmd(listedMember,{kind:'reactivate'})
+  const beforeListedMemberLeavesAgain = await continuingMemberDirectory()
+  assert.ok(beforeListedMemberLeavesAgain.rows.some(row => row.account.user_id === listedMember.id))
+  assert.deepEqual(await changeBeforeDirectoryDelivery(continuingMemberDirectory, async ()=>{
+    await cmd(listedMember,{kind:'deactivate'})
+    assert.deepEqual(await continuingMemberDirectory(), afterListedMemberLeaves)
+  }, memberPageSelected), beforeListedMemberLeavesAgain)
+
   const reactivatedMemberNext = await continuingMemberDirectory()
   assert.deepEqual(await changeBeforeDirectoryDelivery(continuingMemberDirectory, async ()=>{
     await cmd(member,{kind:'deactivate'})
     assert.equal((await directory(member,'?cursor='+savedCursor,404)).code,'missing')
   }, memberPageSelected), reactivatedMemberNext)
-  console.log('PASS member/public directories, exact and owner account facts, safe field/badge projections, opaque cursor boundaries and tampering, full page limits, lifecycle and archive gates, raw bypasses, both directory snapshot orders and both landing/archive snapshot orders')
+  console.log('PASS member/public directories, exact and owner account facts, safe field/badge projections, opaque cursor boundaries and tampering, full page limits, lifecycle and archive gates, raw bypasses, both directory snapshot orders including viewer and listed-member standing, and both landing/archive snapshot orders')
 
 } finally {
   try {

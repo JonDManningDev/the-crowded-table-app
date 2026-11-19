@@ -7,7 +7,7 @@ import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActio
   loadConfigurationFacts, requireCanReadConfiguration, requireCanEditConfiguration,
   loadAccountRecordFacts, requireCanReadAccountRecord, requireCanManageAccountRecords,
   canListCommunityAccounts, requireCanListCommunityAccounts, requireCanReadCommunityAccountFacts,
-  historyViewerFacts, type Account, type Staff, type Pending } from './policies.ts'
+  selectHistoryViewerFacts, type Account, type Staff, type Pending } from './policies.ts'
 import { sql } from 'kysely'
 import { jsonArrayFrom } from 'kysely/helpers/postgres'
 import { type AppDatabase, withEligibleActorTransaction, withTransactionRetry, type AuthenticatedContext } from '../../database.ts'
@@ -719,7 +719,7 @@ async function accountHistory(tx: Tx, actor: string, tenant: string, query: Hist
       a.created_by,a.operation_id,a.reason,a.details,
       array(select c.category from app_private.tenant_admin_action_categories c where c.action_id=a.id order by c.category) as categories
     from public.tenant_admin_actions a
-    join (${historyViewerFacts(tx, actor)}) viewer on viewer.tenant_id=a.tenant_id
+    join (${selectHistoryViewerFacts(tx, actor)}) viewer on viewer.tenant_id=a.tenant_id
     where a.tenant_id=${tenant}
       and viewer.standing='approved' and viewer.status='active'
       and (viewer.role='owner' or (viewer.operational_status='active' and exists(

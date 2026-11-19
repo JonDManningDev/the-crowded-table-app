@@ -314,10 +314,21 @@ try {
   assert.ok(previousCursor)
   const nextPage={cursor:previousCursor,limit:'1'}
   const permittedPage=await history(sr,nextPage)
+  const permittedExact={rows:[linked],next:null}
   assert.equal(permittedPage.rows.length,1)
+  // Deactivation pauses an active assignment, retaining its audit permission.
+  assert.deepEqual(await duringLockedChange(async ()=>{
+    await admin.query("update public.community_accounts set standing='inactive' where tenant_id=$1 and user_id=$2",[tenant,sr.id])
+    await admin.query("update public.tenant_staff_assignments set status='paused' where tenant_id=$1 and user_id=$2",[tenant,sr.id])
+  },
+    ()=>Promise.all([history(sr,exact(linked.id)),history(sr,nextPage)])),[permittedExact,permittedPage])
+  assert.deepEqual(await history(sr,exact(linked.id)),empty)
+  assert.deepEqual(await history(sr,nextPage),empty)
+  await cmd(sr,{kind:'reactivate'})
+  await cmd(owner,{kind:'resume',target:sr.id})
   assert.deepEqual(await duringLockedChange(
     ()=>admin.query('update public.tenant_staff_assignments set can_audit_staff_accounts=false where tenant_id=$1 and user_id=$2',[tenant,sr.id]),
-    ()=>Promise.all([history(sr,exact(linked.id)),history(sr,nextPage)])),[{rows:[linked],next:null},permittedPage])
+    ()=>Promise.all([history(sr,exact(linked.id)),history(sr,nextPage)])),[permittedExact,permittedPage])
   assert.deepEqual(await history(sr,exact(linked.id)),empty)
   assert.deepEqual(await history(sr,nextPage),empty)
   await cmd(owner,{kind:'permissions',target:sr.id,permissions:{can_audit_staff_accounts:true}})
@@ -334,18 +345,18 @@ try {
   await cmd(owner,{kind:'archive',archived:false})
 
   // Hold a selected result before delivery while a real command commits.
-  async function changeBeforeDelivery(body) {
+  async function changeBeforeDelivery(change, query=exact(linked.id), expected=permittedExact) {
     const selected=Promise.withResolvers(), deliver=Promise.withResolvers()
     pauseHistoryResult=async row=>{
-      if(row?.id!==linked.id || !Array.isArray(row.categories)) return
+      if(row?.id!==expected.rows[0].id || !Array.isArray(row.categories)) return
       pauseHistoryResult=undefined
       selected.resolve()
       await deliver.promise
     }
-    const reader=history(sr,exact(linked.id))
+    const reader=history(sr,query)
     try {
       await Promise.race([selected.promise,reader.then(()=>assert.fail('History ended before the result barrier'))])
-      await cmd(owner,body)
+      await change()
       assert.deepEqual(await history(sr,exact(linked.id)),empty)
       assert.deepEqual(await history(sr,nextPage),empty)
     } finally {
@@ -353,12 +364,14 @@ try {
       deliver.resolve()
       await reader
     }
-    assert.deepEqual(await reader,{rows:[linked],next:null})
+    assert.deepEqual(await reader,expected)
   }
-  await changeBeforeDelivery({kind:'archive',archived:true})
+  await changeBeforeDelivery(()=>cmd(owner,{kind:'archive',archived:true}))
   await cmd(owner,{kind:'archive',archived:false})
-  await changeBeforeDelivery({kind:'permissions',target:sr.id,permissions:{can_audit_staff_accounts:false}})
-  console.log('PASS history categories, exact lookup and disciplinary reason isolation; legacy preservation, pagination, current eligibility, browser/GraphQL/runtime bypasses and both permission/archive snapshot orders')
+  await changeBeforeDelivery(()=>cmd(owner,{kind:'permissions',target:sr.id,permissions:{can_audit_staff_accounts:false}}))
+  await cmd(owner,{kind:'permissions',target:sr.id,permissions:{can_audit_staff_accounts:true}})
+  await changeBeforeDelivery(()=>cmd(sr,{kind:'deactivate'}),nextPage,permittedPage)
+  console.log('PASS history categories, exact lookup and disciplinary reason isolation; legacy preservation, pagination, current eligibility, browser/GraphQL/runtime bypasses and both permission/archive/auditor-standing snapshot orders')
 } finally {
   try {
     await admin.query('begin')
