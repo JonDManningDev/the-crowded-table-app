@@ -84,7 +84,7 @@ test('public, protected and health scopes retain isolated authentication and cac
     }
     for (const headers of [{}, authorization]) {
       const before = h.verifications.length
-      h.queue([{ id: tenantId }], [{ ...landing, internal_secret: 'omit' }])
+      h.queue([{ ...landing, internal_secret: 'omit' }])
       const publicLanding = await h.app.inject({ method, url: '/api/public/communities/test-community', headers })
       assert.equal(publicLanding.statusCode, 200)
       assert.equal(publicLanding.headers['cache-control'], 'no-store')
@@ -404,7 +404,7 @@ test('business, stale, arbitrary SQL and unconfirmed transport errors are never 
 test('public community reads retry without introducing actor context or eligibility', async t => {
   for (const [url, rows, expected] of [
     ['/api/community-standings', [[]], []],
-    ['/api/public/communities/test-community', [[{ id: tenantId }], [landing]], landing],
+    ['/api/public/communities/test-community', [[landing]], landing],
     ['/api/public/communities/test-community/directory', [[{ id: tenantId }], [{ operational_status: 'active', allow_public_directory_visibility: true }], []], { rows: [], next: null }],
   ]) {
     const h = createHttpHarness(t)

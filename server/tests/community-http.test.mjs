@@ -242,12 +242,16 @@ test('public service retains projections and anonymous transaction scope without
   assert.equal((await h.app.inject('/api/community-standings')).statusCode, 200)
   assert.deepEqual(h.queries[0].parameters, [])
   const landing = operations.find(operation => operation.name === 'readLanding')
-  h.queue([{ id: tenantId }], [response(landing).dto])
-  assert.equal((await h.app.inject(input(landing))).statusCode, 200)
+  const landingProjection = response(landing).dto
+  h.queue([landingProjection])
+  const landingResponse = await h.app.inject(input(landing))
+  assert.equal(landingResponse.statusCode, 200)
+  assert.deepEqual(landingResponse.json(), landingProjection)
   const directory = operations.find(operation => operation.name === 'publicDirectory')
+  const directoryQueryStart = h.queries.length
   h.queue([{ id: tenantId }], [{ operational_status: 'active', allow_public_directory_visibility: true }], [])
   assert.equal((await h.app.inject(input(directory))).statusCode, 200)
-  assert.ok(h.queries.some(q => q.sql.includes('for share') && q.parameters[0] === 'test-community'))
+  assert.ok(h.queries.slice(directoryQueryStart).some(q => q.sql.includes('for share') && q.parameters[0] === 'test-community'))
   assert.ok(h.queries.every(q => !/begin_actor_context|request.jwt.claim.sub|ct.operation_id/.test(q.sql)))
 })
 

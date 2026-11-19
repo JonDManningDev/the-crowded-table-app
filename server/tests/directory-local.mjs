@@ -16,7 +16,15 @@ assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
 const cursorKey=randomBytes(32).toString('hex'), cursors=directoryCursors(cursorKey)
-const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(cursorKey), cleanup: () => db.destroy() })
+let pauseLandingResult
+const apiDb = db.withPlugin({
+  transformQuery({node}) {return node},
+  async transformResult({result}) {
+    await pauseLandingResult?.(result.rows[0])
+    return result
+  },
+})
+const app = buildApi({ db:apiDb, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(cursorKey), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -68,6 +76,7 @@ try {
   const directory=(actor,query='',status=200)=>http(actor,path+'/directory'+query,'GET',undefined,status)
   const accounts=(actor,query='',status=200)=>http(actor,path+'/accounts'+query,'GET',undefined,status)
   const facts=(actor,target,status=200)=>http(actor,path+'/accounts/'+target,'GET',undefined,status)
+  const landing=(status=200)=>http(null,'/api/public/communities/'+slug,'GET',undefined,status)
   const publicDirectory=(actor=null,query='',status=200,handle=slug)=>http(actor,'/api/public/communities/'+handle+'/directory'+query,'GET',undefined,status)
   const config=(body)=>http(owner,path+'/settings','PATCH',body)
   const join={kind:'join',profile:{displayName:'Same name',bio:'Private biography'}}
@@ -243,9 +252,16 @@ try {
     ()=>directory(member,'?cursor='+savedCursor,404))
   assert.equal((await facts(member,member.id)).standing,'inactive')
   await cmd(member,{kind:'reactivate'})
+  await http(owner,path+'/copy/community.hero.heading','PUT',{text_value:'Published heading'})
+  const publishedLanding=await landing()
+  assert.deepEqual(publishedLanding.overrides,[{tenant_id:tenant,content_key:'community.hero.heading',text_value:'Published heading'}])
   await afterLockedChange(
-    ()=>admin.query("update public.tenants set operational_status='archived' where id=$1",[tenant]),
-    ()=>Promise.all([publicDirectory(null,'',404),http(null,'/api/public/communities/'+slug,'GET',undefined,404)]))
+    async ()=>{
+      await admin.query("update public.tenants set operational_status='archived' where id=$1",[tenant])
+      assert.deepEqual(await landing(),publishedLanding)
+    },
+    ()=>publicDirectory(null,'',404))
+  assert.equal((await landing(404)).code,'missing')
   await db.transaction().execute(async tx=>{
     for(const relation of ['community_accounts','community_account_profiles','tenant_staff_assignments','tenant_settings','tenant_website_content_overrides']) {
       assert.deepEqual((await sql`select tenant_id from ${sql.table(relation)} where tenant_id=${tenant}`.execute(tx)).rows,[])
@@ -272,6 +288,27 @@ try {
     assert.deepEqual((await sql`select user_id from public.community_account_profiles where tenant_id=${tenant}`.execute(tx)).rows,[])
   })
   await cmd(owner,{kind:'archive',archived:false})
+
+  // Hold the selected landing before delivery while a real archive command commits.
+  const selected=Promise.withResolvers(), deliver=Promise.withResolvers()
+  pauseLandingResult=async row=>{
+    if(row?.slug!==slug || !Array.isArray(row.overrides)) return
+    selected.resolve()
+    await deliver.promise
+  }
+  const inFlightLanding=landing()
+  try {
+    await Promise.race([selected.promise,inFlightLanding.then(()=>assert.fail('Landing ended before the result barrier'))])
+    await cmd(owner,{kind:'archive',archived:true})
+    assert.equal((await landing(404)).code,'missing')
+  } finally {
+    pauseLandingResult=undefined
+    deliver.resolve()
+    await inFlightLanding
+  }
+  assert.deepEqual(await inFlightLanding,publishedLanding)
+  await cmd(owner,{kind:'archive',archived:false})
+
   // Once admitted, a page finishes before a gate/standing change can commit.
   async function admittedRead(read,compete,actor) {
     let release,ready
@@ -300,7 +337,7 @@ try {
   assert.equal((await admittedRead(tx=>readMemberDirectory(tx,member.id,tenant,{},cursors),
     ()=>cmd(member,{kind:'deactivate'}),member)).rows.length,7)
   await directory(member,'',404)
-  console.log('PASS member/public directories, exact and owner account facts, safe field/badge projections, opaque cursor boundaries and tampering, full page limits, lifecycle and archive gates, raw bypasses and both read/change serialization orders')
+  console.log('PASS member/public directories, exact and owner account facts, safe field/badge projections, opaque cursor boundaries and tampering, full page limits, lifecycle and archive gates, raw bypasses, both directory serialization orders and both landing/archive snapshot orders')
 
 } finally {
   try {

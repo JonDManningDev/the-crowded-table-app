@@ -178,18 +178,15 @@ async function lockPublicCommunity(tx: Tx, slug: string) {
   return tx.selectFrom('tenants').select('id').where('slug', '=', slug).forShare().executeTakeFirst()
 }
 async function readCommunityLanding(db: AppDatabase, slug: string): Promise<CommunityLanding | undefined> {
-  return withTransactionRetry(db, async tx => {
-    const site = await lockPublicCommunity(tx, slug)
-    if (!site) return undefined
-    return tx.selectFrom('tenants as t').innerJoin('tenant_settings as s', 's.tenant_id', 't.id')
+  return withTransactionRetry(db, tx =>
+    tx.selectFrom('tenants as t').innerJoin('tenant_settings as s', 's.tenant_id', 't.id')
       .select(['t.id', 't.slug', 't.name', 't.country_code', 't.state_province', 't.city', 't.timezone',
         's.auto_approve_users', 's.allow_public_directory_visibility'])
       .select(sql<PublicCopy[]>`coalesce((select jsonb_agg(jsonb_build_object(
         'tenant_id',o.tenant_id,'content_key',o.content_key,'text_value',o.text_value) order by o.content_key)
         from public.tenant_website_content_overrides o where o.tenant_id=t.id
         and o.content_key in (${sql.join(Object.keys(copySlots))})), '[]'::jsonb)`.as('overrides'))
-      .where('t.id', '=', site.id).where(sql<boolean>`t.operational_status='active'`).executeTakeFirst()
-  })
+      .where('t.slug', '=', slug).where('t.operational_status', '=', 'active').executeTakeFirst())
 }
 export async function readPublicDirectory(tx: Tx, slug: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<PublicDirectoryRow>> {
   const scope = ['public-directory', slug], after = cursors.decode(scope, query.cursor), limit = Number(query.limit ?? 50)
