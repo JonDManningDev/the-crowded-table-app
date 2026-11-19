@@ -1,6 +1,6 @@
 import { sql } from 'kysely'
 import { ApplicationError } from '../../http-errors.ts'
-import { staffFlags, type CommunityCommand, type ConfigurationKind, type RecordKind, type StaffPermissions, type Tx } from './types.ts'
+import { staffFlags, type CommunityCommand, type ConfigurationKind, type StaffPermissions, type Tx } from './types.ts'
 
 /*
  * Types
@@ -34,8 +34,8 @@ type StandingChangeFacts = { account: Account; assignment: Staff | undefined; ac
  * Fact Loaders
  */
 
-// Staff and participant records. The service holds the tenant root through the
-// projection/mutation; reuse the established staff loader after any lock wait.
+// Account records and participant permission writes load fresh facts once the
+// service holds the tenant root.
 export function loadAccountRecordFacts(tx: Tx, actor: string, tenant: string) {
   return loadCommunityStaffFacts(tx, actor, tenant)
 }
@@ -201,17 +201,6 @@ export function canListCommunityAccounts(facts: AccountRecordFacts): Decision {
     && facts.assignment?.role === 'owner' && facts.assignment.status === 'active' ? 'allowed' : 'missing'
 }
 
-export function requireCanManageAccountRecords(facts: AccountRecordFacts, kind: RecordKind) {
-  requireDecision(canManageAccountRecords(facts, kind))
-}
-
-export function canManageAccountRecords(facts: AccountRecordFacts, kind: RecordKind): Decision {
-  if (!facts.site) return 'missing'
-  const staff = facts.account?.standing === 'approved' && facts.assignment?.status === 'active' ? facts.assignment : undefined
-  if (!staff || (facts.site.operational_status !== 'active' && staff.role !== 'owner')) return 'forbidden'
-  return (kind === 'staff' ? staff.can_grant_staff : staff.can_manage_community_permissions) ? 'allowed' : 'forbidden'
-}
-
 export function requireCanManageCommunityStaff(facts: StaffChangeFacts, command: StaffChange) {
   requireDecision(canManageCommunityStaff(facts, command))
 }
@@ -226,12 +215,15 @@ export function canManageCommunityStaff(facts: StaffChangeFacts, command: StaffC
   return 'allowed'
 }
 
-export function requireCanReadAccountRecord(facts: AccountRecordFacts, kind: RecordKind, own: boolean) {
-  requireDecision(canReadAccountRecord(facts, kind, own))
+export function requireCanManageParticipantPermissions(facts: AccountRecordFacts) {
+  requireDecision(canManageParticipantPermissions(facts))
 }
 
-export function canReadAccountRecord(facts: AccountRecordFacts, kind: RecordKind, own: boolean): Decision {
-  return canManageAccountRecords(facts, kind) === 'allowed' || (own && facts.site?.operational_status === 'active') ? 'allowed' : 'missing'
+export function canManageParticipantPermissions(facts: AccountRecordFacts): Decision {
+  if (!facts.site) return 'missing'
+  const staff = facts.account?.standing === 'approved' && facts.assignment?.status === 'active' ? facts.assignment : undefined
+  if (!staff || (facts.site.operational_status !== 'active' && staff.role !== 'owner')) return 'forbidden'
+  return staff.can_manage_community_permissions ? 'allowed' : 'forbidden'
 }
 
 export function requireCanReadCommunityAccountFacts(facts: AccountRecordFacts, own: boolean) {

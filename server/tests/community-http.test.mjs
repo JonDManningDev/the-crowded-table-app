@@ -304,16 +304,21 @@ test('staff and participant services retain distinct projections and read/write 
   for (const name of ['listStaff', 'readStaff', 'listParticipantPermissions', 'readParticipantPermissions']) {
     const operation = operations.find(operation => operation.name === name), dto = response(operation).dto
     const list = name.startsWith('list'), staff = name.endsWith('Staff')
-    h.eligible([{ id: tenantId }], [{ operational_status: 'active', accountId: actorId, standing: 'approved',
-      role: 'owner', status: 'active', can_grant_staff: true, can_manage_community_permissions: true }], list ? dto.rows : [dto])
-    assert.equal((await h.app.inject(input(operation))).statusCode, 200)
-    const query = h.queries.at(-1), fields = [...metadata, ...(staff ? ['role', 'status', ...staffFlags] : ['can_post_public_events'])]
-    assert.equal(/^select (.*?) from /.exec(query.sql)?.[1], fields.map(key => `"${key}"`).join(', '))
-    assert.deepEqual(query.parameters, list ? [tenantId, null, null, 51] : [tenantId, targetId])
+    const queryStart = h.queries.length
+    h.eligible(list ? dto.rows : [dto])
+    const received = await h.app.inject(input(operation))
+    assert.equal(received.statusCode, 200)
+    assert.deepEqual(received.json(), dto)
+    const [, ...featureQueries] = h.queries.slice(queryStart)
+    assert.equal(featureQueries.length, 1)
+    const query = featureQueries[0], fields = [...metadata, ...(staff ? ['role', 'status', ...staffFlags] : ['can_post_public_events'])]
+    assert.equal(/select ("r"\..*?)\s+from /.exec(query.sql)?.[1], fields.map(key => `"r"."${key}"`).join(', '))
+    assert.deepEqual(query.parameters, list ? [actorId, actorId, null, null, 51, tenantId] : [actorId, actorId, tenantId, targetId, targetId, actorId])
   }
   for (const [name, status, code] of [['readStaff', 404, 'missing'], ['saveParticipantPermissions', 403, 'forbidden']]) {
     const operation = operations.find(operation => operation.name === name)
-    h.eligible([{ id: tenantId }], [{ operational_status: 'active', accountId: actorId, standing: 'approved', role: null }])
+    if (name === 'readStaff') h.eligible([])
+    else h.eligible([{ id: tenantId }], [{ operational_status: 'active', accountId: actorId, standing: 'approved', role: null }])
     error(h, operation, await h.app.inject(input(operation)), status, code)
   }
 })
