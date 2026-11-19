@@ -1,5 +1,29 @@
 # Decisions and open questions
 
+## Remaining community read locks and Auth eligibility — accepted 2026-11-19
+
+Apply the previously accepted statement-snapshot rule to the remaining community reads that acquire the community row lock. This covers configuration details, settings and copy, owner account lists and exact account facts, and staff and participant-permission list and exact reads. Each read evaluates its existing authority and response in one database statement without locking the community row. Preserve authorization and projection, exact-target and list boundaries, and mutation coordination under the existing write locks.
+
+Retain the separate Auth account share lock for protected reads and writes, including its ordering with Auth bans and deletion. Its contention and eligibility boundary is account-wide. This follow-up targets waits on the community row. Reconsider the Auth lock separately if measured contention or a change to the account-lifecycle contract warrants it.
+
+[Document 29](29-community-read-snapshot-spec.md) consolidates the thirteen affected reads and their implementation and verification plan. Public landing is the completed local checkpoint. Implementation authorization and measurement remain pending for the other checkpoints.
+
+## Community directory and audit history reads during access changes — accepted 2026-11-19
+
+Apply the [public landing snapshot rule](#public-community-landing-read-during-archival--accepted-2026-11-19) to the public directory, the member directory and community audit history. Each page or exact audit-event read evaluates its existing audience, lifecycle and row conditions and selects its response in one database statement. A read whose snapshot precedes a committed visibility, standing, permission or archive change may finish under the rules visible to that snapshot. The first snapshot after the commit applies the changed rules, including when a caller continues from an existing cursor.
+
+Preserve the [existing access matrix](16-intended-access-matrix.md), authorized fields, denial and empty-result behavior, owner archive rules and G-02. Apply row visibility before ordering and pagination. For audit history, each audit permission continues to grant only its authorized category, with existing owner and dual-category behavior. The directory and history reads can proceed during an overlapping community write without taking the community row lock. This revises [document 26's concurrency requirement](26-trusted-api-runtime-reads-spec.md#implementation-decisions) for these reads. Revisit if these endpoints gain fields or workflows that require reads to wait for an overlapping change.
+
+Implementation and measurement are pending. The affected service queries and local concurrency suites are `server/src/features/communities/service.ts`, `server/tests/directory-local.mjs` and `server/tests/history-local.mjs`. Verify both sides of the commit boundary, including continued pagination after a visibility, standing or audit-permission change. The follow-up above records the decision for the remaining community reads and the separate Auth lock.
+
+## Public community landing read during archival — accepted 2026-11-19
+
+For `GET /api/public/communities/:slug`, evaluate active status and select the public response in the same database statement. A statement whose snapshot precedes the archive commit may return the previously public page, even if the response arrives after the commit. A statement whose snapshot starts after the commit sees the archived state and returns the existing 404 while the community remains archived. Public landing can proceed while an archive transaction is in flight. This avoids making public reads and community writes wait on one another for this response.
+
+This revises [document 26's locking guarantee](26-trusted-api-runtime-reads-spec.md#implementation-decisions) for public landing. The candidate changes the landing query in `server/src/features/communities/service.ts` and its archive-overlap coverage in `server/tests/directory-local.mjs`. The directory and audit history follow-up above records the next accepted scope. Revisit the landing timing if the endpoint gains fields with a stricter disclosure requirement or a workflow requires stronger ordering with archival.
+
+Public landing is implemented and verified locally at checkpoint `a0b2ca4`. The [implementation record](12-implementation-status.md#public-landing-snapshot-checkpoint---2026-11-19) compares the pinned baseline and candidate under ordinary requests and overlapping archive transactions.
+
 ## Community public access simplification - accepted 2026-11-18
 
 All fourteen interview answers are confirmed. [Document 27](27-community-public-access-simplification-plan.md) records the settled contract and first implementation specification. Keep public Home official activity content, planned About under can_modify_content and the enabled minimal directory/effective badges. Meet & Play, Championship and Discussion require approved/suspended good standing. Any community account row permits own Profile, inactive saved content read-only plus status/return, with current edits/archive fences retained.

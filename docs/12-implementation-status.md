@@ -1,5 +1,28 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Public landing snapshot checkpoint - 2026-11-19
+
+[Document 29](29-community-read-snapshot-spec.md) checkpoint 1 selects the existing public landing projection by exact slug and active status in one statement. The API retains transaction retries and returns the existing 404 for a missing or archived community. The existing public-directory lock continues to serialize directory reads with overlapping community writes.
+
+Checkpoint `a0b2ca4` is integrated on `implementation/public-landing-snapshot`. The real HTTP regression first reproduced the old lock timeout as SQLSTATE `55P03` and HTTP 503 while the archive stayed open. The candidate passed both overlap orders. One read completed while the archive was uncommitted. A second test held an already-selected result while a real owner archive command committed, checked a fresh 404, then delivered the earlier response. The directory lock tests, archive fences and direct bypass checks also passed.
+
+All 76 HTTP tests passed against the reviewed contract fixture. All nine local Auth/HTTP suites, the Auth eligibility and transaction retry suites, the 134-file client access audit, server TypeScript, lint, production build and all 279 client tests passed. Independent standards and spec reviews each reported zero findings. This local checkpoint used the existing schema and grants. The other read checkpoints await implementation authorization.
+
+### Local measurements
+
+The pinned baseline is `c5f4bbf`. An initial standalone baseline and a paired run used the real `ct_api` role, local PostgreSQL 17 and the actual loopback HTTP endpoints. The paired run used the same synthetic community for both variants, warmed connections, six repetitions with alternating variant order, and a four-connection application pool per variant. Mixed traffic used four landing readers and one writer issuing real archive and restore commands. Counts were measured separately from latencies. Fixture cleanup and source hashes were checked.
+
+| Local HTTP workload | Samples per variant | Median ms, baseline to candidate | p95 ms, baseline to candidate |
+| --- | ---: | ---: | ---: |
+| Active landing, serial | 480 | 3.302 to 2.170 | 3.823 to 2.458 |
+| Missing landing, serial | 120 | 1.928 to 2.122 | 2.131 to 2.866 |
+| Landing, mixed with writes | 960 | 4.323 to 2.776 | 30.059 to 4.001 |
+| Archive and restore, mixed with reads | 144 | 29.216 to 27.490 | 72.139 to 33.688 |
+
+Active landing uses three database submissions instead of four, including transaction begin and commit. Missing landing uses three in both variants. The measured missing-slug response was slightly slower, with one slower repetition contributing to its tail. The mixed read mix changed as expected with the new overlap rule. The p95 for mixed 200 responses was 29.533 to 4.275 ms and for mixed 404 responses was 30.491 to 3.528 ms.
+
+In a separate controlled overlap, an archive update was held open for about 50 ms. The observer saw the baseline connection waiting on the community row. It returned 404 in 65.787 ms after the commit. The candidate returned 200 in 2.741 ms while the update was open, with no observed wait on that row. Its next request returned 404 after commit. The observer recorded whether a session was waiting. The reported times are end-to-end HTTP latencies. These are loopback measurements under synthetic contention. Raw samples and the runner are retained under ignored `server/test-results/public-landing-snapshot/`.
+
 ## Public visibility branch closeout — 2026-11-18
 
 At the user's request, `architecture/move-to-persistent-api` was fast-forwarded from `933acaa` to verified/deployed tip `b7b7e13`. The checkout's thirteen uncommitted scope-document changes were verified identical to the already integrated `ad530ea` scope commit, preserved in a patch/archive and temporary stash, and reconciled by the fast-forward. Existing untracked scratch files were left untouched.
