@@ -6,7 +6,6 @@ import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
-import { accountHistory } from '../src/features/communities/service.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
@@ -16,7 +15,15 @@ const endpoint = new URL(process.env.DATABASE_URL)
 assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
-const app = buildApi({ db, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
+let pauseHistoryResult
+const apiDb = db.withPlugin({
+  transformQuery({ node }) { return node },
+  async transformResult({ result }) {
+    await pauseHistoryResult?.(result.rows[0])
+    return result
+  },
+})
+const app = buildApi({ db: apiDb, verify: verifyBearer(local.API_URL, local.ANON_KEY, local.issuer), cursors: directoryCursors(randomBytes(32).toString('hex')), cleanup: () => db.destroy() })
 const admin = new pg.Client({ connectionString: local.DB_URL })
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false } }
 const authAdmin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, authOptions).auth.admin
@@ -87,6 +94,7 @@ try {
   assert.deepEqual(await history(cr,{eventId:suspension.id,category:'staff_account'}),empty)
   assert.deepEqual(await history(cr,{eventId:suspension.id,limit:'1',cursor:'invalid'}),{rows:[suspension],next:null})
   for(const viewer of [manager,target,outsider]) assert.deepEqual(await history(viewer),empty)
+  assert.equal((await history(outsider,{cursor:'bad'},tenant,400)).code,'invalid_cursor')
   assert.deepEqual(await history(owner,{},otherTenant),empty)
   assert.deepEqual(await history(owner,{},randomUUID()),empty)
   assert.equal((await fetch(base+'/api/communities/'+tenant+'/history')).status,401)
@@ -272,33 +280,52 @@ try {
   await cmd(owner,{kind:'reappoint',target:sr.id,permissions:{...noPermissions,can_audit_staff_accounts:true}})
   await admin.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1",[sr.id])
   await history(sr,{},tenant,403)
+  assert.equal((await history(sr,{cursor:'bad'},tenant,403)).code,'ineligible')
   assert.ok((await raw(sr)).some(r=>r.id===suspension.id),'runtime facts do not depend on caller eligibility; HTTP still denies the banned actor')
   await admin.query('update auth.users set banned_until=null where id=$1',[sr.id])
-  // Observe an actual blocked HTTP request, then commit a privilege/archive change.
-  async function afterLockedChange(change,competing) {
+  // The read must complete against committed data while the change holds the root.
+  async function duringLockedChange(change, read) {
     await admin.query('begin')
     let response
     try {
       await admin.query('select id from public.tenants where id=$1 for update',[tenant])
       await change()
-      response=competing()
-      response.catch(()=>{})
-      const deadline=Date.now()+1800
-      while(!(await admin.query("select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as waiting")).rows[0].waiting) {
-        assert.ok(Date.now()<deadline,'history must wait for tenant serialization')
+      response=read()
+      let done=false
+      const finish=()=>{done=true}
+      response.then(finish,finish)
+      const deadline=Date.now()+4000
+      while(!done) {
+        const {waiting}=(await admin.query("select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as waiting")).rows[0]
+        assert.equal(waiting,false,'history must complete while the community write holds the root')
+        assert.ok(Date.now()<deadline,'history must complete before the change commits')
         await new Promise(resolve=>setTimeout(resolve,10))
       }
+      const result=await response
       await admin.query('commit')
-    } finally { await admin.query('rollback') }
-    return response
+      return result
+    } finally {
+      await admin.query('rollback')
+      await response?.catch(()=>{})
+    }
   }
-  assert.deepEqual(await afterLockedChange(
+
+  const previousCursor=(await history(sr,{limit:'1'})).next
+  assert.ok(previousCursor)
+  const nextPage={cursor:previousCursor,limit:'1'}
+  const permittedPage=await history(sr,nextPage)
+  assert.equal(permittedPage.rows.length,1)
+  assert.deepEqual(await duringLockedChange(
     ()=>admin.query('update public.tenant_staff_assignments set can_audit_staff_accounts=false where tenant_id=$1 and user_id=$2',[tenant,sr.id]),
-    ()=>history(sr,exact(linked.id))),empty)
+    ()=>Promise.all([history(sr,exact(linked.id)),history(sr,nextPage)])),[{rows:[linked],next:null},permittedPage])
+  assert.deepEqual(await history(sr,exact(linked.id)),empty)
+  assert.deepEqual(await history(sr,nextPage),empty)
   await cmd(owner,{kind:'permissions',target:sr.id,permissions:{can_audit_staff_accounts:true}})
-  assert.deepEqual(await afterLockedChange(
+  assert.deepEqual(await duringLockedChange(
     ()=>admin.query("update public.tenants set operational_status='archived' where id=$1",[tenant]),
-    ()=>history(sr)),empty)
+    ()=>history(sr,nextPage)),permittedPage)
+  assert.deepEqual(await history(sr,exact(linked.id)),empty)
+  assert.deepEqual(await history(sr,nextPage),empty)
   assert.deepEqual(await history(cr),empty)
   assert.ok((await raw(sr)).some(r=>r.id===suspension.id))
   assert.ok((await raw(cr)).some(r=>r.id===suspension.id))
@@ -306,31 +333,32 @@ try {
   assert.ok((await raw(owner)).some(r=>r.id===suspension.id))
   await cmd(owner,{kind:'archive',archived:false})
 
-  // In the opposite order a checked read holds authority until it completes.
-  let releaseRead, signalReady
-  const release=new Promise(resolve=>{releaseRead=resolve})
-  const ready=new Promise(resolve=>{signalReady=resolve})
-  const reader=withEligibleActorTransaction(db, { actorId: sr.id, requestId: randomUUID() },async tx=>{
-    const result=await accountHistory(tx,sr.id,tenant,exact(linked.id))
-    signalReady((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
-    await release
-    return result
-  }, { initialTenantId: tenant })
-  const holder=await Promise.race([ready,reader.then(()=>{throw Error('read exited before barrier')})])
-  const writer=cmd(owner,{kind:'permissions',target:sr.id,permissions:{can_audit_staff_accounts:false}})
-  writer.catch(()=>{})
-  try {
-    const deadline=Date.now()+1800
-    while(!(await admin.query('select exists(select from pg_stat_activity where $1=any(pg_blocking_pids(pid))) as waiting',[holder])).rows[0].waiting) {
-      assert.ok(Date.now()<deadline,'permission writer must wait for checked read')
-      await new Promise(resolve=>setTimeout(resolve,10))
+  // Hold a selected result before delivery while a real command commits.
+  async function changeBeforeDelivery(body) {
+    const selected=Promise.withResolvers(), deliver=Promise.withResolvers()
+    pauseHistoryResult=async row=>{
+      if(row?.id!==linked.id || !Array.isArray(row.categories)) return
+      pauseHistoryResult=undefined
+      selected.resolve()
+      await deliver.promise
     }
-  } finally { releaseRead() }
-  const readResult=await reader
-  assert.deepEqual(readResult.rows,[linked])
-  await writer
-  assert.deepEqual(await history(sr,exact(linked.id)),empty)
-  console.log('PASS history categories, exact lookup and disciplinary reason isolation; legacy preservation, pagination, current eligibility, browser/GraphQL/runtime bypasses and both serialization orders')
+    const reader=history(sr,exact(linked.id))
+    try {
+      await Promise.race([selected.promise,reader.then(()=>assert.fail('History ended before the result barrier'))])
+      await cmd(owner,body)
+      assert.deepEqual(await history(sr,exact(linked.id)),empty)
+      assert.deepEqual(await history(sr,nextPage),empty)
+    } finally {
+      pauseHistoryResult=undefined
+      deliver.resolve()
+      await reader
+    }
+    assert.deepEqual(await reader,{rows:[linked],next:null})
+  }
+  await changeBeforeDelivery({kind:'archive',archived:true})
+  await cmd(owner,{kind:'archive',archived:false})
+  await changeBeforeDelivery({kind:'permissions',target:sr.id,permissions:{can_audit_staff_accounts:false}})
+  console.log('PASS history categories, exact lookup and disciplinary reason isolation; legacy preservation, pagination, current eligibility, browser/GraphQL/runtime bypasses and both permission/archive snapshot orders')
 } finally {
   try {
     await admin.query('begin')

@@ -7,7 +7,7 @@ import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActio
   loadConfigurationFacts, requireCanReadConfiguration, requireCanEditConfiguration,
   loadAccountRecordFacts, requireCanReadAccountRecord, requireCanManageAccountRecords,
   canListCommunityAccounts, requireCanListCommunityAccounts, requireCanReadCommunityAccountFacts,
-  loadHistoryFacts, type Account, type Staff, type Pending } from './policies.ts'
+  historyViewerFacts, type Account, type Staff, type Pending } from './policies.ts'
 import { sql } from 'kysely'
 import { jsonArrayFrom } from 'kysely/helpers/postgres'
 import { type AppDatabase, withEligibleActorTransaction, withTransactionRetry, type AuthenticatedContext } from '../../database.ts'
@@ -49,7 +49,6 @@ import {
   type SlugParams,
   type Context,
   type Action,
-  type OperationalStatus,
   type ReviewParams,
   type AfterQuery,
   type MissingRequest,
@@ -690,8 +689,7 @@ export async function setParticipantPermission(tx: Tx, actor: string, tenant: st
 // Audit history
 // History reads use explicit tenant filters and API authorization.
 function history(db: AppDatabase, context: AuthenticatedContext, params: TenantParams, query: HistoryQuery) {
-  const actor = context.actorId;
-  return withEligibleActorTransaction(db, context, tx => accountHistory(tx, actor, params.tenantId, query))
+  return withEligibleActorTransaction(db, context, tx => accountHistory(tx, context.actorId, params.tenantId, query))
 }
 function cursorScope(actor: string, tenant: string, query: HistoryQuery) {
   return [actor, tenant, query.target ?? null, query.category ?? null]
@@ -712,16 +710,8 @@ function decodeCursor(actor: string, tenant: string, query: HistoryQuery): Posit
     return { time: value[4], id: value[5] }
   } catch { throw new ApplicationError(400, 'invalid_cursor') }
 }
-export async function accountHistory(tx: Tx, actor: string, tenant: string, query: HistoryQuery): Promise<HistoryPage> {
+async function accountHistory(tx: Tx, actor: string, tenant: string, query: HistoryQuery): Promise<HistoryPage> {
   const position = decodeCursor(actor, tenant, query)
-  // Every command takes this row FOR UPDATE. Acquire it before reading the
-  // staff flags, so a committed archive or revocation governs this request.
-  const site = (await sql<OperationalStatus>`select operational_status from public.tenants
-    where id=${tenant} for share`.execute(tx)).rows[0]
-  const empty: HistoryPage = { rows: [], next: null }
-  if (!site) return empty
-  const facts = await loadHistoryFacts(tx, actor, tenant)
-  const staff = facts.account?.standing === 'approved' && facts.assignment?.status === 'active' ? facts.assignment : undefined
   const limit = query.eventId ? 1 : Number(query.limit ?? 50)
   const rows = (await sql<HistoryEntry>`
     select a.id,a.tenant_id,a.action,a.target_user_id,a.content_key,
@@ -729,15 +719,17 @@ export async function accountHistory(tx: Tx, actor: string, tenant: string, quer
       a.created_by,a.operation_id,a.reason,a.details,
       array(select c.category from app_private.tenant_admin_action_categories c where c.action_id=a.id order by c.category) as categories
     from public.tenant_admin_actions a
+    join (${historyViewerFacts(tx, actor)}) viewer on viewer.tenant_id=a.tenant_id
     where a.tenant_id=${tenant}
+      and viewer.standing='approved' and viewer.status='active'
+      and (viewer.role='owner' or (viewer.operational_status='active' and exists(
+        select from app_private.tenant_admin_action_categories c where c.action_id=a.id
+        and ((c.category='community_account' and viewer.can_audit_community_accounts)
+          or (c.category='staff_account' and viewer.can_audit_staff_accounts)))))
       and (${query.target ?? null}::uuid is null or a.target_user_id=${query.target ?? null}::uuid)
       and (${query.eventId ?? null}::uuid is null or a.id=${query.eventId ?? null}::uuid)
       and (${query.category ?? null}::text is null or exists(select from app_private.tenant_admin_action_categories c
         where c.action_id=a.id and c.category=${query.category ?? null}))
-      and (${staff?.role === 'owner'} or (${facts.site?.operational_status === 'active'} and exists(
-        select from app_private.tenant_admin_action_categories c where c.action_id=a.id
-        and ((c.category='community_account' and ${Boolean(staff?.can_audit_community_accounts)})
-          or (c.category='staff_account' and ${Boolean(staff?.can_audit_staff_accounts)})))))
       and (${position?.time ?? null}::timestamptz is null or (a.created_at,a.id)<(${position?.time ?? null}::timestamptz,${position?.id ?? null}::uuid))
     order by a.created_at desc,a.id desc limit ${query.eventId ? 1 : limit + 1}
   `.execute(tx)).rows

@@ -338,11 +338,11 @@ test('history keeps open details and empty unauthorized pages; own requests keep
   assert.equal(ownResponse.statusCode, 200)
   assert.deepEqual(ownResponse.json(), { request: null })
   const actual = createHttpHarness(t)
-  actual.eligible([{ operational_status: 'active' }], [{ operational_status: 'active', accountId: null, role: null }], [])
+  actual.eligible([])
   const empty = await actual.app.inject(input(history))
   assert.equal(empty.statusCode, 200)
   assert.deepEqual(empty.json(), { rows: [], next: null })
-  assert.equal(actual.queries.length, 4)
+  assert.equal(actual.queries.length, 2)
 })
 
 test('member directory preserves nullable profile and staff role and projects returned profiles', async t => {

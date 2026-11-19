@@ -7,7 +7,7 @@ import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
 import { configurationDetails, configurationSettings, configurationCopy, communityCommand } from '../src/features/communities/service.ts'
 import { copySlots, staffFlags } from '../src/features/communities/types.ts'
-import { loadConfigurationFacts, loadAccountRecordFacts, loadHistoryFacts } from '../src/features/communities/policies.ts'
+import { loadConfigurationFacts, loadAccountRecordFacts } from '../src/features/communities/policies.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
@@ -118,7 +118,6 @@ try {
       await sql`select id from public.tenants where id=${targetTenant} for share`.execute(tx)
       const facts=await loadConfigurationFacts(tx,actor.id,targetTenant)
       assert.deepEqual(await loadAccountRecordFacts(tx,actor.id,targetTenant),facts)
-      assert.deepEqual(await loadHistoryFacts(tx,actor.id,targetTenant),facts)
       return facts
     })
   }
