@@ -30,3 +30,8 @@ supabase/.branches/
 
 # Generated verification reports; reviewed inputs belong in server/tests/fixtures/.
 /server/test-results/
+
+# Local development artifacts
+/.cache/
+/.playwright-mcp/
+/.scratch/
