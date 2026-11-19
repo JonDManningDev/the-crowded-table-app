@@ -194,13 +194,6 @@ export function canEnterCommunityAction(facts: CommunityActionFacts, command: Co
   return 'allowed'
 }
 
-export function requireCanListCommunityAccounts(facts: AccountRecordFacts) { requireDecision(canListCommunityAccounts(facts)) }
-
-export function canListCommunityAccounts(facts: AccountRecordFacts): Decision {
-  return facts.site && facts.account?.standing === 'approved'
-    && facts.assignment?.role === 'owner' && facts.assignment.status === 'active' ? 'allowed' : 'missing'
-}
-
 export function requireCanManageAccountRecords(facts: AccountRecordFacts, kind: RecordKind) {
   requireDecision(canManageAccountRecords(facts, kind))
 }
@@ -232,15 +225,6 @@ export function requireCanReadAccountRecord(facts: AccountRecordFacts, kind: Rec
 
 export function canReadAccountRecord(facts: AccountRecordFacts, kind: RecordKind, own: boolean): Decision {
   return canManageAccountRecords(facts, kind) === 'allowed' || (own && facts.site?.operational_status === 'active') ? 'allowed' : 'missing'
-}
-
-export function requireCanReadCommunityAccountFacts(facts: AccountRecordFacts, own: boolean) {
-  requireDecision(canReadCommunityAccountFacts(facts, own))
-}
-
-export function canReadCommunityAccountFacts(facts: AccountRecordFacts, own: boolean): Decision {
-  return canListCommunityAccounts(facts) === 'allowed' || (facts.site?.operational_status === 'active'
-    && (own || facts.account?.standing === 'approved' || facts.account?.standing === 'suspended')) ? 'allowed' : 'missing'
 }
 
 export function requireCanReadConfiguration(facts: ConfigurationFacts) { requireDecision(canReadConfiguration(facts)) }

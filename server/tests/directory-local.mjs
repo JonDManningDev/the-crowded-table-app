@@ -15,12 +15,12 @@ assert.equal(endpoint.host, new URL(local.DB_URL).host)
 assert.equal(endpoint.pathname, '/postgres')
 const db = connectDatabase(endpoint.href)
 const cursorKey=randomBytes(32).toString('hex'), cursors=directoryCursors(cursorKey)
-let pauseLandingResult, pauseDirectoryResult
+let pauseLandingResult, pauseReadResult
 const apiDb = db.withPlugin({
   transformQuery({node}) {return node},
   async transformResult({result}) {
     await pauseLandingResult?.(result.rows[0])
-    await pauseDirectoryResult?.(result.rows[0]?.rows?.[0] ?? result.rows[0])
+    await pauseReadResult?.(result.rows[0]?.rows?.[0] ?? result.rows[0])
     return result
   },
 })
@@ -112,6 +112,11 @@ try {
     await http(actor,path+'/accounts/'+member.id+'/profile','GET',undefined,404)
   }
   for(const actor of [pending,inactive,suspended]) assert.equal((await facts(actor,actor.id)).user_id,actor.id)
+  for(const actor of [pending,inactive]) {
+    const uppercase = actor.id.toUpperCase()
+    if (uppercase !== actor.id) assert.equal((await facts(actor,uppercase,404)).code,'missing')
+  }
+  assert.equal((await facts(member,inactive.id.toUpperCase())).user_id,inactive.id)
   for(const actor of [member,manager,suspended]) await facts(actor,pending.id,404)
   assert.equal((await facts(owner,pending.id)).standing,'pending')
   assert.equal((await accounts(owner)).rows.length,9)
@@ -237,8 +242,8 @@ try {
       while (!finished) {
         const { rows: [{ blocked }] } = await admin.query(
           "select exists(select from pg_stat_activity where usename='ct_api' and pg_backend_pid()=any(pg_blocking_pids(pid))) as blocked")
-        assert.equal(blocked, false, 'directory read must not wait for the community row')
-        assert.ok(Date.now() < deadline, 'directory read did not finish during the change')
+        assert.equal(blocked, false, 'read must not wait for the community row')
+        assert.ok(Date.now() < deadline, 'read did not finish during the change')
         await new Promise(resolve => setTimeout(resolve, 10))
       }
       const result = await pendingRead
@@ -332,21 +337,21 @@ try {
   assert.deepEqual(await inFlightLanding,publishedLanding)
   await cmd(owner,{kind:'archive',archived:false})
 
-  // Hold a selected directory page before delivery while a real write commits.
-  async function changeBeforeDirectoryDelivery(read, change, match) {
+  // Hold a selected read before delivery while a real write commits.
+  async function changeBeforeReadDelivery(read, change, match) {
     const selected=Promise.withResolvers(), deliver=Promise.withResolvers()
-    pauseDirectoryResult=async row=>{
+    pauseReadResult=async row=>{
       if(!match(row)) return
-      pauseDirectoryResult=undefined
+      pauseReadResult=undefined
       selected.resolve()
       await deliver.promise
     }
     const inFlight=read()
     try {
-      await Promise.race([selected.promise,inFlight.then(()=>assert.fail('Directory ended before the result barrier'))])
+      await Promise.race([selected.promise,inFlight.then(()=>assert.fail('Read ended before the result barrier'))])
       await change()
     } finally {
-      pauseDirectoryResult=undefined
+      pauseReadResult=undefined
       deliver.resolve()
       await inFlight.catch(()=>{})
     }
@@ -359,13 +364,13 @@ try {
     [continuingMemberDirectory, memberPageSelected, ()=>directory(member,'?cursor='+savedCursor,404)],
   ]) {
     const visible = await read()
-    assert.deepEqual(await changeBeforeDirectoryDelivery(read, async ()=>{
+    assert.deepEqual(await changeBeforeReadDelivery(read, async ()=>{
       await cmd(owner,{kind:'archive',archived:true})
       assert.equal((await afterArchive()).code,'missing')
     }, match), visible)
     await cmd(owner,{kind:'archive',archived:false})
   }
-  assert.deepEqual(await changeBeforeDirectoryDelivery(continuingPublicDirectory, async ()=>{
+  assert.deepEqual(await changeBeforeReadDelivery(continuingPublicDirectory, async ()=>{
     await config({allow_public_directory_visibility:false})
     assert.equal((await publicDirectory(null,'?cursor='+publicCursor,404)).code,'missing')
   }, publicPageSelected), publicNext)
@@ -386,17 +391,65 @@ try {
   await cmd(listedMember,{kind:'reactivate'})
   const beforeListedMemberLeavesAgain = await continuingMemberDirectory()
   assert.ok(beforeListedMemberLeavesAgain.rows.some(row => row.account.user_id === listedMember.id))
-  assert.deepEqual(await changeBeforeDirectoryDelivery(continuingMemberDirectory, async ()=>{
+  assert.deepEqual(await changeBeforeReadDelivery(continuingMemberDirectory, async ()=>{
     await cmd(listedMember,{kind:'deactivate'})
     assert.deepEqual(await continuingMemberDirectory(), afterListedMemberLeaves)
   }, memberPageSelected), beforeListedMemberLeavesAgain)
 
   const reactivatedMemberNext = await continuingMemberDirectory()
-  assert.deepEqual(await changeBeforeDirectoryDelivery(continuingMemberDirectory, async ()=>{
+  assert.deepEqual(await changeBeforeReadDelivery(continuingMemberDirectory, async ()=>{
     await cmd(member,{kind:'deactivate'})
     assert.equal((await directory(member,'?cursor='+savedCursor,404)).code,'missing')
   }, memberPageSelected), reactivatedMemberNext)
-  console.log('PASS member/public directories, exact and owner account facts, safe field/badge projections, opaque cursor boundaries and tampering, full page limits, lifecycle and archive gates, raw bypasses, both directory snapshot orders including viewer and listed-member standing, and both landing/archive snapshot orders')
+
+  const ownerCursor = (await accounts(owner,'?limit=1')).next
+  assert.ok(ownerCursor)
+  const continueOwnerList = () => accounts(owner,'?cursor='+ownerCursor)
+  const ownerNext = await continueOwnerList()
+  assert.deepEqual(Object.keys(ownerNext.rows[0]).sort(),factKeys)
+  assert.match(ownerNext.rows[0].created_at,/\.\d{3}Z$/)
+  const pendingInOwnerList = (await accounts(owner)).rows.find(row=>row.user_id===pending.id)
+  assert.deepEqual(pendingInOwnerList,await facts(owner,pending.id))
+  assert.equal(pendingInOwnerList.first_approved_at,null)
+  assert.equal((await accounts(owner,'?cursor=invalid',400)).code,'invalid_cursor')
+  const lastOwnerCursor = cursors.encode(['owner-accounts',owner.id,tenant],ownerNext.rows.at(-1).user_id)
+  assert.deepEqual(await accounts(owner,'?cursor='+lastOwnerCursor),{rows:[],next:null})
+  assert.deepEqual(await readDuringChange(
+    ()=>admin.query("update public.tenants set operational_status='archived' where id=$1",[tenant]),
+    continueOwnerList),ownerNext)
+  assert.deepEqual(await continueOwnerList(),ownerNext)
+  await cmd(owner,{kind:'archive',archived:false})
+  assert.deepEqual(await changeBeforeReadDelivery(continueOwnerList, async ()=>{
+    await cmd(owner,{kind:'archive',archived:true})
+    assert.deepEqual(await continueOwnerList(),ownerNext)
+  }, row=>row?.tenant_id===tenant),ownerNext)
+  assert.equal((await accounts(manager,'?cursor='+ownerCursor,404)).code,'missing')
+  assert.equal((await accounts(manager,'?cursor=invalid',404)).code,'missing')
+  await cmd(owner,{kind:'archive',archived:false})
+  await admin.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1",[owner.id])
+  assert.equal((await accounts(owner,'?cursor='+ownerCursor,403)).code,'ineligible')
+  assert.equal((await accounts(owner,'?cursor=invalid',403)).code,'ineligible')
+  await admin.query('update auth.users set banned_until=null where id=$1',[owner.id])
+
+  await cmd(member,{kind:'reactivate'})
+  const readOtherFacts = () => facts(member,inactive.id)
+  const otherFacts = await readOtherFacts()
+  const ownFacts = await facts(member,member.id)
+  assert.equal(otherFacts.user_id,inactive.id)
+  assert.equal(otherFacts.standing,'inactive')
+  assert.deepEqual(await readDuringChange(
+    ()=>admin.query("update public.community_accounts set standing='inactive' where tenant_id=$1 and user_id=$2",[tenant,member.id]),
+    async ()=>[await readOtherFacts(),await facts(member,member.id)]),[otherFacts,ownFacts])
+  assert.equal((await facts(member,inactive.id,404)).code,'missing')
+  assert.equal((await facts(member,member.id)).standing,'inactive')
+
+  await cmd(member,{kind:'reactivate'})
+  assert.deepEqual(await changeBeforeReadDelivery(readOtherFacts, async ()=>{
+    await cmd(member,{kind:'deactivate'})
+    assert.equal((await facts(member,inactive.id,404)).code,'missing')
+    assert.equal((await facts(member,member.id)).standing,'inactive')
+  }, row=>row?.tenant_id===tenant && row.user_id===inactive.id),otherFacts)
+  console.log('PASS member/public directories, exact and owner account facts, safe projections, cursor and page limits, lifecycle and archive gates, raw bypasses, and both snapshot orders for landing, directories and account facts')
 
 } finally {
   try {

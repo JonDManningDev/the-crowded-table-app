@@ -6,7 +6,6 @@ import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActio
   requireCanChangeCommunityStanding, loadStaffGrantFacts, requireCanManageCommunityStaff,
   loadConfigurationFacts, requireCanReadConfiguration, requireCanEditConfiguration,
   loadAccountRecordFacts, requireCanReadAccountRecord, requireCanManageAccountRecords,
-  canListCommunityAccounts, requireCanListCommunityAccounts, requireCanReadCommunityAccountFacts,
   selectHistoryViewerFacts, type Account, type Staff, type Pending } from './policies.ts'
 import { sql } from 'kysely'
 import { jsonArrayFrom } from 'kysely/helpers/postgres'
@@ -575,7 +574,7 @@ export async function configurationCopy(tx: Tx, actor: string, tenant: string, c
 
 // Directories and account facts
 // Directory/account reads use explicit tenant filters and API authorization.
-const factsFields = ['tenant_id', 'user_id', 'standing', 'first_approved_at', 'has_disciplinary_restriction', 'created_at', 'updated_at', 'created_by', 'updated_by']
+const factsFields = ['tenant_id', 'user_id', 'standing', 'first_approved_at', 'has_disciplinary_restriction', 'created_at', 'updated_at', 'created_by', 'updated_by'] as const
 async function readMemberDirectory(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<MemberDirectoryRow>> {
   const cursorScope = ['member-directory', actor, tenant], limit = Number(query.limit ?? 50)
   let after: string | null = null
@@ -610,25 +609,52 @@ async function readMemberDirectory(tx: Tx, actor: string, tenant: string, query:
   return { rows: visible, next: rows.length > limit && last ? cursors.encode(cursorScope, last.account.user_id) : null }
 }
 export async function listOwnerAccounts(tx: Tx, actor: string, tenant: string, query: DirectoryQuery, cursors: DirectoryCursors): Promise<DirectoryPage<AccountFacts>> {
-  const facts = await lockAccountFacts(tx, actor, tenant)
-  requireCanListCommunityAccounts(facts)
-  const scope = ['owner-accounts', actor, tenant], after = cursors.decode(scope, query.cursor), limit = Number(query.limit ?? 50)
-  const rows = (await sql<AccountFacts>`select ${sql.join(factsFields.map(key => sql.id(key)))} from public.community_accounts
-    where tenant_id=${tenant} and (${after}::uuid is null or user_id>${after}::uuid) order by user_id limit ${limit + 1}`.execute(tx)).rows
+  const scope = ['owner-accounts', actor, tenant], limit = Number(query.limit ?? 50)
+  let after: string | null = null
+  let cursorError: ApplicationError | undefined
+  try {
+    after = cursors.decode(scope, query.cursor)
+  } catch (error) {
+    if (!(error instanceof ApplicationError) || error.message !== 'invalid_cursor') throw error
+    cursorError = error
+  }
+
+  const selected = await tx.selectFrom('tenants as t')
+    .innerJoin('community_accounts as viewer', join => join.onRef('viewer.tenant_id', '=', 't.id').on('viewer.user_id', '=', actor))
+    .innerJoin('tenant_staff_assignments as staff', join => join.onRef('staff.tenant_id', '=', 'viewer.tenant_id').onRef('staff.user_id', '=', 'viewer.user_id'))
+    .where('t.id', '=', tenant).where('viewer.standing', '=', 'approved')
+    .where('staff.role', '=', 'owner').where('staff.status', '=', 'active')
+    .leftJoinLateral(eb => eb.selectFrom('community_accounts as c')
+      .select(factsFields.map(field => `c.${field}` as const))
+      .whereRef('c.tenant_id', '=', 't.id')
+      .$if(after !== null, q => q.where('c.user_id', '>', after!))
+      .orderBy('c.user_id').limit(cursorError ? 0 : limit + 1)
+      .$narrowType<Pick<AccountFacts, 'standing'>>().as('page'), join => join.onTrue())
+    .selectAll('page').orderBy('page.user_id').execute()
+  // An authorized empty page has one null row. Keep the 404 ahead of cursor errors.
+  if (!selected.length) throw new ApplicationError(404, 'missing')
+  if (cursorError) throw cursorError
+  const rows = selected.filter((row): row is AccountFacts => row.user_id !== null)
   const visible = rows.slice(0, limit), last = visible.at(-1)
   return { rows: visible, next: rows.length > limit && last ? cursors.encode(scope, last.user_id) : null }
 }
 export async function readAccountFacts(tx: Tx, actor: string, tenant: string, target: string): Promise<AccountFacts> {
-  const facts = await lockAccountFacts(tx, actor, tenant)
-  requireCanReadCommunityAccountFacts(facts, target === actor)
-  const row = (await sql<AccountFacts>`select ${sql.join(factsFields.map(key => sql.id(key)))} from public.community_accounts
-    where tenant_id=${tenant} and user_id=${target} and (${canListCommunityAccounts(facts) === 'allowed' || target === actor} or standing in ('approved','suspended','inactive'))`.execute(tx)).rows[0]
+  const row = await tx.selectFrom('community_accounts as c')
+    .innerJoin('tenants as t', 't.id', 'c.tenant_id')
+    .innerJoin('community_accounts as viewer', join => join.onRef('viewer.tenant_id', '=', 't.id').on('viewer.user_id', '=', actor))
+    .leftJoin('tenant_staff_assignments as staff', join => join.onRef('staff.tenant_id', '=', 'viewer.tenant_id').onRef('staff.user_id', '=', 'viewer.user_id'))
+    .where('c.tenant_id', '=', tenant).where('c.user_id', '=', target)
+    .where(eb => eb.or([
+      eb.and([eb('viewer.standing', '=', 'approved'), eb('staff.role', '=', 'owner'), eb('staff.status', '=', 'active')]),
+      eb.and([eb('t.operational_status', '=', 'active'), eb.or([
+        eb.val(target === actor),
+        eb.and([eb('viewer.standing', 'in', ['approved', 'suspended']), eb('c.standing', 'in', ['approved', 'suspended', 'inactive'])]),
+      ])]),
+    ]))
+    .select(factsFields.map(field => `c.${field}` as const))
+    .$narrowType<Pick<AccountFacts, 'standing'>>().executeTakeFirst()
   if (!row) throw new ApplicationError(404, 'missing')
   return row
-}
-async function lockAccountFacts(tx: Tx, actor: string, tenant: string) {
-  if (!(await sql`select id from public.tenants where id=${tenant} for share`.execute(tx)).rows[0]) throw new ApplicationError(404, 'missing')
-  return loadAccountRecordFacts(tx, actor, tenant)
 }
 
 // Staff and participant permissions

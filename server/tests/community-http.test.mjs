@@ -278,8 +278,7 @@ test('directory and exact/owner facts retain ordered projections and bound param
     const operation = operations.find(operation => operation.name === name), dto = response(operation).dto
     const queryStart = h.queries.length
     if (name === 'memberDirectory') h.eligible([{ rows: dto.rows }])
-    else h.eligible([{ id: tenantId }], [{ operational_status: 'active', accountId: actorId, standing: 'approved',
-      role: 'owner', status: 'active' }], name === 'accountFacts' ? [dto] : dto.rows)
+    else h.eligible(name === 'accountFacts' ? [dto] : dto.rows)
     assert.equal((await h.app.inject(input(operation))).statusCode, 200)
     const query = h.queries.at(-1)
     if (name === 'memberDirectory') {
@@ -292,8 +291,12 @@ test('directory and exact/owner facts retain ordered projections and bound param
       assert.ok(query.parameters.includes(actorId))
       assert.ok(query.parameters.includes(tenantId))
     } else {
-      assert.equal(/^select (.*?) from /.exec(query.sql)?.[1], facts.map(key => `"${key}"`).join(', '))
-      assert.deepEqual(query.parameters, name === 'accountFacts' ? [tenantId, targetId, true] : [tenantId, null, null, 51])
+      const [, ...featureQueries] = h.queries.slice(queryStart)
+      assert.equal(featureQueries.length, 1)
+      assert.ok(query.sql.includes(`select ${facts.map(key => `"c"."${key}"`).join(', ')} from "community_accounts" as "c"`))
+      assert.ok(query.parameters.includes(actorId))
+      assert.ok(query.parameters.includes(tenantId))
+      assert.ok(query.parameters.includes(name === 'accountFacts' ? targetId : 51))
     }
   }
 })
