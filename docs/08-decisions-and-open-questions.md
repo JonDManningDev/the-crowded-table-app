@@ -1,5 +1,11 @@
 # Decisions and open questions
 
+## Specialized community lifecycle commands ? accepted 2026-11-20
+
+The authenticated commands route keeps its existing path and tagged request schema. It dispatches to one named community service operation per action, with separate archive and restore. Each operation uses the eligible-actor transaction with initial tenant scope, keeps the root lock ahead of fresh authority and target facts, and calls only the policy checks relevant to that action.
+
+Join and self-reactivation do not load staff authority. Withdrawal accepts either request kind for the caller, while approval requires an exact join request and its target revision. Discipline checks the relevant standing and revision, with combined authority for suspension or removal of active or paused staff. Staff grant, resumption, revocation, reappointment and permission editing retain their distinct assignment preconditions and authority. Grant alone loads protected target Auth eligibility. Archive and restore share owner authority and preserve their idempotent outcomes. Existing response, rollback and semantic audit contracts apply.
+
 ## Remaining community read locks and Auth eligibility — accepted 2026-11-19
 
 Apply the previously accepted statement-snapshot rule to the remaining community reads that acquire the community row lock. This covers configuration details, settings and copy, owner account lists and exact account facts, and staff and participant-permission list and exact reads. Each read evaluates its existing authority and response in one database statement without locking the community row. Preserve authorization and projection, exact-target and list boundaries, and mutation coordination under the existing write locks.

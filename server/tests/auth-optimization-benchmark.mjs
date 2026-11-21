@@ -273,7 +273,13 @@ async function full(vs,owner,tenant) {
   const targets=[...tenants]
   for(const id of targets) {
     assert.equal((await http(vs[0],owner,`/api/communities/${id}/settings`,'PATCH',{auto_approve_users:true})).r.status,200)
-    for(const actor of population)await vs[0].community.executeCommand({actorId:actor.id,requestId:randomUUID()},{tenantId:id},{kind:'join',profile:{displayName:'Benchmark participant',bio:null}})
+    for (const actor of population) {
+      const { data, r } = await http(vs[0], actor, `/api/communities/${id}/commands`, 'POST', {
+        kind: 'join', profile: { displayName: 'Benchmark participant', bio: null },
+      })
+      assert.equal(r.status, 200)
+      assert.equal(data.outcome, 'approved')
+    }
   }
   await admin.query('begin');await admin.query('set local session_replication_role=replica')
   for(const id of targets)await admin.query(`insert into public.tenant_admin_actions(id,tenant_id,action,details,created_at,created_by,operation_id)

@@ -32,7 +32,39 @@ export const communityRoutes: FastifyPluginAsyncTypebox<{ service: ProtectedComm
     return reply.code(201).send(result)
   })
   routes.post("/api/communities/:tenantId/commands", { bodyLimit: 32768, schema: schemas.executeCommandSchema }, async request => {
-    return await service.executeCommand(getAuthenticatedContext(request), request.params, request.body)
+    const context = getAuthenticatedContext(request)
+    const { tenantId } = request.params
+    const command = request.body
+    switch (command.kind) {
+      case 'join':
+        return service.joinCommunity(context, tenantId, command.profile)
+      case 'deactivate':
+        return service.deactivateOwnCommunityAccount(context, tenantId)
+      case 'reactivate':
+        return service.reactivateOwnCommunityAccount(context, tenantId)
+      case 'withdraw':
+        return service.withdrawCommunityActivationRequest(context, tenantId, command.requestId)
+      case 'approve':
+        return service.approveCommunityJoinRequest(context, tenantId, command.requestId, command.revision)
+      case 'suspend':
+        return service.suspendCommunityAccount(context, tenantId, { target: command.target, revision: command.revision, reason: command.reason })
+      case 'remove':
+        return service.removeUserFromCommunity(context, tenantId, { target: command.target, revision: command.revision, reason: command.reason })
+      case 'clear':
+        return service.clearCommunityAccountRestriction(context, tenantId, { target: command.target, revision: command.revision, reason: command.reason })
+      case 'grant':
+        return service.grantCommunityStaffAssignment(context, tenantId, command.target)
+      case 'resume':
+        return service.resumeCommunityStaffAssignment(context, tenantId, command.target)
+      case 'revoke':
+        return service.revokeCommunityStaffAssignment(context, tenantId, command.target, command.reason)
+      case 'reappoint':
+        return service.reappointCommunityStaff(context, tenantId, command.target, command.permissions)
+      case 'permissions':
+        return service.updateCommunityStaffPermissions(context, tenantId, command.target, command.permissions)
+      case 'archive':
+        return command.archived ? service.archiveCommunity(context, tenantId) : service.restoreCommunity(context, tenantId)
+    }
   })
 
   // Requests and reviews

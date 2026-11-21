@@ -29,24 +29,9 @@ export type CuratedProfile = { displayName: string; bio: string | null }
 export type CreateCommunityInput = {
   name: string; slug: string; country: string; timezone: string; region: string; city: string; profile: CuratedProfile
 }
-type DisciplineInput = { target: string; revision: string; reason?: string }
-export type CommunityCommand =
-  | { kind: 'join'; profile: CuratedProfile }
-  | { kind: 'deactivate' }
-  | { kind: 'reactivate' }
-  | { kind: 'withdraw'; requestId: string }
-  | { kind: 'approve'; requestId: string; revision: string }
-  | ({ kind: 'suspend' } & DisciplineInput)
-  | ({ kind: 'remove' } & DisciplineInput)
-  | ({ kind: 'clear' } & DisciplineInput)
-  | { kind: 'grant' | 'resume'; target: string }
-  | { kind: 'revoke'; target: string; reason?: string }
-  | { kind: 'reappoint'; target: string; permissions: StaffPermissions }
-  | { kind: 'permissions'; target: string; permissions: Partial<StaffPermissions> }
-  | { kind: 'archive'; archived: boolean }
+export type CommunityDisciplineInput = { target: string; revision: string; reason?: string }
 export type CommandResult = { outcome: string; tenantId: string; revision?: string; requestId?: string }
 export type Context = { tx: Tx; tenant: string; actor: string }
-export type Action<K extends CommunityCommand['kind']> = CommunityCommand & { kind: K }
 
 // Requests and reviews
 export type OwnCommunityRequest = { request_id: string; kind: 'join' | 'reactivation'; requested_at: string }
@@ -161,7 +146,21 @@ export type CommunityService = ReturnType<typeof createCommunityService>
 export type PublicCommunityOperations = Pick<CommunityService, "getCommunityStandingReference" | "readLanding" | "publicDirectory">
 export type ProtectedCommunityOperations = Pick<CommunityService,
   "createCommunity"
-  | "executeCommand"
+  | "joinCommunity"
+  | "deactivateOwnCommunityAccount"
+  | "reactivateOwnCommunityAccount"
+  | "withdrawCommunityActivationRequest"
+  | "approveCommunityJoinRequest"
+  | "suspendCommunityAccount"
+  | "removeUserFromCommunity"
+  | "clearCommunityAccountRestriction"
+  | "grantCommunityStaffAssignment"
+  | "resumeCommunityStaffAssignment"
+  | "revokeCommunityStaffAssignment"
+  | "reappointCommunityStaff"
+  | "updateCommunityStaffPermissions"
+  | "archiveCommunity"
+  | "restoreCommunity"
   | "ownRequest"
   | "reviewAccount"
   | "staffCandidates"

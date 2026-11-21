@@ -5,7 +5,7 @@ import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
-import { communityCommand } from '../src/features/communities/service.ts'
+import { archiveCommunity, grantCommunityStaffAssignment, reactivateOwnCommunityAccount, withdrawCommunityActivationRequest } from '../src/features/communities/service.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
@@ -97,7 +97,10 @@ try {
     assert.ok(denied.errors?.length && !denied.data?.updatetenantsCollection)
   } finally { await admin.query('rollback') }
   const first = await cmd(member, join)
+  assert.equal((await cmd(member, join)).outcome, 'already_applied')
+  assert.equal((await cmd(other, { kind: 'withdraw', requestId: first.requestId }, 409)).code, 'stale_state')
   await cmd(member, { kind: 'withdraw', requestId: first.requestId })
+  assert.equal((await cmd(member, join)).outcome, 'reactivation_required')
   const second = await cmd(member, { kind: 'reactivate' })
   assert.notEqual(second.requestId,first.requestId)
   const ownRequest = (viewer, scope = tenant, expected = 200) => send(viewer, '/api/communities/' + scope + '/me/request', undefined, expected)
@@ -106,9 +109,10 @@ try {
   await ownRequest(member, another, 404)
   await ownRequest(member, randomUUID(), 404)
   let state = await review(member, member.id)
-  await assert.rejects(withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },
-    tx => communityCommand(tx, owner.id, tenant, { kind: 'archive', archived: true }),
-    { initialTenantId: another }), { code: '42501' })
+  for (const options of [undefined, { initialTenantId: another }]) {
+    await assert.rejects(withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },
+      tx => archiveCommunity({ tx, actor: owner.id, tenant }), options), { code: '42501' })
+  }
   assert.equal((await ownRequest(member)).request.request_id, second.requestId)
   await cmd(other, { kind: 'approve', requestId: second.requestId, revision: state.revision }, 403)
   await cmd(owner, { kind: 'approve', requestId: first.requestId, revision: state.revision }, 409)
@@ -133,11 +137,14 @@ try {
   const candidate = allCandidates.find(row => row.user_id === member.id)
   assert.deepEqual(candidate,{ tenant_id:tenant,user_id:member.id,standing:'approved',display_name:'Member',staff_status:null,staff_role:null })
   await cmd(owner, { kind: 'grant', target: member.id })
+  await cmd(owner, { kind: 'grant', target: member.id }, 409)
   await cmd(owner, { kind: 'permissions', target: member.id, permissions: { can_grant_staff: true } })
   await cmd(member, { kind: 'archive', archived: true }, 403)
   await cmd(member, { kind: 'permissions', target: member.id, permissions: { can_manage_settings: true, can_audit_staff_accounts: true } }, 403)
   await cmd(member, { kind: 'deactivate' })
+  assert.equal((await cmd(member, { kind: 'deactivate' })).outcome, 'already_applied')
   await cmd(member, { kind: 'reactivate' })
+  await cmd(member, { kind: 'reactivate' }, 409)
   await cmd(owner, { kind: 'resume', target: member.id })
   state = await review(owner, member.id)
   await cmd(owner, { kind: 'suspend', target: member.id, revision: state.revision, reason: 'Fixture reason' })
@@ -148,6 +155,8 @@ try {
   assert.ok(audit.rows.every(r => r.created_by===owner.id && (r.reason===null || r.category==='community_account' && r.action==='community_suspended')))
   await cmd(owner, { kind: 'clear', target: member.id, revision: state.revision }, 409)
   await cmd(owner, { kind: 'clear', target: member.id, revision: (await review(owner,member.id)).revision })
+  await cmd(owner, { kind: 'clear', target: member.id, revision: (await review(owner, member.id)).revision }, 409)
+  await cmd(owner, { kind: 'resume', target: member.id }, 409)
   const profile = (viewer, scope, target, suffix = '') => fetch(base + '/api/communities/' + scope + '/accounts/' + target + '/profile' + suffix,
     { headers: viewer ? { Authorization: 'Bearer ' + viewer.token } : {} })
   const read = async (viewer, target, name) => {
@@ -172,6 +181,7 @@ try {
   }
   await admin.query("update public.community_accounts set standing='approved' where tenant_id=$1 and user_id=$2", [tenant,member.id])
   await cmd(owner, { kind: 'archive', archived: true })
+  await cmd(member, { kind: 'archive', archived: false }, 403)
   await read(owner, member.id, 'Member')
   for (const viewer of [member,other]) assert.equal((await profile(viewer,tenant,member.id)).status,404)
   // Omit the service predicate, as a faulty future query could. The independent
@@ -191,6 +201,8 @@ try {
   assert.deepEqual(queued.map(row => row.id), requestIds)
   assert.deepEqual((await queue(owner, requestIds[0])).rows.map(row => row.id), requestIds.slice(1))
   assert.deepEqual((await queue(member, requestIds[0])).rows, [])
+  const pendingRevision = queued.find(row => row.id === pendingRequest.requestId).revision
+  await cmd(owner, { kind: 'suspend', target: pending.id, revision: pendingRevision }, 409)
   await cmd(pending, { kind: 'withdraw', requestId: pendingRequest.requestId })
   const selected = queued.find(row => row.id === otherRequest.requestId)
   await cmd(owner, { kind: 'approve', requestId: selected.id, revision: selected.revision })
@@ -200,6 +212,8 @@ try {
   const permissions = Object.fromEntries(staffFlags.map(flag=>[flag,false]))
   await cmd(other,{kind:'reappoint',target:member.id,permissions},403)
   await cmd(owner,{kind:'reappoint',target:member.id,permissions})
+  await cmd(owner,{kind:'reappoint',target:member.id,permissions},409)
+  await cmd(other,{kind:'revoke',target:member.id},403)
   state = await review(owner,member.id)
   await cmd(other,{kind:'remove',target:member.id,revision:state.revision},403)
   await send(member,'/api/communities/'+tenant+'/me/preferences',
@@ -211,6 +225,8 @@ try {
   const restricted = await cmd(member,{kind:'reactivate'})
   assert.equal((await cmd(member,{kind:'reactivate'})).requestId,restricted.requestId)
   assert.equal((await queue(other)).rows[0].id,restricted.requestId)
+  await cmd(owner, { kind: 'approve', requestId: restricted.requestId, revision: (await review(owner, member.id)).revision }, 409)
+  assert.equal((await ownRequest(member)).request.request_id, restricted.requestId)
   await cmd(member,{kind:'withdraw',requestId:restricted.requestId})
   await cmd(member,{kind:'reactivate'})
   await cmd(other,{kind:'clear',target:member.id,revision:(await review(other,member.id)).revision})
@@ -249,7 +265,7 @@ try {
   const grantReady=new Promise(resolve=>{signalGrant=resolve})
   const grantOperation=randomUUID()
   const heldGrant=withEligibleActorTransaction(db,{actorId:owner.id,requestId:grantOperation},async tx=>{
-    const result=await communityCommand(tx,owner.id,tenant,{kind:'grant',target:applicant.id})
+    const result=await grantCommunityStaffAssignment({ tx, actor: owner.id, tenant }, applicant.id)
     signalGrant((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
     await grantGate
     return result
@@ -298,8 +314,8 @@ try {
   const ready = new Promise(resolve=>{signalReady=resolve})
   const release = new Promise(resolve=>{releaseWriter=resolve})
   const writer = withEligibleActorTransaction(db, { actorId: waitingMember.id, requestId: randomUUID() }, async tx => {
-    await communityCommand(tx,waitingMember.id,tenant,{kind:'withdraw',requestId:older.requestId})
-    const fresh = await communityCommand(tx,waitingMember.id,tenant,{kind:'reactivate'})
+    await withdrawCommunityActivationRequest({ tx, actor: waitingMember.id, tenant }, older.requestId)
+    const fresh = await reactivateOwnCommunityAccount({ tx, actor: waitingMember.id, tenant })
     signalReady((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
     await release
     return fresh
@@ -320,7 +336,7 @@ try {
   assert.equal((await review(waitingMember,waitingMember.id)).request_id,fresh.requestId)
   const operation = randomUUID()
   await assert.rejects(withEligibleActorTransaction(db, { actorId: waitingMember.id, requestId: operation },async tx=>{
-    await communityCommand(tx,waitingMember.id,tenant,{kind:'withdraw',requestId:fresh.requestId})
+    await withdrawCommunityActivationRequest({ tx, actor: waitingMember.id, tenant }, fresh.requestId)
     throw Error('injected rollback')
   }, { initialTenantId: tenant }),/injected rollback/)
   assert.equal((await review(waitingMember,waitingMember.id)).request_id,fresh.requestId)

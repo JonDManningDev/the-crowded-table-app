@@ -1,5 +1,11 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Specialized community lifecycle commands ? locally verified 2026-11-20
+
+The commands route now dispatches all 14 request variants to 15 named service operations, with separate archive and restore operations. The HTTP path, schema, response and reviewed baseline are preserved. Each operation performs its own authority, target and state checks under the existing retryable tenant-scoped transaction. Join and self-reactivation no longer read staff authority, and approval and withdrawal consume the exact request. Target Auth locking remains limited to staff grant.
+
+All 77 HTTP tests and the full local server integration run passed, including focused policy races and the 24 actor-context and retry checks. Coverage includes the 15 dispatch outcomes, direct missing- and wrong-scope denials, staff assignment transitions, request ownership and kind, stale revisions, rollback and audit attribution. TypeScript checks, lint, build and the client access-boundary audit passed. The benchmark fixture uses the existing HTTP join route across historical variants. The benchmark itself was not rerun. No migration or hosted deployment was made.
+
 ## Community read snapshot branch closeout — 2026-11-20
 
 The local `architecture/move-to-persistent-api` branch fast-forwarded from `c5f4bbf` to the verified integration tip `7a2df80`, preserving all fourteen commits and the verification history for the three [community read checkpoints](29-community-read-snapshot-spec.md). After confirming ancestry, the local `implementation/public-landing-snapshot` branch was removed. The original checkout is the sole registered worktree. Benchmark and verification evidence remains in its existing ignored directories under `server/test-results/`.

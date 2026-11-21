@@ -15,7 +15,7 @@ const operations = [
   {"group":1,"name":"readLanding","method":"GET","path":"/api/public/communities/:slug","params":true,"query":false,"body":false,"public":true},
   {"group":1,"name":"publicDirectory","method":"GET","path":"/api/public/communities/:slug/directory","params":true,"query":true,"body":false,"public":true},
   {"group":2,"name":"createCommunity","method":"POST","path":"/api/communities","params":false,"query":false,"body":true,"public":false},
-  {"group":2,"name":"executeCommand","method":"POST","path":"/api/communities/:tenantId/commands","params":true,"query":false,"body":true,"public":false},
+  {"group":2,"name":"joinCommunity","method":"POST","path":"/api/communities/:tenantId/commands","params":true,"query":false,"body":true,"public":false},
   {"group":3,"name":"ownRequest","method":"GET","path":"/api/communities/:tenantId/me/request","params":true,"query":false,"body":false,"public":false},
   {"group":3,"name":"reviewAccount","method":"GET","path":"/api/communities/:tenantId/accounts/:target/review","params":true,"query":false,"body":false,"public":false},
   {"group":3,"name":"staffCandidates","method":"GET","path":"/api/communities/:tenantId/staff-candidates","params":true,"query":true,"body":false,"public":false},
@@ -41,6 +41,29 @@ const operations = [
   {"group":7,"name":"saveParticipantPermissions","method":"PATCH","path":"/api/communities/:tenantId/accounts/:userId/permissions","params":true,"query":false,"body":true,"public":false},
   {"group":8,"name":"history","method":"GET","path":"/api/communities/:tenantId/history","params":true,"query":true,"body":false,"public":false},
 ];const baseline = JSON.parse(readFileSync(new URL('./fixtures/http-contract.json', import.meta.url), 'utf8'))
+
+const profile = { displayName: 'Player', bio: 'b'.repeat(2000) }
+const fullPermissions = Object.fromEntries(staffFlags.map(flag => [flag, false]))
+const partialPermissions = { can_grant_staff: false }
+const discipline = { target: targetId, revision: actorId, reason: '' }
+const commandCases = [
+  ['joinCommunity', { kind: 'join', profile }, { profile: { ...profile, bio: 'b'.repeat(2001) } }, [profile]],
+  ['deactivateOwnCommunityAccount', { kind: 'deactivate' }, { requestId: targetId }, []],
+  ['reactivateOwnCommunityAccount', { kind: 'reactivate' }, { profile }, []],
+  ['withdrawCommunityActivationRequest', { kind: 'withdraw', requestId: targetId }, { requestId: undefined }, [targetId]],
+  ['approveCommunityJoinRequest', { kind: 'approve', requestId: targetId, revision: actorId }, { revision: undefined }, [targetId, actorId]],
+  ['suspendCommunityAccount', { kind: 'suspend', ...discipline }, { reason: false }, [discipline]],
+  ['removeUserFromCommunity', { kind: 'remove', target: targetId, revision: actorId }, { target: 1 }, [{ ...discipline, reason: undefined }]],
+  ['clearCommunityAccountRestriction', { kind: 'clear', target: targetId, revision: actorId }, { revision: undefined }, [{ ...discipline, reason: undefined }]],
+  ['grantCommunityStaffAssignment', { kind: 'grant', target: targetId }, { permissions: fullPermissions }, [targetId]],
+  ['resumeCommunityStaffAssignment', { kind: 'resume', target: targetId }, { target: undefined }, [targetId]],
+  ['revokeCommunityStaffAssignment', { kind: 'revoke', target: targetId, reason: 'Reason' }, { reason: null }, [targetId, 'Reason']],
+  ['reappointCommunityStaff', { kind: 'reappoint', target: targetId, permissions: fullPermissions }, { permissions: { can_grant_staff: true } }, [targetId, fullPermissions]],
+  ['updateCommunityStaffPermissions', { kind: 'permissions', target: targetId, permissions: partialPermissions }, { permissions: {} }, [targetId, partialPermissions]],
+  ['archiveCommunity', { kind: 'archive', archived: true }, { archived: 'true' }, []],
+  ['restoreCommunity', { kind: 'archive', archived: false }, { archived: 'false' }, []],
+]
+
 function contract(operation) { return baseline.schemas[`${operation.method} ${operation.path}`] }
 function sample(schema, key = '') {
   if ('const' in schema) return schema.const
@@ -78,15 +101,17 @@ function result(operation, dto) {
 function cache(operation) { return operation.public ? operation.name === 'getCommunityStandingReference' ? undefined : 'no-store' : 'private, no-store' }
 function harness(t) {
   const pending = [], calls = [], unexpected = [], verified = [], requests = [], registered = [], hits = []
-  const all = Object.fromEntries(operations.map(operation => [operation.name, async (...args) => {
-    calls.push({ name: operation.name, args })
+  const stub = name => [name, async (...args) => {
+    calls.push({ name, args })
     const next = pending.shift()
-    if (!next || next.name !== operation.name) { unexpected.push(operation.name); throw new Error('Unexpected service operation') }
+    if (!next || next.name !== name) { unexpected.push(name); throw new Error('Unexpected service operation') }
     if (next.value instanceof Error) throw next.value
     return next.value
-  }]))
-  const publicOps = Object.fromEntries(operations.filter(operation => operation.public).map(operation => [operation.name, all[operation.name]]))
-  const protectedOps = Object.fromEntries(operations.filter(operation => !operation.public).map(operation => [operation.name, all[operation.name]]))
+  }]
+  const publicOps = Object.fromEntries(operations.filter(operation => operation.public).map(operation => stub(operation.name)))
+  const protectedNames = new Set([...operations.filter(operation => !operation.public).map(operation => operation.name),
+    ...commandCases.map(([name]) => name)])
+  const protectedOps = Object.fromEntries(Array.from(protectedNames, stub))
   const verify = async header => { verified.push(header); return header === authorization.authorization ? actorId : null }
   const app = Fastify({ bodyLimit: 8192, requestIdHeader: false, genReqId: () => randomUUID(),
     ajv: { customOptions: { removeAdditional: false, coerceTypes: false, useDefaults: false } } })
@@ -116,6 +141,10 @@ function checkCall(h, operation, request, query = {}) {
   const call = h.calls.at(-1), args = []
   assert.equal(call.name, operation.name)
   if (!operation.public) args.push({ actorId, requestId: h.requests.at(-1).id })
+  if (operation.name === 'joinCommunity') {
+    assert.deepEqual(call.args, [...args, tenantId, request.payload.profile])
+    return
+  }
   const schema = contract(operation)
   if (operation.params) args.push(sample(schema.params))
   if (operation.query) args.push(query)
@@ -394,32 +423,15 @@ test('member directory preserves nullable profile and staff role and projects re
 
 test('community command tags accept their own fields and reject invalid variants before dispatch', async t => {
   const h = harness(t)
-  const operation = operations.find(operation => operation.name === 'executeCommand')
+  const operation = operations.find(operation => operation.name === 'joinCommunity')
   const request = input(operation)
-  const fullPermissions = Object.fromEntries(staffFlags.map(flag => [flag, false]))
-  const cases = [
-    [{ kind: 'join', profile: { displayName: 'Player', bio: 'b'.repeat(2000) } }, { profile: { displayName: 'Player', bio: 'b'.repeat(2001) } }],
-    [{ kind: 'deactivate' }, { requestId: targetId }],
-    [{ kind: 'reactivate' }, { profile: { displayName: 'Player', bio: null } }],
-    [{ kind: 'withdraw', requestId: targetId }, { requestId: undefined }],
-    [{ kind: 'approve', requestId: targetId, revision: actorId }, { revision: undefined }],
-    [{ kind: 'suspend', target: targetId, revision: actorId, reason: '' }, { reason: false }],
-    [{ kind: 'remove', target: targetId, revision: actorId }, { target: 1 }],
-    [{ kind: 'clear', target: targetId, revision: actorId }, { revision: undefined }],
-    [{ kind: 'grant', target: targetId }, { permissions: fullPermissions }],
-    [{ kind: 'resume', target: targetId }, { target: undefined }],
-    [{ kind: 'revoke', target: targetId, reason: 'Reason' }, { reason: null }],
-    [{ kind: 'reappoint', target: targetId, permissions: fullPermissions }, { permissions: { can_grant_staff: true } }],
-    [{ kind: 'permissions', target: targetId, permissions: { can_grant_staff: false } }, { permissions: {} }],
-    [{ kind: 'archive', archived: false }, { archived: 'false' }],
-  ]
-  for (const [payload, invalid] of cases) {
+  for (const [name, payload, invalid, args] of commandCases) {
     const dto = { outcome: 'accepted', tenantId }
-    h.queue(operation.name, result(operation, dto))
+    h.queue(name, dto)
     const accepted = await h.app.inject({ ...request, payload })
-    assert.equal(accepted.statusCode, 200, payload.kind)
+    assert.equal(accepted.statusCode, 200, name)
     assert.deepEqual(accepted.json(), dto)
-    checkCall(h, operation, { ...request, payload })
+    assert.deepEqual(h.calls.at(-1), { name, args: [{ actorId, requestId: h.requests.at(-1).id }, tenantId, ...args] })
     error(h, operation, await h.app.inject({ ...request, payload: { ...payload, ...invalid } }), 400, 'invalid_request')
   }
   for (const payload of [
@@ -430,7 +442,7 @@ test('community command tags accept their own fields and reject invalid variants
   ]) {
     error(h, operation, await h.app.inject({ ...request, payload }), 400, 'invalid_request')
   }
-  assert.equal(h.calls.length, cases.length)
+  assert.equal(h.calls.length, commandCases.length)
 })
 
 test('nullable scalars preserve valid values and reject malformed service output', async t => {

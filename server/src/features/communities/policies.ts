@@ -1,6 +1,6 @@
 import { sql } from 'kysely'
 import { ApplicationError } from '../../http-errors.ts'
-import { staffFlags, type CommunityCommand, type ConfigurationKind, type StaffPermissions, type Tx } from './types.ts'
+import { staffFlags, type ConfigurationKind, type StaffFlag, type StaffPermissions, type Tx } from './types.ts'
 
 /*
  * Types
@@ -10,10 +10,7 @@ export type Account = { standing: 'approved' | 'pending' | 'suspended' | 'inacti
 
 type AccountRecordFacts = Awaited<ReturnType<typeof loadAccountRecordFacts>>
 
-type CommunityActionFacts = { site: { operational_status: string } | undefined; assignment: Staff | undefined }
-
-type CommunityEntryDecision = { kind: 'review'; requestId: string | undefined }
-  | { kind: 'establish'; standing: 'approved' | 'pending' }
+type CommunitySite = { operational_status: string }
 
 type ConfigurationFacts = Awaited<ReturnType<typeof loadConfigurationFacts>>
 
@@ -23,12 +20,6 @@ type Decision = 'allowed' | 'missing' | 'forbidden' | 'stale'
 export type Pending = { id: string; user_id: string; kind: 'join' | 'reactivation' }
 
 export type Staff = StaffPermissions & { role: 'owner' | 'admin'; status: 'active' | 'paused' | 'revoked' }
-
-type StaffChange = Extract<CommunityCommand, { kind: 'grant' | 'resume' | 'revoke' | 'permissions' | 'reappoint' }>
-
-type StaffChangeFacts = { account: Account; assignment: Staff | undefined; owner: boolean; actor: string; target: string; authEligible: boolean }
-
-type StandingChangeFacts = { account: Account; assignment: Staff | undefined; actorStaff: Staff | undefined }
 
 /*
  * Fact Loaders
@@ -42,9 +33,8 @@ export function loadAccountRecordFacts(tx: Tx, actor: string, tenant: string) {
 
 // Creation and lifecycle. Services call these loaders in tenant-root, target
 // account, target Auth order; facts never survive the operation/transaction.
-export async function loadCommunityActionFacts(tx: Tx, actor: string, tenant: string): Promise<CommunityActionFacts> {
-  const site = (await sql<{ operational_status: string }>`select operational_status from public.tenants where id=${tenant} for update`.execute(tx)).rows[0]
-  return { site, assignment: await loadStaffAssignmentFacts(tx, tenant, actor) }
+export async function lockCommunityLifecycleRoot(tx: Tx, tenant: string): Promise<CommunitySite | undefined> {
+  return (await sql<CommunitySite>`select operational_status from public.tenants where id=${tenant} for update`.execute(tx)).rows[0]
 }
 
 export async function loadCommunityRequestFacts(tx: Tx, tenant: string, request: string) {
@@ -83,14 +73,14 @@ export async function loadCreateCommunityFacts(tx: Tx, actor: string) {
   return { account: await tx.selectFrom('user_accounts').select('user_id').where('user_id', '=', actor).executeTakeFirst() }
 }
 
-export async function loadJoinCommunityFacts(tx: Tx, tenant: string, actor: string, restricted: boolean) {
-  if (restricted) {
-    const request = (await sql<Pending>`select id,kind,user_id from app_private.community_account_requests
-      where tenant_id=${tenant} and user_id=${actor}`.execute(tx)).rows[0]
-    return { request, autoApprove: false }
-  }
+export async function loadCommunityAutoApproval(tx: Tx, tenant: string) {
   const settings = await tx.selectFrom('tenant_settings').select('auto_approve_users').where('tenant_id', '=', tenant).executeTakeFirstOrThrow()
-  return { request: undefined, autoApprove: settings.auto_approve_users }
+  return settings.auto_approve_users
+}
+
+export async function loadPendingCommunityReturn(tx: Tx, tenant: string, actor: string) {
+  return (await sql<Pick<Pending, 'id'>>`select id from app_private.community_account_requests
+    where tenant_id=${tenant} and user_id=${actor}`.execute(tx)).rows[0]
 }
 
 export async function loadLifecycleAccountFacts(tx: Tx, tenant: string, user: string) {
@@ -104,11 +94,9 @@ export async function loadStaffAssignmentFacts(tx: Tx, tenant: string, user: str
     from public.tenant_staff_assignments where tenant_id=${tenant} and user_id=${user}`.execute(tx)).rows[0]
 }
 
-export async function loadStaffGrantFacts(tx: Tx, target: string, account: Account, assignment: Staff | undefined) {
-  // Only protected Auth facts/locking remain privileged. Product facts and grant
-  // authority are evaluated here in the API, never by the private primitive.
-  if (account.standing !== 'approved' || assignment) return { authEligible: false }
-  return (await sql<{ authEligible: boolean }>`select app_private.auth_identity_eligible(${target},true) as "authEligible"`.execute(tx)).rows[0]
+export async function lockStaffGrantAuthEligibility(tx: Tx, target: string) {
+  const { rows } = await sql<{ authEligible: boolean }>`select app_private.auth_identity_eligible(${target},true) as "authEligible"`.execute(tx)
+  return rows[0].authEligible
 }
 
 // History joins these facts into the statement that reads the audit rows.
@@ -140,21 +128,32 @@ export function canApproveCommunityRequest(account: Account): Decision {
   return account.standing !== 'pending' || account.restricted || account.approved ? 'stale' : 'allowed'
 }
 
-export function canArchiveCommunity(facts: CommunityActionFacts): Decision {
-  if (!facts.site) return 'missing'
-  return facts.assignment?.status === 'active' && facts.assignment.role === 'owner' ? 'allowed' : 'forbidden'
+export function requireActiveCommunity(site: CommunitySite | undefined) {
+  requireDecision(site?.operational_status === 'active' ? 'allowed' : 'missing')
 }
 
-export function requireCanChangeCommunityStanding(facts: StandingChangeFacts, kind: 'deactivate' | 'suspend' | 'remove' | 'clear') {
-  requireDecision(canChangeCommunityStanding(facts, kind))
+export function requireActiveStaffPermission(assignment: Staff | undefined, permission: StaffFlag): asserts assignment is Staff {
+  requireDecision(assignment?.status === 'active' && assignment[permission] ? 'allowed' : 'forbidden')
 }
 
-export function canChangeCommunityStanding(facts: StandingChangeFacts, kind: 'deactivate' | 'suspend' | 'remove' | 'clear'): Decision {
-  if ((kind === 'suspend' || kind === 'remove') && facts.assignment && facts.assignment.status !== 'revoked'
-    && !(facts.actorStaff?.status === 'active' && facts.actorStaff.can_discipline_staff)) return 'forbidden'
-  if (kind === 'suspend' && facts.account.standing !== 'approved' && facts.account.standing !== 'suspended') return 'stale'
-  if (kind === 'clear' && !facts.account.restricted) return 'stale'
-  return 'allowed'
+export function requireCommunityLifecycleRoot(site: CommunitySite | undefined): asserts site is CommunitySite {
+  requireDecision(site ? 'allowed' : 'missing')
+}
+
+export function requireCommunityOwner(assignment: Staff | undefined) {
+  requireDecision(assignment?.status === 'active' && assignment.role === 'owner' ? 'allowed' : 'forbidden')
+}
+
+export function requireCanDisciplineStaffAccount(actor: Staff, target: Staff | undefined) {
+  if (target && target.status !== 'revoked') requireActiveStaffPermission(actor, 'can_discipline_staff')
+}
+
+export function requireSuspendableCommunityAccount(standing: Account['standing']) {
+  requireDecision(standing === 'approved' || standing === 'suspended' ? 'allowed' : 'stale')
+}
+
+export function requireRestrictedCommunityAccount(restricted: boolean) {
+  requireDecision(restricted ? 'allowed' : 'stale')
 }
 
 export function requireCanCreateCommunity(facts: Awaited<ReturnType<typeof loadCreateCommunityFacts>>): void {
@@ -177,35 +176,33 @@ export function canEditConfiguration(facts: ConfigurationFacts, kind: Configurat
     ? 'allowed' : 'forbidden'
 }
 
-export function requireCanEnterCommunityAction(facts: CommunityActionFacts, command: CommunityCommand) {
-  requireDecision(canEnterCommunityAction(facts, command))
+export function requireNewStaffAssignment(standing: Account['standing'], assignment: Staff | undefined) {
+  requireDecision(standing === 'approved' && !assignment ? 'allowed' : 'stale')
 }
 
-export function canEnterCommunityAction(facts: CommunityActionFacts, command: CommunityCommand): Decision {
-  if (!facts.site) return 'missing'
-  const effective = facts.assignment?.status === 'active' ? facts.assignment : undefined
-  if (command.kind === 'archive') return canArchiveCommunity(facts)
-  if (facts.site.operational_status !== 'active') return 'missing'
-  if (command.kind === 'approve' && !effective?.can_approve_users) return 'forbidden'
-  if (['suspend', 'remove', 'clear'].includes(command.kind) && !effective?.can_discipline_users) return 'forbidden'
-  if (['grant', 'resume', 'permissions'].includes(command.kind) && !effective?.can_grant_staff) return 'forbidden'
-  if (command.kind === 'reappoint' && effective?.role !== 'owner') return 'forbidden'
-  if (command.kind === 'revoke' && !effective?.can_discipline_staff) return 'forbidden'
-  return 'allowed'
+export function requireEligibleStaffGrantTarget(eligible: boolean) {
+  requireDecision(eligible ? 'allowed' : 'stale')
 }
 
-export function requireCanManageCommunityStaff(facts: StaffChangeFacts, command: StaffChange) {
-  requireDecision(canManageCommunityStaff(facts, command))
+export function requireResumableStaffAssignment(
+  standing: Account['standing'], assignment: Staff | undefined, isSelf: boolean,
+): asserts assignment is Staff {
+  requireDecision(!isSelf && standing === 'approved' && assignment?.status === 'paused' ? 'allowed' : 'stale')
 }
 
-export function canManageCommunityStaff(facts: StaffChangeFacts, command: StaffChange): Decision {
-  const { account, assignment } = facts
-  if (command.kind === 'grant') return account.standing === 'approved' && !assignment && facts.authEligible ? 'allowed' : 'stale'
-  if (!assignment || (command.kind === 'reappoint' ? assignment.status !== 'revoked' || account.standing !== 'approved' : assignment.status === 'revoked')) return 'stale'
-  if (command.kind === 'resume' && (facts.target === facts.actor || account.standing !== 'approved' || assignment.status !== 'paused')) return 'stale'
-  if ((command.kind === 'permissions' || command.kind === 'reappoint') && !facts.owner
-    && Object.keys(command.permissions).some(key => key !== 'can_audit_community_accounts' && key !== 'can_audit_staff_accounts')) return 'forbidden'
-  return 'allowed'
+export function requireReappointableStaffAssignment(
+  standing: Account['standing'], assignment: Staff | undefined,
+): asserts assignment is Staff {
+  requireDecision(standing === 'approved' && assignment?.status === 'revoked' ? 'allowed' : 'stale')
+}
+
+export function requireActiveOrPausedStaffAssignment(assignment: Staff | undefined): asserts assignment is Staff {
+  requireDecision(assignment?.status === 'active' || assignment?.status === 'paused' ? 'allowed' : 'stale')
+}
+
+export function requireEditableStaffPermissions(role: Staff['role'], permissions: Partial<StaffPermissions>) {
+  const auditOnly = Object.keys(permissions).every(key => key === 'can_audit_community_accounts' || key === 'can_audit_staff_accounts')
+  requireDecision(role === 'owner' || auditOnly ? 'allowed' : 'forbidden')
 }
 
 export function requireCanManageParticipantPermissions(facts: AccountRecordFacts) {
@@ -219,32 +216,25 @@ export function canManageParticipantPermissions(facts: AccountRecordFacts): Deci
   return staff.can_manage_community_permissions ? 'allowed' : 'forbidden'
 }
 
-export function requireCanReturnToCommunity(account: Account | undefined, kind: 'join' | 'reactivate') {
-  requireDecision(canReturnToCommunity(account, kind))
+export function requireInactiveCommunityAccount(account: Account | undefined): asserts account is Account {
+  requireDecision(account?.standing === 'inactive' ? 'allowed' : 'stale')
 }
 
-export function canReturnToCommunity(account: Account | undefined, kind: 'join' | 'reactivate'): Decision {
-  return kind === 'reactivate' && account?.standing !== 'inactive' ? 'stale' : 'allowed'
+export function requireOwnActivationRequest(request: Pick<Pending, 'user_id'> | undefined, actor: string) {
+  requireDecision(request?.user_id === actor ? 'allowed' : 'stale')
 }
 
-export function requireCanSelectCommunityRequest(request: Pending | undefined, actor: string, kind: 'approve' | 'withdraw'): asserts request is Pending {
-  requireDecision(canSelectCommunityRequest(request, actor, kind))
+export function requireCommunityJoinRequest(request: Pending | undefined): asserts request is Pending {
+  requireDecision(request?.kind === 'join' ? 'allowed' : 'stale')
 }
 
-export function canSelectCommunityRequest(request: Pending | undefined, actor: string, kind: 'approve' | 'withdraw'): Decision {
-  return !request || (kind === 'withdraw' && request.user_id !== actor) || (kind === 'approve' && request.kind !== 'join') ? 'stale' : 'allowed'
+export function requireNonOwnerCommunityAccount(
+  account: Account | undefined, assignment: Staff | undefined, revision?: string,
+): asserts account is Account {
+  if (!account || (revision !== undefined && revision !== account.revision)) requireDecision('stale')
+  requireDecision(assignment?.role === 'owner' ? 'forbidden' : 'allowed')
 }
 
-export function requireCanTargetCommunityAccount(account: Account | undefined, assignment: Staff | undefined, command: CommunityCommand): asserts account is Account {
-  requireDecision(canTargetCommunityAccount(account, assignment, command))
-}
-
-export function canTargetCommunityAccount(account: Account | undefined, assignment: Staff | undefined, command: CommunityCommand): Decision {
-  if (!account || ('revision' in command && command.revision !== account.revision)) return 'stale'
-  return assignment?.role === 'owner' ? 'forbidden' : 'allowed'
-}
-
-export function decideCommunityEntry(account: Account | undefined, facts: Awaited<ReturnType<typeof loadJoinCommunityFacts>>): CommunityEntryDecision {
-  if (account?.restricted) return { kind: 'review', requestId: facts.request?.id }
-  return { kind: 'establish', standing: account?.approved || facts.autoApprove ? 'approved' : 'pending' }
+export function decideCommunityEntryStanding(previouslyApproved: boolean, autoApprove: boolean) {
+  return previouslyApproved || autoApprove ? 'approved' : 'pending'
 }

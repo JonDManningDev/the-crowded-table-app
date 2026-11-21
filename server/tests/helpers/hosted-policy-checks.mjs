@@ -3,7 +3,7 @@ import { randomUUID, randomBytes } from 'node:crypto'
 import pg from 'pg'
 import { Kysely, PostgresDialect, PostgresQueryCompiler, sql } from 'kysely'
 import { withEligibleActorTransaction } from '../../src/database.ts'
-import { communityCommand, ownCommunityPreferences, configurationSettings } from '../../src/features/communities/service.ts'
+import { archiveCommunity, deactivateOwnCommunityAccount, updateCommunityStaffPermissions, ownCommunityPreferences, configurationSettings } from '../../src/features/communities/service.ts'
 import { buildApi } from '../../src/app.ts'
 import { verifyBearer } from '../../src/token-verifier.ts'
 import { directoryCursors } from '../../src/directory-cursors.ts'
@@ -108,7 +108,7 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
     () => command(other, { kind: 'deactivate' }), { root: /from (?:public\.)?community_accounts\b[\s\S]*for update/, initialTenantId: tenant })
   assert.equal((await preferences(other)).show_global_profile, false)
   await command(other, { kind: 'reactivate' })
-  await race(other, tx => communityCommand(tx, other.id, tenant, { kind: 'deactivate' }),
+  await race(other, tx => deactivateOwnCommunityAccount({ tx, actor: other.id, tenant }),
     () => preferences(other, { show_global_profile: true }, 404), { root: /from (?:public\.)?community_accounts\b[\s\S]*for update/, initialTenantId: tenant })
   await command(other, { kind: 'reactivate' })
   console.log('PASS both hosted sharing/deactivation lock orders')
@@ -126,7 +126,7 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   console.log('PASS account-ID block and profile withholding independent of discoverability')
 
   await command(owner, { kind: 'permissions', target: member.id, permissions: { can_manage_settings: true } })
-  await race(owner, tx => communityCommand(tx, owner.id, tenant, { kind: 'archive', archived: true }),
+  await race(owner, tx => archiveCommunity({ tx, actor: owner.id, tenant }),
     () => settings(member, { pause_community_events: true }, 403), { initialTenantId: tenant })
   await http(member, path + '/accounts/' + member.id + '/profile', 'GET', undefined, 404)
   const archived = await transaction(member, async tx => {
@@ -141,7 +141,7 @@ export async function focusedPolicyChecks({ db, endpoint, owner, member, other, 
   await command(owner, { kind: 'archive', archived: false })
   await settings(owner, { pause_community_events: false })
   const revoke = { kind: 'permissions', target: member.id, permissions: { can_manage_settings: false } }
-  await race(owner, tx => communityCommand(tx, owner.id, tenant, revoke),
+  await race(owner, tx => updateCommunityStaffPermissions({ tx, actor: owner.id, tenant }, revoke.target, revoke.permissions),
     () => settings(member, { pause_community_events: true }, 403), { initialTenantId: tenant })
   await command(owner, { ...revoke, permissions: { can_manage_settings: true } })
   await race(member, tx => configurationSettings(tx, member.id, tenant, { pause_community_events: true }),

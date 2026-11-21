@@ -1,9 +1,13 @@
 import { randomUUID } from 'node:crypto'
-import { loadCreateCommunityFacts, requireCanCreateCommunity, loadCommunityActionFacts,
+import { loadCreateCommunityFacts, requireCanCreateCommunity, lockCommunityLifecycleRoot,
   loadLifecycleAccountFacts, loadStaffAssignmentFacts, loadCommunityRequestFacts,
-  requireCanEnterCommunityAction, requireCanSelectCommunityRequest, requireCanTargetCommunityAccount,
-  requireCanApproveCommunityRequest, requireCanReturnToCommunity, loadJoinCommunityFacts, decideCommunityEntry,
-  requireCanChangeCommunityStanding, loadStaffGrantFacts, requireCanManageCommunityStaff,
+  requireActiveCommunity, requireActiveStaffPermission, requireCommunityLifecycleRoot, requireCommunityOwner,
+  requireOwnActivationRequest, requireCommunityJoinRequest, requireNonOwnerCommunityAccount,
+  requireCanApproveCommunityRequest, requireInactiveCommunityAccount, loadPendingCommunityReturn,
+  loadCommunityAutoApproval, decideCommunityEntryStanding, requireCanDisciplineStaffAccount,
+  requireSuspendableCommunityAccount, requireRestrictedCommunityAccount, requireNewStaffAssignment,
+  requireEligibleStaffGrantTarget, lockStaffGrantAuthEligibility, requireResumableStaffAssignment,
+  requireActiveOrPausedStaffAssignment, requireReappointableStaffAssignment, requireEditableStaffPermissions,
   loadConfigurationFacts, requireCanEditConfiguration,
   loadAccountRecordFacts, requireCanManageParticipantPermissions,
   selectHistoryViewerFacts, type Account, type Staff, type Pending } from './policies.ts'
@@ -30,7 +34,8 @@ import {
   type MemberDirectoryRow,
   type PublicDirectoryRow,
   staffFlags,
-  type CommunityCommand,
+  type CommunityDisciplineInput,
+  type StaffPermissions,
   type CommandResult,
   type CreateCommunityInput,
   type CuratedProfile,
@@ -47,7 +52,6 @@ import {
   type HistoryQuery,
   type SlugParams,
   type Context,
-  type Action,
   type ReviewParams,
   type AfterQuery,
   type MissingRequest,
@@ -83,8 +87,50 @@ export function createCommunityService({ db, cursors }: CommunityDependencies) {
     createCommunity(context: AuthenticatedContext, input: CreateCommunityInput) {
       return withEligibleActorTransaction(db, context, tx => createCommunity(tx, context.actorId, input))
     },
-    executeCommand(context: AuthenticatedContext, params: TenantParams, input: CommunityCommand) {
-      return withEligibleActorTransaction(db, context, tx => communityCommand(tx, context.actorId, params.tenantId, input), { initialTenantId: params.tenantId })
+    joinCommunity(context: AuthenticatedContext, tenant: string, profile: CuratedProfile) {
+      return runCommunityAction(db, context, tenant, c => joinCommunity(c, profile))
+    },
+    deactivateOwnCommunityAccount(context: AuthenticatedContext, tenant: string) {
+      return runCommunityAction(db, context, tenant, deactivateOwnCommunityAccount)
+    },
+    reactivateOwnCommunityAccount(context: AuthenticatedContext, tenant: string) {
+      return runCommunityAction(db, context, tenant, reactivateOwnCommunityAccount)
+    },
+    withdrawCommunityActivationRequest(context: AuthenticatedContext, tenant: string, requestId: string) {
+      return runCommunityAction(db, context, tenant, c => withdrawCommunityActivationRequest(c, requestId))
+    },
+    approveCommunityJoinRequest(context: AuthenticatedContext, tenant: string, requestId: string, revision: string) {
+      return runCommunityAction(db, context, tenant, c => approveCommunityJoinRequest(c, requestId, revision))
+    },
+    suspendCommunityAccount(context: AuthenticatedContext, tenant: string, input: CommunityDisciplineInput) {
+      return runCommunityAction(db, context, tenant, c => suspendCommunityAccount(c, input))
+    },
+    removeUserFromCommunity(context: AuthenticatedContext, tenant: string, input: CommunityDisciplineInput) {
+      return runCommunityAction(db, context, tenant, c => removeUserFromCommunity(c, input))
+    },
+    clearCommunityAccountRestriction(context: AuthenticatedContext, tenant: string, input: CommunityDisciplineInput) {
+      return runCommunityAction(db, context, tenant, c => clearCommunityAccountRestriction(c, input))
+    },
+    grantCommunityStaffAssignment(context: AuthenticatedContext, tenant: string, target: string) {
+      return runCommunityAction(db, context, tenant, c => grantCommunityStaffAssignment(c, target))
+    },
+    resumeCommunityStaffAssignment(context: AuthenticatedContext, tenant: string, target: string) {
+      return runCommunityAction(db, context, tenant, c => resumeCommunityStaffAssignment(c, target))
+    },
+    revokeCommunityStaffAssignment(context: AuthenticatedContext, tenant: string, target: string, reason?: string) {
+      return runCommunityAction(db, context, tenant, c => revokeCommunityStaffAssignment(c, target, reason))
+    },
+    reappointCommunityStaff(context: AuthenticatedContext, tenant: string, target: string, permissions: StaffPermissions) {
+      return runCommunityAction(db, context, tenant, c => reappointCommunityStaff(c, target, permissions))
+    },
+    updateCommunityStaffPermissions(context: AuthenticatedContext, tenant: string, target: string, permissions: Partial<StaffPermissions>) {
+      return runCommunityAction(db, context, tenant, c => updateCommunityStaffPermissions(c, target, permissions))
+    },
+    archiveCommunity(context: AuthenticatedContext, tenant: string) {
+      return runCommunityAction(db, context, tenant, archiveCommunity)
+    },
+    restoreCommunity(context: AuthenticatedContext, tenant: string) {
+      return runCommunityAction(db, context, tenant, restoreCommunity)
     },
     // Requests and reviews
     ownRequest(context: AuthenticatedContext, params: TenantParams) {
@@ -277,111 +323,235 @@ async function setStaffStatus(c: Context, user: string, before: Staff['status'],
   await event(c, user, action, { before_status: before, after_status: after }, reason)
 }
 function result(c: Context, outcome: string): CommandResult { return { outcome, tenantId: c.tenant } }
-async function joinOrReturn(c: Context, member: Account | undefined, cmd: Action<'join' | 'reactivate'>) {
-  const { tx, tenant, actor } = c
-  if (cmd.kind === 'join' && member) return result(c, member.standing === 'inactive' ? 'reactivation_required' : 'already_applied')
-  requireCanReturnToCommunity(member, cmd.kind)
-  const facts = await loadJoinCommunityFacts(tx, tenant, actor, member?.restricted ?? false)
-  const decision = decideCommunityEntry(member, facts)
-  if (decision.kind === 'review') {
-    if (decision.requestId) return { ...result(c, 'review_requested'), requestId: decision.requestId }
+function runCommunityAction(db: AppDatabase, context: AuthenticatedContext, tenant: string, action: (c: Context) => Promise<CommandResult>) {
+  return withEligibleActorTransaction(db, context, tx => action({ tx, tenant, actor: context.actorId }), { initialTenantId: tenant })
+}
+
+async function loadActiveCommunityStaff({ tx, actor, tenant }: Context) {
+  requireActiveCommunity(await lockCommunityLifecycleRoot(tx, tenant))
+  return loadStaffAssignmentFacts(tx, tenant, actor)
+}
+
+async function loadCommunityAccountTarget({ tx, tenant }: Context, user: string, revision?: string) {
+  const account = await loadLifecycleAccountFacts(tx, tenant, user)
+  const assignment = await loadStaffAssignmentFacts(tx, tenant, user)
+  requireNonOwnerCommunityAccount(account, assignment, revision)
+  return { account, assignment }
+}
+
+async function joinCommunity(c: Context, profile: CuratedProfile) {
+  const { tx, actor, tenant } = c
+  requireActiveCommunity(await lockCommunityLifecycleRoot(tx, tenant))
+  const account = await loadLifecycleAccountFacts(tx, tenant, actor)
+  if (account) return result(c, account.standing === 'inactive' ? 'reactivation_required' : 'already_applied')
+
+  const standing = decideCommunityEntryStanding(false, await loadCommunityAutoApproval(tx, tenant))
+  await addAccount(c, standing, profile)
+  if (standing === 'pending') return { ...result(c, standing), requestId: await request(c, 'join') }
+  await event(c, actor, 'community_approved', { after_standing: standing })
+  return result(c, standing)
+}
+
+export async function deactivateOwnCommunityAccount(c: Context) {
+  const { tx, actor, tenant } = c
+  requireActiveCommunity(await lockCommunityLifecycleRoot(tx, tenant))
+  const { account, assignment } = await loadCommunityAccountTarget(c, actor)
+  if (account.standing === 'inactive') return result(c, 'already_applied')
+
+  const pending = await closeRequest(c, actor)
+  await setStanding(c, actor, 'inactive', account.restricted)
+  if (assignment?.status === 'active') await setStaffStatus(c, actor, 'active', 'paused', 'staff_paused')
+  return recordStandingChange(c, actor, account, 'inactive', account.restricted, 'community_deactivated', pending)
+}
+
+export async function reactivateOwnCommunityAccount(c: Context) {
+  const { tx, actor, tenant } = c
+  requireActiveCommunity(await lockCommunityLifecycleRoot(tx, tenant))
+  const account = await loadLifecycleAccountFacts(tx, tenant, actor)
+  requireInactiveCommunityAccount(account)
+  if (account.restricted) {
+    const pending = await loadPendingCommunityReturn(tx, tenant, actor)
+    if (pending) return { ...result(c, 'review_requested'), requestId: pending.id }
     await setStanding(c, actor, 'inactive', true)
     return { ...result(c, 'review_requested'), requestId: await request(c, 'reactivation') }
   }
-  const standing = decision.standing
-  if (cmd.kind === 'join') await addAccount(c, standing, cmd.profile)
-  else await setStanding(c, actor, standing)
+
+  const standing = decideCommunityEntryStanding(account.approved, await loadCommunityAutoApproval(tx, tenant))
+  await setStanding(c, actor, standing)
   if (standing === 'pending') return { ...result(c, standing), requestId: await request(c, 'join') }
-  await event(c, actor, member?.approved ? 'community_reactivated' : 'community_approved', { after_standing: standing })
+  await event(c, actor, account.approved ? 'community_reactivated' : 'community_approved', { after_standing: standing })
   return result(c, standing)
 }
-async function changeStanding(c: Context, user: string, member: Account, assignment: Staff | undefined,
-  effective: Staff | undefined, cmd: Action<'deactivate' | 'suspend' | 'remove' | 'clear'>) {
-  requireCanChangeCommunityStanding({ account: member, assignment, actorStaff: effective }, cmd.kind)
-  if ((cmd.kind === 'deactivate' && member.standing === 'inactive') || (cmd.kind === 'suspend' && member.standing === 'suspended')
-    || (cmd.kind === 'remove' && member.standing === 'inactive' && member.restricted)) return result(c, 'already_applied')
-  const after = cmd.kind === 'suspend' ? 'suspended' : cmd.kind === 'clear' && member.standing === 'suspended' ? 'approved' : 'inactive'
-  const restricted = cmd.kind === 'deactivate' ? member.restricted : cmd.kind !== 'clear'
-  const pending = await closeRequest(c, user)
-  await setStanding(c, user, after, restricted)
-  if (assignment?.status === 'active' && cmd.kind === 'deactivate') await setStaffStatus(c, user, 'active', 'paused', 'staff_paused')
-  if (assignment && assignment.status !== 'revoked' && (cmd.kind === 'suspend' || cmd.kind === 'remove')) {
-    await setStaffStatus(c, user, assignment.status, 'revoked', 'staff_revoked')
-  }
-  const action = { deactivate: 'community_deactivated', suspend: 'community_suspended', remove: 'community_removed', clear: 'community_restriction_cleared' }[cmd.kind]
-  await event(c, user, action, {
-    before_standing: member.standing, after_standing: after, before_restricted: member.restricted,
-    after_restricted: restricted, ...(pending && { request_id: pending.id })
-  }, 'reason' in cmd ? cmd.reason : undefined)
+
+async function consumeActivationRequest({ tx, tenant }: Context, user: string, requestId: string) {
+  const current = (await sql<Pending>`delete from app_private.community_account_requests
+    where tenant_id=${tenant} and user_id=${user} and id=${requestId} returning id,kind,user_id`.execute(tx)).rows[0]
+  if (!current) stale()
+  return current
+}
+
+export async function withdrawCommunityActivationRequest(c: Context, requestId: string) {
+  const { tx, actor, tenant } = c
+  requireActiveCommunity(await lockCommunityLifecycleRoot(tx, tenant))
+  requireOwnActivationRequest(await loadCommunityRequestFacts(tx, tenant, requestId), actor)
+  await loadCommunityAccountTarget(c, actor)
+  const current = await consumeActivationRequest(c, actor, requestId)
+  const reactivation = current.kind === 'reactivation'
+  await setStanding(c, actor, 'inactive', reactivation)
+  const action = reactivation ? 'community_reactivation_withdrawn' : 'community_join_withdrawn'
+  await event(c, actor, action, { request_id: current.id })
   return result(c, action)
 }
-async function changeAssignment(c: Context, user: string, member: Account, assignment: Staff | undefined,
-  owner: boolean, cmd: Action<'grant' | 'resume' | 'revoke' | 'permissions' | 'reappoint'>) {
-  const { tx, tenant, actor } = c
-  const grant = cmd.kind === 'grant' ? await loadStaffGrantFacts(tx, user, member, assignment) : { authEligible: false }
-  requireCanManageCommunityStaff({ account: member, assignment, owner, actor, target: user, ...grant }, cmd)
-  if (cmd.kind === 'grant') {
-    await sql`insert into public.tenant_staff_assignments(tenant_id,user_id,role) values(${tenant},${user},'admin')`.execute(tx)
-    await event(c, user, 'staff_created', { after_status: 'active' })
-  } else if (cmd.kind === 'resume' || cmd.kind === 'revoke') {
-    if (!assignment) stale()
-    await setStaffStatus(c, user, assignment.status, cmd.kind === 'resume' ? 'active' : 'revoked',
-      cmd.kind === 'resume' ? 'staff_resumed' : 'staff_revoked', 'reason' in cmd ? cmd.reason : undefined)
-  } else if (cmd.kind === 'permissions' || cmd.kind === 'reappoint') {
-    if (!assignment) stale()
-    const keys = staffFlags.filter(key => Object.hasOwn(cmd.permissions, key))
-    const changed = keys.filter(k => cmd.permissions[k] !== assignment[k])
-    const sets = changed.map(k => sql`${sql.id(k)}=${cmd.permissions[k]}`)
-    if (cmd.kind === 'reappoint') sets.push(sql`status='active'`)
-    if (!sets.length) return result(c, 'already_applied')
-    await sql`update public.tenant_staff_assignments set ${sql.join(sets)} where tenant_id=${tenant} and user_id=${user}`.execute(tx)
-    await event(c, user, cmd.kind === 'reappoint' ? 'staff_reappointed' : 'staff_permissions_changed', {
-      permissions: Object.fromEntries(changed.map(k => [k, { before: assignment[k], after: cmd.permissions[k] }])),
-      ...(cmd.kind === 'reappoint' && { before_status: 'revoked', after_status: 'active' })
-    })
-  }
+
+async function approveCommunityJoinRequest(c: Context, requestId: string, revision: string) {
+  const { tx, tenant } = c
+  requireActiveStaffPermission(await loadActiveCommunityStaff(c), 'can_approve_users')
+  const pending = await loadCommunityRequestFacts(tx, tenant, requestId)
+  requireCommunityJoinRequest(pending)
+  const { account } = await loadCommunityAccountTarget(c, pending.user_id, revision)
+  const current = await consumeActivationRequest(c, pending.user_id, requestId)
+  requireCommunityJoinRequest(current)
+  requireCanApproveCommunityRequest(account)
+  await setStanding(c, pending.user_id, 'approved')
+  await event(c, pending.user_id, 'community_approved', { request_id: current.id })
+  return result(c, 'community_approved')
+}
+
+async function recordStandingChange(c: Context, user: string, before: Account, standing: Account['standing'], restricted: boolean,
+  action: string, pending: Pending | undefined, reason?: string) {
+  await event(c, user, action, {
+    before_standing: before.standing, after_standing: standing, before_restricted: before.restricted,
+    after_restricted: restricted, ...(pending && { request_id: pending.id })
+  }, reason)
+  return result(c, action)
+}
+
+async function revokeStaffForDiscipline(c: Context, target: string, assignment: Staff | undefined) {
+  if (assignment && assignment.status !== 'revoked') await setStaffStatus(c, target, assignment.status, 'revoked', 'staff_revoked')
+}
+
+async function suspendCommunityAccount(c: Context, { target, revision, reason }: CommunityDisciplineInput) {
+  const staff = await loadActiveCommunityStaff(c)
+  requireActiveStaffPermission(staff, 'can_discipline_users')
+  const { account, assignment } = await loadCommunityAccountTarget(c, target, revision)
+  requireCanDisciplineStaffAccount(staff, assignment)
+  requireSuspendableCommunityAccount(account.standing)
+  if (account.standing === 'suspended') return result(c, 'already_applied')
+
+  const pending = await closeRequest(c, target)
+  await setStanding(c, target, 'suspended', true)
+  await revokeStaffForDiscipline(c, target, assignment)
+  return recordStandingChange(c, target, account, 'suspended', true, 'community_suspended', pending, reason)
+}
+
+async function removeUserFromCommunity(c: Context, { target, revision, reason }: CommunityDisciplineInput) {
+  const staff = await loadActiveCommunityStaff(c)
+  requireActiveStaffPermission(staff, 'can_discipline_users')
+  const { account, assignment } = await loadCommunityAccountTarget(c, target, revision)
+  requireCanDisciplineStaffAccount(staff, assignment)
+  if (account.standing === 'inactive' && account.restricted) return result(c, 'already_applied')
+
+  const pending = await closeRequest(c, target)
+  await setStanding(c, target, 'inactive', true)
+  await revokeStaffForDiscipline(c, target, assignment)
+  return recordStandingChange(c, target, account, 'inactive', true, 'community_removed', pending, reason)
+}
+
+async function clearCommunityAccountRestriction(c: Context, { target, revision, reason }: CommunityDisciplineInput) {
+  requireActiveStaffPermission(await loadActiveCommunityStaff(c), 'can_discipline_users')
+  const { account } = await loadCommunityAccountTarget(c, target, revision)
+  requireRestrictedCommunityAccount(account.restricted)
+  const standing = account.standing === 'suspended' ? 'approved' : 'inactive'
+  const pending = await closeRequest(c, target)
+  await setStanding(c, target, standing)
+  return recordStandingChange(c, target, account, standing, false, 'community_restriction_cleared', pending, reason)
+}
+
+async function finishStaffChange(c: Context, target: string, account: Account) {
   // A staff change invalidates an earlier discipline preview for this target.
-  await setStanding(c, user, member.standing, member.restricted)
+  await setStanding(c, target, account.standing, account.restricted)
   return result(c, 'saved')
 }
-// The caller opens an authenticated transaction scoped to tenant.
-export async function communityCommand(tx: Tx, actor: string, tenant: string, cmd: CommunityCommand): Promise<CommandResult> {
-  const c = { tx, actor, tenant }
-  const facts = await loadCommunityActionFacts(tx, actor, tenant)
-  requireCanEnterCommunityAction(facts, cmd)
-  const effective = facts.assignment?.status === 'active' ? facts.assignment : undefined
-  const owner = effective?.role === 'owner'
-  if (cmd.kind === 'archive') {
-    const status = cmd.archived ? 'archived' : 'active'
-    if (facts.site?.operational_status === status) return result(c, 'already_applied')
-    await sql`update public.tenants set operational_status=${status} where id=${tenant}`.execute(tx)
-    await event(c, null, cmd.archived ? 'tenants.archive' : 'tenants.restore')
-    return result(c, status)
+
+export async function grantCommunityStaffAssignment(c: Context, target: string) {
+  const { tx, tenant } = c
+  requireActiveStaffPermission(await loadActiveCommunityStaff(c), 'can_grant_staff')
+  const { account, assignment } = await loadCommunityAccountTarget(c, target)
+  requireNewStaffAssignment(account.standing, assignment)
+  requireEligibleStaffGrantTarget(await lockStaffGrantAuthEligibility(tx, target))
+  await sql`insert into public.tenant_staff_assignments(tenant_id,user_id,role) values(${tenant},${target},'admin')`.execute(tx)
+  await event(c, target, 'staff_created', { after_status: 'active' })
+  return finishStaffChange(c, target, account)
+}
+
+async function resumeCommunityStaffAssignment(c: Context, target: string) {
+  requireActiveStaffPermission(await loadActiveCommunityStaff(c), 'can_grant_staff')
+  const { account, assignment } = await loadCommunityAccountTarget(c, target)
+  requireResumableStaffAssignment(account.standing, assignment, target === c.actor)
+  await setStaffStatus(c, target, assignment.status, 'active', 'staff_resumed')
+  return finishStaffChange(c, target, account)
+}
+
+async function revokeCommunityStaffAssignment(c: Context, target: string, reason?: string) {
+  requireActiveStaffPermission(await loadActiveCommunityStaff(c), 'can_discipline_staff')
+  const { account, assignment } = await loadCommunityAccountTarget(c, target)
+  requireActiveOrPausedStaffAssignment(assignment)
+  await setStaffStatus(c, target, assignment.status, 'revoked', 'staff_revoked', reason)
+  return finishStaffChange(c, target, account)
+}
+
+function staffPermissionChanges(assignment: Staff, permissions: Partial<StaffPermissions>) {
+  const changed = staffFlags.filter(key => Object.hasOwn(permissions, key) && permissions[key] !== assignment[key])
+  return {
+    sets: changed.map(key => sql`${sql.id(key)}=${permissions[key]}`),
+    audit: Object.fromEntries(changed.map(key => [key, { before: assignment[key], after: permissions[key] }])),
   }
-  let user = 'target' in cmd ? cmd.target : actor
-  if (cmd.kind === 'approve' || cmd.kind === 'withdraw') {
-    const current = await loadCommunityRequestFacts(tx, tenant, cmd.requestId)
-    requireCanSelectCommunityRequest(current, actor, cmd.kind)
-    user = current.user_id
-  }
-  const member = await loadLifecycleAccountFacts(tx, tenant, user)
-  if (cmd.kind === 'join' || cmd.kind === 'reactivate') return joinOrReturn(c, member, cmd)
-  const assignment = await loadStaffAssignmentFacts(tx, tenant, user)
-  requireCanTargetCommunityAccount(member, assignment, cmd)
-  if (cmd.kind === 'approve' || cmd.kind === 'withdraw') {
-    const current = await closeRequest(c, user)
-    if (!current || current.id !== cmd.requestId) stale()
-    if (cmd.kind === 'approve') requireCanApproveCommunityRequest(member)
-    if (current.kind === 'join') await setStanding(c, user, cmd.kind === 'approve' ? 'approved' : 'inactive')
-    else await setStanding(c, user, 'inactive', true)
-    const action = cmd.kind === 'approve' ? 'community_approved' : current.kind === 'join' ? 'community_join_withdrawn' : 'community_reactivation_withdrawn'
-    await event(c, user, action, { request_id: current.id })
-    return result(c, action)
-  }
-  if (cmd.kind === 'deactivate' || cmd.kind === 'suspend' || cmd.kind === 'remove' || cmd.kind === 'clear') {
-    return changeStanding(c, user, member, assignment, effective, cmd)
-  }
-  return changeAssignment(c, user, member, assignment, owner, cmd)
+}
+
+async function reappointCommunityStaff(c: Context, target: string, permissions: StaffPermissions) {
+  const { tx, tenant } = c
+  requireCommunityOwner(await loadActiveCommunityStaff(c))
+  const { account, assignment } = await loadCommunityAccountTarget(c, target)
+  requireReappointableStaffAssignment(account.standing, assignment)
+  const changes = staffPermissionChanges(assignment, permissions)
+  await sql`update public.tenant_staff_assignments set ${sql.join([...changes.sets, sql`status='active'`])}
+    where tenant_id=${tenant} and user_id=${target}`.execute(tx)
+  await event(c, target, 'staff_reappointed', { permissions: changes.audit, before_status: 'revoked', after_status: 'active' })
+  return finishStaffChange(c, target, account)
+}
+
+export async function updateCommunityStaffPermissions(c: Context, target: string, permissions: Partial<StaffPermissions>) {
+  const { tx, tenant } = c
+  const staff = await loadActiveCommunityStaff(c)
+  requireActiveStaffPermission(staff, 'can_grant_staff')
+  const { account, assignment } = await loadCommunityAccountTarget(c, target)
+  requireActiveOrPausedStaffAssignment(assignment)
+  requireEditableStaffPermissions(staff.role, permissions)
+  const changes = staffPermissionChanges(assignment, permissions)
+  if (!changes.sets.length) return result(c, 'already_applied')
+  await sql`update public.tenant_staff_assignments set ${sql.join(changes.sets)}
+    where tenant_id=${tenant} and user_id=${target}`.execute(tx)
+  await event(c, target, 'staff_permissions_changed', { permissions: changes.audit })
+  return finishStaffChange(c, target, account)
+}
+
+async function setCommunityArchiveStatus(c: Context, status: 'active' | 'archived', action: 'tenants.archive' | 'tenants.restore') {
+  const { tx, tenant, actor } = c
+  const site = await lockCommunityLifecycleRoot(tx, tenant)
+  requireCommunityLifecycleRoot(site)
+  requireCommunityOwner(await loadStaffAssignmentFacts(tx, tenant, actor))
+  if (site.operational_status === status) return result(c, 'already_applied')
+  await sql`update public.tenants set operational_status=${status} where id=${tenant}`.execute(tx)
+  await event(c, null, action)
+  return result(c, status)
+}
+
+export function archiveCommunity(c: Context) {
+  return setCommunityArchiveStatus(c, 'archived', 'tenants.archive')
+}
+
+function restoreCommunity(c: Context) {
+  return setCommunityArchiveStatus(c, 'active', 'tenants.restore')
 }
 
 // Requests and reviews
