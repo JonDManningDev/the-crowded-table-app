@@ -5,7 +5,7 @@ import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
-import { configurationDetails, configurationSettings, configurationCopy, archiveCommunity, readConfigurationDetails } from '../src/features/communities/service.ts'
+import { configurationDetails, configurationSettings, configurationCopy, archiveCommunityInTransaction, readConfigurationDetails } from '../src/features/communities/service.ts'
 import { copySlots, staffFlags } from '../src/features/communities/types.ts'
 import { loadConfigurationFacts, loadAccountRecordFacts } from '../src/features/communities/policies.ts'
 import { buildApi } from '../src/app.ts'
@@ -470,7 +470,7 @@ try {
   assert.equal((await copy(owner)).rows.find(r=>r.content_key==='community.hero.heading').text_value,'Committed before archive')
   await cmd(owner,{kind:'archive',archived:false})
   await committedBefore(
-    tx=>archiveCommunity({ tx, actor: owner.id, tenant }),
+    tx=>archiveCommunityInTransaction({ tx, actor: owner.id, tenant }),
     ()=>copy(editor,'community.hero.heading','Stale pre-archive authority',403), { initialTenantId: tenant })
   assert.equal((await copy(owner)).rows.find(r=>r.content_key==='community.hero.heading').text_value,'Committed before archive')
   await cmd(owner,{kind:'archive',archived:false})

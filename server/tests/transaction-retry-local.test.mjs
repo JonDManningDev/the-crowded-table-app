@@ -258,6 +258,36 @@ test('real local operations retry with fresh authorization and one committed out
       assert.deepEqual(await settings(), before)
     })
 
+    await t.test('a withdrawal that fails before commit preserves the request and rolls back the audit', async () => {
+      const applicant = await user()
+      const { requestId } = await command(applicant, join)
+      const requestPath = path + '/me/request'
+      const reviewPath = path + '/accounts/' + applicant.id + '/review'
+      const pending = await request(controlApp, applicant, requestPath)
+      const review = await request(controlApp, applicant, reviewPath)
+      assert.equal(pending.request.request_id, requestId)
+      assert.equal(review.standing, 'pending')
+
+      const result = await faulted(applicant, path + '/commands', { kind: 'withdraw', requestId },
+        { match: /^commit$/, codes: ['23505'] }, 503)
+      assert.equal(result.attempts, 1)
+      assert.deepEqual(result.value, { code: 'unavailable', requestId: result.operation })
+      const facts = result.queries.filter(({ text }) => /from public\.(?:tenants|community_accounts)\b/.test(text))
+      assert.equal(facts.length, 1)
+      assert.match(facts[0].text, /for update of c\b/)
+      assert.equal(result.queries.some(({ text }) => text.includes('tenant_staff_assignments')), false)
+      const audit = result.queries.findIndex(({ text, parameters }) =>
+        text.startsWith('insert into "tenant_admin_actions"') && parameters.includes('community_join_withdrawn'))
+      const category = result.queries.findIndex(({ text }) => text.startsWith('insert into "app_private"."tenant_admin_action_categories"'))
+      const commit = result.queries.findIndex(({ text }) => text === 'commit')
+      const rollback = result.queries.findIndex(({ text }) => text === 'rollback')
+      assert.ok(audit >= 0 && audit < category && category < commit && commit < rollback,
+        'withdrawal audit and category writes precede the failed commit and rollback')
+      assert.deepEqual(await request(controlApp, applicant, requestPath), pending)
+      assert.deepEqual(await request(controlApp, applicant, reviewPath), review)
+      assert.deepEqual(await events(result.operation), [])
+    })
+
     await t.test('a request approved between attempts becomes stale and cannot be replayed', async () => {
       const own = await request(controlApp, member, path + '/me/request')
       const review = await request(controlApp, owner, path + '/accounts/' + member.id + '/review')

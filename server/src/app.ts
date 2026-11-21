@@ -31,8 +31,8 @@ export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
   app.register(publicCommunityRoutes, {
     service: {
       getCommunityStandingReference: communityService.getCommunityStandingReference,
-      readLanding: communityService.readLanding,
-      publicDirectory: communityService.publicDirectory,
+      readCommunityLanding: communityService.readCommunityLanding,
+      getPublicCommunityDirectory: communityService.getPublicCommunityDirectory,
     },
     verify,
   })
@@ -44,7 +44,7 @@ export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
         joinCommunity: communityService.joinCommunity,
         deactivateOwnCommunityAccount: communityService.deactivateOwnCommunityAccount,
         reactivateOwnCommunityAccount: communityService.reactivateOwnCommunityAccount,
-        withdrawCommunityActivationRequest: communityService.withdrawCommunityActivationRequest,
+        withdrawCommunityEntryRequest: communityService.withdrawCommunityEntryRequest,
         approveCommunityJoinRequest: communityService.approveCommunityJoinRequest,
         suspendCommunityAccount: communityService.suspendCommunityAccount,
         removeUserFromCommunity: communityService.removeUserFromCommunity,
@@ -56,7 +56,7 @@ export function buildApi({ db, verify, cursors, cleanup }: BuildApiOptions) {
         updateCommunityStaffPermissions: communityService.updateCommunityStaffPermissions,
         archiveCommunity: communityService.archiveCommunity,
         restoreCommunity: communityService.restoreCommunity,
-        ownRequest: communityService.ownRequest,
+        readOwnCommunityEntryRequest: communityService.readOwnCommunityEntryRequest,
         reviewAccount: communityService.reviewAccount,
         staffCandidates: communityService.staffCandidates,
         pendingRequests: communityService.pendingRequests,

@@ -5,7 +5,7 @@ import pg from 'pg'
 import { createClient } from '@supabase/supabase-js'
 import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
-import { archiveCommunity, grantCommunityStaffAssignment, reactivateOwnCommunityAccount, withdrawCommunityActivationRequest } from '../src/features/communities/service.ts'
+import { archiveCommunityInTransaction, grantCommunityStaffAssignmentInTransaction } from '../src/features/communities/service.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
@@ -103,17 +103,17 @@ try {
   assert.equal((await cmd(member, join)).outcome, 'reactivation_required')
   const second = await cmd(member, { kind: 'reactivate' })
   assert.notEqual(second.requestId,first.requestId)
-  const ownRequest = (viewer, scope = tenant, expected = 200) => send(viewer, '/api/communities/' + scope + '/me/request', undefined, expected)
-  assert.equal((await ownRequest(member)).request.request_id, second.requestId)
-  await ownRequest(other, tenant, 404)
-  await ownRequest(member, another, 404)
-  await ownRequest(member, randomUUID(), 404)
+  const readOwnCommunityEntryRequest = (viewer, scope = tenant, expected = 200) => send(viewer, '/api/communities/' + scope + '/me/request', undefined, expected)
+  assert.equal((await readOwnCommunityEntryRequest(member)).request.request_id, second.requestId)
+  await readOwnCommunityEntryRequest(other, tenant, 404)
+  await readOwnCommunityEntryRequest(member, another, 404)
+  await readOwnCommunityEntryRequest(member, randomUUID(), 404)
   let state = await review(member, member.id)
   for (const options of [undefined, { initialTenantId: another }]) {
     await assert.rejects(withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },
-      tx => archiveCommunity({ tx, actor: owner.id, tenant }), options), { code: '42501' })
+      tx => archiveCommunityInTransaction({ tx, actor: owner.id, tenant }), options), { code: '42501' })
   }
-  assert.equal((await ownRequest(member)).request.request_id, second.requestId)
+  assert.equal((await readOwnCommunityEntryRequest(member)).request.request_id, second.requestId)
   await cmd(other, { kind: 'approve', requestId: second.requestId, revision: state.revision }, 403)
   await cmd(owner, { kind: 'approve', requestId: first.requestId, revision: state.revision }, 409)
   await admin.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1",[member.id])
@@ -226,13 +226,22 @@ try {
   assert.equal((await cmd(member,{kind:'reactivate'})).requestId,restricted.requestId)
   assert.equal((await queue(other)).rows[0].id,restricted.requestId)
   await cmd(owner, { kind: 'approve', requestId: restricted.requestId, revision: (await review(owner, member.id)).revision }, 409)
-  assert.equal((await ownRequest(member)).request.request_id, restricted.requestId)
+  assert.equal((await readOwnCommunityEntryRequest(member)).request.request_id, restricted.requestId)
   await cmd(member,{kind:'withdraw',requestId:restricted.requestId})
   await cmd(member,{kind:'reactivate'})
   await cmd(other,{kind:'clear',target:member.id,revision:(await review(other,member.id)).revision})
   assert.equal((await queue(other)).rows.length,0)
   assert.equal((await cmd(member,{kind:'reactivate'})).outcome,'approved')
   await cmd(owner,{kind:'deactivate'},403)
+  assert.equal((await cmd(owner, join)).outcome, 'already_applied')
+  assert.equal((await cmd(owner, { kind: 'reactivate' }, 409)).code, 'stale_state')
+  assert.deepEqual(await readOwnCommunityEntryRequest(owner), { request: null })
+  for (const standing of ['pending', 'suspended', 'inactive']) {
+    await assert.rejects(withEligibleActorTransaction(db, { actorId: owner.id, requestId: randomUUID() },
+      tx => sql`update public.community_accounts set standing=${standing},has_disciplinary_restriction=${standing === 'suspended'}
+        where tenant_id=${tenant} and user_id=${owner.id}`.execute(tx), { initialTenantId: tenant }), { code: '23503' })
+  }
+  assert.equal((await review(owner, owner.id)).standing, 'approved')
   await cmd(owner,{kind:'grant',target:member.id,permissions},400)
   await send(owner,'/api/communities/'+tenant+'/settings',{auto_approve_users:true},200,'PATCH')
   const applicant = await user()
@@ -265,7 +274,7 @@ try {
   const grantReady=new Promise(resolve=>{signalGrant=resolve})
   const grantOperation=randomUUID()
   const heldGrant=withEligibleActorTransaction(db,{actorId:owner.id,requestId:grantOperation},async tx=>{
-    const result=await grantCommunityStaffAssignment({ tx, actor: owner.id, tenant }, applicant.id)
+    const result=await grantCommunityStaffAssignmentInTransaction({ tx, actor: owner.id, tenant }, applicant.id)
     signalGrant((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
     await grantGate
     return result
@@ -308,39 +317,62 @@ try {
   await send(owner,'/api/communities/'+tenant+'/settings',{auto_approve_users:false},200,'PATCH')
   const older = await cmd(waitingMember,join)
   const previousRevision = (await review(waitingMember,waitingMember.id)).revision
-  // Run the real withdrawal and reapplication through the service on a held
-  // connection. An approval queued behind them must see the replacement UUID.
-  let releaseWriter, signalReady
-  const ready = new Promise(resolve=>{signalReady=resolve})
-  const release = new Promise(resolve=>{releaseWriter=resolve})
-  const writer = withEligibleActorTransaction(db, { actorId: waitingMember.id, requestId: randomUUID() }, async tx => {
-    await withdrawCommunityActivationRequest({ tx, actor: waitingMember.id, tenant }, older.requestId)
-    const fresh = await reactivateOwnCommunityAccount({ tx, actor: waitingMember.id, tenant })
-    signalReady((await sql`select pg_backend_pid() as pid`.execute(tx)).rows[0].pid)
-    await release
-    return fresh
-  }, { initialTenantId: tenant })
-  const holder = await Promise.race([ready,writer.then(()=>{throw Error('writer exited before barrier')})])
-  const approval = cmd(owner,{kind:'approve',requestId:older.requestId,revision:previousRevision},409)
-  approval.catch(()=>{})
-  try {
-    const deadline = Date.now()+1800
-    while (!(await admin.query("select exists(select from pg_stat_activity where $1=any(pg_blocking_pids(pid))) as waiting",[holder])).rows[0].waiting) {
-      assert.ok(Date.now()<deadline,'stale approval waited behind replacement request')
-      await new Promise(resolve=>setTimeout(resolve,10))
+  async function waitForBlockedCommand(blocker, deadline, message) {
+    while (Date.now() < deadline) {
+      await admin.query('select pg_stat_clear_snapshot()')
+      const { rows } = await admin.query("select pid from pg_stat_activity where usename='ct_api' and $1=any(pg_blocking_pids(pid))", [blocker])
+      if (rows.length) return rows[0].pid
+      await new Promise(resolve => setTimeout(resolve, 10))
     }
-  } finally { releaseWriter() }
-  const written = await writer
-  const fresh = written
-  await approval
-  assert.equal((await review(waitingMember,waitingMember.id)).request_id,fresh.requestId)
-  const operation = randomUUID()
-  await assert.rejects(withEligibleActorTransaction(db, { actorId: waitingMember.id, requestId: operation },async tx=>{
-    await withdrawCommunityActivationRequest({ tx, actor: waitingMember.id, tenant }, fresh.requestId)
-    throw Error('injected rollback')
-  }, { initialTenantId: tenant }),/injected rollback/)
-  assert.equal((await review(waitingMember,waitingMember.id)).request_id,fresh.requestId)
-  assert.equal((await admin.query('select id from public.tenant_admin_actions where operation_id=$1',[operation])).rowCount,0)
+    assert.fail(message)
+  }
+  // The request lock pauses the first HTTP command after it locks the account.
+  // Start the second command only after observing the first wait.
+  async function raceEntryRequestCommands(requestId, startFirst, startSecond) {
+    await admin.query('begin')
+    let first, second
+    try {
+      const locked = await admin.query('select pg_backend_pid() as pid from app_private.community_account_requests where tenant_id=$1 and id=$2 for update',
+        [tenant, requestId])
+      assert.equal(locked.rowCount, 1)
+      const deadline = Date.now() + 1800
+      first = startFirst()
+      first.catch(() => {})
+      const firstPid = await waitForBlockedCommand(locked.rows[0].pid, deadline, 'the first command must wait for the request lock')
+      second = startSecond()
+      second.catch(() => {})
+      await waitForBlockedCommand(firstPid, deadline, 'the second command must wait for the first')
+      await admin.query('commit')
+    } finally {
+      await admin.query('rollback')
+      await Promise.allSettled([first, second])
+    }
+    return Promise.all([first, second])
+  }
+  const [withdrawal, staleApproval] = await raceEntryRequestCommands(older.requestId,
+    () => cmd(waitingMember, { kind: 'withdraw', requestId: older.requestId }),
+    () => cmd(owner, { kind: 'approve', requestId: older.requestId, revision: previousRevision }, 409))
+  assert.equal(withdrawal.outcome, 'community_join_withdrawn')
+  assert.equal(staleApproval.code, 'stale_state')
+  assert.deepEqual(await readOwnCommunityEntryRequest(waitingMember), { request: null })
+
+  const fresh = await cmd(waitingMember, { kind: 'reactivate' })
+  assert.notEqual(fresh.requestId, older.requestId)
+  const freshReview = await review(waitingMember, waitingMember.id)
+  assert.equal(freshReview.request_id, fresh.requestId)
+  assert.equal((await cmd(owner, { kind: 'approve', requestId: older.requestId, revision: freshReview.revision }, 409)).code, 'stale_state')
+  assert.deepEqual(await review(waitingMember, waitingMember.id), freshReview)
+
+  const approvedApplicant = await user()
+  const pendingApproval = await cmd(approvedApplicant, join)
+  const approvalReview = await review(approvedApplicant, approvedApplicant.id)
+  const [approval, staleWithdrawal] = await raceEntryRequestCommands(pendingApproval.requestId,
+    () => cmd(owner, { kind: 'approve', requestId: pendingApproval.requestId, revision: approvalReview.revision }),
+    () => cmd(approvedApplicant, { kind: 'withdraw', requestId: pendingApproval.requestId }, 409))
+  assert.equal(approval.outcome, 'community_approved')
+  assert.equal(staleWithdrawal.code, 'stale_state')
+  assert.equal((await review(approvedApplicant, approvedApplicant.id)).standing, 'approved')
+
   const preview = await review(other,member.id)
   await afterLockedChange(()=>admin.query('update public.tenant_staff_assignments set can_discipline_users=false where tenant_id=$1 and user_id=$2',[tenant,other.id]),
     ()=>cmd(other,{kind:'remove',target:member.id,revision:preview.revision},403))
@@ -351,6 +383,30 @@ try {
   const restores = await admin.query("select count(*)::int as n from public.tenant_admin_actions where tenant_id=$1 and action='tenants.restore' and created_by=$2",[tenant,owner.id])
   assert.equal(restores.rows[0].n,2)
   assert.equal((await review(member,member.id)).standing,'approved')
+
+  const lateApplicant = await user()
+  const late = await cmd(lateApplicant, join)
+  await admin.query('begin')
+  let lateWithdrawal
+  try {
+    const locked = await admin.query('select pg_backend_pid() as pid from app_private.community_account_requests where tenant_id=$1 and id=$2 for update',
+      [tenant, late.requestId])
+    assert.equal(locked.rowCount, 1)
+    await admin.query("update public.tenants set operational_status='archived' where id=$1", [tenant])
+    assert.equal((await cmd(waitingMember, { kind: 'withdraw', requestId: fresh.requestId })).outcome, 'community_join_withdrawn')
+    lateWithdrawal = cmd(lateApplicant, { kind: 'withdraw', requestId: late.requestId }, 404)
+    lateWithdrawal.catch(() => {})
+    await waitForBlockedCommand(locked.rows[0].pid, Date.now() + 1800, 'the second withdrawal must reach its request row before archive commits')
+    await admin.query('commit')
+  } finally {
+    await admin.query('rollback')
+    await Promise.allSettled([lateWithdrawal])
+  }
+  assert.equal((await lateWithdrawal).code, 'missing')
+  assert.equal((await cmd(lateApplicant, { kind: 'withdraw', requestId: late.requestId }, 404)).code, 'missing')
+  await cmd(owner, { kind: 'archive', archived: false })
+  assert.deepEqual(await readOwnCommunityEntryRequest(waitingMember), { request: null })
+  assert.equal((await readOwnCommunityEntryRequest(lateApplicant)).request.request_id, late.requestId)
 
   // Invalid creation after tenant/settings insertion must roll back every root and action.
   const failedSlug = 'rollback-'+randomUUID()

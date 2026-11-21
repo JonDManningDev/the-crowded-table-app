@@ -34,7 +34,21 @@ export function loadAccountRecordFacts(tx: Tx, actor: string, tenant: string) {
 // Creation and lifecycle. Services call these loaders in tenant-root, target
 // account, target Auth order; facts never survive the operation/transaction.
 export async function lockCommunityLifecycleRoot(tx: Tx, tenant: string): Promise<CommunitySite | undefined> {
-  return (await sql<CommunitySite>`select operational_status from public.tenants where id=${tenant} for update`.execute(tx)).rows[0]
+  return (await sql<CommunitySite>`select operational_status from public.tenants where id=${tenant} for no key update`.execute(tx)).rows[0]
+}
+
+export async function loadCommunityWithdrawalFacts(tx: Tx, tenant: string, actor: string, requestId: string) {
+  return (await sql<CommunitySite & { user_id: string | null; standing: Account['standing'] | null }>`
+    select t.operational_status,r.user_id,account.standing
+    from public.tenants t
+    left join app_private.community_account_requests r
+      on r.tenant_id=t.id and r.user_id=${actor} and r.id=${requestId}
+    left join lateral (
+      select c.standing from public.community_accounts c
+      where c.tenant_id=t.id and c.user_id=r.user_id and t.operational_status='active'
+      for update of c
+    ) account on true
+    where t.id=${tenant}`.execute(tx)).rows[0]
 }
 
 export async function loadCommunityRequestFacts(tx: Tx, tenant: string, request: string) {
@@ -220,8 +234,12 @@ export function requireInactiveCommunityAccount(account: Account | undefined): a
   requireDecision(account?.standing === 'inactive' ? 'allowed' : 'stale')
 }
 
-export function requireOwnActivationRequest(request: Pick<Pending, 'user_id'> | undefined, actor: string) {
-  requireDecision(request?.user_id === actor ? 'allowed' : 'stale')
+export function requireWithdrawableCommunityAccount(standing: Account['standing'] | null | undefined) {
+  requireDecision(standing === 'pending' || standing === 'inactive' ? 'allowed' : 'stale')
+}
+
+export function requireOwnActivationRequest(requestOwner: string | null | undefined, actor: string) {
+  requireDecision(requestOwner === actor ? 'allowed' : 'stale')
 }
 
 export function requireCommunityJoinRequest(request: Pending | undefined): asserts request is Pending {

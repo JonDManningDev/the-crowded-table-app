@@ -8,7 +8,7 @@ import { sql } from 'kysely'
 import { withEligibleActorTransaction, connectDatabase } from '../src/database.ts'
 import { ownCommunityProfile, ownCommunityPreferences } from '../src/features/communities/service.ts'
 import { readOwnGlobalProfile, saveGlobalProfile } from '../src/features/user-accounts/service.ts'
-import { deactivateOwnCommunityAccount } from '../src/features/communities/service.ts'
+import { deactivateOwnCommunityAccountInTransaction } from '../src/features/communities/service.ts'
 import { buildApi } from '../src/app.ts'
 import { verifyBearer } from '../src/token-verifier.ts'
 import { localStack } from '../../supabase/tests/local-stack.mjs'
@@ -289,7 +289,7 @@ try {
   await deactivate
   assert.equal((await prefs(member)).show_global_profile,false)
   await command(member,{kind:'reactivate'})
-  const inactive=await held(member,tx=>deactivateOwnCommunityAccount({ tx, actor: member.id, tenant }))
+  const inactive=await held(member,tx=>deactivateOwnCommunityAccountInTransaction({ tx, actor: member.id, tenant }))
   const enable=prefs(member,{show_global_profile:true},404)
   enable.catch(()=>{})
   try { await blocked(inactive.pid) } finally { inactive.release() }

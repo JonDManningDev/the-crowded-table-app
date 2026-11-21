@@ -12,11 +12,11 @@ export const publicCommunityRoutes: FastifyPluginAsyncTypebox<{ service: PublicC
     if (!await verifyOptionalIdentity(request, reply, verify)) return reply
     return service.getCommunityStandingReference()
   })
-  routes.get("/api/public/communities/:slug", { onRequest: optionalAuthentication(verify), schema: schemas.readLandingSchema }, async (request, reply) => {
-    const row = await service.readLanding(request.params)
+  routes.get("/api/public/communities/:slug", { onRequest: optionalAuthentication(verify), schema: schemas.readCommunityLandingSchema }, async (request, reply) => {
+    const row = await service.readCommunityLanding(request.params)
     return row ?? reply.code(404).send({ code: 'missing', requestId: request.id })
   })
-  routes.get("/api/public/communities/:slug/directory", { onRequest: optionalAuthentication(verify), schema: schemas.publicDirectorySchema }, request => service.publicDirectory(request.params, request.query))
+  routes.get("/api/public/communities/:slug/directory", { onRequest: optionalAuthentication(verify), schema: schemas.getPublicCommunityDirectorySchema }, request => service.getPublicCommunityDirectory(request.params, request.query))
 }
 
 export const communityRoutes: FastifyPluginAsyncTypebox<{ service: ProtectedCommunityOperations }> = async (routes, { service }) => {
@@ -43,7 +43,7 @@ export const communityRoutes: FastifyPluginAsyncTypebox<{ service: ProtectedComm
       case 'reactivate':
         return service.reactivateOwnCommunityAccount(context, tenantId)
       case 'withdraw':
-        return service.withdrawCommunityActivationRequest(context, tenantId, command.requestId)
+        return service.withdrawCommunityEntryRequest(context, tenantId, command.requestId)
       case 'approve':
         return service.approveCommunityJoinRequest(context, tenantId, command.requestId, command.revision)
       case 'suspend':
@@ -69,7 +69,7 @@ export const communityRoutes: FastifyPluginAsyncTypebox<{ service: ProtectedComm
 
   // Requests and reviews
   routes.get("/api/communities/:tenantId/me/request", { schema: schemas.readOwnActivationRequestSchema }, async (request, reply) => {
-    const result = await service.ownRequest(getAuthenticatedContext(request), request.params)
+    const result = await service.readOwnCommunityEntryRequest(getAuthenticatedContext(request), request.params)
     if ('status' in result) return reply.code(result.status).send({ code: 'missing', requestId: request.id })
     return result
   })

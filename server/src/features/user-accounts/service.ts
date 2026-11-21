@@ -22,34 +22,34 @@ import type {
 
 export function createUserAccountService({ db, cursors }: UserAccountDependencies) {
   return {
-    readAccountPreferences(context: AuthenticatedContext) { return readAccountPreferences(db, context) },
-    saveAccountPreferences(context: AuthenticatedContext, input: AccountPreferences) { return saveAccountPreferences(db, context, input) },
-    readOwnGlobalProfile(context: AuthenticatedContext) { return readOwnGlobalProfile(db, context) },
-    saveGlobalProfile(context: AuthenticatedContext, input: ProfileInput) { return saveGlobalProfile(db, context, input) },
-    listMyCommunities(context: AuthenticatedContext, query: CommunitySummaryQuery) { return listMyCommunities(db, context, query) },
-    discoverGlobalProfiles(context: AuthenticatedContext, query: DiscoveryQuery) { return discoverGlobalProfiles(db, cursors, context, query) },
-    readOtherGlobalProfile(context: AuthenticatedContext, target: string) { return readOtherGlobalProfile(db, context, target) },
-    listAccountBlocks(context: AuthenticatedContext, query: DiscoveryQuery) { return listAccountBlocks(db, cursors, context, query) },
-    blockUser(context: AuthenticatedContext, target: string) { return blockUser(db, context, target) },
-    unblockUser(context: AuthenticatedContext, target: string) { return unblockUser(db, context, target) },
+    readAccountPreferences(requestContext: AuthenticatedContext) { return readAccountPreferences(db, requestContext) },
+    saveAccountPreferences(requestContext: AuthenticatedContext, input: AccountPreferences) { return saveAccountPreferences(db, requestContext, input) },
+    readOwnGlobalProfile(requestContext: AuthenticatedContext) { return readOwnGlobalProfile(db, requestContext) },
+    saveGlobalProfile(requestContext: AuthenticatedContext, input: ProfileInput) { return saveGlobalProfile(db, requestContext, input) },
+    listMyCommunities(requestContext: AuthenticatedContext, query: CommunitySummaryQuery) { return listMyCommunities(db, requestContext, query) },
+    discoverGlobalProfiles(requestContext: AuthenticatedContext, query: DiscoveryQuery) { return discoverGlobalProfiles(db, cursors, requestContext, query) },
+    readOtherGlobalProfile(requestContext: AuthenticatedContext, target: string) { return readOtherGlobalProfile(db, requestContext, target) },
+    listAccountBlocks(requestContext: AuthenticatedContext, query: DiscoveryQuery) { return listAccountBlocks(db, cursors, requestContext, query) },
+    blockUser(requestContext: AuthenticatedContext, target: string) { return blockUser(db, requestContext, target) },
+    unblockUser(requestContext: AuthenticatedContext, target: string) { return unblockUser(db, requestContext, target) },
   }
 }
 
 // Account preferences
 
-function readAccountPreferences(db: AppDatabase, context: AuthenticatedContext) {
-  return withEligibleActorTransaction(db, context, async tx => {
+function readAccountPreferences(db: AppDatabase, requestContext: AuthenticatedContext) {
+  return withEligibleActorTransaction(db, requestContext, async tx => {
     const row = await tx.selectFrom('user_accounts')
       .select(['user_is_discoverable', 'enable_matchmaking', 'allow_direct_messages'])
-      .where(sql<boolean>`user_id=${context.actorId}`).executeTakeFirst()
+      .where(sql<boolean>`user_id=${requestContext.actorId}`).executeTakeFirst()
     return row ? { status: 200 as const, row } : { status: 404 as const }
   })
 }
 
-function saveAccountPreferences(db: AppDatabase, context: AuthenticatedContext, input: AccountPreferences) {
-  return withEligibleActorTransaction(db, context, async tx => {
+function saveAccountPreferences(db: AppDatabase, requestContext: AuthenticatedContext, input: AccountPreferences) {
+  return withEligibleActorTransaction(db, requestContext, async tx => {
     const row = await tx.updateTable('user_accounts').set(input)
-      .where(sql<boolean>`user_id=${context.actorId}`)
+      .where(sql<boolean>`user_id=${requestContext.actorId}`)
       .returning(['user_is_discoverable', 'enable_matchmaking', 'allow_direct_messages']).executeTakeFirst()
     return row ? { status: 200 as const, row } : { status: 404 as const }
   })
@@ -57,18 +57,18 @@ function saveAccountPreferences(db: AppDatabase, context: AuthenticatedContext, 
 
 // Own profile
 
-export async function readOwnGlobalProfile(db: AppDatabase, context: AuthenticatedContext) {
-  return withEligibleActorTransaction(db, context, async tx => {
-    const actor = context.actorId
+export async function readOwnGlobalProfile(db: AppDatabase, requestContext: AuthenticatedContext) {
+  return withEligibleActorTransaction(db, requestContext, async tx => {
+    const actor = requestContext.actorId
     const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
     const result = await sql<OwnProfile>`select ${fields} from public.user_account_profiles where user_account_profiles.user_id=${actor}`.execute(tx)
     return { profile: result.rows[0] ?? null }
   })
 }
 
-export async function saveGlobalProfile(db: AppDatabase, context: AuthenticatedContext, input: ProfileInput) {
-  return withEligibleActorTransaction(db, context, async tx => {
-    const actor = context.actorId
+export async function saveGlobalProfile(db: AppDatabase, requestContext: AuthenticatedContext, input: ProfileInput) {
+  return withEligibleActorTransaction(db, requestContext, async tx => {
+    const actor = requestContext.actorId
     const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
     const result = await sql<OwnProfile>`insert into public.user_account_profiles(display_name,bio) values(${input.display_name.trim()},${input.bio?.trim() || null})
       on conflict(user_id) do update set display_name=excluded.display_name,bio=excluded.bio
@@ -79,9 +79,9 @@ export async function saveGlobalProfile(db: AppDatabase, context: AuthenticatedC
 
 // My communities
 
-async function listMyCommunities(db: AppDatabase, context: AuthenticatedContext, query: CommunitySummaryQuery): Promise<CommunitySummaryPage> {
-  return withEligibleActorTransaction(db, context, async tx => {
-    const actor = context.actorId
+async function listMyCommunities(db: AppDatabase, requestContext: AuthenticatedContext, query: CommunitySummaryQuery): Promise<CommunitySummaryPage> {
+  return withEligibleActorTransaction(db, requestContext, async tx => {
+    const actor = requestContext.actorId
     const filter = query.filter ?? 'all', scope = [actor,filter]
     let position: Position | undefined
     if (query.cursor) {
@@ -113,9 +113,9 @@ async function listMyCommunities(db: AppDatabase, context: AuthenticatedContext,
 
 // Global profiles
 
-async function discoverGlobalProfiles(db: AppDatabase, cursors: DirectoryCursors, context: AuthenticatedContext, query: DiscoveryQuery): Promise<ProfilePage<GlobalSearchRow>> {
-  return withEligibleActorTransaction(db, context, async tx => {
-    const actor = context.actorId
+async function discoverGlobalProfiles(db: AppDatabase, cursors: DirectoryCursors, requestContext: AuthenticatedContext, query: DiscoveryQuery): Promise<ProfilePage<GlobalSearchRow>> {
+  return withEligibleActorTransaction(db, requestContext, async tx => {
+    const actor = requestContext.actorId
     const term = (query.q ?? '').trim().toLowerCase(), scope = ['global-discovery',actor,term]
     const after = cursors.decode(scope,query.cursor), limit = Number(query.limit ?? 50)
     // Admission and projection share a fresh statement snapshot, before pagination.
@@ -128,9 +128,9 @@ async function discoverGlobalProfiles(db: AppDatabase, cursors: DirectoryCursors
   })
 }
 const fields = sql`user_id,display_name,bio,created_at,updated_at,created_by,updated_by`
-export async function readOtherGlobalProfile(db: AppDatabase, context: AuthenticatedContext, target: string): Promise<GlobalProfile | BlockedProfile> {
-  return withEligibleActorTransaction(db, context, async tx => {
-    const actor = context.actorId
+export async function readOtherGlobalProfile(db: AppDatabase, requestContext: AuthenticatedContext, target: string): Promise<GlobalProfile | BlockedProfile> {
+  return withEligibleActorTransaction(db, requestContext, async tx => {
+    const actor = requestContext.actorId
     // Shared-community consent and standing follow the community-owned sharing rule.
     const row = (await sql<GlobalProfile & { blocked: boolean }>`select block_status.blocked, details.*
       from public.user_account_profiles p
@@ -155,9 +155,9 @@ export async function readOtherGlobalProfile(db: AppDatabase, context: Authentic
 
 const blockFields = sql`blocker_user_id,blocked_user_id,created_at,created_by`
 
-async function listAccountBlocks(db: AppDatabase, cursors: DirectoryCursors, context: AuthenticatedContext, query: DiscoveryQuery): Promise<ProfilePage<OutgoingBlock>> {
-  return withEligibleActorTransaction(db, context, async tx => {
-    const actor = context.actorId
+async function listAccountBlocks(db: AppDatabase, cursors: DirectoryCursors, requestContext: AuthenticatedContext, query: DiscoveryQuery): Promise<ProfilePage<OutgoingBlock>> {
+  return withEligibleActorTransaction(db, requestContext, async tx => {
+    const actor = requestContext.actorId
     const scope=['outgoing-blocks',actor],after=cursors.decode(scope,query.cursor),limit=Number(query.limit??50)
     const rows=(await sql<OutgoingBlock>`select ${blockFields} from public.user_account_blocks where blocker_user_id=${actor}
       and (${after}::uuid is null or blocked_user_id>${after}::uuid) order by blocked_user_id limit ${limit+1}`.execute(tx)).rows
@@ -166,9 +166,9 @@ async function listAccountBlocks(db: AppDatabase, cursors: DirectoryCursors, con
   })
 }
 
-function blockUser(db: AppDatabase, context: AuthenticatedContext, target: string) {
-  return withEligibleActorTransaction(db, context, async tx => {
-    if (context.actorId.toLowerCase() === target.toLowerCase()) throw new ApplicationError(400, 'invalid_target')
+function blockUser(db: AppDatabase, requestContext: AuthenticatedContext, target: string) {
+  return withEligibleActorTransaction(db, requestContext, async tx => {
+    if (requestContext.actorId.toLowerCase() === target.toLowerCase()) throw new ApplicationError(400, 'invalid_target')
     // Acknowledge the command identically when the target account is absent.
     await sql`insert into public.user_account_blocks(blocked_user_id)
       select user_id from public.user_accounts where user_id=${target}
@@ -177,9 +177,9 @@ function blockUser(db: AppDatabase, context: AuthenticatedContext, target: strin
   })
 }
 
-function unblockUser(db: AppDatabase, context: AuthenticatedContext, target: string) {
-  return withEligibleActorTransaction(db, context, async tx => {
-    const actor = context.actorId
+function unblockUser(db: AppDatabase, requestContext: AuthenticatedContext, target: string) {
+  return withEligibleActorTransaction(db, requestContext, async tx => {
+    const actor = requestContext.actorId
     if (actor.toLowerCase() === target.toLowerCase()) throw new ApplicationError(400, 'invalid_target')
     await sql`delete from public.user_account_blocks where blocker_user_id=${actor} and blocked_user_id=${target}`.execute(tx)
     return {blocked:false}

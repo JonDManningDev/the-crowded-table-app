@@ -1,8 +1,20 @@
 # Decisions and open questions
 
+## Owner standing and community entry requests - confirmed 2026-11-20
+
+A community owner must always have an approved account in that community. Deactivation becomes available only after ownership has been transferred. The transfer feature remains deferred under D-024. Owners never apply to join or reactivate their own community.
+
+The existing active-owner check and composite standing foreign key enforce owner standing in storage. Withdrawal locks the caller account and checks for pending or inactive standing before consuming the exact request. This lets withdrawal rely on the owner-standing invariant without looking up staff permissions. The explicit owner check remains on deactivation.
+
+## Community entry-request withdrawal lock - accepted 2026-11-20
+
+Withdraw the caller's exact entry request without taking an explicit community row lock. Load community status, the matching request and the caller's locked account standing in one statement. Lock only the account associated with the caller's exact request in an active community. Keep tenant scope and atomic request, standing and audit writes. Withdrawal can proceed while archival is in flight. Existing archive RLS still applies to account and preference writes, and a withdrawal whose required account write is filtered rolls back.
+
+Use `FOR NO KEY UPDATE` for the other API community root locks so they still serialize with each other and permit the key-share check used by the audit foreign key. Preserve their existing lock order and post-lock authority reads. The authorization matrix and stored audit contract remain in force.
+
 ## Specialized community lifecycle commands ? accepted 2026-11-20
 
-The authenticated commands route keeps its existing path and tagged request schema. It dispatches to one named community service operation per action, with separate archive and restore. Each operation uses the eligible-actor transaction with initial tenant scope, keeps the root lock ahead of fresh authority and target facts, and calls only the policy checks relevant to that action.
+The authenticated commands route keeps its existing path and tagged request schema. It dispatches to one named community service operation per action, with separate archive and restore. Each operation uses the eligible-actor transaction with initial tenant scope and calls only the policy checks relevant to that action. Operations that lock the community root acquire it before reading fresh authority and target facts.
 
 Join and self-reactivation do not load staff authority. Withdrawal accepts either request kind for the caller, while approval requires an exact join request and its target revision. Discipline checks the relevant standing and revision, with combined authority for suspension or removal of active or paused staff. Staff grant, resumption, revocation, reappointment and permission editing retain their distinct assignment preconditions and authority. Grant alone loads protected target Auth eligibility. Archive and restore share owner authority and preserve their idempotent outcomes. Existing response, rollback and semantic audit contracts apply.
 

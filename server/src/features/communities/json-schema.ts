@@ -83,7 +83,7 @@ export const listStandingsSchema = {
   },
 } as const
 
-export const publicDirectorySchema = {
+export const getPublicCommunityDirectorySchema = {
   params: slugParams,
   querystring: directoryQuery,
   response: {
@@ -270,7 +270,7 @@ const copyResponse = Type.Object(
 
 const copyParams = Type.Object({ tenantId: uuid, contentKey: copyKey }, { additionalProperties: false })
 
-export const readLandingSchema = {
+export const readCommunityLandingSchema = {
   params: slugParams,
   querystring: emptyQuery,
   response: {

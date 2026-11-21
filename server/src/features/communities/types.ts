@@ -31,7 +31,7 @@ export type CreateCommunityInput = {
 }
 export type CommunityDisciplineInput = { target: string; revision: string; reason?: string }
 export type CommandResult = { outcome: string; tenantId: string; revision?: string; requestId?: string }
-export type Context = { tx: Tx; tenant: string; actor: string }
+export type CommunityTransactionContext = { tx: Tx; tenant: string; actor: string }
 
 // Requests and reviews
 export type OwnCommunityRequest = { request_id: string; kind: 'join' | 'reactivation'; requested_at: string }
@@ -143,13 +143,13 @@ export type Tx = Transaction<DB>
 export type TenantParams = { tenantId: string }
 export interface CommunityDependencies { db: AppDatabase; cursors: DirectoryCursors }
 export type CommunityService = ReturnType<typeof createCommunityService>
-export type PublicCommunityOperations = Pick<CommunityService, "getCommunityStandingReference" | "readLanding" | "publicDirectory">
+export type PublicCommunityOperations = Pick<CommunityService, "getCommunityStandingReference" | "readCommunityLanding" | "getPublicCommunityDirectory">
 export type ProtectedCommunityOperations = Pick<CommunityService,
   "createCommunity"
   | "joinCommunity"
   | "deactivateOwnCommunityAccount"
   | "reactivateOwnCommunityAccount"
-  | "withdrawCommunityActivationRequest"
+  | "withdrawCommunityEntryRequest"
   | "approveCommunityJoinRequest"
   | "suspendCommunityAccount"
   | "removeUserFromCommunity"
@@ -161,7 +161,7 @@ export type ProtectedCommunityOperations = Pick<CommunityService,
   | "updateCommunityStaffPermissions"
   | "archiveCommunity"
   | "restoreCommunity"
-  | "ownRequest"
+  | "readOwnCommunityEntryRequest"
   | "reviewAccount"
   | "staffCandidates"
   | "pendingRequests"

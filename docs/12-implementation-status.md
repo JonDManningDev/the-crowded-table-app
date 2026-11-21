@@ -1,10 +1,48 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Owner standing and request withdrawal - 2026-11-20
+
+The API denies owner deactivation and creates no join or reactivation request for an owner. The existing deferred standing foreign key rejects all three non-approved standings for the owner under the real runtime role. Withdrawal locks the caller account and requires pending or inactive standing, eliminating its staff-assignment lookup. Ownership transfer remains deferred.
+
+All 77 HTTP tests, the local community suite and all 18 transaction-retry checks passed, along with lint and build. No migration or deployment was performed.
+
+Withdrawal facts follow-up, 2026-11-20. A single statement now reads community status and the exact owned request, and locks and reads the matching account standing. This removes the separate account-facts submission. The retry suite verifies one facts statement and the account-only row lock. The community suite verifies both approval and withdrawal orderings and the existing archive races. All 77 HTTP tests, the local community suite, all 18 transaction-retry checks, lint and build passed. Deployment was outside this change.
+
+## Community entry-request withdrawal lock - 2026-11-20
+
+Withdrawal reads the community status with the exact request lookup and skips the separate community lock statement. The account row still serializes withdrawal with approval on the same account. API community root locks use `FOR NO KEY UPDATE`, which allows the audit foreign key to take its key-share lock. G-02 and the requirement for an affected standing row preserve rollback if archival makes the account unavailable before the update.
+
+Local verification covered successful withdrawal during an uncommitted archive, rollback when archive commits before the account update, already-archived denial, and the approval race. Community, configuration, records, focused policy and transaction-retry integration checks, all 77 HTTP tests, lint and build passed. No migration or deployment was performed.
+
+## Community entry request operation names - 2026-11-20
+
+The server operations are now `readOwnCommunityEntryRequest` and `withdrawCommunityEntryRequest`. The own-request GET and the withdrawal command retain their HTTP contracts. Join and self-reactivation create pending requests through `createCommunityEntryRequestRecord`. Approval and withdrawal share the internal `deleteCommunityEntryRequestRecord` helper and use `deletedRequest` for its returned row. The helper throws `409 stale_state` directly when the exact request is missing. Server TypeScript checks, all 77 HTTP tests, the local community integration suite and lint passed. Deployment was outside this change.
+
 ## Specialized community lifecycle commands ? locally verified 2026-11-20
 
 The commands route now dispatches all 14 request variants to 15 named service operations, with separate archive and restore operations. The HTTP path, schema, response and reviewed baseline are preserved. Each operation performs its own authority, target and state checks under the existing retryable tenant-scoped transaction. Join and self-reactivation no longer read staff authority, and approval and withdrawal consume the exact request. Target Auth locking remains limited to staff grant.
 
 All 77 HTTP tests and the full local server integration run passed, including focused policy races and the 24 actor-context and retry checks. Coverage includes the 15 dispatch outcomes, direct missing- and wrong-scope denials, staff assignment transitions, request ownership and kind, stale revisions, rollback and audit attribution. TypeScript checks, lint, build and the client access-boundary audit passed. The benchmark fixture uses the existing HTTP join route across historical variants. The benchmark itself was not rerun. No migration or hosted deployment was made.
+
+Transaction setup follow-up, 2026-11-20. The 15 lifecycle service methods delegate to standalone functions that call `withEligibleActorTransaction` directly with initial tenant scope. The caller-held race tests use the same transaction-level workflows through explicit `InTransaction` exports. All 77 HTTP tests, the local community, configuration, self-service, focused policy and transaction-retry suites, lint and build passed. Deployment was outside this change.
+
+Withdrawal race verification, 2026-11-20. The local community suite races an HTTP approval against an HTTP withdrawal and verifies the wait in PostgreSQL. It then submits a separate reactivation and checks that approval of the old request ID leaves the replacement pending, even with the current account revision. Reactivation now runs directly inside its own eligible-actor transaction. The community integration suite passed three consecutive runs. All 77 HTTP tests, server TypeScript checks and lint passed.
+
+Withdrawal rollback verification, 2026-11-20. The local HTTP fault-injection suite raises a non-retryable PostgreSQL error before COMMIT, after the withdrawal audit and category writes. The API returns 503 on a single attempt, the pending request and account review remain unchanged, and no audit event commits. The withdrawal workflow now runs directly inside its own eligible-actor transaction. All 18 transaction-retry checks, the local community suite, all 77 HTTP tests, lint and build passed. Deployment was outside this change.
+
+Community lifecycle helper context, 2026-11-20. The internal `CommunityTransactionContext` type carries the database transaction, community ID and authenticated actor ID. Community and user-account service functions name their authenticated context parameters `requestContext`. Server TypeScript checks and lint passed.
+
+## Community creation transaction ownership - 2026-11-20
+
+The private `createCommunity` function opens the eligible-actor transaction and runs the existing creation policy, writes and audit events inside it. The service method delegates with verified context. The creation function sets transaction-local tenant scope directly after allocating the new ID. The HTTP contract, eligibility checks and retry boundary are preserved. All 77 HTTP tests, the local community and transaction retry suites, lint and the production build passed. Deployment was outside this change.
+
+## Public community directory operation name - 2026-11-20
+
+The server operation and its query function are named `getPublicCommunityDirectory`. The query function owns the existing transaction retry boundary, including cursor handling and result shaping. `GET /api/public/communities/:slug/directory` retains its HTTP contract and statement-snapshot behavior. All 77 HTTP tests, the local directory integration suite, lint and the production build passed. Deployment was outside this change.
+
+## Community landing operation name - 2026-11-20
+
+The server operation is now `readCommunityLanding`. The route, schema export, service composition and tests use the new name. `GET /api/public/communities/:slug` retains its HTTP contract and statement-snapshot behavior. Server TypeScript checks, all 77 HTTP tests and lint passed locally. Deployment was outside this change.
 
 ## Community read snapshot branch closeout — 2026-11-20
 

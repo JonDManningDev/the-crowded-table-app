@@ -12,11 +12,11 @@ import { actorId, targetId, tenantId, authorization, createHttpHarness } from '.
 
 const operations = [
   {"group":1,"name":"getCommunityStandingReference","method":"GET","path":"/api/community-standings","params":false,"query":false,"body":false,"public":true},
-  {"group":1,"name":"readLanding","method":"GET","path":"/api/public/communities/:slug","params":true,"query":false,"body":false,"public":true},
-  {"group":1,"name":"publicDirectory","method":"GET","path":"/api/public/communities/:slug/directory","params":true,"query":true,"body":false,"public":true},
+  {"group":1,"name":"readCommunityLanding","method":"GET","path":"/api/public/communities/:slug","params":true,"query":false,"body":false,"public":true},
+  {"group":1,"name":"getPublicCommunityDirectory","method":"GET","path":"/api/public/communities/:slug/directory","params":true,"query":true,"body":false,"public":true},
   {"group":2,"name":"createCommunity","method":"POST","path":"/api/communities","params":false,"query":false,"body":true,"public":false},
   {"group":2,"name":"joinCommunity","method":"POST","path":"/api/communities/:tenantId/commands","params":true,"query":false,"body":true,"public":false},
-  {"group":3,"name":"ownRequest","method":"GET","path":"/api/communities/:tenantId/me/request","params":true,"query":false,"body":false,"public":false},
+  {"group":3,"name":"readOwnCommunityEntryRequest","method":"GET","path":"/api/communities/:tenantId/me/request","params":true,"query":false,"body":false,"public":false},
   {"group":3,"name":"reviewAccount","method":"GET","path":"/api/communities/:tenantId/accounts/:target/review","params":true,"query":false,"body":false,"public":false},
   {"group":3,"name":"staffCandidates","method":"GET","path":"/api/communities/:tenantId/staff-candidates","params":true,"query":true,"body":false,"public":false},
   {"group":3,"name":"pendingRequests","method":"GET","path":"/api/communities/:tenantId/activation-requests","params":true,"query":true,"body":false,"public":false},
@@ -50,7 +50,7 @@ const commandCases = [
   ['joinCommunity', { kind: 'join', profile }, { profile: { ...profile, bio: 'b'.repeat(2001) } }, [profile]],
   ['deactivateOwnCommunityAccount', { kind: 'deactivate' }, { requestId: targetId }, []],
   ['reactivateOwnCommunityAccount', { kind: 'reactivate' }, { profile }, []],
-  ['withdrawCommunityActivationRequest', { kind: 'withdraw', requestId: targetId }, { requestId: undefined }, [targetId]],
+  ['withdrawCommunityEntryRequest', { kind: 'withdraw', requestId: targetId }, { requestId: undefined }, [targetId]],
   ['approveCommunityJoinRequest', { kind: 'approve', requestId: targetId, revision: actorId }, { revision: undefined }, [targetId, actorId]],
   ['suspendCommunityAccount', { kind: 'suspend', ...discipline }, { reason: false }, [discipline]],
   ['removeUserFromCommunity', { kind: 'remove', target: targetId, revision: actorId }, { target: 1 }, [{ ...discipline, reason: undefined }]],
@@ -220,18 +220,18 @@ test('service denials retain operation-specific eligibility, missing and unavail
     h.queue(operation.name, new IneligibleActorError())
     error(h, operation, await h.app.inject(input(operation)), 403, operation.name === 'reviewAccount' ? 'unavailable' : 'ineligible')
   }
-  for (const operation of operations.filter(operation => ['ownRequest', 'reviewAccount', 'readProfile'].includes(operation.name))) {
+  for (const operation of operations.filter(operation => ['readOwnCommunityEntryRequest', 'reviewAccount', 'readProfile'].includes(operation.name))) {
     h.queue(operation.name, { status: 404 })
     error(h, operation, await h.app.inject(input(operation)), 404, operation.name === 'reviewAccount' ? 'unavailable' : 'missing')
   }
-  for (const operation of operations.filter(operation => !operation.public && !['ownRequest', 'reviewAccount', 'readProfile'].includes(operation.name))) {
+  for (const operation of operations.filter(operation => !operation.public && !['readOwnCommunityEntryRequest', 'reviewAccount', 'readProfile'].includes(operation.name))) {
     h.queue(operation.name, new ApplicationError(404, 'missing'))
     error(h, operation, await h.app.inject(input(operation)), 404, 'missing')
   }
-  const landing = operations.find(operation => operation.name === 'readLanding')
+  const landing = operations.find(operation => operation.name === 'readCommunityLanding')
   h.queue(landing.name, undefined)
   error(h, landing, await h.app.inject(input(landing)), 404, 'missing')
-  const directory = operations.find(operation => operation.name === 'publicDirectory')
+  const directory = operations.find(operation => operation.name === 'getPublicCommunityDirectory')
   h.queue(directory.name, new ApplicationError(404, 'missing'))
   error(h, directory, await h.app.inject(input(directory)), 404, 'missing')
   const creation = operations.find(operation => operation.name === 'createCommunity')
@@ -270,13 +270,13 @@ test('public service retains projections and anonymous transaction scope without
   h.queue([])
   assert.equal((await h.app.inject('/api/community-standings')).statusCode, 200)
   assert.deepEqual(h.queries[0].parameters, [])
-  const landing = operations.find(operation => operation.name === 'readLanding')
+  const landing = operations.find(operation => operation.name === 'readCommunityLanding')
   const landingProjection = response(landing).dto
   h.queue([landingProjection])
   const landingResponse = await h.app.inject(input(landing))
   assert.equal(landingResponse.statusCode, 200)
   assert.deepEqual(landingResponse.json(), landingProjection)
-  const directory = operations.find(operation => operation.name === 'publicDirectory')
+  const directory = operations.find(operation => operation.name === 'getPublicCommunityDirectory')
   const directoryQueryStart = h.queries.length
   h.queue([{ rows: [] }])
   assert.equal((await h.app.inject(input(directory))).statusCode, 200)
@@ -394,7 +394,7 @@ test('history keeps open details and empty unauthorized pages; own requests keep
   dto.rows[0].details = { future: [{ subject: 'kept', count: 1 }], flag: true, 'line\nbreak': null }
   h.queue(history.name, result(history, dto))
   assert.deepEqual((await h.app.inject(input(history))).json(), dto)
-  const own = operations.find(operation => operation.name === 'ownRequest')
+  const own = operations.find(operation => operation.name === 'readOwnCommunityEntryRequest')
   h.queue(own.name, { request: null })
   const ownResponse = await h.app.inject(input(own))
   assert.equal(ownResponse.statusCode, 200)
@@ -478,7 +478,7 @@ test('nullable scalars preserve valid values and reject malformed service output
 
 test('nullable staff fields preserve valid values, null, and legacy serializer behavior', async t => {
   const h = harness(t)
-  for (const name of ['publicDirectory', 'memberDirectory', 'staffCandidates']) {
+  for (const name of ['getPublicCommunityDirectory', 'memberDirectory', 'staffCandidates']) {
     const operation = operations.find(operation => operation.name === name)
     const roles = ['owner', 'admin', null, 'unexpected-role']
     const statuses = ['active', 'paused', null, 'unexpected-status']
