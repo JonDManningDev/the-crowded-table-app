@@ -1,5 +1,9 @@
 # Account and navigation implementation audit — 2026-10-16
 
+## Community read snapshot branch closeout — 2026-11-20
+
+The local `architecture/move-to-persistent-api` branch fast-forwarded from `c5f4bbf` to the verified integration tip `7a2df80`, preserving all fourteen commits and the verification history for the three [community read checkpoints](29-community-read-snapshot-spec.md). After confirming ancestry, the local `implementation/public-landing-snapshot` branch was removed. The original checkout is the sole registered worktree. Benchmark and verification evidence remains in its existing ignored directories under `server/test-results/`.
+
 ## Configuration and records snapshot checkpoint - 2026-11-19
 
 [Document 29](29-community-read-snapshot-spec.md) checkpoint 3 is locally verified on `implementation/public-landing-snapshot` through `4b0c6b5`. All thirteen reads identified in the community lock review now authorize and select results from one statement snapshot without locking the community row. This checkpoint covers details, settings, copy, owner account enumeration, exact account facts, and staff and participant-permission list and exact reads. The separate Auth account lock and write lock order, fresh write facts, archive safeguards and audit effects continue to apply.
